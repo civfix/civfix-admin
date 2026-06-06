@@ -313,7 +313,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                     <span className="evt-turnout-cap"> / {event.capacity ?? "-"}</span>
                   </span>
                   <span className="evt-turnout-lbl">
-                    {event.status === "completed" ? "attended" : "RSVP’d"}
+                    {event.status === "completed" ? "attended" : "RSVP'd"}
                   </span>
                 </div>
                 <div className="evt-turnout-bar">

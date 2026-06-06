@@ -9,7 +9,6 @@ import {
   type AdminUserDTO,
   type AdminUserListItemDTO,
   type ReportCategory,
-  type Role,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -21,7 +20,6 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
   useFlagUser,
-  useSetUserRole,
   useSetUserStatus,
   useUser,
   useUserEvents,
@@ -36,13 +34,13 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  * Users (ported from pages-users.jsx, enumeration 2.F). Master-detail: the account list on the left
  * (filter chips All / Active / Suspended / Flagged + counts, search name/handle/city) and the full
  * account detail on the right (head avatar/name/handle/city + Flagged/status badges, profile meta, the
- * Reports/Events/Messages tabs each with a count, and the action bar: flag toggle, ban, role). All wired
- * to the typed admin client.
+ * Reports/Events/Messages tabs each with a count, and the action bar: flag toggle + ban). All wired to
+ * the typed admin client.
  *
  * Difference from the prototype: the three tabs render REAL data from getUserReports / getUserEvents /
  * getUserMessages (the prototype synthesized rows client-side). Each tab has its own loading / error /
- * empty state. The design surfaces no role control; this exposes setUserRole minimally in the action bar
- * (it is primarily a gov-provisioning action).
+ * empty state. The action bar matches the design (Flag + Ban only); role/gov provisioning flows through
+ * the government claims queue, not the user detail.
  */
 
 /** Visual treatment per civfix account status (pill class). */
@@ -62,15 +60,6 @@ const REPORT_STATUS_CLS: Record<AdminReportStatus, string> = {
   in_progress: "status-progress",
   resolved: "status-ok",
   rejected: "status-flag",
-}
-
-/** The role-cycle order for the minimal role control (citizen -> gov_user -> gov_admin -> operator). */
-const ROLE_ORDER: Role[] = ["citizen", "gov_user", "gov_admin", "operator"]
-const ROLE_LABELS: Record<Role, string> = {
-  citizen: "Citizen",
-  gov_user: "Gov user",
-  gov_admin: "Gov admin",
-  operator: "Operator",
 }
 
 function catPinSrc(category: ReportCategory): string | null {
@@ -209,7 +198,6 @@ function UserDetail({ userId }: { userId: string }) {
 
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
-  const setRole = useSetUserRole()
 
   const [tab, setTab] = React.useState<TabId>("reports")
 
@@ -248,15 +236,6 @@ function UserDetail({ userId }: { userId: string }) {
     setStatus.mutate(
       { id: user.id, status: "banned" },
       { onSuccess: () => toast(`${user.id} - account banned`) },
-    )
-  }
-
-  const onCycleRole = () => {
-    const idx = ROLE_ORDER.indexOf(user.role)
-    const next = ROLE_ORDER[(idx + 1) % ROLE_ORDER.length]!
-    setRole.mutate(
-      { id: user.id, role: next },
-      { onSuccess: () => toast(`${user.id} - role -> ${ROLE_LABELS[next]}`) },
     )
   }
 
@@ -327,14 +306,6 @@ function UserDetail({ userId }: { userId: string }) {
       </div>
 
       <div className="user-actions">
-        <button
-          className="btn sm ghost"
-          disabled={setRole.isPending}
-          onClick={onCycleRole}
-          title="Cycle the account role (gov provisioning)"
-        >
-          <Icons.Shield size={12} /> {ROLE_LABELS[user.role]}
-        </button>
         <div className="spacer" />
         <button
           className={`btn ${user.flagged ? "flag-on" : ""}`}

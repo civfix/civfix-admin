@@ -9,7 +9,7 @@ import { useUiStore } from "@/store/ui-store"
  * Global ephemeral confirmation toast (ported from app.jsx). Driven by the UI store instead of the
  * prototype's `window.__toast`. Fire it via the `useToast()` hook after a successful write. Auto-
  * dismisses after 2600ms. The "Undo" affordance just dismisses (no real undo is wired, matching the
- * prototype; a real undo would be wired per-action in wave 2 if needed).
+ * prototype).
  */
 export function Toast() {
   const toast = useUiStore((s) => s.toast)

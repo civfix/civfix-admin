@@ -394,37 +394,40 @@ export function MailPage({ focusId }: SectionPageProps) {
         </button>
       </PageHead>
 
-      {/* Deliverability strip (4 cells) */}
-      <div className="statusstrip mail-strip">
-        {statsQuery.isLoading ? (
+      {/* Deliverability strip (4 cells). Loading/error render as a clean strip-level panel, not jammed
+          into a stat cell. */}
+      {statsQuery.isLoading ? (
+        <div className="strip-state">
           <LoadingState label="Loading deliverability..." />
-        ) : statsQuery.isError ? (
+        </div>
+      ) : statsQuery.isError ? (
+        <div className="strip-state">
           <ErrorState error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
-        ) : stats ? (
-          <>
-            <div className="statcell tone-ok">
-              <div className="statcell-label">Deliverability - 7d</div>
-              <div className="statcell-num">{stats.placement7d}%</div>
-              <div className="statcell-hot">Above 80% target</div>
-            </div>
-            <div className="statcell">
-              <div className="statcell-label">Delivered</div>
-              <div className="statcell-num">{(stats.delivered7d / 1000).toFixed(1)}k</div>
-              <div className="statcell-hot">last 7 days</div>
-            </div>
-            <div className="statcell tone-info">
-              <div className="statcell-label">Bounce rate</div>
-              <div className="statcell-num">{stats.bounceRate}%</div>
-              <div className="statcell-hot">{stats.complaintRate}% complaints</div>
-            </div>
-            <div className="statcell">
-              <div className="statcell-label">Unread</div>
-              <div className="statcell-num">{stats.unread}</div>
-              <div className="statcell-hot">{stats.threads} threads total</div>
-            </div>
-          </>
-        ) : null}
-      </div>
+        </div>
+      ) : stats ? (
+        <div className="statusstrip mail-strip">
+          <div className="statcell tone-ok">
+            <div className="statcell-label">Deliverability - 7d</div>
+            <div className="statcell-num">{stats.placement7d}%</div>
+            <div className="statcell-hot">Above 80% target</div>
+          </div>
+          <div className="statcell">
+            <div className="statcell-label">Delivered</div>
+            <div className="statcell-num">{(stats.delivered7d / 1000).toFixed(1)}k</div>
+            <div className="statcell-hot">last 7 days</div>
+          </div>
+          <div className="statcell tone-info">
+            <div className="statcell-label">Bounce rate</div>
+            <div className="statcell-num">{stats.bounceRate}%</div>
+            <div className="statcell-hot">{stats.complaintRate}% complaints</div>
+          </div>
+          <div className="statcell">
+            <div className="statcell-label">Unread</div>
+            <div className="statcell-num">{stats.unread}</div>
+            <div className="statcell-hot">{stats.threads} threads total</div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="toolbar">
         <FilterChips

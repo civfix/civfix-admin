@@ -40,7 +40,7 @@ export function makeQueryClient(): QueryClient {
 /**
  * Stable query keys for every admin domain. Centralized so invalidation stays consistent.
  *
- * Conventions for wave-2 page agents:
+ * Query-key conventions:
  *  - List keys take the FULL filter/search/sort object (e.g. `reports.list({ filter, q })`) so two
  *    views with different filters do not collide on one cache entry.
  *  - Detail keys take the id (`reports.detail(id)`).

@@ -6,8 +6,8 @@ import { toAppError } from "@/lib/api"
 
 /**
  * Standard loading / error / empty state components for data-bound views. The prototype had NONE of
- * these (data was synchronous from window.DATA); every real list/detail needs them. Wave-2 page agents
- * should use these so the conventions stay consistent across sections.
+ * these (data was synchronous from window.DATA); every real list/detail needs them. The section pages
+ * use these so the conventions stay consistent across sections.
  *
  * Recommended pattern in a page/section:
  *

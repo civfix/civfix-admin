@@ -1,28 +1,51 @@
 "use client"
 
 import * as React from "react"
-import type { HomeSummaryResponse } from "@civfix/shared"
+import type {
+  AdminEventListItemDTO,
+  AdminReportListItemDTO,
+  AdminUserListItemDTO,
+  DiscoveryTaskDTO,
+  HomeSummaryResponse,
+  MailDirection,
+  MailThreadListItemDTO,
+  ReportCategory,
+} from "@civfix/shared"
+import { ADMIN_REPORT_STATUS_LABELS } from "@civfix/shared"
+import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { LiveMap } from "@/components/map/live-map"
 import { ActivityCard } from "@/features/home/activity-card"
 import { SystemCard } from "@/features/home/system-card"
+import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useHomeSummary } from "@/hooks/use-admin-home"
+import { useDiscoveryList } from "@/features/discovery/use-discovery"
+import { useReportList } from "@/features/reports/use-reports"
+import { useEventList } from "@/features/events/use-events"
+import { useMailList } from "@/features/mail/use-mail"
+import { useUserList } from "@/features/users/use-users"
 import { useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
- * Home / dashboard hub (ported from pages-operations.jsx HomePage). The BENTO layout is the shipped
- * default (the prototype's triage/bands variants were a design-tool knob; we ship one). The hub reads
- * GET /admin/home/summary for the per-section counts/leads, GET /admin/home/map (LiveMap), GET
- * /admin/activity (activity feed), and GET /admin/system/health - each with its own loading/error
- * state so one failing card does not take down the rest (enumeration 2.A.6).
+ * Home / dashboard hub (ported from pages-operations.jsx HomePage + HomeBento). The BENTO layout is the
+ * shipped default (the prototype's triage/bands variants were a design-tool knob; we ship one).
  *
- * Difference from the prototype: the summary endpoint returns AGGREGATES (counts), not full section
- * lists, so each tile renders its lead + stats + CTA rather than a 3-row item preview (the prototype
- * built those previews by reading all six section lists client-side, which the aggregate endpoint
- * intentionally avoids). The "Recent activity" card carries the real per-item feed.
+ * Data split (matches the prototype's launchpad interaction):
+ *  - GET /admin/home/summary -> the per-section counts/leads + the analytics mini block (useHomeSummary).
+ *  - The existing typed list endpoints -> the first few real entries previewed inside each non-analytics
+ *    tile (listDiscovery / listAdminReports / listAdminEvents / listMail / listAdminUsers, fetched with a
+ *    small limit). Each preview row deep-links straight into its section with that item preselected
+ *    (nav(page, id)) - the design's openEntry -> nav(page, id).
+ *  - GET /admin/home/map (LiveMap), GET /admin/activity (ActivityCard), GET /admin/system/health
+ *    (SystemCard) - each independent so one failing card does not take down the rest (enumeration 2.A.6).
+ *
+ * The "... and N more {things}" footer renders an exact count where the summary carries a clean section
+ * total (discovery -> queue); for reports / events / mail / users it shows "... and more {things}" when
+ * the list page has further items (the home summary endpoint carries no list total for those and the
+ * contract is frozen, so an exact remainder is not derivable without a contract change).
  */
 
 const HUB_ICON: Record<string, IconComponent> = {
@@ -34,10 +57,32 @@ const HUB_ICON: Record<string, IconComponent> = {
   analytics: Icons.BarChart,
 }
 
+/** How many preview rows each tile shows (the design previewed 3). */
+const PREVIEW_ROWS = 3
+
 interface SectionStat {
   k: string
   v: React.ReactNode
   tone?: "warn" | "alert" | null
+}
+
+/** A single preview row (the design's `.slr` item) with its leading glyph and deep-link target id. */
+interface PeekItem {
+  kind: "pin" | "icon" | "dir" | "avatar"
+  /** pin: report category for the pin SVG. */
+  cat?: ReportCategory
+  /** icon: the Icons.* name + hue. */
+  icon?: IconComponent
+  hue?: string
+  /** dir: inbound/outbound mail arrow. */
+  dir?: MailDirection
+  /** avatar: the name the initials are derived from. */
+  name?: string
+  title: string
+  meta: string
+  age: string
+  /** The entry id to deep-link to inside the section. */
+  focusId: string
 }
 
 interface SectionSummary {
@@ -153,31 +198,250 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
   ]
 }
 
-/** Sparkline (ported from pages-operations.jsx Spark). */
-function Spark({ values, hue }: { values: number[]; hue: string }) {
-  const max = Math.max(...values)
-  const min = Math.min(...values)
+function catPinSrc(category: ReportCategory): string | null {
+  if (category === "other") return null
+  return `/ds/pin-${category}.svg`
+}
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .map((w) => w[0] ?? "")
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
+}
+
+// --- DTO -> preview row mappers (ported from buildSummaries' per-section `.list` maps) -------------
+
+function discoveryRow(x: DiscoveryTaskDTO): PeekItem {
+  return {
+    kind: "pin",
+    cat: x.category,
+    title: x.place,
+    meta: `${x.reports} reports - pop ${(x.pop / 1000).toFixed(0)}k`,
+    age: x.age,
+    focusId: x.id,
+  }
+}
+
+function reportRow(r: AdminReportListItemDTO): PeekItem {
+  return {
+    kind: "pin",
+    cat: r.category,
+    title: r.title,
+    meta: `${r.place} - ${ADMIN_REPORT_STATUS_LABELS[r.status]}`,
+    age: r.submitted.rel,
+    focusId: r.id,
+  }
+}
+
+function eventRow(e: AdminEventListItemDTO): PeekItem {
+  return {
+    kind: "icon",
+    icon: Icons.Calendar,
+    hue: "sun",
+    title: e.title,
+    meta: `${e.place} - ${e.attendees} attending`,
+    age: e.date.rel,
+    focusId: e.id,
+  }
+}
+
+function mailRow(t: MailThreadListItemDTO): PeekItem {
+  return {
+    kind: "dir",
+    dir: t.dir,
+    title: t.org,
+    meta: t.subject,
+    age: t.ts,
+    focusId: t.id,
+  }
+}
+
+function userRow(u: AdminUserListItemDTO): PeekItem {
+  return {
+    kind: "avatar",
+    name: u.name,
+    title: u.name,
+    meta: u.flagReason ?? `${u.city} - ${u.trust}`,
+    age: u.lastActive,
+    focusId: u.id,
+  }
+}
+
+/** Leading glyph for a preview row (ported from PeekGlyph): pin / icon / dir-arrow / avatar. */
+function PeekGlyph({ item }: { item: PeekItem }) {
+  if (item.kind === "pin") {
+    const src = item.cat ? catPinSrc(item.cat) : null
+    return (
+      <span className="peek-pin">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="" />
+        ) : (
+          <Icons.Layers size={13} />
+        )}
+      </span>
+    )
+  }
+  if (item.kind === "icon") {
+    const I = item.icon ?? Icons.Shield
+    return (
+      <span className={`peek-ico hue-${item.hue ?? "lilac"}`}>
+        <I size={13} />
+      </span>
+    )
+  }
+  if (item.kind === "dir") {
+    return (
+      <span className={`peek-dir ${item.dir}`}>
+        {item.dir === "in" ? <Icons.ArrowDown size={12} /> : <Icons.ArrowUp size={12} />}
+      </span>
+    )
+  }
+  return <span className="peek-av">{initials(item.name ?? "")}</span>
+}
+
+/** A clickable preview row that deep-links into the section with the item preselected. */
+function PreviewRow({ item, page }: { item: PeekItem; page: PageId }) {
+  const nav = useNav()
+  const open = () => nav(page, item.focusId)
   return (
-    <div className="hub-spark">
-      {values.map((v, i) => (
-        <span
-          // eslint-disable-next-line react/no-array-index-key
-          key={i}
-          className={`hub-spark-bar ${i === values.length - 1 ? "now" : ""}`}
-          style={
-            {
-              height: `${10 + ((v - min) / (max - min || 1)) * 88}%`,
-              "--sh": `var(--${hue})`,
-            } as React.CSSProperties
-          }
-        />
+    <div
+      className="slr"
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation()
+        open()
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.stopPropagation()
+          open()
+        }
+      }}
+    >
+      <PeekGlyph item={item} />
+      <div className="slr-body">
+        <div className="slr-title">{item.title}</div>
+        <div className="slr-meta">{item.meta}</div>
+      </div>
+      <span className="slr-age">{item.age}</span>
+      <span className="slr-arr">
+        <Icons.ChevronRight size={13} />
+      </span>
+    </div>
+  )
+}
+
+/** The narrowed query state a preview list needs (avoids UseQueryResult variance across response types). */
+interface PreviewState {
+  isLoading: boolean
+  isError: boolean
+  error: unknown
+  onRetry: () => void
+  /** Whether the list page reports further items beyond the preview (cursor or an extra fetched row). */
+  hasMore: boolean
+}
+
+/** The preview list (loading / error / empty / rows) shown inside a non-analytics tile. */
+function PreviewList({
+  page,
+  state,
+  rows,
+}: {
+  page: PageId
+  state: PreviewState
+  rows: PeekItem[]
+}) {
+  if (state.isLoading) {
+    return (
+      <div className="stile-list">
+        <LoadingState label="Loading..." />
+      </div>
+    )
+  }
+  if (state.isError) {
+    return (
+      <div className="stile-list">
+        <ErrorState error={state.error} onRetry={state.onRetry} />
+      </div>
+    )
+  }
+  if (rows.length === 0) {
+    return (
+      <div className="stile-list">
+        <div className="slr-empty">Nothing here right now.</div>
+      </div>
+    )
+  }
+  return (
+    <div className="stile-list">
+      {rows.map((item) => (
+        <PreviewRow key={item.focusId} item={item} page={page} />
       ))}
     </div>
   )
 }
 
-/** Section tile used by the bento grid (ported from SectionTile). */
-function SectionTile({ s, feature }: { s: SectionSummary; feature?: boolean }) {
+/**
+ * The design's "... and N more {things}" foot label (moreOf port). Exact remainder when a clean section
+ * total is known; "... and more {things}" when only the list-page cursor signals further items. Null
+ * (no footer) when nothing is loaded yet, the list is empty, or there is no overflow.
+ */
+function computeMoreLabel(
+  state: PreviewState,
+  shown: number,
+  thing: string,
+  things: string,
+  total?: number,
+): string | null {
+  if (state.isLoading || state.isError || shown === 0) return null
+  if (total !== undefined) {
+    const remaining = Math.max(0, total - shown)
+    return remaining > 0 ? `... and ${remaining} more ${remaining === 1 ? thing : things}` : null
+  }
+  return state.hasMore ? `... and more ${things}` : null
+}
+
+/** A cursor-paged list response (the shape every admin list endpoint returns). */
+interface ListPage<T> {
+  items: T[]
+  nextCursor: string | null
+}
+
+/** Build the narrowed PreviewState + whether more items exist from a list query result. */
+function previewState<T>(query: UseQueryResult<ListPage<T>>, shown: number): PreviewState {
+  return {
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    onRetry: () => {
+      void query.refetch()
+    },
+    hasMore: query.data?.nextCursor != null || (query.data?.items.length ?? 0) > shown,
+  }
+}
+
+/**
+ * Section tile used by the bento grid (ported from SectionTile). The analytics tile is the metric
+ * variant (lead + spark + 2x2 metric grid + stats footer); every other tile shows the preview list +
+ * the "... and N more" footer + the Open CTA.
+ */
+function SectionTile({
+  s,
+  feature,
+  preview,
+  moreLabel,
+}: {
+  s: SectionSummary
+  feature?: boolean
+  preview?: React.ReactNode
+  /** The non-metric foot's "... and N more {things}" label, or null. */
+  moreLabel?: string | null
+}) {
   const nav = useNav()
   const Ico = HUB_ICON[s.id] ?? Icons.Layers
   const metric = s.id === "analytics"
@@ -233,7 +497,10 @@ function SectionTile({ s, feature }: { s: SectionSummary; feature?: boolean }) {
           )}
         </>
       ) : (
-        feature && s.blurb && <p className="stile-blurb">{s.blurb}</p>
+        <>
+          {feature && s.blurb && <p className="stile-blurb">{s.blurb}</p>}
+          {preview}
+        </>
       )}
 
       <div
@@ -251,30 +518,135 @@ function SectionTile({ s, feature }: { s: SectionSummary; feature?: boolean }) {
           }
         }}
       >
-        <div className="stile-stats">
-          {s.stats.map((st) => (
-            <span key={st.k} className="stile-stat">
-              <b className={st.tone || ""}>{st.v}</b> {st.k}
-            </span>
-          ))}
-        </div>
+        {metric ? (
+          <div className="stile-stats">
+            {s.stats.map((st) => (
+              <span key={st.k} className="stile-stat">
+                <b className={st.tone || ""}>{st.v}</b> {st.k}
+              </span>
+            ))}
+          </div>
+        ) : (
+          moreLabel && <span className="stile-moreinline">{moreLabel}</span>
+        )}
         <span className="spacer-flex" />
         <span className="stile-cta">
-          {s.cta} <Icons.ArrowRight size={13} />
+          {metric ? s.cta : "Open"} <Icons.ArrowRight size={13} />
         </span>
       </div>
     </div>
   )
 }
 
+/** A fully-resolved non-analytics tile: its summary view model + preview rows + foot more-label. */
+interface PreviewTile {
+  id: string
+  cell: string
+  feature?: boolean
+  s: SectionSummary
+  state: PreviewState
+  rows: PeekItem[]
+  moreLabel: string | null
+}
+
 export function HomePage(_props: SectionPageProps) {
   const summaryQuery = useHomeSummary()
+
+  // Preview rows from the real list endpoints (small page each). Each row's meta still surfaces the
+  // flag reason when present (the design's `u.flagReason || ...`), so review-worthy accounts read clearly.
+  const discoveryQuery = useDiscoveryList({ limit: PREVIEW_ROWS + 1 })
+  const reportsQuery = useReportList({ limit: PREVIEW_ROWS + 1 })
+  const eventsQuery = useEventList({ limit: PREVIEW_ROWS + 1 })
+  const mailQuery = useMailList({ limit: PREVIEW_ROWS + 1 })
+  const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
 
   const summaries = React.useMemo(
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
     [summaryQuery.data],
   )
   const byId = (id: string) => summaries.find((s) => s.id === id)
+  const summary = summaryQuery.data
+
+  // Resolve each non-analytics tile once (view model + rows + foot label). The bento renders them in the
+  // design's order (discovery feature, analytics, mail, users, reports, events) with the map first.
+  const analytics = byId("analytics")
+  const previewTiles: PreviewTile[] = []
+  const addTile = (
+    id: string,
+    cell: string,
+    state: PreviewState,
+    rows: PeekItem[],
+    thing: string,
+    things: string,
+    opts?: { feature?: boolean; total?: number },
+  ) => {
+    const s = byId(id)
+    if (!s) return
+    previewTiles.push({
+      id,
+      cell,
+      feature: opts?.feature,
+      s,
+      state,
+      rows,
+      moreLabel: computeMoreLabel(state, rows.length, thing, things, opts?.total),
+    })
+  }
+
+  addTile(
+    "discovery",
+    "bt-discovery",
+    previewState(discoveryQuery, PREVIEW_ROWS),
+    (discoveryQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(discoveryRow),
+    "city",
+    "cities",
+    { feature: true, total: summary?.discovery.queue },
+  )
+  addTile(
+    "mail",
+    "bt-mail",
+    previewState(mailQuery, PREVIEW_ROWS),
+    (mailQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(mailRow),
+    "email",
+    "emails",
+  )
+  addTile(
+    "users",
+    "bt-users",
+    previewState(usersQuery, PREVIEW_ROWS),
+    (usersQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(userRow),
+    "account",
+    "accounts",
+  )
+  addTile(
+    "reports",
+    "bt-reports",
+    previewState(reportsQuery, PREVIEW_ROWS),
+    (reportsQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(reportRow),
+    "report",
+    "reports",
+  )
+  addTile(
+    "events",
+    "bt-events",
+    previewState(eventsQuery, PREVIEW_ROWS),
+    (eventsQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(eventRow),
+    "event",
+    "events",
+  )
+
+  const tile = (id: string) => previewTiles.find((t) => t.id === id)
+  const renderTile = (t: PreviewTile | undefined) =>
+    t ? (
+      <div className={`bt-cell ${t.cell}`}>
+        <SectionTile
+          s={t.s}
+          feature={t.feature}
+          moreLabel={t.moreLabel}
+          preview={<PreviewList page={t.s.page} state={t.state} rows={t.rows} />}
+        />
+      </div>
+    ) : null
 
   return (
     <div className="hub">
@@ -301,36 +673,16 @@ export function HomePage(_props: SectionPageProps) {
           </div>
         ) : (
           <>
-            {byId("discovery") && (
-              <div className="bt-cell bt-discovery">
-                <SectionTile s={byId("discovery")!} feature />
-              </div>
-            )}
-            {byId("analytics") && (
+            {renderTile(tile("discovery"))}
+            {analytics && (
               <div className="bt-cell bt-moderation">
-                <SectionTile s={byId("analytics")!} />
+                <SectionTile s={analytics} />
               </div>
             )}
-            {byId("mail") && (
-              <div className="bt-cell bt-mail">
-                <SectionTile s={byId("mail")!} />
-              </div>
-            )}
-            {byId("users") && (
-              <div className="bt-cell bt-users">
-                <SectionTile s={byId("users")!} />
-              </div>
-            )}
-            {byId("reports") && (
-              <div className="bt-cell bt-reports">
-                <SectionTile s={byId("reports")!} />
-              </div>
-            )}
-            {byId("events") && (
-              <div className="bt-cell bt-events">
-                <SectionTile s={byId("events")!} />
-              </div>
-            )}
+            {renderTile(tile("mail"))}
+            {renderTile(tile("users"))}
+            {renderTile(tile("reports"))}
+            {renderTile(tile("events"))}
           </>
         )}
       </div>

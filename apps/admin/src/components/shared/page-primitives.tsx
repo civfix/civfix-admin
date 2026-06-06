@@ -5,8 +5,8 @@ import * as React from "react"
 import { Icons } from "@/components/icons"
 
 /**
- * Shared page primitives, ported from the design (pages-shared.jsx). Wave-2 section pages compose
- * these to match the prototype's structure exactly (class names + DOM preserved).
+ * Shared page primitives, ported from the design (pages-shared.jsx). The section pages compose these to
+ * match the prototype's structure exactly (class names + DOM preserved).
  */
 
 /** Page header with title, subtitle, and right-side actions (and optional meta on the far right). */

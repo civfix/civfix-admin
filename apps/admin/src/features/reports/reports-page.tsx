@@ -78,6 +78,12 @@ function catPinSrc(category: ReportCategory): string | null {
   return `/ds/pin-${category}.svg`
 }
 
+/** Per-category hue var for the held-photo placeholder tint ("other" -> neutral ink). */
+function catColor(category: ReportCategory): string {
+  if (category === "other") return "var(--ink-4)"
+  return `var(--cat-${category})`
+}
+
 function firstName(name: string): string {
   return name.split(" ")[0] ?? name
 }
@@ -282,8 +288,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <div className="sub-body" style={{ padding: 10 }}>
               <div className="rep-media">
                 {report.hasPhoto && (
-                  <div className="rep-photo">
-                    <span className="rep-photo-pin">
+                  <div className="rep-photo" style={{ ["--cat" as string]: catColor(report.category) }}>
+                    <span className="rep-photo-pin" style={{ background: catColor(report.category) }}>
                       {pin ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={pin} alt="" />
