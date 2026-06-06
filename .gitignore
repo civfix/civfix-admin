@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp.*
+
+# Next.js
+.next/
+out/
+
+# Turbo
+.turbo/
+
+# Wrangler (local Cloudflare Pages dev cache: `wrangler pages dev out`)
+.wrangler/
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Env files (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Test / coverage
+coverage/

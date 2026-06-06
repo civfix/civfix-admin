@@ -1,0 +1,65 @@
+"use client"
+
+import * as React from "react"
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query"
+
+import { makeQueryClient } from "@/lib/query"
+import { AuthHydrator } from "@/components/auth/auth-hydrator"
+import { OperatorLogin } from "@/features/auth/operator-login"
+import { useOperatorSession } from "@/hooks/use-admin-auth"
+
+/**
+ * App-wide client providers. Mounted once in the root layout.
+ *
+ * The QueryClient is created lazily and held in a ref so it survives re-renders but is unique per
+ * browser tab. AuthHydrator runs the session check on mount; AuthGate then decides whether to render
+ * the dashboard, the loading screen, or the operator login.
+ */
+export function Providers({ children }: { children: React.ReactNode }) {
+  const clientRef = React.useRef<QueryClient | null>(null)
+  if (!clientRef.current) {
+    clientRef.current = makeQueryClient()
+  }
+
+  return (
+    <QueryClientProvider client={clientRef.current}>
+      <AuthHydrator />
+      <AuthGate>{children}</AuthGate>
+    </QueryClientProvider>
+  )
+}
+
+/**
+ * The operator login gate. Only an authenticated operator session renders the dashboard:
+ *  - idle / loading  -> a minimal loading screen (session check in flight, or pre-hydration).
+ *  - not an operator -> the full-page Email-OTP login.
+ *  - operator        -> the dashboard shell (children).
+ */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isOperator, status } = useOperatorSession()
+
+  if (status === "idle" || status === "loading") {
+    return <BootScreen />
+  }
+
+  if (!isOperator) {
+    return <OperatorLogin />
+  }
+
+  return <>{children}</>
+}
+
+/** Minimal centered loading screen shown while the session check is in flight. */
+function BootScreen() {
+  return (
+    <div className="op-boot" role="status" aria-live="polite">
+      <span className="op-boot-bug" aria-hidden="true">
+        {/* Tiny static brand SVG: <img> is appropriate (static export, images.unoptimized). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ds/pinit-bug.svg" alt="" width={30} height={36} />
+      </span>
+      <span className="op-boot-spin" aria-hidden="true" />
+      <span className="op-boot-text">Loading operations...</span>
+    </div>
+  )
+}

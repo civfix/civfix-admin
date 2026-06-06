@@ -1,0 +1,14 @@
+# Cloudflare Pages routing for the civfix admin / operator dashboard static export.
+#
+# This app is a SINGLE client-rooted SPA: there is exactly one Next route (out/index.html) and all
+# section navigation is client-side page state (no Next routes, no catch-all detail routes - unlike
+# community-web). So the only rule needed is a catch-all SPA fallback: serve the app shell for any
+# path with a 200 (rewrite, not redirect) so deep links and reloads boot the SPA, which then restores
+# its page state on the client.
+#
+# Cloudflare serves real static assets (/_next/*, /ds/*, /favicon.svg, ...) before this rule because
+# it matches them as files first; the splat only catches paths that have no static asset. This file is
+# copied verbatim into out/_redirects by the export and consumed by Cloudflare at deploy time (it is
+# not served as an asset).
+
+/*    /index.html    200

@@ -1,0 +1,107 @@
+"use client"
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import type {
+  AdminUserListQuery,
+  AdminUserListResponse,
+  FlagUserRequest,
+  GetAdminUserResponse,
+  SetRoleRequest,
+  SetUserStatusRequest,
+  UserEventsResponse,
+  UserMessagesResponse,
+  UserReportsResponse,
+} from "@civfix/shared"
+
+import { api } from "@/lib/api"
+import { queryKeys } from "@/lib/query"
+
+/**
+ * Data hooks for the Users section (enumeration 2.F). Reads use GET /admin/users (list), GET
+ * /admin/users/:id (detail), and the three sub-activity lists (reports / events / messages). Writes use
+ * flag / set-status (ban) / set-role. Every mutation invalidates the users caches plus the cross-cutting
+ * home + activity feeds (a flag/status change moves the dashboard aggregates and the activity feed), per
+ * the scaffold's documented pattern.
+ *
+ * Query keys: reuses the existing registry (users.list/detail/reports/events/messages + users.all). No
+ * local keys were needed.
+ */
+
+/** GET /admin/users - the account list (filter active/suspended/flagged + search via params). */
+export function useUserList(params: AdminUserListQuery) {
+  return useQuery<AdminUserListResponse>({
+    queryKey: queryKeys.users.list(params),
+    queryFn: () => api.listAdminUsers(params),
+  })
+}
+
+/** GET /admin/users/:id - full user (profile + counts + trust/risk + role). */
+export function useUser(id: string | null) {
+  return useQuery<GetAdminUserResponse>({
+    queryKey: queryKeys.users.detail(id ?? ""),
+    queryFn: () => api.getAdminUser({ id: id as string }),
+    enabled: !!id,
+  })
+}
+
+/** GET /admin/users/:id/reports - the user's filed reports (Reports tab). */
+export function useUserReports(id: string | null) {
+  return useQuery<UserReportsResponse>({
+    queryKey: queryKeys.users.reports(id ?? ""),
+    queryFn: () => api.getUserReports({ id: id as string }),
+    enabled: !!id,
+  })
+}
+
+/** GET /admin/users/:id/events - the user's cleanup memberships (Events tab). */
+export function useUserEvents(id: string | null) {
+  return useQuery<UserEventsResponse>({
+    queryKey: queryKeys.users.events(id ?? ""),
+    queryFn: () => api.getUserEvents({ id: id as string }),
+    enabled: !!id,
+  })
+}
+
+/** GET /admin/users/:id/messages - the user's chat messages (Messages tab). */
+export function useUserMessages(id: string | null) {
+  return useQuery<UserMessagesResponse>({
+    queryKey: queryKeys.users.messages(id ?? ""),
+    queryFn: () => api.getUserMessages({ id: id as string }),
+    enabled: !!id,
+  })
+}
+
+/** Invalidate every user view plus the home + activity aggregates after a write. */
+function invalidateUsers(qc: ReturnType<typeof useQueryClient>, id: string) {
+  qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) })
+  qc.invalidateQueries({ queryKey: queryKeys.users.all })
+  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
+}
+
+/** POST /admin/users/:id/flag - flag / unflag an account. */
+export function useFlagUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: FlagUserRequest) => api.flagUser(input),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+  })
+}
+
+/** POST /admin/users/:id/status - set the account status (ban / suspend / review / reactivate). */
+export function useSetUserStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetUserStatusRequest) => api.setUserStatus(input),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+  })
+}
+
+/** POST /admin/users/:id/role - set the account role (gov provisioning surfaces this). */
+export function useSetUserRole() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetRoleRequest) => api.setUserRole(input),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+  })
+}

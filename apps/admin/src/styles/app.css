@@ -1,0 +1,305 @@
+/* =========================================================================
+   civfix Operations - dashboard app additions
+   Styles the prototype did NOT have: the operator login gate, the boot/loading
+   screen, OTP cells, an inline spinner, and the loading / error / empty states
+   the real app needs. Built on the ported design tokens (colors-and-type.css)
+   so nothing here hardcodes a hex the design system already defines. ASCII only.
+   ========================================================================= */
+
+/* -- Inline spinner (login + buttons + hooks) ----------------------------- */
+.op-login-spin,
+.op-boot-spin,
+.op-spin {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: op-spin 0.7s linear infinite;
+  vertical-align: -2px;
+}
+.op-boot-spin {
+  width: 20px;
+  height: 20px;
+  color: var(--bloom);
+}
+@keyframes op-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -- Boot / loading screen (session check in flight) ---------------------- */
+.op-boot {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--paper);
+  color: var(--ink-3);
+}
+.op-boot-bug {
+  display: inline-flex;
+  filter: drop-shadow(0 6px 14px rgba(79, 149, 81, 0.25));
+}
+.op-boot-text {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* -- Operator login gate -------------------------------------------------- */
+.op-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, var(--moss-50), transparent 60%),
+    var(--paper);
+}
+.op-login-card {
+  width: 100%;
+  max-width: 408px;
+  padding: 28px 26px 24px;
+  box-shadow: var(--shadow-3);
+}
+.op-login-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.op-login-bug {
+  display: inline-flex;
+}
+.op-login-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.op-login-tag {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+  background: var(--paper-2);
+  border: 1px solid var(--border-soft);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.op-login-title {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.op-login-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 1.45;
+  margin: 0 0 18px;
+}
+.op-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.btn.block {
+  width: 100%;
+}
+.op-login-submit {
+  margin-top: 2px;
+}
+.op-login-error {
+  color: var(--bloom-700);
+  background: var(--bloom-50);
+  border: 1px solid color-mix(in oklab, var(--bloom) 25%, transparent);
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+.op-login-resend {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 14px 0 8px;
+}
+.op-login-resend button {
+  background: none;
+  border: none;
+  color: var(--bloom);
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 0;
+  cursor: pointer;
+}
+.op-login-resend button:disabled {
+  color: var(--ink-4);
+  cursor: default;
+}
+
+/* -- OTP cells ------------------------------------------------------------ */
+.otp-row {
+  display: flex;
+  gap: 9px;
+  justify-content: space-between;
+}
+.otp-cell {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  outline: none;
+  transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+}
+.otp-cell:focus {
+  border-color: var(--bloom);
+  box-shadow: var(--ring);
+}
+.otp-cell:disabled {
+  background: var(--paper-2);
+  color: var(--ink-3);
+}
+
+/* -- App-level loading / error / empty states (data hooks) ---------------- */
+/* Reuse .empty-state from the design for empty + error; these add a spinner row
+   and a skeleton shimmer for loading. */
+.state-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 40px 16px;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+.state-loading .op-spin {
+  color: var(--bloom);
+}
+.state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 36px 20px;
+  text-align: center;
+}
+.state-error-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+}
+.state-error-sub {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  max-width: 320px;
+  line-height: 1.45;
+}
+.state-error .btn {
+  margin-top: 8px;
+}
+
+/* Skeleton shimmer for card/list placeholders. */
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper-2);
+  border-radius: 8px;
+}
+.skel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: skel-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes skel-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skel::after,
+  .op-spin,
+  .op-boot-spin,
+  .op-login-spin {
+    animation: none;
+  }
+}
+
+/* -- Home: auxiliary cards row (activity + system health) ----------------- */
+/* The aggregate /admin/home/summary does not carry per-item lists, so the home
+   hub pairs the bento grid with these two real-data cards below it. */
+.hub-aux {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--gutter);
+  margin-top: var(--gutter);
+}
+@media (max-width: 900px) {
+  .hub-aux {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -- "To be built" placeholder for wave-2 section pages ------------------- */
+.section-stub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 340px;
+  text-align: center;
+  padding: 40px 24px;
+}
+.section-stub-ico {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-2);
+  color: var(--ink-3);
+}
+.section-stub-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--ink);
+}
+.section-stub-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  max-width: 360px;
+  line-height: 1.5;
+}

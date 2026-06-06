@@ -1,0 +1,25 @@
+{
+  // Cloudflare Pages project configuration for civfix-admin (the operator dashboard, admin.civfix.org).
+  //
+  // DEPLOY MODEL: CI build + Direct Upload (NOT Cloudflare's native Git build).
+  //   The @civfix/shared contract is a PRIVATE git submodule with a RELATIVE URL
+  //   (shared/ -> ../civfix-shared). Cloudflare's native Git builds cannot reliably clone
+  //   private/relative submodules, so we DO NOT connect this repo to Pages' git builder.
+  //   Instead, GitHub Actions builds the static export (checking out the submodule with
+  //   credentials, pinned Node 22 + pnpm 9.12.0) and ships the prebuilt out/ to Pages with
+  //   `wrangler pages deploy`. See .github/workflows/deploy.yml and
+  //   documents/phase2/07-civfix-admin-repo.md.
+  //
+  // WHAT THIS FILE DOES: makes the deploy declarative. With it present, `wrangler pages deploy`
+  //   (no args) reads the project name and the prebuilt output directory from here, and
+  //   `wrangler pages dev` serves that directory through the real Pages routing engine (so the
+  //   _redirects / _headers behave exactly as in production). It does NOT configure a build
+  //   command or submodule handling - Cloudflare Pages has no repo-level build-command file;
+  //   the build happens in CI.
+  "name": "civfix-admin",
+  "pages_build_output_dir": "apps/admin/out",
+  // Pure static export: there are no Pages Functions, so the Workers runtime version is never
+  // exercised and compatibility_date is inert. It is required whenever pages_build_output_dir
+  // is set, so we pin a stable past date.
+  "compatibility_date": "2024-12-01"
+}

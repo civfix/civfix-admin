@@ -1,0 +1,21 @@
+{
+  "name": "civfix-admin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "civfix admin / operator dashboard workspace (admin.civfix.org) plus the @civfix/shared contract submodule.",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  }
+}
