@@ -12,8 +12,8 @@ import { useOperatorSession } from "@/hooks/use-admin-auth"
  * App-wide client providers. Mounted once in the root layout.
  *
  * The QueryClient is created lazily and held in a ref so it survives re-renders but is unique per
- * browser tab. AuthHydrator runs the session check on mount; AuthGate then decides whether to render
- * the dashboard, the loading screen, or the operator login.
+ * browser tab. AuthHydrator runs the Cloudflare Access exchange/bootstrap on mount; AuthGate then
+ * decides whether to render the dashboard, the loading screen, or the operator (Access) gate.
  */
 export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = React.useRef<QueryClient | null>(null)
@@ -30,9 +30,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The operator login gate. Only an authenticated operator session renders the dashboard:
- *  - idle / loading  -> a minimal loading screen (session check in flight, or pre-hydration).
- *  - not an operator -> the full-page Email-OTP login.
+ * The operator gate. Only an authenticated operator session renders the dashboard:
+ *  - idle / loading  -> a minimal loading screen (Access exchange in flight, or pre-hydration).
+ *  - not an operator -> the full-page Cloudflare Access gate (anonymous: authenticating + manual
+ *                       continue; forbidden: not-authorized message).
  *  - operator        -> the dashboard shell (children).
  */
 function AuthGate({ children }: { children: React.ReactNode }) {

@@ -8,9 +8,9 @@ import "./globals.css"
 // handoff). Imported AFTER globals.css so the design's component classes win over Tailwind's base
 // reset wherever they overlap on the shell. admin.css @imports colors-and-type.css itself.
 import "@/styles/admin.css"
-// Dashboard app additions the prototype lacked: login gate, boot screen, OTP cells, inline spinner,
-// and loading / error / empty states. Built on the same design tokens; imported last so it can layer
-// on top of the ported design CSS.
+// Dashboard app additions the prototype lacked: the Cloudflare Access sign-in gate, boot screen, inline
+// spinner, and loading / error / empty states. Built on the same design tokens; imported last so it can
+// layer on top of the ported design CSS.
 import "@/styles/app.css"
 
 /**

@@ -6,11 +6,18 @@ import { AppError, ErrorCode } from "@civfix/shared"
 import { getCsrfToken, useAuthStore } from "@/store/auth-store"
 
 /**
- * The civfix API base URL. Defaults to the local backend; overridden at build time via
- * NEXT_PUBLIC_API_URL. NEXT_PUBLIC_ vars are inlined into the static export at build time.
+ * The civfix API base URL. NEXT_PUBLIC_API_URL (inlined into the static export at build time) overrides
+ * it. When unset, the default is SAME-ORIGIN ("") in a production build — the operator dashboard is
+ * served behind the same Cloudflare Access app and origin as the API (admin.civfix.org → Caddy serves
+ * the SPA and routes /admin/* to the backend), so relative calls resolve to admin.civfix.org/admin/* and
+ * carry the Access cookie. (On the raw, ungated civfix-admin.pages.dev shell those relative /admin calls
+ * 404 there, keeping it inert by design.) In development the default is the local backend so `next dev`
+ * can talk to a locally-running API.
  */
-export const API_BASE_URL: string =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "http://localhost:8080"
+export const API_BASE_URL: string = (
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === "production" ? "" : "http://localhost:8080")
+).replace(/\/+$/, "")
 
 /**
  * Build the typed API client (admin surface).

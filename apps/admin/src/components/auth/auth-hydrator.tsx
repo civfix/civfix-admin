@@ -2,45 +2,25 @@
 
 import * as React from "react"
 
-import { api } from "@/lib/api"
-import { useAuthStore } from "@/store/auth-store"
+import { useOperatorBootstrap } from "@/hooks/use-admin-auth"
 
 /**
- * Hydrates the operator auth store from GET /admin/auth/session exactly once on mount.
+ * Bootstraps the operator session via Cloudflare Access exactly once on mount (doc 16, same-origin).
  *
- * Resilient by design: if the backend is unreachable (dev / no server), the catch sets the status to
- * "anonymous" so the app renders the login gate instead of spinning forever. The session endpoint
- * returns `authenticated:false` for the normal signed-out path.
+ * The SPA and the `/admin/*` API are served behind the same Access app on the same origin, so by the time
+ * this runs the browser already holds the Access cookie. The bootstrap (useOperatorBootstrap) first reuses
+ * a still-valid operator session (GET /admin/auth/session), and otherwise exchanges the edge-injected
+ * Access JWT (POST /admin/auth/access/exchange) for one. On success the auth store flips to authenticated
+ * and the gate (providers.tsx) renders the dashboard; a 403 (authenticated but not allowlisted) lands on
+ * the not-authorized state; any other failure lands on the retryable login screen. No cross-origin cookie
+ * bootstrap / redirect is needed in this same-origin deployment.
  */
 export function AuthHydrator() {
-  const setSession = useAuthStore((s) => s.setSession)
-  const setStatus = useAuthStore((s) => s.setStatus)
+  const bootstrap = useOperatorBootstrap()
 
   React.useEffect(() => {
-    let cancelled = false
-    setStatus("loading")
-
-    api
-      .adminSession()
-      .then((res) => {
-        if (cancelled) return
-        if (res.authenticated && res.operator) {
-          // Thread the CSRF token from the session check so a page reload recovers it for mutations.
-          setSession({ operator: res.operator, csrfToken: res.csrfToken })
-        } else {
-          setSession({ operator: null })
-        }
-      })
-      .catch(() => {
-        if (cancelled) return
-        // Backend down or network error: treat as signed-out, do not block the UI.
-        setStatus("anonymous")
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [setSession, setStatus])
+    void bootstrap()
+  }, [bootstrap])
 
   return null
 }

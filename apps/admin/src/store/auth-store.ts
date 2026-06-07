@@ -7,15 +7,23 @@ import type { AdminOperatorDTO } from "@civfix/shared"
  * Operator authentication state for the admin dashboard.
  *
  * Web uses cookie sessions: the session cookie is httpOnly and set by the API, so we never see the
- * token here. What we DO track is the CSRF token (returned by GET /admin/auth/session and the verify
- * response) which must be echoed on mutating requests via the x-csrf-token header, plus the operator
- * identity rendered across the shell.
+ * token here. What we DO track is the CSRF token (returned by the POST /admin/auth/access/exchange
+ * response and GET /admin/auth/session) which must be echoed on mutating requests via the x-csrf-token
+ * header, plus the operator identity rendered across the shell.
  *
  * The API client (src/lib/api.ts) reads the current csrfToken through getCsrfToken() at call time, so
  * there is no static import cycle between the store and the client.
  */
 
-export type AuthStatus = "idle" | "loading" | "authenticated" | "anonymous"
+/**
+ * - idle/loading: pre-hydration or the Access exchange is in flight (show the boot/authenticating gate).
+ * - authenticated: an operator session is established.
+ * - anonymous: no session yet; the Access bootstrap can be (re)attempted via a top-level navigation.
+ * - forbidden: Cloudflare Access authenticated the user but their email is NOT on the operator
+ *   allowlist (a clean 403). This is a terminal state - retrying the bootstrap would loop, so the gate
+ *   shows a "not authorized" message instead of redirecting.
+ */
+export type AuthStatus = "idle" | "loading" | "authenticated" | "anonymous" | "forbidden"
 
 export interface AuthState {
   status: AuthStatus

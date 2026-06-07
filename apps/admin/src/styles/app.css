@@ -1,13 +1,12 @@
 /* =========================================================================
    civfix Operations - dashboard app additions
-   Styles the prototype did NOT have: the operator login gate, the boot/loading
-   screen, OTP cells, an inline spinner, and the loading / error / empty states
+   Styles the prototype did NOT have: the operator (Cloudflare Access) gate, the
+   boot/loading screen, an inline spinner, and the loading / error / empty states
    the real app needs. Built on the ported design tokens (colors-and-type.css)
    so nothing here hardcodes a hex the design system already defines. ASCII only.
    ========================================================================= */
 
-/* -- Inline spinner (login + buttons + hooks) ----------------------------- */
-.op-login-spin,
+/* -- Inline spinner (boot + buttons + hooks) ------------------------------ */
 .op-boot-spin,
 .op-spin {
   display: inline-block;
@@ -110,11 +109,6 @@
   line-height: 1.45;
   margin: 0 0 18px;
 }
-.op-login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
 .btn.block {
   width: 100%;
 }
@@ -131,56 +125,6 @@
   font-weight: 600;
   margin: 4px 0 0;
 }
-.op-login-resend {
-  text-align: center;
-  font-size: 12.5px;
-  color: var(--ink-3);
-  margin: 14px 0 8px;
-}
-.op-login-resend button {
-  background: none;
-  border: none;
-  color: var(--bloom);
-  font-weight: 700;
-  font-size: 12.5px;
-  padding: 0;
-  cursor: pointer;
-}
-.op-login-resend button:disabled {
-  color: var(--ink-4);
-  cursor: default;
-}
-
-/* -- OTP cells ------------------------------------------------------------ */
-.otp-row {
-  display: flex;
-  gap: 9px;
-  justify-content: space-between;
-}
-.otp-cell {
-  flex: 1;
-  min-width: 0;
-  height: 52px;
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--ink);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  outline: none;
-  transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
-}
-.otp-cell:focus {
-  border-color: var(--bloom);
-  box-shadow: var(--ring);
-}
-.otp-cell:disabled {
-  background: var(--paper-2);
-  color: var(--ink-3);
-}
-
 /* -- App-level loading / error / empty states (data hooks) ---------------- */
 /* Reuse .empty-state from the design for empty + error; these add a spinner row
    and a skeleton shimmer for loading. */
@@ -277,8 +221,7 @@
 @media (prefers-reduced-motion: reduce) {
   .skel::after,
   .op-spin,
-  .op-boot-spin,
-  .op-login-spin {
+  .op-boot-spin {
     animation: none;
   }
 }
