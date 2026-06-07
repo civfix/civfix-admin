@@ -11,9 +11,10 @@
  *      design CSS is imported after globals.css, its component classes win over Tailwind's base reset
  *      wherever they overlap on the shell.
  *
- * Fonts: next/font assigns --font-display / --font-body / --font-mono on <html> (layout.tsx). The
- * ported design stylesheet expects --font-*-next; we bridge them here so every var(--font-display)
- * in the design CSS resolves to the next/font family.
+ * Fonts: next/font assigns --font-display-next / --font-body-next / --font-mono-next on <html>
+ * (layout.tsx) — exactly the names the ported design stylesheet (colors-and-type.css) aliases into the
+ * final --font-display / --font-body / --font-mono stacks. No bridge is needed (and a
+ * `--font-*-next: var(--font-*)` bridge would be CIRCULAR, invalidating font-family -> serif fallback).
  */
 
 @import "leaflet/dist/leaflet.css";
@@ -21,13 +22,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  /* Bridge: next/font variable names -> the names the ported design CSS aliases. */
-  --font-display-next: var(--font-display);
-  --font-body-next: var(--font-body);
-  --font-mono-next: var(--font-mono);
-}
 
 @layer base {
   html,

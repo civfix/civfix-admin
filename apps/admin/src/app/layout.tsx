@@ -14,28 +14,30 @@ import "@/styles/admin.css"
 import "@/styles/app.css"
 
 /**
- * Fonts are loaded via next/font/google and exposed as CSS variables that the design CSS references
- * through a bridge in globals.css (--font-display / --font-body / --font-mono -> --font-*-next). The
- * families match tokens.font (Bricolage Grotesque / Manrope / JetBrains Mono), identical to
- * community-web.
+ * Fonts are loaded via next/font/google and exposed DIRECTLY as the CSS variables the ported design CSS
+ * consumes (--font-display-next / --font-body-next / --font-mono-next, see colors-and-type.css). Those
+ * design vars then build the final --font-display / --font-body / --font-mono stacks with literal
+ * fallbacks. The next/font variable names MUST differ from the design's own --font-display/body/mono, or
+ * the alias becomes a circular var() reference (which CSS invalidates -> serif fallback). The families
+ * match tokens.font (Bricolage Grotesque / Manrope / JetBrains Mono), identical to community-web.
  */
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-display-next",
   display: "swap",
   weight: ["400", "500", "600", "700", "800"],
 })
 
 const body = Manrope({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-body-next",
   display: "swap",
   weight: ["400", "500", "600", "700"],
 })
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-mono-next",
   display: "swap",
 })
 
