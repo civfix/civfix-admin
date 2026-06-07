@@ -3,7 +3,6 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import {
-  REPORT_CATEGORY_LABELS,
   type DiscoveryContact,
   type DiscoveryTaskDTO,
   type GetDiscoveryTaskResponse,
@@ -16,7 +15,6 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import type { MapPin } from "@/components/map/leaflet-map"
 import {
-  useAddDiscoveryNote,
   useDiscoveryList,
   useDiscoveryTask,
   useFlagDiscovery,
@@ -30,8 +28,9 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  * Jurisdictions / discovery queue (ported from pages-discovery.jsx, enumeration 2.B). Master-detail:
  * the population-sorted queue on the left (filter chips All / Need attention / No action required,
  * search, sort) and the per-jurisdiction contact-research panel on the right. The right panel writes a
- * per-category routing contact for the GEOID ("Save & route"), saves a draft, flags for review, and
- * appends operator notes - all via the typed admin client (no window.DATA).
+ * per-category routing contact for the GEOID ("Save & route"), saves a draft, and flags for review —
+ * all via the typed admin client (no window.DATA). The operator-note textarea is local-only (no
+ * persist), matching the prototype's Notes & history card.
  *
  * Difference from the prototype: the per-category counts come from the task's real `perCategoryCounts`
  * and the prefilled emails from the task's stored `contacts[]` (the prototype synthesized both with a
@@ -45,10 +44,42 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-/** The 6 civfix report categories + a synthetic "Other" row, in the order the routing grid renders. */
-const REPORT_TYPES: { id: ReportCategory; label: string }[] = (
-  Object.keys(REPORT_CATEGORY_LABELS) as ReportCategory[]
-).map((id) => ({ id, label: REPORT_CATEGORY_LABELS[id] }))
+/**
+ * The routing grid's category id. The design's `window.CATEGORIES` carries a 7th routing type,
+ * `cleanup`, that shared's `ReportCategorySchema` deliberately excludes (cleanups are a separate
+ * entity — see common.ts). To match the design's 7-cell grid + "of 7" denominator without touching
+ * the shared contract, we model the grid locally with this superset and map back to `ReportCategory`
+ * at the save boundary (`contactsPayload`). See PARITY note below.
+ */
+type DiscoveryRoutingCategory = ReportCategory | "cleanup"
+
+/**
+ * The 6 civfix report categories + the design-only `cleanup` row + a synthetic "Other" row, in the
+ * exact order the design's routing grid renders (`pages-discovery.jsx` L4 → `data.js` CATEGORIES):
+ * Trash, Recycling, Graffiti, Hazard, Cleanup, Water, Other. `pin` is the leading pin asset
+ * (`/ds/pin-<id>.svg`); the "other" row has no pin (rendered as a Layers glyph).
+ *
+ * PARITY: `cleanup` is rendered for visual parity only — the admin contacts endpoints
+ * (`SaveContactsRequest` / `SaveDraftRequest`) type `contacts` as `Record<ReportCategory, …>`, which
+ * cannot carry a `cleanup` key, so a Cleanup contact is dropped at the save boundary (input stays
+ * save-safe, no crash). Its waiting count comes from the detail's `perCategoryCounts`, which is also
+ * `ReportCategory`-keyed, so it has no `cleanup` entry → defaults to 0.
+ */
+const REPORT_TYPES: { id: DiscoveryRoutingCategory; label: string; pin: string | null }[] = [
+  { id: "trash", label: "Trash", pin: "/ds/pin-trash.svg" },
+  { id: "recycling", label: "Recycling", pin: "/ds/pin-recycling.svg" },
+  { id: "graffiti", label: "Graffiti", pin: "/ds/pin-graffiti.svg" },
+  { id: "hazard", label: "Hazard", pin: "/ds/pin-hazard.svg" },
+  { id: "cleanup", label: "Cleanup", pin: "/ds/pin-cleanup.svg" },
+  { id: "water", label: "Water", pin: "/ds/pin-water.svg" },
+  { id: "other", label: "Other", pin: null },
+]
+
+/** Waiting-report count for a routing-grid category. `cleanup` is never in the (ReportCategory-keyed) map → 0. */
+function routingCount(counts: PerCategoryCounts, id: DiscoveryRoutingCategory): number {
+  if (id === "cleanup") return 0
+  return counts[id] ?? 0
+}
 
 /** Pin asset for a category. "other" has no pin (rendered as a Layers glyph by the caller). */
 function catPinSrc(category: ReportCategory): string | null {
@@ -99,9 +130,9 @@ function DiscoveryRow({
         </div>
         <div className="sub">
           <span className="strong">{fmtPop(item.pop)} pop</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{item.reports} reports</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>last {item.lastReport}</span>
         </div>
       </div>
@@ -135,13 +166,14 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
   const q = useDiscoveryTask(taskId)
   const toast = useToast()
 
-  const addNote = useAddDiscoveryNote()
   const flag = useFlagDiscovery()
   const saveDraft = useSaveDiscoveryDraft()
   const saveContacts = useSaveJurisdictionContacts()
 
   // Per-category contact emails (controlled inputs), seeded from the task's stored contacts.
   const [contacts, setContacts] = React.useState<Record<string, string>>({})
+  // Operator-note textarea state. Local-only to mirror the prototype: the design's Notes & history
+  // card has no "Add note" button (the textarea is non-persisting). See PARITY M1.
   const [opNote, setOpNote] = React.useState("")
 
   const task = q.data
@@ -155,7 +187,7 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
     setOpNote("")
   }, [task])
 
-  if (q.isLoading) return <LoadingState label="Loading jurisdiction..." />
+  if (q.isLoading) return <LoadingState label="Loading jurisdiction…" />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
   if (!task) {
     return (
@@ -171,36 +203,26 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
   const slug = task.place.split(",")[0]?.toLowerCase().replace(/\s+/g, "-") ?? "city"
   const missingContacts = REPORT_TYPES.filter(
-    (c) => (counts[c.id] ?? 0) > 0 && !contacts[c.id],
+    (c) => routingCount(counts, c.id) > 0 && !contacts[c.id],
   ).length
   const filledCount = REPORT_TYPES.filter((c) => contacts[c.id]).length
   const canSave = filledCount > 0
   const needs = needsAttention(task)
   const headPin = catPinSrc(task.category)
-  const busy = saveContacts.isPending || saveDraft.isPending || flag.isPending || addNote.isPending
+  const busy = saveContacts.isPending || saveDraft.isPending || flag.isPending
 
   // Build the per-category contact map for a write (only non-empty emails; cleared ones -> null).
+  // The design-only `cleanup` row is skipped: it is not a `ReportCategory`, so the contract's
+  // `Record<ReportCategory, …>` cannot carry it (a typed Cleanup contact cannot persist — see
+  // REPORT_TYPES note). Skipping it keeps the input save-safe instead of crashing.
   const contactsPayload = (): Partial<Record<ReportCategory, string | null>> => {
     const out: Partial<Record<ReportCategory, string | null>> = {}
     REPORT_TYPES.forEach((c) => {
+      if (c.id === "cleanup") return
       const v = contacts[c.id]?.trim()
       if (v) out[c.id] = v
     })
     return out
-  }
-
-  const onAddNote = () => {
-    const text = opNote.trim()
-    if (!text) return
-    addNote.mutate(
-      { id: task.id, text },
-      {
-        onSuccess: () => {
-          setOpNote("")
-          toast("Note added")
-        },
-      },
-    )
   }
 
   const onFlag = () => {
@@ -238,7 +260,7 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
         </span>
         <div className="rep-head-text">
           <div className="crumb">
-            {task.id} - Jurisdiction - GEOID {task.geoid}
+            {task.id} · Jurisdiction · GEOID {task.geoid}
           </div>
           <h2>{task.place}</h2>
         </div>
@@ -302,7 +324,7 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
                     >
                       {n.text}
                       <div className="meta">
-                        @{n.who} - {n.when}
+                        @{n.who} · {n.when}
                       </div>
                     </div>
                   ))}
@@ -313,20 +335,12 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
                 style={{ marginTop: task.notes.length ? 8 : 0, marginBottom: 0 }}
               >
                 <textarea
-                  placeholder="Add a note for the next operator..."
+                  placeholder="Add a note for the next operator…"
                   value={opNote}
                   onChange={(e) => setOpNote(e.target.value)}
                   rows={3}
                 />
               </div>
-              <button
-                className="btn sm"
-                disabled={!opNote.trim() || addNote.isPending}
-                onClick={onAddNote}
-                style={{ marginTop: 8 }}
-              >
-                <Icons.Plus size={12} /> Add note
-              </button>
             </div>
           </div>
         </div>
@@ -345,9 +359,9 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
             <div className="sub-body">
               <div className="ccat-grid one-col">
                 {REPORT_TYPES.map((c) => {
-                  const n = counts[c.id] ?? 0
+                  const n = routingCount(counts, c.id)
                   const attention = n > 0 && !contacts[c.id]
-                  const pin = catPinSrc(c.id)
+                  const pin = c.pin
                   return (
                     <div
                       key={c.id}
@@ -378,8 +392,8 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
                           value={contacts[c.id] ?? ""}
                           placeholder={
                             attention
-                              ? "Add a contact - reports waiting"
-                              : `${c.id === "other" ? "info" : c.id}@${slug}.gov`
+                              ? "Add a contact — reports waiting"
+                              : `${c.id}@${slug}.gov`
                           }
                           onChange={(e) => setCat(c.id, e.target.value)}
                         />
@@ -394,7 +408,7 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
                 })}
               </div>
               <div className="hint" style={{ marginTop: 10 }}>
-                Counts are reports waiting per type - highlighted types have reports but no contact yet.
+                Counts are reports waiting per type · highlighted types have reports but no contact yet.
               </div>
             </div>
           </div>
@@ -469,8 +483,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         title="Jurisdictions"
         subtitle={
           <span>
-            Pins are landing in places we do not have a contact for yet. Research the jurisdiction, save
-            a routing contact, and reports start flowing.
+            Pins are landing in places we don&apos;t have a contact for yet. Research the jurisdiction,
+            save a routing contact, and reports start flowing.
           </span>
         }
       />
@@ -482,7 +496,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search place or ID..."
+            placeholder="Search place or ID…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -503,11 +517,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
               {items.length} {items.length === 1 ? "jurisdiction" : "jurisdictions"}
             </h3>
             <div className="spacer" />
-            <span className="meta">click a row -&gt;</span>
+            <span className="meta">click a row →</span>
           </div>
           <div className="queue-list">
             {listQuery.isLoading ? (
-              <LoadingState label="Loading jurisdictions..." />
+              <LoadingState label="Loading jurisdictions…" />
             ) : listQuery.isError ? (
               <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
             ) : items.length === 0 ? (

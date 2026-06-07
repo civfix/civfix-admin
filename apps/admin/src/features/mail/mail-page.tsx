@@ -116,7 +116,7 @@ function ComposeModal({
             <label>Message</label>
             <textarea
               rows={7}
-              placeholder="Write your message..."
+              placeholder="Write your message…"
               value={body}
               onChange={(e) => setBody(e.target.value)}
             />
@@ -242,7 +242,7 @@ function MailReader({ threadId }: { threadId: string }) {
             {sel.dir === "in" ? <Icons.ArrowDown size={12} /> : <Icons.ArrowUp size={12} />}
           </span>
           <span className="mono">{sel.from}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{sel.org}</span>
           <span className="spacer" />
           <span className={`pill ${STATUS_CLS[sel.status]} tight`}>
@@ -269,7 +269,7 @@ function MailReader({ threadId }: { threadId: string }) {
         {sel.status === "bounced" && (
           <div className="mail-bounce-note">
             <Icons.AlertTriangle size={14} />
-            Hard bounce - the address rejected delivery. Try a different contact or the city&apos;s
+            Hard bounce — the address rejected delivery. Try a different contact or the city&apos;s
             reporting form.
           </div>
         )}
@@ -295,7 +295,7 @@ function MailReader({ threadId }: { threadId: string }) {
           <textarea
             className="mail-reply-input"
             rows={3}
-            placeholder={`Reply to ${sel.org}...`}
+            placeholder={`Reply to ${sel.org}…`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -316,7 +316,7 @@ function MailReader({ threadId }: { threadId: string }) {
               style={!text.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
               onClick={sendReply}
             >
-              <Icons.Send size={13} /> Reply <span className="kbdhint">Cmd+Enter</span>
+              <Icons.Send size={13} /> Reply <span className="kbdhint">⌘⏎</span>
             </button>
           </div>
         </div>
@@ -373,6 +373,10 @@ export function MailPage({ focusId }: SectionPageProps) {
       onSuccess: () => {
         setComposeOpen(false)
         setBox("all")
+        // The compose endpoint returns { ok: true } (no thread id), but the new thread is prepended
+        // server-side. Clear the selection so the list effect opens items[0] — the just-sent thread —
+        // once the invalidated list re-fetches (matches the design's setSelId(newId) intent).
+        setSelId(null)
         toast(`Message sent to ${input.to}`)
       },
     })
@@ -384,7 +388,7 @@ export function MailPage({ focusId }: SectionPageProps) {
         title="Mail"
         subtitle={
           <span>
-            Two-way mail with municipal contacts - outbound routing and the replies that come back.
+            Two-way mail with municipal contacts — outbound routing and the replies that come back.
             Powered by OCI Email Delivery + Cloudflare Routing.
           </span>
         }
@@ -407,7 +411,7 @@ export function MailPage({ focusId }: SectionPageProps) {
       ) : stats ? (
         <div className="statusstrip mail-strip">
           <div className="statcell tone-ok">
-            <div className="statcell-label">Deliverability - 7d</div>
+            <div className="statcell-label">Deliverability · 7d</div>
             <div className="statcell-num">{stats.placement7d}%</div>
             <div className="statcell-hot">Above 80% target</div>
           </div>

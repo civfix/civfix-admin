@@ -212,7 +212,7 @@ export function LeafletMap({
         const m = L.marker([p.lat, p.lng], { icon, riseOnHover: true }).addTo(map)
         const tip = p.tip || p.label
         if (tip) {
-          m.bindTooltip(tip + (p.place ? ` - ${p.place}` : ""), {
+          m.bindTooltip(tip + (p.place ? ` · ${p.place}` : ""), {
             direction: "top",
             offset: [0, -30],
             className: "pi-map-tip",

@@ -2,9 +2,7 @@
 
 import * as React from "react"
 import {
-  ADMIN_REPORT_STATUS_LABELS,
   REPORT_CATEGORY_LABELS,
-  USER_STATUS_LABELS,
   type AdminReportStatus,
   type AdminUserDTO,
   type AdminUserListItemDTO,
@@ -43,23 +41,30 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  * the government claims queue, not the user detail.
  */
 
-/** Visual treatment per civfix account status (pill class). */
-const STATUS_CLS: Record<UserStatus, string> = {
-  active: "status-ok",
-  suspended: "status-flag",
-  review: "status-progress",
-  banned: "status-flag",
+/**
+ * Visual treatment per civfix account status (pill class + design label). The pill renders `label`
+ * (the design's Active / Suspended / In review / Banned).
+ */
+const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
+  active: { cls: "status-ok", label: "Active" },
+  suspended: { cls: "status-flag", label: "Suspended" },
+  review: { cls: "status-progress", label: "In review" },
+  banned: { cls: "status-flag", label: "Banned" },
 }
 
-/** Visual treatment per civfix report status (pill class) for the Reports tab rows. */
-const REPORT_STATUS_CLS: Record<AdminReportStatus, string> = {
-  submitted: "status-new",
-  held: "status-progress",
-  published: "status-ok",
-  acknowledged: "status-progress",
-  in_progress: "status-progress",
-  resolved: "status-ok",
-  rejected: "status-flag",
+/**
+ * Visual treatment per civfix report status for the Reports tab rows (pill class + design label).
+ * Mirrors the Reports page: each civfix value maps to the design's Submitted / In progress /
+ * Completed bucket, plus rejected → "Removed".
+ */
+const REPORT_STATUS_VIEW: Record<AdminReportStatus, { cls: string; label: string }> = {
+  submitted: { cls: "status-new", label: "Submitted" },
+  held: { cls: "status-progress", label: "In progress" },
+  published: { cls: "status-ok", label: "Completed" },
+  acknowledged: { cls: "status-progress", label: "In progress" },
+  in_progress: { cls: "status-progress", label: "In progress" },
+  resolved: { cls: "status-ok", label: "Completed" },
+  rejected: { cls: "status-flag", label: "Removed" },
 }
 
 function catPinSrc(category: ReportCategory): string | null {
@@ -91,11 +96,11 @@ function ProfileReportRow({ r }: { r: UserReportItemDTO }) {
       <div className="prow-body">
         <div className="prow-title">{r.title}</div>
         <div className="prow-meta">
-          {r.place} - <span className="mono">{r.id}</span>
+          {r.place} · <span className="mono">{r.id}</span>
         </div>
       </div>
-      <span className={`pill ${REPORT_STATUS_CLS[r.status]} tight`}>
-        {ADMIN_REPORT_STATUS_LABELS[r.status]}
+      <span className={`pill ${REPORT_STATUS_VIEW[r.status].cls} tight`}>
+        {REPORT_STATUS_VIEW[r.status].label}
       </span>
       <span className="prow-age">{r.age}</span>
     </div>
@@ -225,7 +230,7 @@ function UserDetail({ userId }: { userId: string }) {
       { id: user.id },
       {
         onSuccess: () =>
-          toast(user.flagged ? `${user.id} - flag cleared` : `${user.id} - account flagged`),
+          toast(user.flagged ? `${user.id} · flag cleared` : `${user.id} · account flagged`),
       },
     )
   }
@@ -235,7 +240,7 @@ function UserDetail({ userId }: { userId: string }) {
     if (!window.confirm(`Ban ${user.name}? This revokes all of their sessions.`)) return
     setStatus.mutate(
       { id: user.id, status: "banned" },
-      { onSuccess: () => toast(`${user.id} - account banned`) },
+      { onSuccess: () => toast(`${user.id} · Account banned`) },
     )
   }
 
@@ -244,12 +249,7 @@ function UserDetail({ userId }: { userId: string }) {
       <div className="user-detail-head">
         <span
           className="user-av lg"
-          style={{
-            background:
-              user.trust === "Unverified"
-                ? "var(--ink-4)"
-                : "linear-gradient(135deg, var(--sky), var(--moss))",
-          }}
+          style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
         >
           {initials(user.name)}
         </span>
@@ -257,7 +257,7 @@ function UserDetail({ userId }: { userId: string }) {
           <h2>{user.name}</h2>
           <div className="udh-sub">
             <span className="mono">{user.handle}</span>
-            <span className="sep">-</span>
+            <span className="sep">·</span>
             <span>{user.city}</span>
           </div>
         </div>
@@ -267,8 +267,8 @@ function UserDetail({ userId }: { userId: string }) {
               <Icons.Flag size={11} /> Flagged
             </span>
           )}
-          <span className={`pill ${STATUS_CLS[user.status]}`}>
-            {USER_STATUS_LABELS[user.status]}
+          <span className={`pill ${STATUS_VIEW[user.status].cls}`}>
+            {STATUS_VIEW[user.status].label}
           </span>
         </div>
       </div>
@@ -339,12 +339,7 @@ function UserRow({
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
       <span
         className="user-av"
-        style={{
-          background:
-            user.trust === "Unverified"
-              ? "var(--ink-4)"
-              : "linear-gradient(135deg, var(--sky), var(--moss))",
-        }}
+        style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
       >
         {initials(user.name)}
       </span>
@@ -360,15 +355,15 @@ function UserRow({
         </div>
         <div className="sub">
           <span>{user.city}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span className="strong">{user.reports} reports</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{user.cleanups} cleanups</span>
         </div>
       </div>
       <div className="trailing">
-        <span className={`pill ${STATUS_CLS[user.status]} tight`}>
-          {USER_STATUS_LABELS[user.status]}
+        <span className={`pill ${STATUS_VIEW[user.status].cls} tight`}>
+          {STATUS_VIEW[user.status].label}
         </span>
       </div>
     </div>
@@ -411,8 +406,8 @@ export function UsersPage({ focusId }: SectionPageProps) {
         title="Users"
         subtitle={
           <span>
-            Every neighbor on civfix and what they have contributed - the reports they have filed,
-            cleanups they have joined, and messages they have sent.
+            Every neighbor on civfix and what they&apos;ve contributed — the reports they&apos;ve
+            filed, cleanups they&apos;ve joined, and messages they&apos;ve sent.
           </span>
         }
       />
@@ -433,7 +428,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search name, handle, city..."
+            placeholder="Search name, handle, city…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

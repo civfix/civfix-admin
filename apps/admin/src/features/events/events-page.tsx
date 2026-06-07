@@ -40,12 +40,15 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-/** Pill class per event status. */
-const STATUS_CLS: Record<EventStatus, string> = {
-  upcoming: "status-new",
-  in_progress: "status-progress",
-  completed: "status-ok",
-  cancelled: "status-flag",
+/**
+ * Pill treatment per event status (class + design label). The pill renders `label` (the design's
+ * Upcoming / In progress / Completed / Cancelled); toasts keep EVENT_STATUS_LABELS.
+ */
+const STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
+  upcoming: { cls: "status-new", label: "Upcoming" },
+  in_progress: { cls: "status-progress", label: "In progress" },
+  completed: { cls: "status-ok", label: "Completed" },
+  cancelled: { cls: "status-flag", label: "Cancelled" },
 }
 
 /** The three operator status buckets (the design's Upcoming / In progress / Completed). */
@@ -107,15 +110,15 @@ function EventRow({
         </div>
         <div className="sub">
           <span className="strong">{item.place}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{item.attendees} attending</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{firstName(item.organizer.name)}</span>
         </div>
       </div>
       <div className="trailing">
-        <span className={`pill ${STATUS_CLS[item.status]} tight`}>
-          {EVENT_STATUS_LABELS[item.status]}
+        <span className={`pill ${STATUS_VIEW[item.status].cls} tight`}>
+          {STATUS_VIEW[item.status].label}
         </span>
         <span className="age">{item.date.rel.replace(/^[A-Za-z]+, /, "")}</span>
       </div>
@@ -168,7 +171,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     if (event.status === status) return
     setStatus.mutate(
       { id: event.id, status },
-      { onSuccess: () => toast(`${event.id} - status -> ${EVENT_STATUS_LABELS[status]}`) },
+      { onSuccess: () => toast(`${event.id} · status → ${EVENT_STATUS_LABELS[status]}`) },
     )
   }
 
@@ -177,7 +180,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
       { id: event.id },
       {
         onSuccess: () =>
-          toast(event.flagged ? `${event.id} - flag cleared` : `${event.id} - flagged for review`),
+          toast(event.flagged ? `${event.id} · flag cleared` : `${event.id} · flagged for review`),
       },
     )
   }
@@ -187,7 +190,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
       { id: event.id },
       {
         onSuccess: () => {
-          toast(`${event.id} - event cancelled`)
+          toast(`${event.id} · event cancelled`)
           onCancelled(event.id)
         },
       },
@@ -204,7 +207,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         </span>
         <div className="rep-head-text">
           <div className="crumb">
-            {event.id} - Cleanup event - {event.place}
+            {event.id} · Cleanup event · {event.place}
           </div>
           <h2>{event.title}</h2>
         </div>
@@ -214,10 +217,10 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           </span>
         )}
         <span
-          className={`pill ${STATUS_CLS[event.status]}`}
+          className={`pill ${STATUS_VIEW[event.status].cls}`}
           style={event.flagged ? undefined : { marginLeft: "auto" }}
         >
-          {EVENT_STATUS_LABELS[event.status]}
+          {STATUS_VIEW[event.status].label}
         </span>
       </div>
 
@@ -237,7 +240,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                 <span className="rep-loc-item">
                   <Icons.Pin size={13} /> {event.address}
                 </span>
-                <span className="rep-loc-sep">-</span>
+                <span className="rep-loc-sep">·</span>
                 <span className="rep-loc-item">
                   <Icons.Calendar size={13} /> {event.date.abs}
                 </span>
@@ -313,7 +316,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                     <span className="evt-turnout-cap"> / {event.capacity ?? "-"}</span>
                   </span>
                   <span className="evt-turnout-lbl">
-                    {event.status === "completed" ? "attended" : "RSVP'd"}
+                    {event.status === "completed" ? "attended" : "RSVP’d"}
                   </span>
                 </div>
                 <div className="evt-turnout-bar">
@@ -370,7 +373,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                 </div>
               </div>
               <button className="btn sm ghost full" onClick={() => nav("users", event.organizer.id)}>
-                View full account -&gt;
+                View full account →
               </button>
             </div>
           </div>
@@ -397,7 +400,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
               <textarea
                 className="rep-followup"
                 rows={2}
-                placeholder={`Post an update to ${event.attendees} attendees...`}
+                placeholder={`Post an update to ${event.attendees} attendees…`}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
@@ -488,7 +491,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
         title="Events"
         subtitle={
           <span>
-            Community cleanup events neighbors organize on civfix - track turnout, keep them on the
+            Community cleanup events neighbors organize on civfix — track turnout, keep them on the
             level, and message attendees.
           </span>
         }
@@ -511,7 +514,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search title, place, organizer..."
+            placeholder="Search title, place, organizer…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

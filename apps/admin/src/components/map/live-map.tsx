@@ -80,9 +80,9 @@ export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
   return (
     <section className="card live-map-card">
       <div className="card-head">
-        <h3>Live - United States</h3>
+        <h3>Live · United States</h3>
         <span className="meta">
-          {reportCount} reports - {eventCount} events
+          {reportCount} reports · {eventCount} events
         </span>
         <div className="spacer" />
         <button className="head-action" onClick={() => nav("reports")}>
@@ -145,12 +145,12 @@ export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
                   <div className="mac-title">{active.title}</div>
                   <div className="mac-sub">
                     <span>{active.place}</span>
-                    <span className="sep">-</span>
+                    <span className="sep">·</span>
                     <span style={{ color: tone.color, fontWeight: 700 }}>{tone.label}</span>
                   </div>
                 </div>
                 <button className="btn sm primary" onClick={openActive}>
-                  Open {active.refType === "event" ? "event" : "report"} -&gt;
+                  Open {active.refType === "event" ? "event" : "report"} →
                 </button>
               </div>
             )

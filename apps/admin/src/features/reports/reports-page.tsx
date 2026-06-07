@@ -33,8 +33,8 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  *
  * Reconciliation: the design's submitted|in-progress|completed becomes the civfix status enum. The
  * quick-status buttons drive the three real buckets (submitted | in_progress | resolved); the row /
- * header pill render whatever civfix status the DTO carries via ADMIN_REPORT_STATUS_LABELS. "flagged"
- * is the orthogonal abuse marker, not a status.
+ * header pill render the design bucket label for whatever civfix status the DTO carries via
+ * STATUS_VIEW. "flagged" is the orthogonal abuse marker, not a status.
  */
 
 // Client-only Leaflet minimap (must not run during the static export).
@@ -43,15 +43,19 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-/** Visual treatment per civfix report status (pill class + icon). */
-const STATUS_VIEW: Record<AdminReportStatus, { cls: string; icon: IconComponent }> = {
-  submitted: { cls: "status-new", icon: Icons.Inbox },
-  held: { cls: "status-progress", icon: Icons.Clock },
-  published: { cls: "status-ok", icon: Icons.Check },
-  acknowledged: { cls: "status-progress", icon: Icons.Clock },
-  in_progress: { cls: "status-progress", icon: Icons.Clock },
-  resolved: { cls: "status-ok", icon: Icons.Check },
-  rejected: { cls: "status-flag", icon: Icons.Trash },
+/**
+ * Visual treatment per civfix report status (pill class + icon + design label). Each civfix value
+ * maps to one of the design's three pill buckets (Submitted / In progress / Completed) — plus the
+ * rejected → "Removed" flag bucket. The pill renders `label`; toasts/meta keep the civfix labels.
+ */
+const STATUS_VIEW: Record<AdminReportStatus, { cls: string; icon: IconComponent; label: string }> = {
+  submitted: { cls: "status-new", icon: Icons.Inbox, label: "Submitted" },
+  held: { cls: "status-progress", icon: Icons.Clock, label: "In progress" },
+  published: { cls: "status-ok", icon: Icons.Check, label: "Completed" },
+  acknowledged: { cls: "status-progress", icon: Icons.Clock, label: "In progress" },
+  in_progress: { cls: "status-progress", icon: Icons.Clock, label: "In progress" },
+  resolved: { cls: "status-ok", icon: Icons.Check, label: "Completed" },
+  rejected: { cls: "status-flag", icon: Icons.Trash, label: "Removed" },
 }
 
 /** The three quick-status buckets (the design's Submitted / In progress / Completed). */
@@ -130,14 +134,14 @@ function ReportRow({
         </div>
         <div className="sub">
           <span className="strong">{item.place}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{firstName(item.reporter.name)}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{item.confirmations} confirms</span>
         </div>
       </div>
       <div className="trailing">
-        <span className={`pill ${view.cls} tight`}>{ADMIN_REPORT_STATUS_LABELS[item.status]}</span>
+        <span className={`pill ${view.cls} tight`}>{view.label}</span>
         <span className="age">{item.submitted.rel.replace(" ago", "")}</span>
       </div>
     </div>
@@ -192,7 +196,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     if (report.status === status) return
     setStatus.mutate(
       { id: report.id, status },
-      { onSuccess: () => toast(`${report.id} - status -> ${ADMIN_REPORT_STATUS_LABELS[status]}`) },
+      { onSuccess: () => toast(`${report.id} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`) },
     )
   }
 
@@ -201,7 +205,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       { id: report.id },
       {
         onSuccess: () =>
-          toast(report.flagged ? `${report.id} - flag cleared` : `${report.id} - flagged for review`),
+          toast(report.flagged ? `${report.id} · flag cleared` : `${report.id} · flagged for review`),
       },
     )
   }
@@ -211,7 +215,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       { id: report.id },
       {
         onSuccess: () => {
-          toast(`${report.id} - report removed`)
+          toast(`${report.id} · report removed`)
           onRemoved(report.id)
         },
       },
@@ -232,7 +236,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         </span>
         <div className="rep-head-text">
           <div className="crumb">
-            {report.id} - {REPORT_CATEGORY_LABELS[report.category]} - {report.place}
+            {report.id} · {REPORT_CATEGORY_LABELS[report.category]} · {report.place}
           </div>
           <h2>{report.title}</h2>
         </div>
@@ -245,7 +249,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           className={`pill ${view.cls}`}
           style={report.flagged ? undefined : { marginLeft: "auto" }}
         >
-          {ADMIN_REPORT_STATUS_LABELS[report.status]}
+          {view.label}
         </span>
       </div>
 
@@ -265,7 +269,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 <span className="rep-loc-item">
                   <Icons.Pin size={13} /> {report.address}
                 </span>
-                <span className="rep-loc-sep">-</span>
+                <span className="rep-loc-sep">·</span>
                 <span className="rep-loc-item">
                   <Icons.Clock size={13} /> Submitted {report.submitted.abs}
                 </span>
@@ -393,7 +397,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 </div>
               </div>
               <button className="btn sm ghost full" onClick={() => nav("users", report.reporter.id)}>
-                View full account -&gt;
+                View full account →
               </button>
             </div>
           </div>
@@ -419,7 +423,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               ) : (
                 <div className="rep-city-contact warn">
                   <Icons.AlertTriangle size={12} />
-                  <span>No contact on file - set one in Jurisdictions</span>
+                  <span>No contact on file — set one in Jurisdictions</span>
                 </div>
               )}
             </div>
@@ -450,8 +454,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 rows={3}
                 placeholder={
                   to === "reporter"
-                    ? `Message ${firstName(report.reporter.name)} - e.g. a status update or a question...`
-                    : `Message ${report.city.dept} - e.g. nudge for an update...`
+                    ? `Message ${firstName(report.reporter.name)} — e.g. a status update or a question…`
+                    : `Message ${report.city.dept} — e.g. nudge for an update…`
                 }
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -544,7 +548,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
         title="Reports"
         subtitle={
           <span>
-            Every report neighbors submit - routed to the right city department. Track status, follow up
+            Every report neighbors submit — routed to the right city department. Track status, follow up
             with the reporter or the city, and close the loop.
           </span>
         }
@@ -567,7 +571,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search title, place, reporter..."
+            placeholder="Search title, place, reporter…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

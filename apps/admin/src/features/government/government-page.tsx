@@ -102,7 +102,7 @@ function CheckRow({
         </div>
         <div className={`prow-meta ${state.evidence ? "mono" : "muted"}`}>
           {state.evidence ?? "No evidence yet"}
-          {state.note ? ` - ${state.note}` : ""}
+          {state.note ? ` · ${state.note}` : ""}
         </div>
       </div>
       <button
@@ -147,7 +147,7 @@ function GovClaimDetail({ claimId, onResolved }: { claimId: string; onResolved: 
       {
         onSuccess: () =>
           toast(
-            `${claim.id} - ${GOV_VERIFICATION_CHECK_LABELS[check]} ${
+            `${claim.id} · ${GOV_VERIFICATION_CHECK_LABELS[check]} ${
               next === "verified" ? "verified" : "cleared"
             }`,
           ),
@@ -166,7 +166,7 @@ function GovClaimDetail({ claimId, onResolved }: { claimId: string; onResolved: 
       { id: claim.id },
       {
         onSuccess: () => {
-          toast(`${claim.id} - approved, gov_admin provisioned`)
+          toast(`${claim.id} · approved, gov_admin provisioned`)
           onResolved(claim.id)
         },
       },
@@ -182,7 +182,7 @@ function GovClaimDetail({ claimId, onResolved }: { claimId: string; onResolved: 
       { id: claim.id, reason: trimmed },
       {
         onSuccess: () => {
-          toast(`${claim.id} - rejected`)
+          toast(`${claim.id} · rejected`)
           onResolved(claim.id)
         },
       },
@@ -200,7 +200,7 @@ function GovClaimDetail({ claimId, onResolved }: { claimId: string; onResolved: 
         </span>
         <div className="rep-head-text">
           <div className="crumb">
-            {claim.id} - Gov claim - {METHOD_LABELS[claim.method]}
+            {claim.id} · Gov claim · {METHOD_LABELS[claim.method]}
           </div>
           <h2>{claim.name}</h2>
         </div>
@@ -318,7 +318,7 @@ function GovRow({
         </div>
         <div className="sub">
           <span>{claim.title}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span className="strong">{claim.org}</span>
         </div>
         <div className="sub" style={{ marginTop: 4, gap: 4, flexWrap: "wrap" }}>
@@ -382,7 +382,7 @@ export function GovernmentPage({ focusId }: SectionPageProps) {
         title="Government"
         subtitle={
           <span>
-            Operators verify municipal officials - LinkedIn, directory, phone callback - then provision a
+            Operators verify municipal officials — LinkedIn, directory, phone callback — then provision a
             gov_admin linked to the jurisdiction.
           </span>
         }
@@ -404,7 +404,7 @@ export function GovernmentPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search name, org..."
+            placeholder="Search name, org…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

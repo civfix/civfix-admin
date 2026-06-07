@@ -43,7 +43,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "civfix Operations",
-  description: "civfix admin and operator dashboard: discovery, reports, events, mail, users, and moderation.",
+  description: "civfix admin and operator dashboard: discovery, reports, events, mail, users, and analytics.",
   applicationName: "civfix Operations",
   robots: { index: false, follow: false },
 }

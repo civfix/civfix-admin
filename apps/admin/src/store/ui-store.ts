@@ -7,8 +7,9 @@ import { create } from "zustand"
  * `window.__nav`, and `window.__navOpen` globals (app.jsx) with a typed store so any component
  * (the live map, home cards, section pages) can drive navigation and toasts without globals.
  *
- * The set of routable sections. `home` is the hub. The prototype's router was missing `moderation`
- * and `government` (dead links, see enumeration section 0); both are added here as first-class routes.
+ * The set of routable sections. `home` is the hub. (The prototype also defined `moderation` and
+ * `government`, but the design has no screens for them and nothing in the UI navigates there, so they
+ * are not surfaced as routes; the feature files remain orphaned in place.)
  */
 export const SECTIONS = [
   "discovery",
@@ -17,8 +18,6 @@ export const SECTIONS = [
   "mail",
   "users",
   "analytics",
-  "moderation",
-  "government",
 ] as const
 
 export type SectionId = (typeof SECTIONS)[number]
@@ -33,8 +32,6 @@ export const PAGE_LABEL: Record<PageId, string> = {
   mail: "Mail",
   users: "Users",
   analytics: "Analytics",
-  moderation: "Moderation",
-  government: "Government",
 }
 
 export interface Toast {

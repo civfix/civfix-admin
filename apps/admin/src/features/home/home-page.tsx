@@ -11,13 +11,10 @@ import type {
   MailThreadListItemDTO,
   ReportCategory,
 } from "@civfix/shared"
-import { ADMIN_REPORT_STATUS_LABELS } from "@civfix/shared"
 import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { LiveMap } from "@/components/map/live-map"
-import { ActivityCard } from "@/features/home/activity-card"
-import { SystemCard } from "@/features/home/system-card"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useHomeSummary } from "@/hooks/use-admin-home"
@@ -39,8 +36,8 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  *    tile (listDiscovery / listAdminReports / listAdminEvents / listMail / listAdminUsers, fetched with a
  *    small limit). Each preview row deep-links straight into its section with that item preselected
  *    (nav(page, id)) - the design's openEntry -> nav(page, id).
- *  - GET /admin/home/map (LiveMap), GET /admin/activity (ActivityCard), GET /admin/system/health
- *    (SystemCard) - each independent so one failing card does not take down the rest (enumeration 2.A.6).
+ *  - GET /admin/home/map (LiveMap) - independent so a failing card does not take down the rest of the
+ *    dashboard (enumeration 2.A.6).
  *
  * The "... and N more {things}" footer renders an exact count where the summary carries a clean section
  * total (discovery -> queue); for reports / events / mail / users it shows "... and more {things}" when
@@ -110,11 +107,10 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       hue: "slate",
       lead: d.discovery.queue,
       unit: "jurisdictions in queue",
-      blurb:
-        "Pins are landing in places we do not have a contact for yet. Research, save a contact, route the pin.",
+      blurb: "",
       stats: [
         { k: "Reports waiting", v: d.discovery.reportsWaiting },
-        { k: "Over SLA", v: d.discovery.overSla, tone: d.discovery.overSla > 0 ? "warn" : null },
+        { k: "Metros", v: d.discovery.queue },
       ],
       cta: "Open",
     },
@@ -126,7 +122,7 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       lead: d.reports.flagged,
       unit: "reports flagged",
       blurb:
-        "Every report neighbors submit, routed to the right city department - track status and close the loop.",
+        "Every report neighbors submit, routed to the right city department — track status and close the loop.",
       stats: [
         { k: "In progress", v: d.reports.inProgress },
         { k: "Completed", v: d.reports.completed },
@@ -141,7 +137,7 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       lead: d.events.upcoming,
       unit: "upcoming events",
       blurb:
-        "Community cleanups neighbors organize - track turnout, keep them on the level, message attendees.",
+        "Community cleanups neighbors organize — track turnout, keep them legit, and message attendees.",
       stats: [
         { k: "Live now", v: d.events.live },
         { k: "Attending", v: d.events.attending },
@@ -156,7 +152,7 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       lead: d.mail.unread,
       unit: "unread messages",
       blurb:
-        "Two-way mail with municipal contacts - outbound routing and the replies that come back.",
+        "Two-way mail with municipal contacts — outbound routing and the replies that come back.",
       stats: [
         { k: "Needs action", v: d.mail.needsAction, tone: d.mail.needsAction > 0 ? "warn" : null },
         { k: "Bounce", v: `${d.mail.bounceRate}%` },
@@ -184,14 +180,17 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       hue: "moss",
       lead: d.analytics.pinsThisMonth,
       unit: "pins this month",
-      blurb: "The numbers are the proof civfix works - dropped, routed, resolved, cleaned up.",
+      blurb: "The numbers are the proof civfix works — dropped, routed, resolved, cleaned up.",
       stats: [{ k: "Cleanups", v: d.analytics.cleanups }],
       spark: d.analytics.pinsByWeek,
+      // Deltas mirror the design prototype's static literals (buildSummaries in pages-operations.jsx):
+      // the frozen AnalyticsMiniSchema carries no real delta fields yet, so these are fixed strings to
+      // match the bento's up-arrow badges exactly rather than computed month-over-month values.
       metrics: [
-        { k: "Resolved", v: `${d.analytics.resolvedPct}%` },
-        { k: "Coverage", v: `${d.analytics.coveragePct}%` },
-        { k: "Events", v: d.analytics.eventsThisMonth },
-        { k: "Volunteers", v: d.analytics.volunteers },
+        { k: "Resolved", v: `${d.analytics.resolvedPct}%`, delta: "+3pt" },
+        { k: "Coverage", v: `${d.analytics.coveragePct}%`, delta: "+5" },
+        { k: "Events", v: d.analytics.eventsThisMonth, delta: "+3" },
+        { k: "Volunteers", v: d.analytics.volunteers, delta: "+64" },
       ],
       cta: "See analytics",
     },
@@ -219,10 +218,26 @@ function discoveryRow(x: DiscoveryTaskDTO): PeekItem {
     kind: "pin",
     cat: x.category,
     title: x.place,
-    meta: `${x.reports} reports - pop ${(x.pop / 1000).toFixed(0)}k`,
+    meta: `${x.reports} reports · pop ${(x.pop / 1000).toFixed(0)}k`,
     age: x.age,
     focusId: x.id,
   }
+}
+
+/**
+ * Home peek-row status word, collapsed to the design prototype's 4 buckets (REPORT_STATUS in
+ * pages-reports.jsx only had Submitted / In progress / Completed). The full civfix enum's extra
+ * moderation states map onto those buckets the same way the status pills do, so the bento reads in the
+ * design's vocabulary rather than the operator labels (Under review / Published / Acknowledged / ...).
+ */
+const HOME_REPORT_STATUS_LABELS: Record<AdminReportListItemDTO["status"], string> = {
+  submitted: "Submitted",
+  held: "In progress",
+  acknowledged: "In progress",
+  in_progress: "In progress",
+  published: "Completed",
+  resolved: "Completed",
+  rejected: "Removed",
 }
 
 function reportRow(r: AdminReportListItemDTO): PeekItem {
@@ -230,7 +245,7 @@ function reportRow(r: AdminReportListItemDTO): PeekItem {
     kind: "pin",
     cat: r.category,
     title: r.title,
-    meta: `${r.place} - ${ADMIN_REPORT_STATUS_LABELS[r.status]}`,
+    meta: `${r.place} · ${HOME_REPORT_STATUS_LABELS[r.status]}`,
     age: r.submitted.rel,
     focusId: r.id,
   }
@@ -242,7 +257,7 @@ function eventRow(e: AdminEventListItemDTO): PeekItem {
     icon: Icons.Calendar,
     hue: "sun",
     title: e.title,
-    meta: `${e.place} - ${e.attendees} attending`,
+    meta: `${e.place} · ${e.attendees} attending`,
     age: e.date.rel,
     focusId: e.id,
   }
@@ -264,7 +279,7 @@ function userRow(u: AdminUserListItemDTO): PeekItem {
     kind: "avatar",
     name: u.name,
     title: u.name,
-    meta: u.flagReason ?? `${u.city} - ${u.trust}`,
+    meta: u.flagReason ?? `${u.city} · ${u.trust}`,
     age: u.lastActive,
     focusId: u.id,
   }
@@ -401,9 +416,9 @@ function computeMoreLabel(
   if (state.isLoading || state.isError || shown === 0) return null
   if (total !== undefined) {
     const remaining = Math.max(0, total - shown)
-    return remaining > 0 ? `... and ${remaining} more ${remaining === 1 ? thing : things}` : null
+    return remaining > 0 ? `… and ${remaining} more ${remaining === 1 ? thing : things}` : null
   }
-  return state.hasMore ? `... and more ${things}` : null
+  return state.hasMore ? `… and more ${things}` : null
 }
 
 /** A cursor-paged list response (the shape every admin list endpoint returns). */
@@ -685,12 +700,6 @@ export function HomePage(_props: SectionPageProps) {
             {renderTile(tile("events"))}
           </>
         )}
-      </div>
-
-      {/* Recent activity + system health: real per-item data the aggregate summary does not carry. */}
-      <div className="hub-aux">
-        <ActivityCard />
-        <SystemCard />
       </div>
     </div>
   )

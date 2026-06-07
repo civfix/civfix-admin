@@ -6,11 +6,9 @@ import type {
   AnalyticsCoverageResponse,
   AnalyticsEventsResponse,
   AnalyticsFunnelResponse,
-  AnalyticsHeatmapResponse,
   AnalyticsKpisResponse,
   AnalyticsPinsByWeekResponse,
   AnalyticsResolutionByCategoryResponse,
-  AnalyticsRetentionResponse,
   AnalyticsTopContributorsResponse,
   AnalyticsTopJurisdictionsResponse,
 } from "@civfix/shared"
@@ -21,7 +19,7 @@ import { queryKeys } from "@/lib/query"
 /**
  * Data hooks for the Analytics section (enumeration 2.G). Each analytics card is an INDEPENDENT read so
  * one failing aggregate does not blank the whole page (each card renders its own loading / error /
- * empty state). All eleven endpoints take no arguments (the server scopes the window). These are reads
+ * empty state). All nine endpoints take no arguments (the server scopes the window). These are reads
  * only; analytics has no mutations (the CSV Export is a client-side download in the page).
  *
  * Query keys: reuses the existing registry (analytics.kpis/pinsByWeek/.../retention). No local keys
@@ -97,21 +95,5 @@ export function useAnalyticsTopContributors() {
   return useQuery<AnalyticsTopContributorsResponse>({
     queryKey: queryKeys.analytics.topContributors,
     queryFn: () => api.analyticsTopContributors(),
-  })
-}
-
-/** GET /admin/analytics/heatmap - per-jurisdiction pin density (Phase 2 addition). */
-export function useAnalyticsHeatmap() {
-  return useQuery<AnalyticsHeatmapResponse>({
-    queryKey: queryKeys.analytics.heatmap,
-    queryFn: () => api.analyticsHeatmap(),
-  })
-}
-
-/** GET /admin/analytics/retention - cohort retention (Phase 2 addition). */
-export function useAnalyticsRetention() {
-  return useQuery<AnalyticsRetentionResponse>({
-    queryKey: queryKeys.analytics.retention,
-    queryFn: () => api.analyticsRetention(),
   })
 }

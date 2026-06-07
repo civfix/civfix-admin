@@ -55,6 +55,11 @@ export function useMailStats() {
 function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
   if (id) qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.mail.all })
+  // The deliverability strip's Unread / threads-total come from getMailStats; refresh it after
+  // read/reply/mark-done so the counts track the design (which decrements instantly). NB: mail.stats
+  // is a descendant of mail.all so the line above already matches it by prefix — this is an explicit,
+  // intent-revealing guard that stays correct if the key hierarchy ever changes.
+  qc.invalidateQueries({ queryKey: queryKeys.mail.stats })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
   qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }

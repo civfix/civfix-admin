@@ -169,7 +169,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       { id: item.id },
       {
         onSuccess: () => {
-          toast(`${item.id} - published`)
+          toast(`${item.id} · published`)
           onResolved(item.id)
         },
       },
@@ -181,7 +181,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       { id: item.id },
       {
         onSuccess: () => {
-          toast(`${item.id} - removed`)
+          toast(`${item.id} · removed`)
           onResolved(item.id)
         },
       },
@@ -193,7 +193,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       { id: item.id },
       {
         onSuccess: () => {
-          toast(`${item.id} - hold extended`)
+          toast(`${item.id} · hold extended`)
           onResolved(item.id)
         },
       },
@@ -205,7 +205,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       { id: item.id, decision },
       {
         onSuccess: () => {
-          toast(`${item.id} - appeal ${decision === "uphold" ? "upheld" : "overturned"}`)
+          toast(`${item.id} · appeal ${decision === "uphold" ? "upheld" : "overturned"}`)
           onResolved(item.id)
         },
       },
@@ -219,7 +219,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       <div className="mod-detail-head">
         <div>
           <div className="crumb">
-            {item.id} - {MODERATION_KIND_LABELS[item.kind]} - {categoryLabel(item.category)}
+            {item.id} · {MODERATION_KIND_LABELS[item.kind]} · {categoryLabel(item.category)}
           </div>
           <h2>{item.flag}</h2>
         </div>
@@ -392,7 +392,7 @@ function ModerationRow({
         </div>
         <div className="sub">
           <span>{item.reporter}</span>
-          <span className="sep">-</span>
+          <span className="sep">·</span>
           <span>{item.reason}</span>
         </div>
       </div>
@@ -451,7 +451,7 @@ export function ModerationPage({ focusId }: SectionPageProps) {
         title="Moderation"
         subtitle={
           <span>
-            Held media and flagged reports - review the signals, the reporter&apos;s trust, and similar
+            Held media and flagged reports — review the signals, the reporter&apos;s trust, and similar
             items, then approve, remove, or hold.
           </span>
         }
@@ -474,7 +474,7 @@ export function ModerationPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search flag, reporter, reason..."
+            placeholder="Search flag, reporter, reason…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

@@ -17,11 +17,9 @@ import {
   useAnalyticsCoverage,
   useAnalyticsEvents,
   useAnalyticsFunnel,
-  useAnalyticsHeatmap,
   useAnalyticsKpis,
   useAnalyticsPinsByWeek,
   useAnalyticsResolutionByCategory,
-  useAnalyticsRetention,
   useAnalyticsTopContributors,
   useAnalyticsTopJurisdictions,
 } from "@/features/analytics/use-analytics"
@@ -32,9 +30,8 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  * Analytics (ported from pages-misc.jsx AnalyticsPage, enumeration 2.G). Layout: PageHead + a
  * client-side CSV Export, a KPI strip (analyticsKpis + the events thisMonth/volunteers cells), and the
  * analytics card grid. Each card is an INDEPENDENT read with its own loading / error / empty state so
- * one failing aggregate does not blank the page (enumeration 2.A.6). The eight prototype cards plus the
- * two Phase-2 additions the spec requires (heatmap #65, cohort retention #66) render in the same design
- * language.
+ * one failing aggregate does not blank the page (enumeration 2.A.6). The eight prototype cards render in
+ * the same design language.
  *
  * Reconciliation: by-category / resolution-by-category use the 6 canonical civfix categories
  * (REPORT_CATEGORY_LABELS); the design's "cleanup" is the Events domain, not a report category. Category
@@ -154,7 +151,12 @@ function KpiStrip({
         .map((k) => (
           <div key={k.label} className="statcell">
             <div className="statcell-label">{k.label}</div>
-            <div className="statcell-num">{k.num.toLocaleString()}</div>
+            <div className="statcell-num">
+              {/* The Resolved KPI is a percentage; the contract carries the bare number, so re-append
+                  the "%" at render time to match the design's "89%" (count KPIs stay bare). */}
+              {k.num.toLocaleString()}
+              {/resolved/i.test(k.label) ? "%" : ""}
+            </div>
             <KpiDelta delta={k.delta} dir={k.dir} />
           </div>
         ))}
@@ -192,8 +194,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
   const eventsQuery = useAnalyticsEvents()
   const topJurisdictionsQuery = useAnalyticsTopJurisdictions()
   const topContributorsQuery = useAnalyticsTopContributors()
-  const heatmapQuery = useAnalyticsHeatmap()
-  const retentionQuery = useAnalyticsRetention()
 
   const kpis = kpisQuery.data
   const events = eventsQuery.data
@@ -224,7 +224,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
     link.download = "civfix-analytics.csv"
     link.click()
     URL.revokeObjectURL(url)
-    toast("Analytics exported - civfix-analytics.csv")
+    toast("Analytics exported · civfix-analytics.csv")
   }
 
   return (
@@ -301,7 +301,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
         {/* Report funnel */}
         <AnalyticsCard
           title="Report funnel"
-          meta="pin to resolved"
+          meta="pin → resolved"
           query={funnelQuery}
           isEmpty={(d) => d.stages.length === 0}
         >
@@ -433,7 +433,9 @@ export function AnalyticsPage(_props: SectionPageProps) {
                   <span className="td-strong">{j.org}</span>
                   <span className="mono">{j.pins}</span>
                   <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
-                    {j.resolved}
+                    {/* resolved is a percentage; the contract carries the bare number, so append "%"
+                        at render time to match the design's "91%". */}
+                    {j.resolved}%
                   </span>
                 </div>
               ))}
@@ -470,93 +472,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
                   <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
                     {c.cleanups}
                   </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </AnalyticsCard>
-
-        {/* Pin density heatmap (Phase 2 addition) - per-jurisdiction density bars in the design language. */}
-        <AnalyticsCard
-          title="Pin density heatmap"
-          meta="by jurisdiction"
-          span2
-          query={heatmapQuery}
-          isEmpty={(d) => d.cells.length === 0}
-        >
-          {(d) => {
-            const max = Math.max(...d.cells.map((c) => c.density), 1)
-            return (
-              <div className="cat-breakdown">
-                {d.cells.map((c) => (
-                  <div key={c.geoid} className="cat-bd-row">
-                    <span
-                      className="cat-bd-dot"
-                      style={{ background: "var(--bloom)", opacity: 0.25 + (c.density / max) * 0.75 }}
-                    />
-                    <span className="cat-bd-name">{c.name}</span>
-                    <span className="cat-bd-track">
-                      <span
-                        style={{ width: `${(c.density / max) * 100}%`, background: "var(--bloom)" }}
-                      />
-                    </span>
-                    <span className="cat-bd-n mono">{Math.round(c.density)}</span>
-                  </div>
-                ))}
-              </div>
-            )
-          }}
-        </AnalyticsCard>
-
-        {/* Cohort retention (Phase 2 addition) - a cohort heatgrid (moss opacity scales with retention). */}
-        <AnalyticsCard
-          title="Cohort retention"
-          meta="by signup month"
-          span2
-          query={retentionQuery}
-          isEmpty={(d) => d.cohorts.length === 0}
-        >
-          {(d) => (
-            <div className="table">
-              <div
-                className="trow thead"
-                style={{
-                  gridTemplateColumns: `1.4fr 0.7fr repeat(${d.periodLabels.length}, 1fr)`,
-                }}
-              >
-                <span>Cohort</span>
-                <span>Size</span>
-                {d.periodLabels.map((p) => (
-                  <span key={p}>{p}</span>
-                ))}
-              </div>
-              {d.cohorts.map((c) => (
-                <div
-                  key={c.cohort}
-                  className="trow"
-                  style={{
-                    gridTemplateColumns: `1.4fr 0.7fr repeat(${d.periodLabels.length}, 1fr)`,
-                  }}
-                >
-                  <span className="td-strong">{c.cohort}</span>
-                  <span className="mono">{c.size.toLocaleString()}</span>
-                  {c.values.map((v, i) => (
-                    <span
-                      key={d.periodLabels[i] ?? i}
-                      className="mono"
-                      title={`${v}%`}
-                      style={{
-                        textAlign: "center",
-                        borderRadius: 6,
-                        padding: "2px 0",
-                        color: v >= 50 ? "#fff" : "var(--ink-2)",
-                        background: "var(--moss)",
-                        opacity: 0.12 + (Math.max(0, Math.min(100, v)) / 100) * 0.88,
-                      }}
-                    >
-                      {v}
-                    </span>
-                  ))}
                 </div>
               ))}
             </div>
