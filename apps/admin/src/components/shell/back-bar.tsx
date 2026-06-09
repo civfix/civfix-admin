@@ -13,7 +13,6 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
   reports: Icons.FileText,
   events: Icons.Calendar,
   mail: Icons.Mail,
-  inbox: Icons.Inbox,
   users: Icons.Users,
   analytics: Icons.BarChart,
 }
@@ -23,7 +22,6 @@ const SECTION_HUE: Record<SectionId, string> = {
   reports: "lilac",
   events: "sun",
   mail: "sky",
-  inbox: "sky",
   users: "sun",
   analytics: "moss",
 }

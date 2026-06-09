@@ -20,25 +20,33 @@ import {
   useResendMail,
   useSetMailStatus,
 } from "@/features/mail/use-mail"
+import { useInboxList, useSetInboxStatus } from "@/features/inbox/use-inbox"
+import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
- * Mail / outreach (ported from pages-mail.jsx, enumeration 2.E). Layout: PageHead + Compose, a
- * deliverability strip (4 cells wired to getMailStats), filter chips (All / Inbound / Outbound /
- * Needs attention), a master-detail of the thread list (listMail) + the reader (getMailThread), and a
- * Compose modal. All wired to the typed admin client (no window.DATA).
+ * Mail — the unified mailbox. Consolidates what used to be two separate sections ("Mail" + "Inbox") into
+ * ONE screen with a mail-client folder switch:
+ *   • Outreach — two-way threads with municipal contacts (compose / reply / resend / deliverability),
+ *     backed by GET /admin/mail (threaded, repliable).
+ *   • Inbox    — catch-all *@civfix.org mail that is not an outreach reply (support@, cold inbound),
+ *     backed by GET /admin/inbox (flat single messages, triage-only: mark read / archive).
  *
- * Reconciliation: the design's `needs-action` becomes the civfix `needs_action`; the status pill
- * renders via MAIL_STATUS_LABELS. Selecting a thread fires markMailRead; Reply -> replyMail; Mark done
- * -> setMailStatus(replied); a bounced thread offers Resend / Fix routing (-> resendMail) and, when the
- * thread links a jurisdiction, a deep-link into Jurisdictions to fix the routing contact.
+ * The two are genuinely different data models (threads vs single messages), so each folder keeps its own
+ * typed endpoints, list, reader, and actions — but they share one master-detail shell + CSS. The folder
+ * switch is the primary control; the status chips and the deliverability strip are contextual to it.
+ *
+ * Deep-links: a focusId of "inbox:<id>" opens the Inbox folder on that message; a bare "<id>" opens an
+ * outreach thread (see parseFocus + the home Mail tile, which prefixes inbox rows).
  */
 
-/** The needs-attention statuses (the design's {needs-action, bounced}). */
+type Folder = "outreach" | "inbox"
+
+/** The needs-attention outreach statuses (the design's {needs-action, bounced}). */
 const ATTENTION: MailStatus[] = ["needs_action", "bounced"]
 
-/** Pill treatment per mail status (matches the design's MAIL_STATUS class mapping). */
+/** Pill treatment per outreach status (matches the design's MAIL_STATUS class mapping). */
 const STATUS_CLS: Record<MailStatus, string> = {
   replied: "status-ok",
   delivered: "status-ok",
@@ -49,12 +57,21 @@ const STATUS_CLS: Record<MailStatus, string> = {
   bounced: "status-flag",
 }
 
-/** The thread-list card title per selected box. */
+/** The thread-list card title per selected outreach box / inbox box. */
 const BOX_LABEL: Record<string, string> = {
-  all: "All mail",
+  all: "All",
   in: "Inbound",
   out: "Outbound",
   attn: "Needs attention",
+  unread: "Unread",
+  archived: "Archived",
+}
+
+/** Decode a shell focusId into the folder it targets + the bare entry id. */
+function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
+  if (!focusId) return { folder: "outreach", id: null }
+  if (focusId.startsWith("inbox:")) return { folder: "inbox", id: focusId.slice("inbox:".length) }
+  return { folder: "outreach", id: focusId }
 }
 
 function ComposeModal({
@@ -326,61 +343,130 @@ function MailReader({ threadId }: { threadId: string }) {
 }
 
 export function MailPage({ focusId }: SectionPageProps) {
+  const initial = parseFocus(focusId)
+  const [folder, setFolder] = React.useState<Folder>(initial.folder)
   const [box, setBox] = React.useState("all")
-  const [selId, setSelId] = React.useState<string | null>(focusId)
+  const [selId, setSelId] = React.useState<string | null>(initial.id)
   const [composeOpen, setComposeOpen] = React.useState(false)
+  const outreach = folder === "outreach"
 
   const toast = useToast()
   const compose = useComposeMail()
   const markRead = useMarkMailRead()
+  const setInboxStatus = useSetInboxStatus()
 
-  const listParams = {
-    dir: box === "in" ? ("in" as const) : box === "out" ? ("out" as const) : undefined,
-    filter: box === "attn" ? ("attn" as const) : undefined,
-  }
-  const listQuery = useMailList(listParams)
-  const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
+  // Filtered list for the ACTIVE folder; the inactive folder fetches its unfiltered list (which
+  // dedupes by query key with the *All queries below, so a folder costs one list fetch + the badges).
+  const mailListQuery = useMailList(
+    outreach
+      ? {
+          dir: box === "in" ? ("in" as const) : box === "out" ? ("out" as const) : undefined,
+          filter: box === "attn" ? ("attn" as const) : undefined,
+        }
+      : {},
+  )
+  const inboxListQuery = useInboxList(
+    !outreach
+      ? {
+          status:
+            box === "unread"
+              ? ("unread" as const)
+              : box === "archived"
+                ? ("archived" as const)
+                : ("all" as const),
+        }
+      : { status: "all" as const },
+  )
 
-  // Unfiltered fetch for stable chip counts + the deliverability "threads total" fallback.
-  const allQuery = useMailList({})
-  const allItems = React.useMemo(() => allQuery.data?.items ?? [], [allQuery.data])
-  const counts = {
-    all: allItems.length,
-    in: allItems.filter((t) => t.dir === "in").length,
-    out: allItems.filter((t) => t.dir === "out").length,
-    attn: allItems.filter((t) => ATTENTION.includes(t.status)).length,
+  // Unfiltered fetches for stable folder/chip counts + the deliverability "threads total" fallback.
+  const mailAllQuery = useMailList({})
+  const inboxAllQuery = useInboxList({ status: "all" })
+  const mailAllItems = mailAllQuery.data?.items ?? []
+  const inboxAllItems = inboxAllQuery.data?.items ?? []
+  const mailCounts = {
+    all: mailAllItems.length,
+    in: mailAllItems.filter((t) => t.dir === "in").length,
+    out: mailAllItems.filter((t) => t.dir === "out").length,
+    attn: mailAllItems.filter((t) => ATTENTION.includes(t.status)).length,
   }
+  const inboxCounts = {
+    all: inboxAllItems.length,
+    unread: inboxAllItems.filter((i) => i.unread).length,
+    archived: inboxAllItems.filter((i) => i.status === "archived").length,
+  }
+
+  const mailItems = React.useMemo(() => mailListQuery.data?.items ?? [], [mailListQuery.data])
+  const inboxItems = React.useMemo(() => inboxListQuery.data?.items ?? [], [inboxListQuery.data])
+  const activeListQuery = outreach ? mailListQuery : inboxListQuery
+  const activeCount = outreach ? mailItems.length : inboxItems.length
+  const activeIds = React.useMemo(
+    () => (outreach ? mailItems.map((t) => t.id) : inboxItems.map((i) => i.id)),
+    [outreach, mailItems, inboxItems],
+  )
 
   const statsQuery = useMailStats()
   const stats = statsQuery.data
 
   React.useEffect(() => {
-    if (focusId) setSelId(focusId)
+    const p = parseFocus(focusId)
+    if (p.id) {
+      setFolder(p.folder)
+      // Reset the status filter too: a deep-linked item (e.g. an unread inbox message) must not be
+      // hidden by a stale cross-folder box (e.g. "archived"/"out"), which would then let the
+      // auto-select effect override the requested selection with the filtered list's first row.
+      setBox("all")
+      setSelId(p.id)
+    }
   }, [focusId])
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
-  }, [items, selId])
+    if (!selId && activeIds.length) setSelId(activeIds[0]!)
+    if (selId && activeIds.length && !activeIds.includes(selId)) setSelId(activeIds[0]!)
+  }, [activeIds, selId])
 
-  const selectThread = (id: string) => {
+  const switchFolder = (next: Folder) => {
+    if (next === folder) return
+    setFolder(next)
+    setBox("all")
+    setSelId(null)
+  }
+
+  const select = (id: string) => {
     setSelId(id)
-    const row = items.find((t) => t.id === id)
-    if (row?.unread) markRead.mutate({ id })
+    if (outreach) {
+      const row = mailItems.find((t) => t.id === id)
+      if (row?.unread) markRead.mutate({ id })
+    } else {
+      const row = inboxItems.find((i) => i.id === id)
+      if (row?.unread) setInboxStatus.mutate({ id, status: "read" })
+    }
   }
 
   const onSend = (input: { to: string; subject: string; body: string }) => {
     compose.mutate(input, {
       onSuccess: () => {
         setComposeOpen(false)
+        // Composing always starts an outreach thread; jump to that folder so the new thread (prepended
+        // server-side) opens once the invalidated list re-fetches (the list effect picks items[0]).
+        setFolder("outreach")
         setBox("all")
-        // The compose endpoint returns { ok: true } (no thread id), but the new thread is prepended
-        // server-side. Clear the selection so the list effect opens items[0] — the just-sent thread —
-        // once the invalidated list re-fetches (matches the design's setSelId(newId) intent).
         setSelId(null)
         toast(`Message sent to ${input.to}`)
       },
     })
   }
+
+  const statusOptions = outreach
+    ? [
+        { value: "all", label: "All", count: mailCounts.all },
+        { value: "in", label: "Inbound", count: mailCounts.in },
+        { value: "out", label: "Outbound", count: mailCounts.out },
+        { value: "attn", label: "Needs attention", count: mailCounts.attn },
+      ]
+    : [
+        { value: "all", label: "All", count: inboxCounts.all },
+        { value: "unread", label: "Unread", count: inboxCounts.unread },
+        { value: "archived", label: "Archived", count: inboxCounts.archived },
+      ]
 
   return (
     <>
@@ -388,8 +474,9 @@ export function MailPage({ focusId }: SectionPageProps) {
         title="Mail"
         subtitle={
           <span>
-            Two-way mail with municipal contacts — outbound routing and the replies that come back.
-            Powered by OCI Email Delivery + Cloudflare Routing.
+            Two-way outreach with municipal contacts, plus catch-all inbound to{" "}
+            <span className="mono">*@civfix.org</span>. Powered by OCI Email Delivery + Cloudflare
+            Routing.
           </span>
         }
       >
@@ -398,75 +485,103 @@ export function MailPage({ focusId }: SectionPageProps) {
         </button>
       </PageHead>
 
-      {/* Deliverability strip (4 cells). Loading/error render as a clean strip-level panel, not jammed
-          into a stat cell. */}
-      {statsQuery.isLoading ? (
-        <div className="strip-state">
-          <LoadingState label="Loading deliverability..." />
-        </div>
-      ) : statsQuery.isError ? (
-        <div className="strip-state">
-          <ErrorState error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
-        </div>
-      ) : stats ? (
-        <div className="statusstrip mail-strip">
-          <div className="statcell tone-ok">
-            <div className="statcell-label">Deliverability · 7d</div>
-            <div className="statcell-num">{stats.placement7d}%</div>
-            <div className="statcell-hot">Above 80% target</div>
+      {/* Folder switch — the primary control. Anchored ABOVE the deliverability strip so it never
+          shifts under the cursor when toggling folders shows/hides the strip below it. A radiogroup
+          (pick one of two modes), not tabs: there are no linked tabpanels to navigate. */}
+      <div className="mailbox-switch" role="radiogroup" aria-label="Mailbox folder">
+        <button
+          className={`mbx ${outreach ? "active" : ""}`}
+          role="radio"
+          aria-checked={outreach}
+          onClick={() => switchFolder("outreach")}
+        >
+          <Icons.Mail size={13} /> Outreach
+          {mailCounts.all > 0 && <span className="mbx-c">{mailCounts.all}</span>}
+        </button>
+        <button
+          className={`mbx ${!outreach ? "active" : ""}`}
+          role="radio"
+          aria-checked={!outreach}
+          onClick={() => switchFolder("inbox")}
+        >
+          <Icons.Inbox size={13} /> Inbox
+          {inboxCounts.all > 0 && <span className="mbx-c">{inboxCounts.all}</span>}
+        </button>
+      </div>
+
+      {/* Deliverability strip (outreach only — these KPIs describe outbound mail health). */}
+      {outreach &&
+        (statsQuery.isLoading ? (
+          <div className="strip-state">
+            <LoadingState label="Loading deliverability..." />
           </div>
-          <div className="statcell">
-            <div className="statcell-label">Delivered</div>
-            <div className="statcell-num">{(stats.delivered7d / 1000).toFixed(1)}k</div>
-            <div className="statcell-hot">last 7 days</div>
+        ) : statsQuery.isError ? (
+          <div className="strip-state">
+            <ErrorState error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
           </div>
-          <div className="statcell tone-info">
-            <div className="statcell-label">Bounce rate</div>
-            <div className="statcell-num">{stats.bounceRate}%</div>
-            <div className="statcell-hot">{stats.complaintRate}% complaints</div>
+        ) : stats ? (
+          <div className="statusstrip mail-strip">
+            <div className="statcell tone-ok">
+              <div className="statcell-label">Deliverability · 7d</div>
+              <div className="statcell-num">{stats.placement7d}%</div>
+              <div className="statcell-hot">Above 80% target</div>
+            </div>
+            <div className="statcell">
+              <div className="statcell-label">Delivered</div>
+              <div className="statcell-num">{(stats.delivered7d / 1000).toFixed(1)}k</div>
+              <div className="statcell-hot">last 7 days</div>
+            </div>
+            <div className="statcell tone-info">
+              <div className="statcell-label">Bounce rate</div>
+              <div className="statcell-num">{stats.bounceRate}%</div>
+              <div className="statcell-hot">{stats.complaintRate}% complaints</div>
+            </div>
+            <div className="statcell">
+              <div className="statcell-label">Unread</div>
+              <div className="statcell-num">{stats.unread}</div>
+              <div className="statcell-hot">{stats.threads} threads total</div>
+            </div>
           </div>
-          <div className="statcell">
-            <div className="statcell-label">Unread</div>
-            <div className="statcell-num">{stats.unread}</div>
-            <div className="statcell-hot">{stats.threads} threads total</div>
-          </div>
-        </div>
-      ) : null}
+        ) : null)}
 
       <div className="toolbar">
-        <FilterChips
-          options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "in", label: "Inbound", count: counts.in },
-            { value: "out", label: "Outbound", count: counts.out },
-            { value: "attn", label: "Needs attention", count: counts.attn },
-          ]}
-          value={box}
-          onChange={setBox}
-        />
+        <FilterChips options={statusOptions} value={box} onChange={setBox} />
       </div>
 
       <div className="master-detail">
         <section className="card md-list">
           <div className="card-head">
-            <h3>{BOX_LABEL[box] ?? "All mail"}</h3>
+            <h3>{BOX_LABEL[box] ?? "All"}</h3>
             <div className="spacer" />
-            <span className="meta">{items.length}</span>
+            <span className="meta">{activeCount}</span>
           </div>
           <div className="queue-list">
-            {listQuery.isLoading ? (
-              <LoadingState label="Loading mail..." />
-            ) : listQuery.isError ? (
-              <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
-            ) : items.length === 0 ? (
-              <EmptyState title="Empty" sub="No messages here." icon={<Icons.Mail size={20} />} />
-            ) : (
-              items.map((t) => (
+            {activeListQuery.isLoading ? (
+              <LoadingState label={outreach ? "Loading mail..." : "Loading inbox..."} />
+            ) : activeListQuery.isError ? (
+              <ErrorState error={activeListQuery.error} onRetry={() => activeListQuery.refetch()} />
+            ) : activeCount === 0 ? (
+              <EmptyState
+                title="Empty"
+                sub="No messages here."
+                icon={outreach ? <Icons.Mail size={20} /> : <Icons.Inbox size={20} />}
+              />
+            ) : outreach ? (
+              mailItems.map((t) => (
                 <MailRow
                   key={t.id}
                   item={t}
                   selected={selId === t.id}
-                  onClick={() => selectThread(t.id)}
+                  onClick={() => select(t.id)}
+                />
+              ))
+            ) : (
+              inboxItems.map((i) => (
+                <InboxRow
+                  key={i.id}
+                  item={i}
+                  selected={selId === i.id}
+                  onClick={() => select(i.id)}
                 />
               ))
             )}
@@ -475,9 +590,16 @@ export function MailPage({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <MailReader key={selId} threadId={selId} />
+            outreach ? (
+              <MailReader key={selId} threadId={selId} />
+            ) : (
+              <InboxReader key={selId} id={selId} />
+            )
           ) : (
-            <EmptyState title="No message selected" icon={<Icons.Mail size={20} />} />
+            <EmptyState
+              title="No message selected"
+              icon={outreach ? <Icons.Mail size={20} /> : <Icons.Inbox size={20} />}
+            />
           )}
         </section>
       </div>

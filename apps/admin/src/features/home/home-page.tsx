@@ -52,7 +52,6 @@ const HUB_ICON: Record<string, IconComponent> = {
   reports: Icons.FileText,
   events: Icons.Calendar,
   mail: Icons.Mail,
-  inbox: Icons.Inbox,
   users: Icons.Users,
   analytics: Icons.BarChart,
 }
@@ -285,7 +284,9 @@ function inboxRow(i: InboundEmailListItemDTO): PeekItem {
     title: i.from || i.recipient,
     meta: i.subject || "(no subject)",
     age: i.ts,
-    focusId: i.id,
+    // The Mail section's unified screen routes an "inbox:"-prefixed focusId into its Inbox folder
+    // (see features/mail/mail-page.tsx parseFocus); a bare id opens an outreach thread.
+    focusId: `inbox:${i.id}`,
   }
 }
 
@@ -595,24 +596,29 @@ export function HomePage(_props: SectionPageProps) {
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
     [summaryQuery.data],
   )
-  // The home summary contract is frozen (no inbox block), so the Inbox tile's lead (unread count) is
-  // derived from the inbox list query rather than the summary, mirroring how chip counts are derived.
-  const inboxSummary = React.useMemo<SectionSummary>(
-    () => ({
-      id: "inbox",
-      page: "inbox",
-      label: "Inbox",
-      hue: "sky",
-      lead: (inboxQuery.data?.items ?? []).filter((i) => i.unread).length,
+  // The Mail section now unifies outreach threads + the catch-all inbox in one screen, so its tile rolls
+  // both up: the lead is combined unread (outreach unread from the frozen summary + inbox unread derived
+  // from the inbox list, since the summary contract carries no inbox block), with an Inbox-unread stat.
+  const inboxUnread = (inboxQuery.data?.items ?? []).filter((i) => i.unread).length
+  const mailSummary = React.useMemo<SectionSummary | undefined>(() => {
+    const base = summaries.find((s) => s.id === "mail")
+    if (!base) return undefined
+    const needsAction = summaryQuery.data?.mail.needsAction ?? 0
+    return {
+      ...base,
+      lead: base.lead + inboxUnread,
       unit: "unread messages",
-      blurb: "Catch-all mail to *@civfix.org — support requests and cold inbound.",
-      stats: [],
-      cta: "Open inbox",
-    }),
-    [inboxQuery.data],
-  )
+      blurb:
+        "Two-way outreach with municipal contacts plus catch-all inbound to *@civfix.org — replies, support requests, and cold mail in one place.",
+      cta: "Open mail",
+      stats: [
+        { k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null },
+        { k: "Inbox unread", v: inboxUnread },
+      ],
+    }
+  }, [summaries, inboxUnread, summaryQuery.data])
   const byId = (id: string): SectionSummary | undefined =>
-    id === "inbox" ? inboxSummary : summaries.find((s) => s.id === id)
+    id === "mail" ? mailSummary : summaries.find((s) => s.id === id)
   const summary = summaryQuery.data
 
   // Resolve each non-analytics tile once (view model + rows + foot label). The bento renders them in the
@@ -650,19 +656,28 @@ export function HomePage(_props: SectionPageProps) {
     "cities",
     { feature: true, total: summary?.discovery.queue },
   )
+  // One unified Mail tile: a blended peek of recent outreach threads + catch-all inbox messages. Each
+  // row deep-links into the unified Mail screen (inbox rows carry the "inbox:" focusId prefix).
+  const mailPeek = (mailQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(mailRow)
+  const inboxPeek = (inboxQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(inboxRow)
+  const mailState: PreviewState = {
+    isLoading: mailQuery.isLoading || inboxQuery.isLoading,
+    isError: mailQuery.isError || inboxQuery.isError,
+    error: mailQuery.error ?? inboxQuery.error,
+    onRetry: () => {
+      void mailQuery.refetch()
+      void inboxQuery.refetch()
+    },
+    hasMore:
+      mailQuery.data?.nextCursor != null ||
+      inboxQuery.data?.nextCursor != null ||
+      mailPeek.length + inboxPeek.length > PREVIEW_ROWS,
+  }
   addTile(
     "mail",
     "bt-mail",
-    previewState(mailQuery, PREVIEW_ROWS),
-    (mailQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(mailRow),
-    "email",
-    "emails",
-  )
-  addTile(
-    "inbox",
-    "bt-inbox",
-    previewState(inboxQuery, PREVIEW_ROWS),
-    (inboxQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(inboxRow),
+    mailState,
+    [...mailPeek, ...inboxPeek].slice(0, PREVIEW_ROWS),
     "message",
     "messages",
   )
@@ -736,7 +751,6 @@ export function HomePage(_props: SectionPageProps) {
               </div>
             )}
             {renderTile(tile("mail"))}
-            {renderTile(tile("inbox"))}
             {renderTile(tile("users"))}
             {renderTile(tile("reports"))}
             {renderTile(tile("events"))}
