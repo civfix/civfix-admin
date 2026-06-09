@@ -1,11 +1,10 @@
 "use client"
 
 import * as React from "react"
-import dynamic from "next/dynamic"
 import {
   type DiscoveryContact,
-  type DiscoveryTaskDTO,
-  type GetDiscoveryTaskResponse,
+  type JurisdictionDirectoryDTO,
+  type JurisdictionLayer,
   type PerCategoryCounts,
   type ReportCategory,
 } from "@civfix/shared"
@@ -13,57 +12,61 @@ import {
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import type { MapPin } from "@/components/map/leaflet-map"
 import {
-  useDiscoveryList,
-  useDiscoveryTask,
-  useFlagDiscovery,
-  useSaveDiscoveryDraft,
+  useJurisdictionDirectory,
+  usePatchJurisdiction,
   useSaveJurisdictionContacts,
 } from "@/features/discovery/use-discovery"
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
- * Jurisdictions / discovery queue (ported from pages-discovery.jsx, enumeration 2.B). Master-detail:
- * the population-sorted queue on the left (filter chips All / Need attention / No action required,
- * search, sort) and the per-jurisdiction contact-research panel on the right. The right panel writes a
- * per-category routing contact for the GEOID ("Save & route"), saves a draft, and flags for review —
- * all via the typed admin client (no window.DATA). The operator-note textarea is local-only (no
- * persist), matching the prototype's Notes & history card.
+ * Jurisdictions (the section the design titles "Jurisdictions"; ported from pages-discovery.jsx,
+ * enumeration 2.B). Master-detail: a persistent list of EVERY jurisdiction reports map to on the left
+ * (filter chips All / Need attention / No action required, search, sort) and the per-jurisdiction
+ * contact-research panel on the right.
  *
- * Difference from the prototype: the per-category counts come from the task's real `perCategoryCounts`
- * and the prefilled emails from the task's stored `contacts[]` (the prototype synthesized both with a
- * hash-seeded mock). "needs contact / routed" is driven by the server's `contactState`.
+ * DATA SOURCE (re-sourced): the list comes from GET /admin/jurisdictions (the full directory) rather
+ * than the discovery-task queue, so a jurisdiction STAYS listed after it is routed (the queue dropped
+ * routed tasks) and jurisdictions seeded with contacts also appear. Each row carries its TYPE
+ * (City / County / State / Federal land / Tribal), waiting-report counts, and existing contacts, so the
+ * detail renders straight from the selected row (no second fetch). The right panel writes a per-category
+ * routing contact for the GEOID ("Save & route"), saves a draft (PATCH, no routing), and flags for
+ * review (PATCH flagged) - all via the typed admin client.
+ *
+ * PARITY: faithful to the design's DOM/classes (.qrow, .pill, .sub, .ccat-grid, master-detail). The
+ * directory DTO carries no mini-map geometry or persisted operator notes, so the Jurisdiction card shows
+ * the design's text-label map fallback and the Notes textarea is local-only (non-persisting), as the
+ * prototype's note field already was. A jurisdiction TYPE chip (.pill.category) is added to each row +
+ * the detail crumb. See .parity/ for the recorded divergence.
  */
 
-// Client-only Leaflet minimap (must not run during the static export). Single dynamic import reused for
-// the jurisdiction mini-map; pins are the task's sample report pins.
-const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
-  ssr: false,
-  loading: () => <div className="pi-map-canvas" aria-busy="true" />,
-})
+/** Human label for the jurisdiction TYPE chip (the design groups jurisdictions by this). */
+const LAYER_LABEL: Record<JurisdictionLayer, string> = {
+  place: "City",
+  county: "County",
+  state: "State",
+  federal: "Federal land",
+  tribal: "Tribal",
+}
 
 /**
  * The routing grid's category id. The design's `window.CATEGORIES` carries a 7th routing type,
  * `cleanup`, that shared's `ReportCategorySchema` deliberately excludes (cleanups are a separate
- * entity — see common.ts). To match the design's 7-cell grid + "of 7" denominator without touching
- * the shared contract, we model the grid locally with this superset and map back to `ReportCategory`
- * at the save boundary (`contactsPayload`). See PARITY note below.
+ * entity). We model the grid locally with this superset and map back to `ReportCategory` at the save
+ * boundary (`contactsPayload`). See PARITY note below.
  */
 type DiscoveryRoutingCategory = ReportCategory | "cleanup"
 
 /**
  * The 6 civfix report categories + the design-only `cleanup` row + a synthetic "Other" row, in the
- * exact order the design's routing grid renders (`pages-discovery.jsx` L4 → `data.js` CATEGORIES):
- * Trash, Recycling, Graffiti, Hazard, Cleanup, Water, Other. `pin` is the leading pin asset
- * (`/ds/pin-<id>.svg`); the "other" row has no pin (rendered as a Layers glyph).
+ * exact order the design's routing grid renders: Trash, Recycling, Graffiti, Hazard, Cleanup, Water,
+ * Other. `pin` is the leading pin asset (`/ds/pin-<id>.svg`); the "other" row has no pin.
  *
- * PARITY: `cleanup` is rendered for visual parity only — the admin contacts endpoints
- * (`SaveContactsRequest` / `SaveDraftRequest`) type `contacts` as `Record<ReportCategory, …>`, which
- * cannot carry a `cleanup` key, so a Cleanup contact is dropped at the save boundary (input stays
- * save-safe, no crash). Its waiting count comes from the detail's `perCategoryCounts`, which is also
- * `ReportCategory`-keyed, so it has no `cleanup` entry → defaults to 0.
+ * PARITY: `cleanup` is rendered for visual parity only - the admin contacts endpoints type `contacts`
+ * as `Record<ReportCategory, ...>`, which cannot carry a `cleanup` key, so a Cleanup contact is dropped
+ * at the save boundary (input stays save-safe). Its waiting count comes from `perCategoryCounts`, which
+ * is also `ReportCategory`-keyed, so it has no `cleanup` entry -> defaults to 0.
  */
 const REPORT_TYPES: { id: DiscoveryRoutingCategory; label: string; pin: string | null }[] = [
   { id: "trash", label: "Trash", pin: "/ds/pin-trash.svg" },
@@ -75,7 +78,17 @@ const REPORT_TYPES: { id: DiscoveryRoutingCategory; label: string; pin: string |
   { id: "other", label: "Other", pin: null },
 ]
 
-/** Waiting-report count for a routing-grid category. `cleanup` is never in the (ReportCategory-keyed) map → 0. */
+/** The 6 civfix report categories in canonical order (for the dominant-pin pick). */
+const CATEGORIES: readonly ReportCategory[] = [
+  "trash",
+  "recycling",
+  "graffiti",
+  "hazard",
+  "water",
+  "other",
+]
+
+/** Waiting-report count for a routing-grid category. `cleanup` is never in the map -> 0. */
 function routingCount(counts: PerCategoryCounts, id: DiscoveryRoutingCategory): number {
   if (id === "cleanup") return 0
   return counts[id] ?? 0
@@ -87,25 +100,45 @@ function catPinSrc(category: ReportCategory): string | null {
   return `/ds/pin-${category}.svg`
 }
 
-/** A jurisdiction needs attention when any category has waiting reports but no routed contact. */
-function needsAttention(task: { perCategoryCounts: PerCategoryCounts; contactState: { missing: ReportCategory[] } }): boolean {
-  return task.contactState.missing.some((c) => (task.perCategoryCounts[c] ?? 0) > 0)
+/** The dominant waiting category (drives the leading row pin); null when nothing is waiting. */
+function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
+  let best: ReportCategory | null = null
+  let bestN = 0
+  for (const c of CATEGORIES) {
+    const n = counts[c] ?? 0
+    if (n > bestN) {
+      bestN = n
+      best = c
+    }
+  }
+  return best
 }
 
-function DiscoveryRow({
+/** A jurisdiction needs attention when it has waiting reports and no routing contact on file at all. */
+function needsAttention(dto: JurisdictionDirectoryDTO): boolean {
+  return dto.reportsWaiting > 0 && dto.method === "none"
+}
+
+function fmtPop(n: number): string {
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k"
+  return String(n)
+}
+
+function JurisdictionRow({
   item,
   selected,
   onClick,
 }: {
-  item: DiscoveryTaskDTO
+  item: JurisdictionDirectoryDTO
   selected: boolean
   onClick: () => void
 }) {
   const needs = needsAttention(item)
-  const pin = catPinSrc(item.category)
+  const dom = dominantCategory(item.perCategoryCounts)
+  const pin = dom ? catPinSrc(dom) : null
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
-      <div className="leading has-pin" title={item.catLabel}>
+      <div className="leading has-pin" title={LAYER_LABEL[item.layer]}>
         {pin ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={pin} alt="" />
@@ -115,7 +148,8 @@ function DiscoveryRow({
       </div>
       <div className="body">
         <div className="top">
-          <span className="title">{item.place}</span>
+          <span className="title">{item.org}</span>
+          <span className="pill category">{LAYER_LABEL[item.layer]}</span>
           {needs ? (
             <span className="pill attention tight">
               <span className="dot" />
@@ -126,18 +160,23 @@ function DiscoveryRow({
               <Icons.Check size={9} /> Routed
             </span>
           )}
-          <span className="ident">{item.id}</span>
+          {item.flaggedAt && (
+            <span className="pill attention tight">
+              <Icons.Flag size={9} /> Flagged
+            </span>
+          )}
+          <span className="ident">{item.geoid}</span>
         </div>
         <div className="sub">
-          <span className="strong">{fmtPop(item.pop)} pop</span>
+          <span className="strong">{fmtPop(item.population)} pop</span>
           <span className="sep">·</span>
-          <span>{item.reports} reports</span>
+          <span>{item.reportsWaiting} waiting</span>
           <span className="sep">·</span>
-          <span>last {item.lastReport}</span>
+          <span>{item.coverage}</span>
         </div>
       </div>
       <div className="trailing">
-        <span className="age">{item.age}</span>
+        <span className="age">{item.lastRouted ?? "—"}</span>
         <span className="row-arrow">
           <Icons.ChevronRight size={14} />
         </span>
@@ -146,75 +185,41 @@ function DiscoveryRow({
   )
 }
 
-function fmtPop(n: number): string {
-  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k"
-  return String(n)
-}
-
-/** The jurisdiction mini-map pins (sample report pins for the GEOID), as Leaflet MapPin shapes. */
-function toSamplePins(task: GetDiscoveryTaskResponse): MapPin[] {
-  return task.samplePins.map((p, i) => ({
-    id: `s-${i}`,
-    lat: p.lat,
-    lng: p.lng,
-    category: p.category,
-    draft: p.draft,
-  }))
-}
-
-function DiscoveryDetail({ taskId }: { taskId: string }) {
-  const q = useDiscoveryTask(taskId)
+function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const toast = useToast()
-
-  const flag = useFlagDiscovery()
-  const saveDraft = useSaveDiscoveryDraft()
+  const patch = usePatchJurisdiction()
   const saveContacts = useSaveJurisdictionContacts()
 
-  // Per-category contact emails (controlled inputs), seeded from the task's stored contacts.
-  const [contacts, setContacts] = React.useState<Record<string, string>>({})
-  // Operator-note textarea state. Local-only to mirror the prototype: the design's Notes & history
-  // card has no "Add note" button (the textarea is non-persisting). See PARITY M1.
-  const [opNote, setOpNote] = React.useState("")
-
-  const task = q.data
-  React.useEffect(() => {
-    if (!task) return
+  // Per-category contact emails (controlled inputs), seeded once from the row's stored contacts. The
+  // parent keys this component by geoid, so it remounts (and re-seeds) when the selection changes.
+  const [contacts, setContacts] = React.useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {}
-    task.contacts.forEach((c: DiscoveryContact) => {
+    dto.contacts.forEach((c: DiscoveryContact) => {
       if (c.email) seed[c.category] = c.email
     })
-    setContacts(seed)
-    setOpNote("")
-  }, [task])
+    return seed
+  })
+  // Operator-note textarea state. Local-only (the directory carries no persisted notes; the design's
+  // Notes card textarea was non-persisting too). See PARITY.
+  const [opNote, setOpNote] = React.useState("")
 
-  if (q.isLoading) return <LoadingState label="Loading jurisdiction…" />
-  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
-  if (!task) {
-    return (
-      <EmptyState
-        title="No jurisdiction selected"
-        sub="Pick a place from the list."
-        icon={<Icons.Pin size={20} />}
-      />
-    )
-  }
-
-  const counts = task.perCategoryCounts
+  const counts = dto.perCategoryCounts
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
-  const slug = task.place.split(",")[0]?.toLowerCase().replace(/\s+/g, "-") ?? "city"
+  const slug = dto.org.split(",")[0]?.toLowerCase().replace(/\s+/g, "-") ?? "city"
   const missingContacts = REPORT_TYPES.filter(
     (c) => routingCount(counts, c.id) > 0 && !contacts[c.id],
   ).length
   const filledCount = REPORT_TYPES.filter((c) => contacts[c.id]).length
   const canSave = filledCount > 0
-  const needs = needsAttention(task)
-  const headPin = catPinSrc(task.category)
-  const busy = saveContacts.isPending || saveDraft.isPending || flag.isPending
+  const needs = needsAttention(dto)
+  const dom = dominantCategory(counts)
+  const headPin = dom ? catPinSrc(dom) : null
+  const isFlagged = dto.flaggedAt !== null
+  const busy = saveContacts.isPending || patch.isPending
 
-  // Build the per-category contact map for a write (only non-empty emails; cleared ones -> null).
-  // The design-only `cleanup` row is skipped: it is not a `ReportCategory`, so the contract's
-  // `Record<ReportCategory, …>` cannot carry it (a typed Cleanup contact cannot persist — see
-  // REPORT_TYPES note). Skipping it keeps the input save-safe instead of crashing.
+  // Build the per-category contact map for a write (only non-empty emails). The design-only `cleanup`
+  // row is skipped: it is not a `ReportCategory`, so the contract's `Record<ReportCategory, ...>` cannot
+  // carry it. Skipping it keeps the input save-safe instead of crashing.
   const contactsPayload = (): Partial<Record<ReportCategory, string | null>> => {
     const out: Partial<Record<ReportCategory, string | null>> = {}
     REPORT_TYPES.forEach((c) => {
@@ -226,24 +231,27 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
   }
 
   const onFlag = () => {
-    flag.mutate(
-      { id: task.id },
-      { onSuccess: () => toast(`${task.id} flagged for review`) },
+    patch.mutate(
+      { geoid: dto.geoid, flagged: !isFlagged },
+      {
+        onSuccess: () =>
+          toast(isFlagged ? `Flag cleared for ${dto.org}` : `${dto.org} flagged for review`),
+      },
     )
   }
 
   const onSaveDraft = () => {
-    saveDraft.mutate(
-      { id: task.id, contacts: contactsPayload() },
-      { onSuccess: () => toast(`Draft saved for ${task.place}`) },
+    patch.mutate(
+      { geoid: dto.geoid, contacts: contactsPayload() },
+      { onSuccess: () => toast(`Draft saved for ${dto.org}`) },
     )
   }
 
   const onSaveAndRoute = () => {
     if (!canSave) return
     saveContacts.mutate(
-      { geoid: task.geoid, contacts: contactsPayload() },
-      { onSuccess: () => toast(`Contacts saved for ${task.place}. Outreach queued.`) },
+      { geoid: dto.geoid, contacts: contactsPayload() },
+      { onSuccess: () => toast(`Contacts saved for ${dto.org}. Outreach queued.`) },
     )
   }
 
@@ -260,9 +268,9 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
         </span>
         <div className="rep-head-text">
           <div className="crumb">
-            {task.id} · Jurisdiction · GEOID {task.geoid}
+            {LAYER_LABEL[dto.layer]} · Jurisdiction · GEOID {dto.geoid}
           </div>
-          <h2>{task.place}</h2>
+          <h2>{dto.org}</h2>
         </div>
         {needs ? (
           <span className="pill attention" style={{ marginLeft: "auto" }}>
@@ -283,28 +291,18 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
             <div className="sub-head">Jurisdiction</div>
             <div className="sub-body" style={{ padding: 10 }}>
               <div className="mini-map">
-                {task.center && task.samplePins.length > 0 ? (
-                  <LeafletMap
-                    pins={toSamplePins(task)}
-                    center={task.center}
-                    zoom={task.zoom ?? 11}
-                    tint="voyager"
-                    interactive={false}
-                  />
-                ) : (
-                  <div className="juris-label">{task.place}</div>
-                )}
+                <div className="juris-label">{dto.org}</div>
               </div>
               <div className="juris-stats">
                 <div>
                   <div className="eyebrow">Population</div>
-                  <div className="juris-stat-n">{task.pop.toLocaleString()}</div>
+                  <div className="juris-stat-n">{dto.population.toLocaleString()}</div>
                   <div className="juris-stat-sub">TIGER 2024</div>
                 </div>
                 <div>
                   <div className="eyebrow">Reports waiting</div>
-                  <div className="juris-stat-n">{task.reports}</div>
-                  <div className="juris-stat-sub">oldest {task.age}</div>
+                  <div className="juris-stat-n">{dto.reportsWaiting}</div>
+                  <div className="juris-stat-sub">{LAYER_LABEL[dto.layer]}</div>
                 </div>
               </div>
             </div>
@@ -314,26 +312,7 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
           <div className="sub">
             <div className="sub-head">Notes &amp; history</div>
             <div className="sub-body">
-              {task.notes.length > 0 && (
-                <div className="notes">
-                  {task.notes.map((n, i) => (
-                    <div
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={i}
-                      className="note"
-                    >
-                      {n.text}
-                      <div className="meta">
-                        @{n.who} · {n.when}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div
-                className="field"
-                style={{ marginTop: task.notes.length ? 8 : 0, marginBottom: 0 }}
-              >
+              <div className="field" style={{ marginTop: 0, marginBottom: 0 }}>
                 <textarea
                   placeholder="Add a note for the next operator…"
                   value={opNote}
@@ -391,9 +370,7 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
                           type="email"
                           value={contacts[c.id] ?? ""}
                           placeholder={
-                            attention
-                              ? "Add a contact — reports waiting"
-                              : `${c.id}@${slug}.gov`
+                            attention ? "Add a contact — reports waiting" : `${c.id}@${slug}.gov`
                           }
                           onChange={(e) => setCat(c.id, e.target.value)}
                         />
@@ -421,10 +398,10 @@ function DiscoveryDetail({ taskId }: { taskId: string }) {
           {filledCount} of {REPORT_TYPES.length} contacts set
         </span>
         <div className="spacer" />
-        <button className="btn danger" disabled={flag.isPending} onClick={onFlag}>
-          <Icons.Flag size={13} /> Flag for review
+        <button className="btn danger" disabled={patch.isPending} onClick={onFlag}>
+          <Icons.Flag size={13} /> {isFlagged ? "Clear flag" : "Flag for review"}
         </button>
-        <button className="btn" disabled={saveDraft.isPending} onClick={onSaveDraft}>
+        <button className="btn" disabled={busy} onClick={onSaveDraft}>
           Save draft
         </button>
         <button
@@ -446,35 +423,43 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  // The list query carries the full filter/sort/search so different views do not collide in cache.
-  const listParams = {
-    filter: filter === "all" ? undefined : (filter as "attention" | "clear"),
-    sort,
-    q: query.trim() || undefined,
-  }
-  const listQuery = useDiscoveryList(listParams)
-  const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
+  // The full directory. Search + the attention/clear facet + the pop/reports sort are applied
+  // client-side (matching the design, which filtered its in-memory set). A generous page covers the
+  // expected jurisdiction count; large deployments would move search/sort server-side (follow-up).
+  const listQuery = useJurisdictionDirectory({ limit: 100 })
+  const all = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
+  const attentionCount = React.useMemo(() => all.filter(needsAttention).length, [all])
 
-  // Counts for the filter chips come from an unfiltered fetch so they stay stable across filters.
-  const allQuery = useDiscoveryList({ sort: "pop" })
-  const allItems = React.useMemo(() => allQuery.data?.items ?? [], [allQuery.data])
-  const attentionCount = allItems.filter((x) => needsAttention(x)).length
+  const items = React.useMemo(() => {
+    const q = query.trim().toLowerCase()
+    let xs = q
+      ? all.filter((x) => x.org.toLowerCase().includes(q) || x.geoid.toLowerCase().includes(q))
+      : all.slice()
+    if (filter === "attention") xs = xs.filter(needsAttention)
+    else if (filter === "clear") xs = xs.filter((x) => !needsAttention(x))
+    xs.sort((a, b) =>
+      sort === "reports" ? b.reportsWaiting - a.reportsWaiting : b.population - a.population,
+    )
+    return xs
+  }, [all, query, filter, sort])
 
   // Keep a selection: honor focusId, else fall back to the first row of the current view.
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) {
-      setSelId(items[0]!.id)
+    if (!selId && items.length) setSelId(items[0]!.geoid)
+    if (selId && items.length && !items.some((x) => x.geoid === selId)) {
+      setSelId(items[0]!.geoid)
     }
   }, [items, selId])
 
+  const selected = items.find((x) => x.geoid === selId) ?? null
+
   const catFilters = [
-    { value: "all", label: "All", count: allItems.length },
+    { value: "all", label: "All", count: all.length },
     { value: "attention", label: "Need attention", count: attentionCount },
-    { value: "clear", label: "No action required", count: allItems.length - attentionCount },
+    { value: "clear", label: "No action required", count: all.length - attentionCount },
   ]
 
   return (
@@ -483,8 +468,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         title="Jurisdictions"
         subtitle={
           <span>
-            Pins are landing in places we don&apos;t have a contact for yet. Research the jurisdiction,
-            save a routing contact, and reports start flowing.
+            Every place reports land in, and who they route to. Map a routing contact for the ones that
+            need one, and reports start flowing.
           </span>
         }
       />
@@ -496,7 +481,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder="Search place or ID…"
+            placeholder="Search place or GEOID…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -532,11 +517,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
               />
             ) : (
               items.map((item) => (
-                <DiscoveryRow
-                  key={item.id}
+                <JurisdictionRow
+                  key={item.geoid}
                   item={item}
-                  selected={selId === item.id}
-                  onClick={() => setSelId(item.id)}
+                  selected={selId === item.geoid}
+                  onClick={() => setSelId(item.geoid)}
                 />
               ))
             )}
@@ -544,8 +529,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         </section>
 
         <section className="card md-detail-card">
-          {selId ? (
-            <DiscoveryDetail key={selId} taskId={selId} />
+          {selected ? (
+            <JurisdictionDetail key={selected.geoid} dto={selected} />
           ) : (
             <EmptyState
               title="No jurisdiction selected"
