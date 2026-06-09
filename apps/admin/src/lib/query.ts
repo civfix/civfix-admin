@@ -126,6 +126,13 @@ export const queryKeys = {
     stats: ["admin", "mail", "stats"] as const,
   },
 
+  // ----- inbox (catch-all inbound mail) -----
+  inbox: {
+    all: ["admin", "inbox"] as const,
+    list: (params?: unknown) => ["admin", "inbox", "list", params ?? null] as const,
+    detail: (id: string) => ["admin", "inbox", "detail", id] as const,
+  },
+
   // ----- analytics -----
   analytics: {
     all: ["admin", "analytics"] as const,

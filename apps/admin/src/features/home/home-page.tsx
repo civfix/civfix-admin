@@ -7,6 +7,7 @@ import type {
   AdminUserListItemDTO,
   DiscoveryTaskDTO,
   HomeSummaryResponse,
+  InboundEmailListItemDTO,
   MailDirection,
   MailThreadListItemDTO,
   ReportCategory,
@@ -22,6 +23,7 @@ import { useDiscoveryList } from "@/features/discovery/use-discovery"
 import { useReportList } from "@/features/reports/use-reports"
 import { useEventList } from "@/features/events/use-events"
 import { useMailList } from "@/features/mail/use-mail"
+import { useInboxList } from "@/features/inbox/use-inbox"
 import { useUserList } from "@/features/users/use-users"
 import { useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -50,6 +52,7 @@ const HUB_ICON: Record<string, IconComponent> = {
   reports: Icons.FileText,
   events: Icons.Calendar,
   mail: Icons.Mail,
+  inbox: Icons.Inbox,
   users: Icons.Users,
   analytics: Icons.BarChart,
 }
@@ -271,6 +274,18 @@ function mailRow(t: MailThreadListItemDTO): PeekItem {
     meta: t.subject,
     age: t.ts,
     focusId: t.id,
+  }
+}
+
+function inboxRow(i: InboundEmailListItemDTO): PeekItem {
+  return {
+    kind: "icon",
+    icon: Icons.Inbox,
+    hue: "sky",
+    title: i.from || i.recipient,
+    meta: i.subject || "(no subject)",
+    age: i.ts,
+    focusId: i.id,
   }
 }
 
@@ -573,13 +588,31 @@ export function HomePage(_props: SectionPageProps) {
   const reportsQuery = useReportList({ limit: PREVIEW_ROWS + 1 })
   const eventsQuery = useEventList({ limit: PREVIEW_ROWS + 1 })
   const mailQuery = useMailList({ limit: PREVIEW_ROWS + 1 })
+  const inboxQuery = useInboxList({ status: "all", limit: PREVIEW_ROWS + 1 })
   const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
 
   const summaries = React.useMemo(
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
     [summaryQuery.data],
   )
-  const byId = (id: string) => summaries.find((s) => s.id === id)
+  // The home summary contract is frozen (no inbox block), so the Inbox tile's lead (unread count) is
+  // derived from the inbox list query rather than the summary, mirroring how chip counts are derived.
+  const inboxSummary = React.useMemo<SectionSummary>(
+    () => ({
+      id: "inbox",
+      page: "inbox",
+      label: "Inbox",
+      hue: "sky",
+      lead: (inboxQuery.data?.items ?? []).filter((i) => i.unread).length,
+      unit: "unread messages",
+      blurb: "Catch-all mail to *@civfix.org — support requests and cold inbound.",
+      stats: [],
+      cta: "Open inbox",
+    }),
+    [inboxQuery.data],
+  )
+  const byId = (id: string): SectionSummary | undefined =>
+    id === "inbox" ? inboxSummary : summaries.find((s) => s.id === id)
   const summary = summaryQuery.data
 
   // Resolve each non-analytics tile once (view model + rows + foot label). The bento renders them in the
@@ -624,6 +657,14 @@ export function HomePage(_props: SectionPageProps) {
     (mailQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(mailRow),
     "email",
     "emails",
+  )
+  addTile(
+    "inbox",
+    "bt-inbox",
+    previewState(inboxQuery, PREVIEW_ROWS),
+    (inboxQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(inboxRow),
+    "message",
+    "messages",
   )
   addTile(
     "users",
@@ -695,6 +736,7 @@ export function HomePage(_props: SectionPageProps) {
               </div>
             )}
             {renderTile(tile("mail"))}
+            {renderTile(tile("inbox"))}
             {renderTile(tile("users"))}
             {renderTile(tile("reports"))}
             {renderTile(tile("events"))}

@@ -3260,12 +3260,12 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .bt-map .card { height: 100%; }
 .bt-discovery { grid-column: span 5; }
 .bt-moderation { grid-column: span 5; }
-.bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
+.bt-mail, .bt-inbox, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
 @media (max-width: 1100px) {
   .hub-bento { grid-template-columns: repeat(6, 1fr); }
   .bt-map { grid-column: span 6; grid-row: auto; min-height: 300px; }
   .bt-discovery, .bt-moderation { grid-column: span 6; }
-  .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
+  .bt-mail, .bt-inbox, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
 }
 @media (max-width: 720px) {
   .hub-bento { grid-template-columns: 1fr; }
