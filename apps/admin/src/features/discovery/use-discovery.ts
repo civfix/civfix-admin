@@ -7,6 +7,9 @@ import type {
   DiscoveryListResponse,
   FlagDiscoveryRequest,
   GetDiscoveryTaskResponse,
+  JurisdictionDirectoryResponse,
+  JurisdictionListQuery,
+  PatchJurisdictionRequest,
   SaveContactsRequest,
   SaveDraftRequest,
 } from "@civfix/shared"
@@ -38,6 +41,19 @@ export function useDiscoveryTask(id: string | null) {
     queryKey: queryKeys.discovery.detail(id ?? ""),
     queryFn: () => api.getDiscoveryTask({ id: id as string }),
     enabled: !!id,
+  })
+}
+
+/**
+ * GET /admin/jurisdictions - the full jurisdiction directory: EVERY jurisdiction reports map to (incl.
+ * federal land), with its type, routing posture, waiting-report counts, and existing contacts. This is
+ * the persistent list the Jurisdictions page is sourced from (routed jurisdictions stay listed, unlike
+ * the discovery-task queue which drops them once routed).
+ */
+export function useJurisdictionDirectory(params: JurisdictionListQuery) {
+  return useQuery<JurisdictionDirectoryResponse>({
+    queryKey: queryKeys.jurisdictions.list(params),
+    queryFn: () => api.listJurisdictions(params),
   })
 }
 
@@ -90,6 +106,19 @@ export function useSaveJurisdictionContacts() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SaveContactsRequest) => api.saveJurisdictionContacts(input),
+    onSuccess: () => invalidateDiscovery(qc),
+  })
+}
+
+/**
+ * PATCH /admin/jurisdictions/:geoid - non-routing edits on a directory jurisdiction: save a contact
+ * draft (contacts/form without routing the pending pins) and flag / unflag for review (flagged +
+ * flagReason). Used by the Directory detail's "Save draft" and "Flag for review" actions.
+ */
+export function usePatchJurisdiction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: PatchJurisdictionRequest) => api.patchJurisdiction(input),
     onSuccess: () => invalidateDiscovery(qc),
   })
 }
