@@ -14,15 +14,8 @@ jobs:
     name: lint / typecheck / build / test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # The @civfix/shared contract is a git submodule (shared/) in a SEPARATE private repo
-          # (github.com/civfix/civfix-shared). The default GITHUB_TOKEN cannot clone it, so check
-          # out with SUBMODULE_READ_TOKEN (read access to both civfix-admin and civfix-shared) so the
-          # submodule fetch authenticates and the workspace resolves and builds.
-          submodules: recursive
-          token: ${{ secrets.SUBMODULE_READ_TOKEN }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

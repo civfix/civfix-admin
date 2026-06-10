@@ -9,10 +9,6 @@ name: Deploy (Cloudflare Pages)
 #   Secrets:
 #     CLOUDFLARE_API_TOKEN    Cloudflare API token with the "Cloudflare Pages: Edit" permission.
 #     CLOUDFLARE_ACCOUNT_ID   The Cloudflare account id that owns the Pages project.
-#     SUBMODULE_READ_TOKEN    A token with READ access to BOTH civfix-admin and the private civfix-shared
-#                             repo, so actions/checkout can clone the shared/ submodule. A fine-grained
-#                             PAT (Contents: Read on both repos) or a GitHub App installation token. The
-#                             default GITHUB_TOKEN cannot do this (scoped to civfix-admin only).
 #
 #   Variables (vars.*), inlined into the static export at BUILD time (NEXT_PUBLIC_*):
 #     NEXT_PUBLIC_API_URL     Base URL of the civfix API (e.g. https://api.civfix.example). The admin
@@ -21,10 +17,10 @@ name: Deploy (Cloudflare Pages)
 #
 # The project name + prebuilt output directory come from wrangler.jsonc, so the deploy step is just
 # `pages deploy` (no args). The project is created automatically by the first run. We use Direct Upload
-# (build here, ship the prebuilt out/) rather than Cloudflare's native Git build because the
-# @civfix/shared submodule is private with a relative URL, which native Pages builds cannot reliably
-# clone; this job checks it out with credentials (submodules: recursive). SPA deep links and
-# security/cache headers are handled by the app's public/{_redirects,_headers} (copied into out/).
+# (build here, ship the prebuilt out/) rather than Cloudflare's native Git build; @civfix/shared installs
+# from the public-read private registry via the committed .npmrc, so no submodule checkout is needed.
+# SPA deep links and security/cache headers are handled by the app's public/{_redirects,_headers}
+# (copied into out/).
 
 on:
   push:
@@ -41,15 +37,8 @@ jobs:
     name: build + publish civfix-admin
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # The @civfix/shared contract is a git submodule (shared/) living in a SEPARATE private repo
-          # (github.com/civfix/civfix-shared). The default GITHUB_TOKEN is scoped to this repo only and
-          # cannot clone it (GitHub returns "Repository not found"), so we check out with
-          # SUBMODULE_READ_TOKEN - a token with read access to BOTH civfix-admin and civfix-shared.
-          submodules: recursive
-          token: ${{ secrets.SUBMODULE_READ_TOKEN }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
