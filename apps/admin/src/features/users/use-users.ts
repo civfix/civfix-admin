@@ -6,7 +6,6 @@ import type {
   AdminUserListResponse,
   FlagUserRequest,
   GetAdminUserResponse,
-  SetRoleRequest,
   SetUserStatusRequest,
   UserEventsResponse,
   UserMessagesResponse,
@@ -35,7 +34,7 @@ export function useUserList(params: AdminUserListQuery) {
   })
 }
 
-/** GET /admin/users/:id - full user (profile + counts + trust/risk + role). */
+/** GET /admin/users/:id - full user (profile + counts + risk + role). */
 export function useUser(id: string | null) {
   return useQuery<GetAdminUserResponse>({
     queryKey: queryKeys.users.detail(id ?? ""),
@@ -97,11 +96,3 @@ export function useSetUserStatus() {
   })
 }
 
-/** POST /admin/users/:id/role - set the account role (gov provisioning surfaces this). */
-export function useSetUserRole() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: SetRoleRequest) => api.setUserRole(input),
-    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
-  })
-}

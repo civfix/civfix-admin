@@ -8,8 +8,9 @@ import { useUiStore } from "@/store/ui-store"
 /**
  * Global ephemeral confirmation toast (ported from app.jsx). Driven by the UI store instead of the
  * prototype's `window.__toast`. Fire it via the `useToast()` hook after a successful write. Auto-
- * dismisses after 2600ms. The "Undo" affordance just dismisses (no real undo is wired, matching the
- * prototype).
+ * dismisses after 2600ms. Toasts confirm destructive writes (remove/cancel/ban/reject) that have no
+ * real undo, so the trailing affordance is a dismiss "X" — not an "Undo" that would imply the action
+ * could be reverted.
  */
 export function Toast() {
   const toast = useUiStore((s) => s.toast)
@@ -27,8 +28,8 @@ export function Toast() {
         <Icons.Check size={11} />
       </span>
       <span>{toast?.text}</span>
-      <span className="undo" onClick={dismiss}>
-        Undo
+      <span className="undo" role="button" aria-label="Dismiss" onClick={dismiss}>
+        <Icons.X size={13} />
       </span>
     </div>
   )

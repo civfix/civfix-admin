@@ -51,6 +51,22 @@ const LAYER_LABEL: Record<JurisdictionLayer, string> = {
 }
 
 /**
+ * Sentinel geoid for the synthetic "Unmapped / Unknown jurisdiction" row (mirrors the backend
+ * UNMAPPED_GEOID in jurisdiction-contacts-service.ts). It aggregates waiting reports whose location did
+ * not resolve to a known jurisdiction. It is NOT a real jurisdiction — Save & route / PATCH would 404 —
+ * so the row + detail render read-only triage (waiting backlog only, no routing controls).
+ */
+const UNMAPPED_GEOID = "__unmapped__"
+
+/** Format an ISO timestamp as a short "Mon D" label (the DTO ships lastRouted as a raw ISO string). */
+function fmtRouted(iso: string | null): string {
+  if (!iso) return "—"
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return "—"
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+/**
  * The routing grid's category id. The design's `window.CATEGORIES` carries a 7th routing type,
  * `cleanup`, that shared's `ReportCategorySchema` deliberately excludes (cleanups are a separate
  * entity). We model the grid locally with this superset and map back to `ReportCategory` at the save
@@ -133,9 +149,42 @@ function JurisdictionRow({
   selected: boolean
   onClick: () => void
 }) {
+  const isUnmapped = item.geoid === UNMAPPED_GEOID
   const needs = needsAttention(item)
   const dom = dominantCategory(item.perCategoryCounts)
   const pin = dom ? catPinSrc(dom) : null
+
+  // The synthetic "Unmapped" row: waiting reports whose location did not resolve to a jurisdiction. Render
+  // a distinct, contact-free triage row (no type chip / GEOID / population — none apply).
+  if (isUnmapped) {
+    return (
+      <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+        <div className="leading has-pin" title="Unmapped">
+          <Icons.AlertTriangle size={16} />
+        </div>
+        <div className="body">
+          <div className="top">
+            <span className="title">{item.org}</span>
+            <span className="pill attention tight">
+              <span className="dot" />
+              Needs mapping
+            </span>
+          </div>
+          <div className="sub">
+            <span className="strong">{item.reportsWaiting} waiting</span>
+            <span className="sep">·</span>
+            <span>location didn’t resolve to a jurisdiction</span>
+          </div>
+        </div>
+        <div className="trailing">
+          <span className="row-arrow">
+            <Icons.ChevronRight size={14} />
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
       <div className="leading has-pin" title={LAYER_LABEL[item.layer]}>
@@ -176,7 +225,7 @@ function JurisdictionRow({
         </div>
       </div>
       <div className="trailing">
-        <span className="age">{item.lastRouted ?? "—"}</span>
+        <span className="age">{fmtRouted(item.lastRouted)}</span>
         <span className="row-arrow">
           <Icons.ChevronRight size={14} />
         </span>
@@ -241,8 +290,16 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   }
 
   const onSaveDraft = () => {
+    // Include the operator note in the PATCH so it persists server-side instead of being silently dropped
+    // (the backend PATCH supports `notes`). Skip a no-op save when neither a contact nor a note is set.
+    const note = opNote.trim()
+    const contacts = contactsPayload()
+    if (Object.keys(contacts).length === 0 && note === "") {
+      toast("Nothing to save yet")
+      return
+    }
     patch.mutate(
-      { geoid: dto.geoid, contacts: contactsPayload() },
+      { geoid: dto.geoid, contacts, ...(note ? { notes: note } : {}) },
       { onSuccess: () => toast(`Draft saved for ${dto.org}`) },
     )
   }
@@ -417,6 +474,83 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   )
 }
 
+/**
+ * Read-only triage view for the synthetic "Unmapped / Unknown jurisdiction" row. It is NOT a real
+ * jurisdiction (Save & route / PATCH would 404), so it shows only the waiting backlog + guidance, with no
+ * contact/routing controls.
+ */
+function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
+  const counts = dto.perCategoryCounts
+  const waiting = REPORT_TYPES.filter((c) => routingCount(counts, c.id) > 0)
+  return (
+    <div className="rep-detail">
+      <div className="rep-head">
+        <span className="rep-head-pin">
+          <Icons.AlertTriangle size={22} />
+        </span>
+        <div className="rep-head-text">
+          <div className="crumb">Triage · location did not resolve</div>
+          <h2>{dto.org}</h2>
+        </div>
+        <span className="pill attention" style={{ marginLeft: "auto" }}>
+          <span className="dot" />
+          {dto.reportsWaiting} waiting
+        </span>
+      </div>
+
+      <div className="sub">
+        <div className="sub-head">What this is</div>
+        <div className="sub-body">
+          <p className="rep-desc">
+            These reports’ locations didn’t resolve to any jurisdiction on file, so they can’t be routed to
+            a city contact yet. This usually means jurisdiction boundaries haven’t been loaded (run the
+            jurisdictions seed/ingest), or the pins fall outside all known coverage.
+          </p>
+        </div>
+      </div>
+
+      <div className="sub">
+        <div className="sub-head">Waiting reports by type</div>
+        <div className="sub-body">
+          {waiting.length === 0 ? (
+            <div className="hint">Nothing waiting.</div>
+          ) : (
+            <div className="ccat-grid one-col">
+              {waiting.map((c) => {
+                const n = routingCount(counts, c.id)
+                return (
+                  <div key={c.id} className="ccat-cell">
+                    <div className="ccat-cell-head">
+                      {c.pin ? (
+                        <span className="ccat-pin">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={c.pin} alt="" />
+                        </span>
+                      ) : (
+                        <span className="ccat-other">
+                          <Icons.Layers size={13} />
+                        </span>
+                      )}
+                      <span className="ccat-label">{c.label}</span>
+                      <span className="ccat-count">
+                        {n} {n === 1 ? "report" : "reports"}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div className="hint" style={{ marginTop: 10 }}>
+            Once jurisdictions are loaded, new pins route automatically; existing unmapped pins may need a
+            re-resolve pass.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function DiscoveryPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState("all")
   const [sort, setSort] = React.useState<"pop" | "reports">("pop")
@@ -530,7 +664,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selected ? (
-            <JurisdictionDetail key={selected.geoid} dto={selected} />
+            selected.geoid === UNMAPPED_GEOID ? (
+              <UnmappedDetail key={selected.geoid} dto={selected} />
+            ) : (
+              <JurisdictionDetail key={selected.geoid} dto={selected} />
+            )
           ) : (
             <EmptyState
               title="No jurisdiction selected"

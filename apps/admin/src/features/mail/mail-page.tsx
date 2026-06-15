@@ -3,7 +3,9 @@
 import * as React from "react"
 import {
   MAIL_STATUS_LABELS,
+  relativeAgo,
   type MailStatus,
+  type MailThreadDTO,
   type MailThreadListItemDTO,
 } from "@civfix/shared"
 
@@ -72,6 +74,44 @@ function parseFocus(focusId: string | null): { folder: Folder; id: string | null
   if (!focusId) return { folder: "outreach", id: null }
   if (focusId.startsWith("inbox:")) return { folder: "inbox", id: focusId.slice("inbox:".length) }
   return { folder: "outreach", id: focusId }
+}
+
+/** Pill treatment per sending-domain health status (shares the status-* pill classes). */
+const DOMAIN_HEALTH_CLS: Record<"ok" | "warn" | "bad", string> = {
+  ok: "status-ok",
+  warn: "status-progress",
+  bad: "status-flag",
+}
+
+/** Compact relative "ago" label ("3h"/"2d") for a list/row timestamp; "" for an empty/bad ts. */
+function ts(value: string): string {
+  return relativeAgo(value)
+}
+
+/** The full absolute date for a timestamp's hover title (empty for a missing/bad ts). */
+function tsTitle(value: string): string {
+  if (!value) return ""
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString()
+}
+
+/** A whole-number percent from a 0-1 deliverability fraction (e.g. 0.95 -> "95"). */
+function pct(fraction: number, digits = 0): string {
+  return (fraction * 100).toFixed(digits)
+}
+
+/**
+ * Resolve the human correspondent for a thread reader. The thread-level `from` carries our own
+ * outreach address (or "") for outbound-only threads, so prefer the latest INBOUND message's sender;
+ * fall back to the thread `from`, then to a placeholder. (A precise "to" address for a purely
+ * outbound thread is not in the DTO — that needs a contract field.)
+ */
+function correspondent(sel: MailThreadDTO): string {
+  for (let i = sel.messages.length - 1; i >= 0; i--) {
+    const m = sel.messages[i]!
+    if (m.dir === "in" && m.from) return m.from
+  }
+  return sel.from || "—"
 }
 
 function ComposeModal({
@@ -180,10 +220,14 @@ function MailRow({
       </span>
       <div className="mail-row-body">
         <div className="mail-row-top">
-          <span className="mail-from">{item.org}</span>
-          <span className="mail-ts mono">{item.ts}</span>
+          <span className="mail-from">
+            {item.org || (item.dir === "in" ? item.from || "(no sender)" : "(no organization)")}
+          </span>
+          <span className="mail-ts mono" title={tsTitle(item.ts)}>
+            {ts(item.ts)}
+          </span>
         </div>
-        <div className="mail-subject">{item.subject}</div>
+        <div className="mail-subject">{item.subject || "(no subject)"}</div>
         <div className="mail-preview">{item.preview}</div>
       </div>
       <span className={`pill ${STATUS_CLS[item.status]} tight mail-status-pill`}>
@@ -242,25 +286,25 @@ function MailReader({ threadId }: { threadId: string }) {
     resend.mutate({ id: sel.id }, { onSuccess: () => toast("Message resent") })
   }
 
+  // Only meaningful when the thread links a jurisdiction — otherwise there is no routing contact to
+  // fix, so the button is hidden (see the bounced footer) and this never fires without a geoid.
   const onFixRouting = () => {
-    if (sel.jurisdictionGeoid) {
-      nav("discovery", sel.jurisdictionGeoid)
-      return
-    }
-    resend.mutate({ id: sel.id }, { onSuccess: () => toast("Routing contact flagged for fix") })
+    if (sel.jurisdictionGeoid) nav("discovery", sel.jurisdictionGeoid)
   }
+
+  const who = correspondent(sel)
 
   return (
     <div className="mail-reader">
       <div className="mail-reader-head">
-        <div className="mail-reader-subj">{sel.subject}</div>
+        <div className="mail-reader-subj">{sel.subject || "(no subject)"}</div>
         <div className="mail-reader-meta">
           <span className={`mail-dir ${sel.dir}`}>
             {sel.dir === "in" ? <Icons.ArrowDown size={12} /> : <Icons.ArrowUp size={12} />}
           </span>
-          <span className="mono">{sel.from}</span>
+          <span className="mono">{who}</span>
           <span className="sep">·</span>
-          <span>{sel.org}</span>
+          <span>{sel.org || "(no organization)"}</span>
           <span className="spacer" />
           <span className={`pill ${STATUS_CLS[sel.status]} tight`}>
             {MAIL_STATUS_LABELS[sel.status]}
@@ -276,7 +320,9 @@ function MailReader({ threadId }: { threadId: string }) {
                 <span className="mail-msg-who">{msg.who}</span>
                 <span className="mail-msg-addr mono">{msg.from}</span>
                 <span className="spacer" />
-                <span className="mail-msg-ts mono">{msg.ts}</span>
+                <span className="mail-msg-ts mono" title={tsTitle(msg.ts)}>
+                  {ts(msg.ts)}
+                </span>
               </div>
               <p className="mail-msg-body">{msg.body}</p>
             </div>
@@ -300,9 +346,11 @@ function MailReader({ threadId }: { threadId: string }) {
 
       {sel.status === "bounced" ? (
         <div className="mail-reader-foot">
-          <button className="btn primary" disabled={resend.isPending} onClick={onFixRouting}>
-            <Icons.AlertTriangle size={13} /> Fix routing contact
-          </button>
+          {sel.jurisdictionGeoid && (
+            <button className="btn primary" disabled={resend.isPending} onClick={onFixRouting}>
+              <Icons.AlertTriangle size={13} /> Fix routing contact
+            </button>
+          )}
           <button className="btn" disabled={resend.isPending} onClick={onResend}>
             <Icons.Send size={13} /> Resend
           </button>
@@ -321,7 +369,7 @@ function MailReader({ threadId }: { threadId: string }) {
           />
           <div className="mail-composer-foot">
             <span className="mail-reply-to">
-              To <span className="mono">{sel.from}</span>
+              To <span className="mono">{who}</span>
             </span>
             <div className="spacer" />
             <button className="btn" disabled={setStatus.isPending} onClick={markDone}>
@@ -350,6 +398,16 @@ export function MailPage({ focusId }: SectionPageProps) {
   const [composeOpen, setComposeOpen] = React.useState(false)
   const outreach = folder === "outreach"
 
+  // Search the active folder's list (backend MailListQuery.q / InboxListQuery.q). Debounced so we
+  // don't refetch on every keystroke; the trimmed value flows into the active list query below.
+  const [query, setQuery] = React.useState("")
+  const [debouncedQuery, setDebouncedQuery] = React.useState("")
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 250)
+    return () => clearTimeout(t)
+  }, [query])
+  const q = debouncedQuery || undefined
+
   const toast = useToast()
   const compose = useComposeMail()
   const markRead = useMarkMailRead()
@@ -362,6 +420,7 @@ export function MailPage({ focusId }: SectionPageProps) {
       ? {
           dir: box === "in" ? ("in" as const) : box === "out" ? ("out" as const) : undefined,
           filter: box === "attn" ? ("attn" as const) : undefined,
+          q,
         }
       : {},
   )
@@ -374,11 +433,12 @@ export function MailPage({ focusId }: SectionPageProps) {
               : box === "archived"
                 ? ("archived" as const)
                 : ("all" as const),
+          q,
         }
       : { status: "all" as const },
   )
 
-  // Unfiltered fetches for stable folder/chip counts + the deliverability "threads total" fallback.
+  // Unfiltered fetches for stable folder switch + chip counts (independent of the active search/box).
   const mailAllQuery = useMailList({})
   const inboxAllQuery = useInboxList({ status: "all" })
   const mailAllItems = mailAllQuery.data?.items ?? []
@@ -387,7 +447,7 @@ export function MailPage({ focusId }: SectionPageProps) {
     all: mailAllItems.length,
     in: mailAllItems.filter((t) => t.dir === "in").length,
     out: mailAllItems.filter((t) => t.dir === "out").length,
-    attn: mailAllItems.filter((t) => ATTENTION.includes(t.status)).length,
+    attn: mailAllItems.filter((t) => t.unread || ATTENTION.includes(t.status)).length,
   }
   const inboxCounts = {
     all: inboxAllItems.length,
@@ -428,6 +488,8 @@ export function MailPage({ focusId }: SectionPageProps) {
     setFolder(next)
     setBox("all")
     setSelId(null)
+    setQuery("")
+    setDebouncedQuery("")
   }
 
   const select = (id: string) => {
@@ -475,8 +537,7 @@ export function MailPage({ focusId }: SectionPageProps) {
         subtitle={
           <span>
             Two-way outreach with municipal contacts, plus catch-all inbound to{" "}
-            <span className="mono">*@civfix.org</span>. Powered by OCI Email Delivery + Cloudflare
-            Routing.
+            <span className="mono">*@civfix.org</span>.
           </span>
         }
       >
@@ -520,32 +581,84 @@ export function MailPage({ focusId }: SectionPageProps) {
             <ErrorState error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
           </div>
         ) : stats ? (
-          <div className="statusstrip mail-strip">
-            <div className="statcell tone-ok">
-              <div className="statcell-label">Deliverability · 7d</div>
-              <div className="statcell-num">{stats.placement7d}%</div>
-              <div className="statcell-hot">Above 80% target</div>
-            </div>
-            <div className="statcell">
-              <div className="statcell-label">Delivered</div>
-              <div className="statcell-num">{(stats.delivered7d / 1000).toFixed(1)}k</div>
-              <div className="statcell-hot">last 7 days</div>
-            </div>
-            <div className="statcell tone-info">
-              <div className="statcell-label">Bounce rate</div>
-              <div className="statcell-num">{stats.bounceRate}%</div>
-              <div className="statcell-hot">{stats.complaintRate}% complaints</div>
-            </div>
-            <div className="statcell">
-              <div className="statcell-label">Unread</div>
-              <div className="statcell-num">{stats.unread}</div>
-              <div className="statcell-hot">{stats.threads} threads total</div>
-            </div>
-          </div>
+          (() => {
+            // The stats DTO carries placement/bounce/complaint as 0-1 fractions (delivered/sent etc.);
+            // render them as percents. delivered7d is a raw count — show it plainly, compacting to "k"
+            // only once it crosses ~10k (so 30 reads "30", not "0.0k").
+            const placement = Math.round(stats.placement7d * 100)
+            const aboveTarget = placement >= 80
+            return (
+              <div className="statusstrip mail-strip">
+                <div className={`statcell ${aboveTarget ? "tone-ok" : "tone-alert"}`}>
+                  <div className="statcell-label">Deliverability · 7d</div>
+                  <div className="statcell-num">{placement}%</div>
+                  <div className="statcell-hot">
+                    {aboveTarget ? "Above 80% target" : "Below 80% target"}
+                  </div>
+                </div>
+                <div className="statcell">
+                  <div className="statcell-label">Delivered</div>
+                  <div className="statcell-num">
+                    {stats.delivered7d >= 10000
+                      ? `${(stats.delivered7d / 1000).toFixed(1)}k`
+                      : stats.delivered7d.toLocaleString()}
+                  </div>
+                  <div className="statcell-hot">last 7 days</div>
+                </div>
+                <div className="statcell tone-info">
+                  <div className="statcell-label">Bounce rate</div>
+                  <div className="statcell-num">{pct(stats.bounceRate, 1)}%</div>
+                  <div className="statcell-hot">{pct(stats.complaintRate, 2)}% complaints</div>
+                </div>
+                <div className="statcell">
+                  <div className="statcell-label">Unread</div>
+                  <div className="statcell-num">{stats.unread}</div>
+                  <div className="statcell-hot">awaiting reply</div>
+                </div>
+              </div>
+            )
+          })()
         ) : null)}
+
+      {/* Sending-domain health (outreach only) — the getMailStats domainHealth[] rows the strip omits.
+          No bespoke CSS: reuses the pill/mono tokens + light inline layout (as elsewhere in this file). */}
+      {outreach && stats && stats.domainHealth.length > 0 && (
+        <div
+          className="mail-domains"
+          style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}
+        >
+          {stats.domainHealth.map((d) => (
+            <div
+              key={d.domain}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 10px",
+                border: "1px solid var(--border-soft)",
+                borderRadius: 8,
+              }}
+            >
+              <span className={`pill ${DOMAIN_HEALTH_CLS[d.status]} tight`}>{d.status}</span>
+              <span className="mono">{d.domain}</span>
+              <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{d.note}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="toolbar">
         <FilterChips options={statusOptions} value={box} onChange={setBox} />
+        <div className="toolbar-spacer" />
+        <div className="searchbox">
+          <Icons.Search size={14} />
+          <input
+            type="text"
+            placeholder={outreach ? "Search org, subject, sender…" : "Search sender, subject…"}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="master-detail">
@@ -561,11 +674,19 @@ export function MailPage({ focusId }: SectionPageProps) {
             ) : activeListQuery.isError ? (
               <ErrorState error={activeListQuery.error} onRetry={() => activeListQuery.refetch()} />
             ) : activeCount === 0 ? (
-              <EmptyState
-                title="Empty"
-                sub="No messages here."
-                icon={outreach ? <Icons.Mail size={20} /> : <Icons.Inbox size={20} />}
-              />
+              q ? (
+                <EmptyState
+                  title="Nothing matches"
+                  sub="Try a different search."
+                  icon={<Icons.Search size={20} />}
+                />
+              ) : (
+                <EmptyState
+                  title="Empty"
+                  sub="No messages here."
+                  icon={outreach ? <Icons.Mail size={20} /> : <Icons.Inbox size={20} />}
+                />
+              )
             ) : outreach ? (
               mailItems.map((t) => (
                 <MailRow

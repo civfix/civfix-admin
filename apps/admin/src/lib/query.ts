@@ -104,20 +104,6 @@ export const queryKeys = {
       ["admin", "users", id, "messages", params ?? null] as const,
   },
 
-  // ----- gov provisioning -----
-  gov: {
-    all: ["admin", "gov-claims"] as const,
-    list: (params?: unknown) => ["admin", "gov-claims", "list", params ?? null] as const,
-    detail: (id: string) => ["admin", "gov-claims", "detail", id] as const,
-  },
-
-  // ----- moderation -----
-  moderation: {
-    all: ["admin", "moderation"] as const,
-    list: (params?: unknown) => ["admin", "moderation", "list", params ?? null] as const,
-    detail: (id: string) => ["admin", "moderation", "detail", id] as const,
-  },
-
   // ----- mail / outreach -----
   mail: {
     all: ["admin", "mail"] as const,

@@ -18,6 +18,7 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { LiveMap } from "@/components/map/live-map"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { reportStatusView } from "@/lib/report-status"
 import { useHomeSummary } from "@/hooks/use-admin-home"
 import { useDiscoveryList } from "@/features/discovery/use-discovery"
 import { useReportList } from "@/features/reports/use-reports"
@@ -109,10 +110,11 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       hue: "slate",
       lead: d.discovery.queue,
       unit: "jurisdictions in queue",
-      blurb: "",
+      blurb:
+        "Jurisdictions with reports waiting on routing setup — work the queue so neighbors' reports reach the right city department.",
       stats: [
         { k: "Reports waiting", v: d.discovery.reportsWaiting },
-        { k: "Metros", v: d.discovery.queue },
+        { k: "Over SLA", v: d.discovery.overSla, tone: d.discovery.overSla > 0 ? "warn" : null },
       ],
       cta: "Open",
     },
@@ -185,14 +187,15 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       blurb: "The numbers are the proof civfix works — dropped, routed, resolved, cleaned up.",
       stats: [{ k: "Cleanups", v: d.analytics.cleanups }],
       spark: d.analytics.pinsByWeek,
-      // Deltas mirror the design prototype's static literals (buildSummaries in pages-operations.jsx):
-      // the frozen AnalyticsMiniSchema carries no real delta fields yet, so these are fixed strings to
-      // match the bento's up-arrow badges exactly rather than computed month-over-month values.
+      // No trend badges: the frozen AnalyticsMiniSchema carries no real delta fields, and the design
+      // prototype's "+3pt"/"+5"/... were static literals. Rendering them as live up-arrow trend badges
+      // next to real numbers would present fabricated data as real, so the metrics ship without deltas
+      // until the contract carries real month-over-month values.
       metrics: [
-        { k: "Resolved", v: `${d.analytics.resolvedPct}%`, delta: "+3pt" },
-        { k: "Coverage", v: `${d.analytics.coveragePct}%`, delta: "+5" },
-        { k: "Events", v: d.analytics.eventsThisMonth, delta: "+3" },
-        { k: "Volunteers", v: d.analytics.volunteers, delta: "+64" },
+        { k: "Resolved", v: `${d.analytics.resolvedPct}%` },
+        { k: "Coverage", v: `${d.analytics.coveragePct}%` },
+        { k: "Events", v: d.analytics.eventsThisMonth },
+        { k: "Volunteers", v: d.analytics.volunteers },
       ],
       cta: "See analytics",
     },
@@ -215,31 +218,24 @@ function initials(name: string): string {
 
 // --- DTO -> preview row mappers (ported from buildSummaries' per-section `.list` maps) -------------
 
+/** Compact population string ("4.2k", "850"). Empty when pop is 0 so the segment can be suppressed. */
+function compactPop(pop: number): string {
+  if (pop <= 0) return ""
+  if (pop < 1000) return String(pop)
+  const k = pop / 1000
+  return `${k < 10 ? k.toFixed(1) : k.toFixed(0)}k`
+}
+
 function discoveryRow(x: DiscoveryTaskDTO): PeekItem {
+  const pop = compactPop(x.pop)
   return {
     kind: "pin",
     cat: x.category,
     title: x.place,
-    meta: `${x.reports} reports · pop ${(x.pop / 1000).toFixed(0)}k`,
+    meta: pop ? `${x.reports} reports · pop ${pop}` : `${x.reports} reports`,
     age: x.age,
     focusId: x.id,
   }
-}
-
-/**
- * Home peek-row status word, collapsed to the design prototype's 4 buckets (REPORT_STATUS in
- * pages-reports.jsx only had Submitted / In progress / Completed). The full civfix enum's extra
- * moderation states map onto those buckets the same way the status pills do, so the bento reads in the
- * design's vocabulary rather than the operator labels (Under review / Published / Acknowledged / ...).
- */
-const HOME_REPORT_STATUS_LABELS: Record<AdminReportListItemDTO["status"], string> = {
-  submitted: "Submitted",
-  held: "In progress",
-  acknowledged: "In progress",
-  in_progress: "In progress",
-  published: "Completed",
-  resolved: "Completed",
-  rejected: "Removed",
 }
 
 function reportRow(r: AdminReportListItemDTO): PeekItem {
@@ -247,7 +243,7 @@ function reportRow(r: AdminReportListItemDTO): PeekItem {
     kind: "pin",
     cat: r.category,
     title: r.title,
-    meta: `${r.place} · ${HOME_REPORT_STATUS_LABELS[r.status]}`,
+    meta: `${r.place} · ${reportStatusView(r.status).label}`,
     age: r.submitted.rel,
     focusId: r.id,
   }
@@ -295,7 +291,7 @@ function userRow(u: AdminUserListItemDTO): PeekItem {
     kind: "avatar",
     name: u.name,
     title: u.name,
-    meta: u.flagReason ?? `${u.city} · ${u.trust}`,
+    meta: u.flagReason ?? (u.city || "—"),
     age: u.lastActive,
     focusId: u.id,
   }
@@ -506,7 +502,12 @@ function SectionTile({
               <span className="stile-num">{s.lead}</span>
               <span className="stile-unit">{s.unit}</span>
             </div>
-            {s.spark && <Spark values={s.spark} hue={s.hue} />}
+            {s.spark &&
+              (s.spark.some((v) => v > 0) ? (
+                <Spark values={s.spark} hue={s.hue} />
+              ) : (
+                <div className="hub-spark hub-spark-empty">No data yet</div>
+              ))}
           </div>
           {s.metrics && (
             <div className="stile-metricgrid">

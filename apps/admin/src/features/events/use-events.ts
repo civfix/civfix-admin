@@ -8,6 +8,7 @@ import type {
   FlagEventRequest,
   GetAdminEventResponse,
   PostMessageRequest,
+  SetEventOutcomeRequest,
   SetEventStatusRequest,
 } from "@civfix/shared"
 
@@ -80,6 +81,15 @@ export function usePostEventMessage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: PostMessageRequest) => api.postEventMessage(input),
+    onSuccess: (_res, { id }) => invalidateEvents(qc, id),
+  })
+}
+
+/** POST /admin/events/:id/outcome - log the cleanup's bags collected (the only write path for bags). */
+export function useSetEventOutcome() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetEventOutcomeRequest) => api.setEventOutcome(input),
     onSuccess: (_res, { id }) => invalidateEvents(qc, id),
   })
 }

@@ -22,6 +22,14 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
+/**
+ * Report statuses that still need attention on the map: the "Submitted" bucket. An authed pin is created
+ * `published` (live, awaiting a city contact), so it — and `held` (under review) — are needs-attention,
+ * NOT handled. Mirrors the canonical bucket in src/lib/report-status.ts (kept as a local string set here so
+ * the map needs no AdminReportStatus narrowing of the report|event status union).
+ */
+const WAITING_REPORT_STATUSES = new Set(["submitted", "held", "published"])
+
 /** Map a HomeMapPin (API) to the Leaflet MapPin shape, computing the needs-attention / event flags. */
 function toMapPin(p: HomeMapPin): MapPin & {
   refType: HomeMapPin["refType"]
@@ -31,7 +39,7 @@ function toMapPin(p: HomeMapPin): MapPin & {
   title: string
 } {
   const isEvent = p.refType === "event"
-  const needs = !isEvent && (p.flagged || p.status === "submitted")
+  const needs = !isEvent && (p.flagged || WAITING_REPORT_STATUSES.has(p.status))
   return {
     id: `${p.refType}-${p.id}`,
     refType: p.refType,
@@ -54,8 +62,9 @@ type ActivePin = ReturnType<typeof toMapPin>
 function statusTone(m: ActivePin): { color: string; label: string } {
   if (m.refType === "event") return { color: "var(--sun-700)", label: "Cleanup event" }
   if (m.flagged) return { color: "var(--bloom-700)", label: "Flagged" }
-  if (m.status === "submitted") return { color: "var(--ink-2)", label: "Submitted" }
-  if (m.status === "in_progress") return { color: "var(--lilac-600)", label: "In progress" }
+  if (WAITING_REPORT_STATUSES.has(m.status)) return { color: "var(--ink-2)", label: "Submitted" }
+  if (m.status === "in_progress" || m.status === "acknowledged")
+    return { color: "var(--lilac-600)", label: "In progress" }
   return { color: "var(--moss-700)", label: "Completed" }
 }
 
@@ -69,7 +78,7 @@ export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
   const reportCount = pins.filter((p) => p.refType === "report").length
   const eventCount = pins.filter((p) => p.refType === "event").length
   const needsAttention = pins.filter(
-    (p) => p.refType === "report" && (p.flagged || p.status === "submitted"),
+    (p) => p.refType === "report" && (p.flagged || WAITING_REPORT_STATUSES.has(p.status)),
   ).length
 
   const openActive = () => {

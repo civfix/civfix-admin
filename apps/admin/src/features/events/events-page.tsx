@@ -18,6 +18,7 @@ import {
   useEventList,
   useFlagEvent,
   usePostEventMessage,
+  useSetEventOutcome,
   useSetEventStatus,
 } from "@/features/events/use-events"
 import { useNav, useToast } from "@/store/ui-store"
@@ -73,6 +74,11 @@ function firstName(name: string): string {
   return name.split(" ")[0] ?? name
 }
 
+/** Short, readable event ident from the raw UUID (e.g. "#1a2b3c4d"); full id stays on a title attr. */
+function shortId(id: string): string {
+  return `#${id.replace(/-/g, "").slice(0, 8)}`
+}
+
 function initials(name: string): string {
   return name
     .split(" ")
@@ -106,7 +112,9 @@ function EventRow({
               <Icons.Flag size={10} />
             </span>
           )}
-          <span className="ident">{item.id}</span>
+          <span className="ident" title={item.id}>
+            {shortId(item.id)}
+          </span>
         </div>
         <div className="sub">
           <span className="strong">{item.place}</span>
@@ -120,7 +128,7 @@ function EventRow({
         <span className={`pill ${STATUS_VIEW[item.status].cls} tight`}>
           {STATUS_VIEW[item.status].label}
         </span>
-        <span className="age">{item.date.rel.replace(/^[A-Za-z]+, /, "")}</span>
+        <span className="age">{item.date.abs}</span>
       </div>
     </div>
   )
@@ -135,8 +143,10 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   const flag = useFlagEvent()
   const cancel = useCancelEvent()
   const postMessage = usePostEventMessage()
+  const outcome = useSetEventOutcome()
 
   const [text, setText] = React.useState("")
+  const [bagsInput, setBagsInput] = React.useState("")
 
   if (q.isLoading) return <LoadingState label="Loading event..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -175,6 +185,20 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     )
   }
 
+  const logOutcome = () => {
+    const bags = Number.parseInt(bagsInput, 10)
+    if (!Number.isFinite(bags) || bags < 0) return
+    outcome.mutate(
+      { id: event.id, bags },
+      {
+        onSuccess: () => {
+          setBagsInput("")
+          toast(`Outcome logged · ${bags} bags`)
+        },
+      },
+    )
+  }
+
   const onFlag = () => {
     flag.mutate(
       { id: event.id },
@@ -206,8 +230,8 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           </span>
         </span>
         <div className="rep-head-text">
-          <div className="crumb">
-            {event.id} · Cleanup event · {event.place}
+          <div className="crumb" title={event.id}>
+            {shortId(event.id)} · Cleanup event
           </div>
           <h2>{event.title}</h2>
         </div>
@@ -278,8 +302,11 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           <div className="sub">
             <div className="sub-head">Activity</div>
             <div className="sub-body">
-              <div className="rep-timeline">
-                {event.timeline.map((t, i) => {
+              {event.timeline.length === 0 ? (
+                <EmptyState title="No activity yet" icon={<Icons.Clock size={20} />} />
+              ) : (
+                <div className="rep-timeline">
+                  {event.timeline.map((t, i) => {
                   const Ico = TL_ICON[t.kind] ?? Icons.Clock
                   return (
                     <div
@@ -297,9 +324,10 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                         <div className="rep-tl-when">{t.when}</div>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -309,25 +337,64 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           <div className="sub">
             <div className="sub-head">Turnout</div>
             <div className="sub-body">
-              <div className="evt-turnout">
+              <div
+                className="evt-turnout"
+                style={event.status === "cancelled" ? { opacity: 0.6 } : undefined}
+              >
                 <div className="evt-turnout-top">
                   <span className="evt-turnout-n">
                     {event.attendees}
-                    <span className="evt-turnout-cap"> / {event.capacity ?? "-"}</span>
+                    {event.capacity != null && (
+                      <span className="evt-turnout-cap"> / {event.capacity}</span>
+                    )}
                   </span>
                   <span className="evt-turnout-lbl">
-                    {event.status === "completed" ? "attended" : "RSVP’d"}
+                    {event.status === "cancelled"
+                      ? "had RSVP’d"
+                      : event.status === "completed"
+                        ? "attended"
+                        : "RSVP’d"}
                   </span>
                 </div>
-                <div className="evt-turnout-bar">
-                  <span style={{ width: pct + "%" }} />
-                </div>
+                {event.capacity != null && (
+                  <div className="evt-turnout-bar">
+                    <span style={{ width: pct + "%" }} />
+                  </div>
+                )}
               </div>
-              {event.bags > 0 && (
+              {event.bags > 0 ? (
                 <div className="evt-stat-row">
                   <span className="evt-stat">
                     <Icons.Trash size={13} /> <b>{event.bags}</b> bags collected
                   </span>
+                </div>
+              ) : (
+                event.status === "completed" && (
+                  <div className="evt-stat-row">
+                    <span className="evt-stat">
+                      <Icons.Trash size={13} /> No outcome logged
+                    </span>
+                  </div>
+                )
+              )}
+              {/* Log the cleanup outcome (the only write path for bags) — once the cleanup is under way. */}
+              {(event.status === "in_progress" || event.status === "completed") && (
+                <div className="evt-stat-row" style={{ gap: 8, alignItems: "center", marginTop: 6 }}>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="bags"
+                    value={bagsInput}
+                    onChange={(e) => setBagsInput(e.target.value)}
+                    style={{ width: 84 }}
+                  />
+                  <button
+                    className="btn sm"
+                    disabled={outcome.isPending || bagsInput.trim() === ""}
+                    onClick={logOutcome}
+                  >
+                    {event.bags > 0 ? "Update outcome" : "Log outcome"}
+                  </button>
                 </div>
               )}
             </div>
@@ -340,12 +407,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
               <div className="user-head">
                 <span
                   className="user-av"
-                  style={{
-                    background:
-                      event.organizer.trust === "Unverified"
-                        ? "var(--ink-4)"
-                        : "linear-gradient(135deg, var(--sun), var(--moss))",
-                  }}
+                  style={{ background: "linear-gradient(135deg, var(--sun), var(--moss))" }}
                 >
                   {initials(event.organizer.name)}
                 </span>
@@ -354,24 +416,14 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                   <div className="user-handle mono">{event.organizer.handle}</div>
                 </div>
               </div>
-              <div
-                className={`trust-badge ${
-                  event.organizer.trust === "Unverified" ? "unverified" : "verified"
-                }`}
-              >
-                {event.organizer.trust === "Unverified" ? (
-                  <Icons.AlertTriangle size={11} />
-                ) : (
-                  <Icons.Check size={11} />
-                )}
-                {event.organizer.trust}
-              </div>
-              <div className="user-meta-rows">
-                <div className="umr">
-                  <span>Member</span>
-                  <span className="mono">{event.organizer.joined}</span>
+              {event.organizer.joined !== "-" && (
+                <div className="user-meta-rows">
+                  <div className="umr">
+                    <span>Joined</span>
+                    <span className="mono">{event.organizer.joined}</span>
+                  </div>
                 </div>
-              </div>
+              )}
               <button className="btn sm ghost full" onClick={() => nav("users", event.organizer.id)}>
                 View full account →
               </button>
@@ -400,15 +452,24 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
               <textarea
                 className="rep-followup"
                 rows={2}
-                placeholder={`Post an update to ${event.attendees} attendees…`}
+                placeholder={
+                  event.attendees === 0
+                    ? "No attendees to message yet"
+                    : `Post an update to ${event.attendees} attendees…`
+                }
                 value={text}
+                disabled={event.attendees === 0}
                 onChange={(e) => setText(e.target.value)}
               />
               <button
                 className="btn primary full"
-                disabled={!text.trim() || postMessage.isPending}
+                disabled={event.attendees === 0 || !text.trim() || postMessage.isPending}
                 onClick={send}
-                style={!text.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+                style={
+                  event.attendees === 0 || !text.trim()
+                    ? { opacity: 0.45, cursor: "not-allowed" }
+                    : undefined
+                }
               >
                 <Icons.Send size={13} /> Post update
               </button>
@@ -462,24 +523,14 @@ export function EventsPage({ focusId }: SectionPageProps) {
   const listQuery = useEventList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Unfiltered list for stable chip counts across filters. In the default "All" view with no search,
-  // `listParams` serializes to the same query key as `{}` (filter/q both undefined), so this second
-  // `useEventList({})` resolves against the SAME TanStack Query cache entry as `listQuery` — no extra
-  // network round-trip or Zod parse on a plain Events mount; we just reuse the already-fetched `items`.
-  // The duplicate request only fires when a filter/search is active (a different key). Both queries are
-  // keyset-paginated, so these counts cap at the first page (a fully accurate total needs server counts).
-  const isUnfiltered = !listParams.filter && !listParams.q
-  const allQuery = useEventList({})
-  const allItems = React.useMemo(
-    () => (isUnfiltered ? items : (allQuery.data?.items ?? [])),
-    [isUnfiltered, items, allQuery.data],
-  )
-  const counts = {
-    all: allItems.length,
-    upcoming: allItems.filter((e) => e.status === "upcoming").length,
-    in_progress: allItems.filter((e) => e.status === "in_progress").length,
-    completed: allItems.filter((e) => e.status === "completed").length,
-    flagged: allItems.filter((e) => e.flagged).length,
+  // Chip counts come from the SERVER (response.counts): accurate per-facet totals over the searched set,
+  // not capped to the first keyset page and stable as the facet changes. Falls back to zeros pre-load.
+  const counts = listQuery.data?.counts ?? {
+    all: 0,
+    upcoming: 0,
+    in_progress: 0,
+    completed: 0,
+    flagged: 0,
   }
 
   React.useEffect(() => {

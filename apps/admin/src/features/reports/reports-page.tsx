@@ -14,6 +14,7 @@ import {
 import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { reportBucket, reportStatusView } from "@/lib/report-status"
 import {
   useFlagReport,
   useRemoveReport,
@@ -33,8 +34,10 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  *
  * Reconciliation: the design's submitted|in-progress|completed becomes the civfix status enum. The
  * quick-status buttons drive the three real buckets (submitted | in_progress | resolved); the row /
- * header pill render the design bucket label for whatever civfix status the DTO carries via
- * STATUS_VIEW. "flagged" is the orthogonal abuse marker, not a status.
+ * header pill render the design bucket label for whatever civfix status the DTO carries via the canonical
+ * reportStatusView helper (src/lib/report-status.ts). "flagged" is the orthogonal abuse marker, not a
+ * status. NOTE: a freshly created authed pin is `published` (live, awaiting city action) — it reads as
+ * "Submitted", NOT "Completed".
  */
 
 // Client-only Leaflet minimap (must not run during the static export).
@@ -42,21 +45,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
-
-/**
- * Visual treatment per civfix report status (pill class + icon + design label). Each civfix value
- * maps to one of the design's three pill buckets (Submitted / In progress / Completed) — plus the
- * rejected → "Removed" flag bucket. The pill renders `label`; toasts/meta keep the civfix labels.
- */
-const STATUS_VIEW: Record<AdminReportStatus, { cls: string; icon: IconComponent; label: string }> = {
-  submitted: { cls: "status-new", icon: Icons.Inbox, label: "Submitted" },
-  held: { cls: "status-progress", icon: Icons.Clock, label: "In progress" },
-  published: { cls: "status-ok", icon: Icons.Check, label: "Completed" },
-  acknowledged: { cls: "status-progress", icon: Icons.Clock, label: "In progress" },
-  in_progress: { cls: "status-progress", icon: Icons.Clock, label: "In progress" },
-  resolved: { cls: "status-ok", icon: Icons.Check, label: "Completed" },
-  rejected: { cls: "status-flag", icon: Icons.Trash, label: "Removed" },
-}
 
 /** The three quick-status buckets (the design's Submitted / In progress / Completed). */
 const STATUS_ACTIONS: { value: AdminReportStatus; label: string }[] = [
@@ -101,6 +89,16 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
+/** A human-friendly short report id ("#" + first 8 chars of the uuid) for display only. */
+function shortId(id: string): string {
+  return `#${id.slice(0, 8)}`
+}
+
+/** Pluralize a noun against a count: pluralize(1, "confirm") -> "1 confirm". */
+function pluralize(n: number, singular: string, plural = `${singular}s`): string {
+  return `${n} ${n === 1 ? singular : plural}`
+}
+
 const ReportRow = React.memo(function ReportRow({
   item,
   selected,
@@ -112,7 +110,7 @@ const ReportRow = React.memo(function ReportRow({
   // only re-render when their own `item`/`selected` actually change — not on every keystroke.
   onSelect: (id: string) => void
 }) {
-  const view = STATUS_VIEW[item.status]
+  const view = reportStatusView(item.status)
   const pin = catPinSrc(item.category)
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
@@ -132,19 +130,21 @@ const ReportRow = React.memo(function ReportRow({
               <Icons.Flag size={10} />
             </span>
           )}
-          <span className="ident">{item.id}</span>
+          <span className="ident" title={item.id}>
+            {shortId(item.id)}
+          </span>
         </div>
         <div className="sub">
           <span className="strong">{item.place}</span>
           <span className="sep">·</span>
           <span>{firstName(item.reporter.name)}</span>
           <span className="sep">·</span>
-          <span>{item.confirmations} confirms</span>
+          <span>{pluralize(item.confirmations, "confirm")}</span>
         </div>
       </div>
       <div className="trailing">
         <span className={`pill ${view.cls} tight`}>{view.label}</span>
-        <span className="age">{item.submitted.rel.replace(" ago", "")}</span>
+        <span className="age">{item.submitted.rel}</span>
       </div>
     </div>
   )
@@ -166,17 +166,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   if (q.isLoading) return <LoadingState label="Loading report..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
   const report = q.data
-  if (!report) {
-    return (
-      <EmptyState
-        title="No report selected"
-        sub="Pick a report from the list."
-        icon={<Icons.FileText size={20} />}
-      />
-    )
-  }
+  if (!report) return null
 
-  const view = STATUS_VIEW[report.status]
+  const view = reportStatusView(report.status)
   const canCity = !!report.city.contact
   // A follow-up to the reporter needs a reporter account to notify. An anonymous report has none (the API
   // rejects it with a 422), so the "Reporter" tab is gated exactly like "City" — issue #12.
@@ -211,10 +203,12 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   }
 
   const onStatus = (status: AdminReportStatus) => {
-    if (report.status === status) return
+    // The quick-status buttons act on BUCKETS, not raw statuses: a `published` report is already in the
+    // Submitted bucket, so clicking "Submitted" is a no-op rather than a downgrade to literal `submitted`.
+    if (reportBucket(report.status) === reportBucket(status)) return
     setStatus.mutate(
       { id: report.id, status },
-      { onSuccess: () => toast(`${report.id} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`) },
+      { onSuccess: () => toast(`${shortId(report.id)} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`) },
     )
   }
 
@@ -223,7 +217,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       { id: report.id },
       {
         onSuccess: () =>
-          toast(report.flagged ? `${report.id} · flag cleared` : `${report.id} · flagged for review`),
+          toast(
+            report.flagged
+              ? `${shortId(report.id)} · flag cleared`
+              : `${shortId(report.id)} · flagged for review`,
+          ),
       },
     )
   }
@@ -233,7 +231,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       { id: report.id },
       {
         onSuccess: () => {
-          toast(`${report.id} · report removed`)
+          toast(`${shortId(report.id)} · report removed`)
           onRemoved(report.id)
         },
       },
@@ -253,8 +251,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           )}
         </span>
         <div className="rep-head-text">
-          <div className="crumb">
-            {report.id} · {REPORT_CATEGORY_LABELS[report.category]} · {report.place}
+          <div className="crumb" title={report.id}>
+            {shortId(report.id)} · {REPORT_CATEGORY_LABELS[report.category]} · {report.place}
           </div>
           <h2>{report.title}</h2>
         </div>
@@ -278,7 +276,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <div className="sub-head">
               Report
               <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-                <Icons.Users size={12} /> {report.confirmations} neighbors confirmed
+                <Icons.Users size={12} />{" "}
+                {report.confirmations === 1
+                  ? "1 neighbor confirmed"
+                  : `${report.confirmations} neighbors confirmed`}
               </span>
             </div>
             <div className="sub-body">
@@ -353,8 +354,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           <div className="sub">
             <div className="sub-head">Activity</div>
             <div className="sub-body">
-              <div className="rep-timeline">
-                {report.timeline.map((t, i) => {
+              {report.timeline.length === 0 ? (
+                <EmptyState
+                  title="No activity yet"
+                  sub="Updates appear here as this report is routed, confirmed, and resolved."
+                  icon={<Icons.Clock size={20} />}
+                />
+              ) : (
+                <div className="rep-timeline">
+                  {report.timeline.map((t, i) => {
                   const Ico = TL_ICON[t.kind] ?? Icons.Clock
                   return (
                     <div
@@ -374,7 +382,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                     </div>
                   )
                 })}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -387,12 +396,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               <div className="user-head">
                 <span
                   className="user-av"
-                  style={{
-                    background:
-                      report.reporter.trust === "Unverified"
-                        ? "var(--ink-4)"
-                        : "linear-gradient(135deg, var(--sky), var(--moss))",
-                  }}
+                  style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
                 >
                   {initials(report.reporter.name)}
                 </span>
@@ -401,21 +405,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   <div className="user-handle mono">{report.reporter.handle}</div>
                 </div>
               </div>
-              <div
-                className={`trust-badge ${
-                  report.reporter.trust === "Unverified" ? "unverified" : "verified"
-                }`}
-              >
-                {report.reporter.trust === "Unverified" ? (
-                  <Icons.AlertTriangle size={11} />
-                ) : (
-                  <Icons.Check size={11} />
-                )}
-                {report.reporter.trust}
-              </div>
               <div className="user-meta-rows">
                 <div className="umr">
-                  <span>Member</span>
+                  <span>Joined</span>
                   <span className="mono">{report.reporter.joined}</span>
                 </div>
               </div>
@@ -435,7 +427,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 </span>
                 <div>
                   <div className="rep-city-dept">{report.city.dept}</div>
-                  <div className="rep-city-place">{report.place}</div>
+                  {report.city.dept !== report.place && (
+                    <div className="rep-city-place">{report.place}</div>
+                  )}
                 </div>
               </div>
               {canCity ? (
@@ -501,17 +495,22 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       {/* Action bar */}
       <div className="rep-actions">
         <span className="rep-actions-label">Quick status</span>
-        {STATUS_ACTIONS.map((s) => (
-          <button
-            key={s.value}
-            className={`btn sm ${report.status === s.value ? "primary" : ""}`}
-            disabled={setStatus.isPending}
-            onClick={() => onStatus(s.value)}
-          >
-            {report.status === s.value && <Icons.Check size={11} />}
-            {s.label}
-          </button>
-        ))}
+        {STATUS_ACTIONS.map((s) => {
+          // Active when the report's CURRENT status shares this button's bucket (so a `published` report
+          // shows "Submitted" as the active step, not nothing).
+          const active = reportBucket(report.status) === reportBucket(s.value)
+          return (
+            <button
+              key={s.value}
+              className={`btn sm ${active ? "primary" : ""}`}
+              disabled={setStatus.isPending}
+              onClick={() => onStatus(s.value)}
+            >
+              {active && <Icons.Check size={11} />}
+              {s.label}
+            </button>
+          )
+        })}
         <div className="spacer" />
         <button
           className={`btn ${report.flagged ? "flag-on" : ""}`}
@@ -543,27 +542,15 @@ export function ReportsPage({ focusId }: SectionPageProps) {
   const listQuery = useReportList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Unfiltered list for stable chip counts across filters. In the default "All" view with no search,
-  // `listParams` serializes to the same query key as `{}` (filter/q both undefined), so this second
-  // `useReportList({})` resolves against the SAME TanStack Query cache entry as `listQuery` — no extra
-  // network round-trip or Zod parse on a plain Reports mount; we just reuse the already-fetched `items`.
-  // The duplicate request only fires when a filter/search is active (a different key), which is the
-  // intended "counts stay stable while the visible list is filtered" behavior.
-  //
-  // Note: both queries are keyset-paginated (ADMIN_DEFAULT_LIMIT=25, max 100), so these counts cap at
-  // the first page; a fully accurate count needs server-side per-bucket totals (contract change).
-  const isUnfiltered = !listParams.filter && !listParams.q
-  const allQuery = useReportList({})
-  const allItems = React.useMemo(
-    () => (isUnfiltered ? items : (allQuery.data?.items ?? [])),
-    [isUnfiltered, items, allQuery.data],
-  )
-  const counts = {
-    all: allItems.length,
-    submitted: allItems.filter((r) => r.status === "submitted").length,
-    in_progress: allItems.filter((r) => r.status === "in_progress").length,
-    completed: allItems.filter((r) => r.status === "resolved").length,
-    flagged: allItems.filter((r) => r.flagged).length,
+  // Chip counts come from the SERVER (response.counts): accurate per-bucket totals over the searched set,
+  // not capped to the first keyset page and stable as the status facet changes. The backend buckets
+  // published/held as Submitted (a live pin), matching the pills. Falls back to zeros pre-load.
+  const counts = listQuery.data?.counts ?? {
+    all: 0,
+    submitted: 0,
+    in_progress: 0,
+    completed: 0,
+    flagged: 0,
   }
 
   React.useEffect(() => {

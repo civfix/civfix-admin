@@ -3,7 +3,6 @@
 import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
-  type AnalyticsEventsResponse,
   type AnalyticsKpisResponse,
   type ReportCategory,
 } from "@civfix/shared"
@@ -28,7 +27,7 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
  * Analytics (ported from pages-misc.jsx AnalyticsPage, enumeration 2.G). Layout: PageHead + a
- * client-side CSV Export, a KPI strip (analyticsKpis + the events thisMonth/volunteers cells), and the
+ * client-side CSV Export, a KPI strip (the analyticsKpis contract cells), and the
  * analytics card grid. Each card is an INDEPENDENT read with its own loading / error / empty state so
  * one failing aggregate does not blank the page (enumeration 2.A.6). The eight prototype cards render in
  * the same design language.
@@ -49,14 +48,29 @@ const CAT_COLOR: Record<ReportCategory, string> = {
   other: "var(--ink-3)",
 }
 
-/** Initials for a contributor avatar (first two words). */
+/** Initials for a contributor avatar (first two words); falls back to "?" for an empty/blank name. */
 function initials(name: string): string {
-  return name
+  const out = name
     .split(" ")
     .map((w) => w[0] ?? "")
     .slice(0, 2)
     .join("")
     .toUpperCase()
+  return out || "?"
+}
+
+/**
+ * Humanize a median-resolution duration in hours: 0 reads as "—" (no resolved reports yet, distinct
+ * from a fast "<1h"), sub-hour as "<1h", under a day as "Xh", and a day or more as "Xd Yh" (the trailing
+ * "Yh" is dropped when it is a whole number of days).
+ */
+function humanizeHours(hours: number): string {
+  if (hours <= 0) return "—"
+  if (hours < 1) return "<1h"
+  if (hours < 24) return `${Math.round(hours)}h`
+  const days = Math.floor(hours / 24)
+  const rem = Math.round(hours % 24)
+  return rem > 0 ? `${days}d ${rem}h` : `${days}d`
 }
 
 /**
@@ -111,73 +125,45 @@ function AnalyticsCard<T>({
 }
 
 /**
- * Month-over-month change of a monthly series (the last two points), or null when there is no prior
- * month to compare against. Drives the up/down delta arrow on the events KPI cell from real data
- * instead of a hardcoded placeholder.
+ * A KPI delta caption (the design's up/down arrow + delta). The color and arrow track the direction so
+ * a down delta reads negative and a flat delta reads neutral (the old version always drew a green
+ * up-arrow): up -> moss + ArrowUp, down -> danger + ArrowDown, flat -> tertiary ink + no arrow.
  */
-function monthOverMonth(series: number[]): { delta: string; dir: "up" | "down" | "flat" } | null {
-  if (series.length < 2) return null
-  const last = series[series.length - 1] ?? 0
-  const prev = series[series.length - 2] ?? 0
-  const diff = last - prev
-  const dir = diff > 0 ? "up" : diff < 0 ? "down" : "flat"
-  return { delta: `${diff > 0 ? "+" : ""}${diff}`, dir }
-}
-
-/** A KPI delta caption (the design's up/down arrow + delta, moss-tinted). */
 function KpiDelta({ delta, dir }: { delta: string; dir: "up" | "down" | "flat" }) {
+  const color = dir === "up" ? "var(--moss-700)" : dir === "down" ? "var(--danger)" : "var(--ink-3)"
   return (
-    <div className="statcell-hot" style={{ color: "var(--moss-700)" }}>
-      {dir === "down" ? <Icons.ArrowDown size={10} /> : <Icons.ArrowUp size={10} />} {delta}
+    <div className="statcell-hot" style={{ color }}>
+      {dir === "up" ? <Icons.ArrowUp size={10} /> : dir === "down" ? <Icons.ArrowDown size={10} /> : null}{" "}
+      {delta}
     </div>
   )
 }
 
-/** The KPI strip: analyticsKpis (route-time hidden) plus the two events cells. */
-function KpiStrip({
-  kpis,
-  events,
-}: {
-  kpis: AnalyticsKpisResponse
-  events: AnalyticsEventsResponse | undefined
-}) {
-  // Real month-over-month delta for the events cell (from the byMonth series); volunteers carries no
-  // monthly history in the contract, so its cell keeps a static caption rather than a fabricated delta.
-  const eventsDelta = events ? monthOverMonth(events.byMonth) : null
+/**
+ * The KPI strip: the analyticsKpis contract cells (route-time hidden). The events stats ("Events this
+ * month" / "Volunteers") come from this same contract with their own real deltas, so the strip no longer
+ * hand-builds duplicate events cells from the events aggregate (those collided with the contract cells).
+ * The cleanup-events totals still render once in the dedicated "Cleanup events" card below.
+ */
+function KpiStrip({ kpis }: { kpis: AnalyticsKpisResponse }) {
   return (
     <>
       {kpis.kpis
         .filter((k) => !/route/i.test(k.label))
-        .map((k) => (
-          <div key={k.label} className="statcell">
-            <div className="statcell-label">{k.label}</div>
-            <div className="statcell-num">
-              {/* The Resolved KPI is a percentage; the contract carries the bare number, so re-append
-                  the "%" at render time to match the design's "89%" (count KPIs stay bare). */}
-              {k.num.toLocaleString()}
-              {/resolved/i.test(k.label) ? "%" : ""}
+        .map((k) => {
+          // Percent KPIs (e.g. "Resolved") carry the bare number; render whole-number percent + "%" so
+          // they match the whole-number count KPIs instead of showing a float like "88.9%".
+          const isPct = /resolved/i.test(k.label)
+          return (
+            <div key={k.label} className="statcell">
+              <div className="statcell-label">{k.label}</div>
+              <div className="statcell-num">
+                {isPct ? `${Math.round(k.num)}%` : k.num.toLocaleString()}
+              </div>
+              <KpiDelta delta={k.delta} dir={k.dir} />
             </div>
-            <KpiDelta delta={k.delta} dir={k.dir} />
-          </div>
-        ))}
-      <div className="statcell">
-        <div className="statcell-label">Cleanup events</div>
-        <div className="statcell-num">{events ? events.thisMonth : "-"}</div>
-        {eventsDelta ? (
-          <KpiDelta delta={eventsDelta.delta} dir={eventsDelta.dir} />
-        ) : (
-          <div className="statcell-hot" style={{ color: "var(--moss-700)" }}>
-            this month
-          </div>
-        )}
-      </div>
-      <div className="statcell">
-        <div className="statcell-label">Volunteers</div>
-        <div className="statcell-num">{events ? events.volunteers.toLocaleString() : "-"}</div>
-        <div className="statcell-hot" style={{ color: "var(--moss-700)" }}>
-          all cleanups
-        </div>
-      </div>
+          )
+        })}
     </>
   )
 }
@@ -207,7 +193,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
     if (events) {
       rows.push(["Cleanup events (month)", events.thisMonth, ""])
       rows.push(["Volunteers", events.volunteers, ""])
-      rows.push(["Bags collected", events.bags, ""])
+      // "Bags collected" has no production write path (always 0), so it is omitted from the export.
     }
     rows.push([])
     rows.push(["Category", "Reports", "Share %"])
@@ -259,7 +245,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
         </div>
       ) : kpis ? (
         <div className="statusstrip kpi-strip">
-          <KpiStrip kpis={kpis} events={events} />
+          <KpiStrip kpis={kpis} />
         </div>
       ) : null}
 
@@ -280,7 +266,9 @@ export function AnalyticsPage(_props: SectionPageProps) {
           title="By category"
           meta="this month"
           query={byCategoryQuery}
-          isEmpty={(d) => d.rows.length === 0}
+          // The contract always returns all 6 category rows, so length is always 6; the card is empty
+          // only when every category has a zero count.
+          isEmpty={(d) => d.rows.every((r) => r.count === 0)}
         >
           {(d) => (
             <div className="cat-breakdown">
@@ -329,7 +317,12 @@ export function AnalyticsPage(_props: SectionPageProps) {
         </AnalyticsCard>
 
         {/* Mapping coverage */}
-        <AnalyticsCard title="Mapping coverage" meta="jurisdictions" query={coverageQuery}>
+        <AnalyticsCard
+          title="Mapping coverage"
+          meta="jurisdictions"
+          query={coverageQuery}
+          isEmpty={(d) => d.mapped + d.needsMapping === 0}
+        >
           {(d) => (
             <div className="coverage">
               <div className="coverage-num">
@@ -362,7 +355,9 @@ export function AnalyticsPage(_props: SectionPageProps) {
           meta="by report type"
           span2
           query={resolutionQuery}
-          isEmpty={(d) => d.rows.length === 0}
+          // The contract always returns all 6 category rows, so length is always 6; the card is empty
+          // only when every category has zero recorded resolution hours.
+          isEmpty={(d) => d.rows.every((r) => r.hours === 0)}
         >
           {(d) => {
             const max = Math.max(...d.rows.map((x) => x.hours), 1)
@@ -375,7 +370,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
                     <span className="cat-bd-track">
                       <span style={{ width: `${(r.hours / max) * 100}%`, background: CAT_COLOR[r.cat] }} />
                     </span>
-                    <span className="cat-bd-n mono">{r.hours}h</span>
+                    <span className="cat-bd-n mono">{humanizeHours(r.hours)}</span>
                   </div>
                 ))}
               </div>
@@ -402,10 +397,14 @@ export function AnalyticsPage(_props: SectionPageProps) {
                   <span className="es-num">{d.volunteers.toLocaleString()}</span>
                   <span className="es-lbl">volunteers</span>
                 </div>
-                <div className="es-stat">
-                  <span className="es-num">{d.bags.toLocaleString()}</span>
-                  <span className="es-lbl">bags collected</span>
-                </div>
+                {/* "Bags collected" has no production write path; hide it while it is always 0 rather
+                    than showing a fabricated zero stat. */}
+                {d.bags > 0 ? (
+                  <div className="es-stat">
+                    <span className="es-num">{d.bags.toLocaleString()}</span>
+                    <span className="es-lbl">bags collected</span>
+                  </div>
+                ) : null}
               </div>
               <BarChart values={d.byMonth} labels={d.monthLabels} />
             </>
@@ -428,8 +427,9 @@ export function AnalyticsPage(_props: SectionPageProps) {
                 <span>Pins</span>
                 <span>Resolved</span>
               </div>
-              {d.rows.map((j) => (
-                <div key={j.org} className="trow jt">
+              {d.rows.map((j, i) => (
+                // org can repeat across rows, so pair it with the index for a stable unique key.
+                <div key={`${j.org}-${i}`} className="trow jt">
                   <span className="td-strong">{j.org}</span>
                   <span className="mono">{j.pins}</span>
                   <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
@@ -459,13 +459,14 @@ export function AnalyticsPage(_props: SectionPageProps) {
                 <span>Reports</span>
                 <span>Cleanups</span>
               </div>
-              {d.rows.map((c) => (
-                <div key={c.name} className="trow ct">
+              {d.rows.map((c, i) => (
+                // name/city can repeat across rows, so pair them with the index for a stable unique key.
+                <div key={`${c.name}-${c.city}-${i}`} className="trow ct">
                   <span className="contrib-cell">
                     <span className="contrib-av">{initials(c.name)}</span>
                     <span className="contrib-text">
                       <span className="td-strong">{c.name}</span>
-                      <span className="contrib-city">{c.city}</span>
+                      <span className="contrib-city">{c.city || "—"}</span>
                     </span>
                   </span>
                   <span className="mono">{c.reports}</span>

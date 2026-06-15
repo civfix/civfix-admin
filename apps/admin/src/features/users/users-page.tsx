@@ -3,7 +3,6 @@
 import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
-  type AdminReportStatus,
   type AdminUserDTO,
   type AdminUserListItemDTO,
   type ReportCategory,
@@ -16,6 +15,7 @@ import {
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { reportStatusView } from "@/lib/report-status"
 import {
   useFlagUser,
   useSetUserStatus,
@@ -32,13 +32,13 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
  * Users (ported from pages-users.jsx, enumeration 2.F). Master-detail: the account list on the left
  * (filter chips All / Active / Suspended / Flagged + counts, search name/handle/city) and the full
  * account detail on the right (head avatar/name/handle/city + Flagged/status badges, profile meta, the
- * Reports/Events/Messages tabs each with a count, and the action bar: flag toggle + ban). All wired to
- * the typed admin client.
+ * Reports/Events/Messages tabs each with a count, and the action bar: flag toggle + status controls
+ * (Suspend when active, Un-ban/Reactivate when suspended/banned, Ban)). All wired to the typed admin
+ * client.
  *
  * Difference from the prototype: the three tabs render REAL data from getUserReports / getUserEvents /
  * getUserMessages (the prototype synthesized rows client-side). Each tab has its own loading / error /
- * empty state. The action bar matches the design (Flag + Ban only); role/gov provisioning flows through
- * the government claims queue, not the user detail.
+ * empty state. The action bar extends the design's flag/ban with reversible Suspend / Reactivate.
  */
 
 /**
@@ -50,21 +50,6 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   suspended: { cls: "status-flag", label: "Suspended" },
   review: { cls: "status-progress", label: "In review" },
   banned: { cls: "status-flag", label: "Banned" },
-}
-
-/**
- * Visual treatment per civfix report status for the Reports tab rows (pill class + design label).
- * Mirrors the Reports page: each civfix value maps to the design's Submitted / In progress /
- * Completed bucket, plus rejected → "Removed".
- */
-const REPORT_STATUS_VIEW: Record<AdminReportStatus, { cls: string; label: string }> = {
-  submitted: { cls: "status-new", label: "Submitted" },
-  held: { cls: "status-progress", label: "In progress" },
-  published: { cls: "status-ok", label: "Completed" },
-  acknowledged: { cls: "status-progress", label: "In progress" },
-  in_progress: { cls: "status-progress", label: "In progress" },
-  resolved: { cls: "status-ok", label: "Completed" },
-  rejected: { cls: "status-flag", label: "Removed" },
 }
 
 function catPinSrc(category: ReportCategory): string | null {
@@ -79,6 +64,19 @@ function initials(name: string): string {
     .slice(0, 2)
     .join("")
     .toUpperCase()
+}
+
+/** The server returns a "-" sentinel for an absent timestamp; treat it (and empty) as missing. */
+function isMissing(v: string | null | undefined): boolean {
+  const t = (v ?? "").trim()
+  return t === "" || t === "-"
+}
+
+/** Best-effort date-only rendering of a join timestamp; falls back to the raw string if unparseable. */
+function joinDate(v: string): string {
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return v
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 }
 
 function ProfileReportRow({ r }: { r: UserReportItemDTO }) {
@@ -99,8 +97,8 @@ function ProfileReportRow({ r }: { r: UserReportItemDTO }) {
           {r.place} · <span className="mono">{r.id}</span>
         </div>
       </div>
-      <span className={`pill ${REPORT_STATUS_VIEW[r.status].cls} tight`}>
-        {REPORT_STATUS_VIEW[r.status].label}
+      <span className={`pill ${reportStatusView(r.status).cls} tight`}>
+        {reportStatusView(r.status).label}
       </span>
       <span className="prow-age">{r.age}</span>
     </div>
@@ -118,7 +116,15 @@ function ProfileEventRow({ e }: { e: UserEventItemDTO }) {
         <div className="prow-title">
           {organized ? "Organized" : "Joined"} the {e.title}
         </div>
-        <div className="prow-meta">{e.attendees} neighbors attended</div>
+        <div className="prow-meta">
+          {!isMissing(e.place) && (
+            <>
+              {e.place}
+              <span className="sep"> · </span>
+            </>
+          )}
+          {e.attendees} neighbors joined
+        </div>
       </div>
       {organized && <span className="pill status-progress tight">Organizer</span>}
       <span className="prow-age">{e.when}</span>
@@ -153,7 +159,14 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
     if (reports.isLoading) return <LoadingState label="Loading reports..." />
     if (reports.isError) return <ErrorState error={reports.error} onRetry={() => reports.refetch()} />
     const items = reports.data?.items ?? []
-    if (!items.length) return <div className="profile-empty">No reports yet.</div>
+    if (!items.length)
+      return (
+        <EmptyState
+          title="No reports yet"
+          sub="This neighbor hasn't filed any reports."
+          icon={<Icons.Layers size={20} />}
+        />
+      )
     return (
       <>
         {items.map((r) => (
@@ -167,7 +180,14 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
     if (events.isLoading) return <LoadingState label="Loading cleanups..." />
     if (events.isError) return <ErrorState error={events.error} onRetry={() => events.refetch()} />
     const items = events.data?.items ?? []
-    if (!items.length) return <div className="profile-empty">No cleanup events yet.</div>
+    if (!items.length)
+      return (
+        <EmptyState
+          title="No cleanup events yet"
+          sub="This neighbor hasn't joined any cleanups."
+          icon={<Icons.Calendar size={20} />}
+        />
+      )
     return (
       <>
         {items.map((e) => (
@@ -180,7 +200,14 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   if (messages.isLoading) return <LoadingState label="Loading messages..." />
   if (messages.isError) return <ErrorState error={messages.error} onRetry={() => messages.refetch()} />
   const items = messages.data?.items ?? []
-  if (!items.length) return <div className="profile-empty">No messages yet.</div>
+  if (!items.length)
+    return (
+      <EmptyState
+        title="No messages yet"
+        sub="This neighbor hasn't sent any messages."
+        icon={<Icons.MessageSquare size={20} />}
+      />
+    )
   return (
     <>
       {items.map((m) => (
@@ -190,11 +217,11 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   )
 }
 
-/** Tab counts come from the user's own counters (reports/cleanups); messages is not pre-counted. */
-function tabCount(user: AdminUserDTO, id: TabId): number | null {
+/** Tab counts come from the user's own counters (reports / cleanups / messages), all on the detail DTO. */
+function tabCount(user: AdminUserDTO, id: TabId): number {
   if (id === "reports") return user.reports
   if (id === "events") return user.cleanups
-  return null
+  return user.messages
 }
 
 function UserDetail({ userId }: { userId: string }) {
@@ -230,7 +257,7 @@ function UserDetail({ userId }: { userId: string }) {
       { id: user.id },
       {
         onSuccess: () =>
-          toast(user.flagged ? `${user.id} · flag cleared` : `${user.id} · account flagged`),
+          toast(user.flagged ? `${user.name} · flag cleared` : `${user.name} · account flagged`),
       },
     )
   }
@@ -240,7 +267,26 @@ function UserDetail({ userId }: { userId: string }) {
     if (!window.confirm(`Ban ${user.name}? This revokes all of their sessions.`)) return
     setStatus.mutate(
       { id: user.id, status: "banned" },
-      { onSuccess: () => toast(`${user.id} · Account banned`) },
+      { onSuccess: () => toast(`${user.name} · account banned`) },
+    )
+  }
+
+  const onSuspend = () => {
+    if (user.status !== "active") return
+    if (!window.confirm(`Suspend ${user.name}? They keep their account but can't post.`)) return
+    setStatus.mutate(
+      { id: user.id, status: "suspended" },
+      { onSuccess: () => toast(`${user.name} · account suspended`) },
+    )
+  }
+
+  const onReactivate = () => {
+    if (user.status !== "banned" && user.status !== "suspended") return
+    const verb = user.status === "banned" ? "Un-ban" : "Reactivate"
+    if (!window.confirm(`${verb} ${user.name}? This restores their access.`)) return
+    setStatus.mutate(
+      { id: user.id, status: "active" },
+      { onSuccess: () => toast(`${user.name} · account reactivated`) },
     )
   }
 
@@ -256,9 +302,13 @@ function UserDetail({ userId }: { userId: string }) {
         <div className="udh-text">
           <h2>{user.name}</h2>
           <div className="udh-sub">
-            <span className="mono">{user.handle}</span>
-            <span className="sep">·</span>
-            <span>{user.city}</span>
+            <span className="mono">{isMissing(user.handle) ? "—" : user.handle}</span>
+            {!isMissing(user.city) && (
+              <>
+                <span className="sep">·</span>
+                <span>{user.city}</span>
+              </>
+            )}
           </div>
         </div>
         <div className="udh-badges">
@@ -275,14 +325,17 @@ function UserDetail({ userId }: { userId: string }) {
 
       <div className="profile-meta">
         <span className="pm-item">
-          <Icons.Activity size={13} /> Active {user.lastActive}
+          <Icons.Activity size={13} /> Active {isMissing(user.lastActive) ? "never" : user.lastActive}
         </span>
         <span className="pm-item">
-          <Icons.Calendar size={13} /> Joined {user.joined}
+          <Icons.Calendar size={13} /> Joined{" "}
+          {isMissing(user.joined) ? "unknown" : joinDate(user.joined)}
         </span>
-        <span className="pm-item">
-          <Icons.Pin size={13} /> {user.city}
-        </span>
+        {!isMissing(user.city) && (
+          <span className="pm-item">
+            <Icons.Pin size={13} /> {user.city}
+          </span>
+        )}
       </div>
 
       <div className="profile-tabs">
@@ -295,7 +348,7 @@ function UserDetail({ userId }: { userId: string }) {
               onClick={() => setTab(t.id)}
             >
               {t.label}
-              {n !== null && <span className="profile-tab-n">{n}</span>}
+              <span className="profile-tab-n">{n}</span>
             </button>
           )
         })}
@@ -314,6 +367,16 @@ function UserDetail({ userId }: { userId: string }) {
         >
           <Icons.Flag size={13} /> {user.flagged ? "Flagged" : "Flag account"}
         </button>
+        {(user.status === "banned" || user.status === "suspended") && (
+          <button className="btn" disabled={setStatus.isPending} onClick={onReactivate}>
+            <Icons.Check size={13} /> {user.status === "banned" ? "Un-ban" : "Reactivate"}
+          </button>
+        )}
+        {user.status === "active" && (
+          <button className="btn" disabled={setStatus.isPending} onClick={onSuspend}>
+            <Icons.Lock size={13} /> Suspend
+          </button>
+        )}
         <button
           className="btn danger"
           disabled={setStatus.isPending || user.status === "banned"}
@@ -351,11 +414,15 @@ function UserRow({
               <Icons.Flag size={10} />
             </span>
           )}
-          <span className="ident">{user.handle}</span>
+          <span className="ident">{isMissing(user.handle) ? "—" : user.handle}</span>
         </div>
         <div className="sub">
-          <span>{user.city}</span>
-          <span className="sep">·</span>
+          {!isMissing(user.city) && (
+            <>
+              <span>{user.city}</span>
+              <span className="sep">·</span>
+            </>
+          )}
           <span className="strong">{user.reports} reports</span>
           <span className="sep">·</span>
           <span>{user.cleanups} cleanups</span>
@@ -382,26 +449,10 @@ export function UsersPage({ focusId }: SectionPageProps) {
   const listQuery = useUserList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Unfiltered list for stable chip counts across filters. In the default "All" view with no search,
-  // `listParams` serializes to the same query key as `{}` (filter/q both undefined), so this second
-  // `useUserList({})` resolves against the SAME TanStack Query cache entry as `listQuery` — no extra
-  // network round-trip or Zod parse on a plain Users mount; we just reuse the already-fetched `items`.
-  // When a filter/search IS active it resolves separately so the chips keep showing the UNFILTERED totals
-  // (stable across filters) rather than collapsing to the narrowed page's contents. Both queries are
-  // keyset-paginated (server-side default page size, max 100), so these counts cap at the first page; a
-  // fully accurate total would need a server-side per-status counts block (a contract addition).
-  const isUnfiltered = !listParams.filter && !listParams.q
-  const allQuery = useUserList({})
-  const allItems = React.useMemo(
-    () => (isUnfiltered ? items : (allQuery.data?.items ?? [])),
-    [isUnfiltered, items, allQuery.data],
-  )
-  const counts = {
-    all: allItems.length,
-    active: allItems.filter((u) => u.status === "active").length,
-    suspended: allItems.filter((u) => u.status !== "active").length,
-    flagged: allItems.filter((u) => u.flagged).length,
-  }
+  // Chip counts come from the SERVER (response.counts): accurate per-facet totals over the searched set,
+  // not capped to the first keyset page and stable as the facet changes. `suspended` is the explicit
+  // suspended status (matching the server facet). Falls back to zeros pre-load.
+  const counts = listQuery.data?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)

@@ -2290,18 +2290,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .user-av.lg { width: 48px; height: 48px; font-size: 16px; }
 .user-name { font-weight: 700; font-size: 14px; color: var(--ink); }
 .user-handle { font-size: 11.5px; color: var(--ink-3); }
-.trust-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: 999px;
-  margin-bottom: 12px;
-}
-.trust-badge.verified { background: var(--moss-50); color: var(--moss-700); border: 1px solid color-mix(in oklab, var(--moss) 18%, transparent); }
-.trust-badge.unverified { background: var(--sun-50); color: var(--sun-700); border: 1px solid color-mix(in oklab, var(--sun) 26%, transparent); }
 
 .user-stats {
   display: grid;
