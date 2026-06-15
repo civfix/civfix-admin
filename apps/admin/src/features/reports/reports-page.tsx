@@ -178,17 +178,33 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
   const view = STATUS_VIEW[report.status]
   const canCity = !!report.city.contact
+  // A follow-up to the reporter needs a reporter account to notify. An anonymous report has none (the API
+  // rejects it with a 422), so the "Reporter" tab is gated exactly like "City" — issue #12.
+  const canReporter = !!report.reporter.id
+  // Never target a channel that doesn't exist: if "reporter" is selected but unreachable, fall back to city.
+  const target: "reporter" | "city" = to === "reporter" && !canReporter ? "city" : to
+  const canSend = target === "reporter" ? canReporter : canCity
   const pin = catPinSrc(report.category)
+  // The best still to show in the 116px box. media now carries presigned, browser-loadable URLs: prefer the
+  // first image (thumb over full), else a video's poster thumbnail. A video with no generated poster has no
+  // image to render, so we leave photoUrl null and fall back to the category-pin placeholder rather than
+  // putting a video URL in an <img>. Null -> placeholder.
+  const previewMedia = report.media.find((m) => m.kind === "image") ?? report.media[0]
+  const photoUrl = previewMedia
+    ? previewMedia.kind === "image"
+      ? (previewMedia.thumbUrl ?? previewMedia.url)
+      : (previewMedia.thumbUrl ?? null)
+    : null
 
   const send = () => {
     const body = text.trim()
-    if (!body) return
+    if (!body || !canSend) return
     followup.mutate(
-      { id: report.id, to, body },
+      { id: report.id, to: target, body },
       {
         onSuccess: () => {
           setText("")
-          toast(`Follow-up sent to ${to === "reporter" ? "reporter" : "city"}`)
+          toast(`Follow-up sent to ${target === "reporter" ? "reporter" : "city"}`)
         },
       },
     )
@@ -295,14 +311,19 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               <div className="rep-media">
                 {report.hasPhoto && (
                   <div className="rep-photo" style={{ ["--cat" as string]: catColor(report.category) }}>
-                    <span className="rep-photo-pin" style={{ background: catColor(report.category) }}>
-                      {pin ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={pin} alt="" />
-                      ) : (
-                        <Icons.Layers size={14} />
-                      )}
-                    </span>
+                    {photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" />
+                    ) : (
+                      <span className="rep-photo-pin" style={{ background: catColor(report.category) }}>
+                        {pin ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={pin} alt="" />
+                        ) : (
+                          <Icons.Layers size={14} />
+                        )}
+                      </span>
+                    )}
                     <span className="rep-photo-tag">
                       <Icons.Eye size={12} /> Reporter photo
                     </span>
@@ -437,13 +458,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <div className="sub-body">
               <div className="rep-to">
                 <button
-                  className={`rep-to-btn ${to === "reporter" ? "on" : ""}`}
-                  onClick={() => setTo("reporter")}
+                  className={`rep-to-btn ${target === "reporter" ? "on" : ""}`}
+                  onClick={() => canReporter && setTo("reporter")}
+                  disabled={!canReporter}
+                  title={canReporter ? "" : "Anonymous report — no reporter account to message"}
                 >
                   <Icons.Users size={12} /> Reporter
                 </button>
                 <button
-                  className={`rep-to-btn ${to === "city" ? "on" : ""}`}
+                  className={`rep-to-btn ${target === "city" ? "on" : ""}`}
                   onClick={() => canCity && setTo("city")}
                   disabled={!canCity}
                   title={canCity ? "" : "No city contact on file"}
@@ -455,7 +478,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 className="rep-followup"
                 rows={3}
                 placeholder={
-                  to === "reporter"
+                  target === "reporter"
                     ? `Message ${firstName(report.reporter.name)} — e.g. a status update or a question…`
                     : `Message ${report.city.dept} — e.g. nudge for an update…`
                 }
@@ -464,11 +487,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               />
               <button
                 className="btn primary full"
-                disabled={!text.trim() || followup.isPending}
+                disabled={!text.trim() || !canSend || followup.isPending}
                 onClick={send}
-                style={!text.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+                style={!text.trim() || !canSend ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
               >
-                <Icons.Send size={13} /> Send to {to === "reporter" ? "reporter" : "city"}
+                <Icons.Send size={13} /> Send to {target === "reporter" ? "reporter" : "city"}
               </button>
             </div>
           </div>
