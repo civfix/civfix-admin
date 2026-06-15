@@ -382,9 +382,20 @@ export function UsersPage({ focusId }: SectionPageProps) {
   const listQuery = useUserList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Unfiltered fetch for stable chip counts across filters.
+  // Unfiltered list for stable chip counts across filters. In the default "All" view with no search,
+  // `listParams` serializes to the same query key as `{}` (filter/q both undefined), so this second
+  // `useUserList({})` resolves against the SAME TanStack Query cache entry as `listQuery` — no extra
+  // network round-trip or Zod parse on a plain Users mount; we just reuse the already-fetched `items`.
+  // When a filter/search IS active it resolves separately so the chips keep showing the UNFILTERED totals
+  // (stable across filters) rather than collapsing to the narrowed page's contents. Both queries are
+  // keyset-paginated (server-side default page size, max 100), so these counts cap at the first page; a
+  // fully accurate total would need a server-side per-status counts block (a contract addition).
+  const isUnfiltered = !listParams.filter && !listParams.q
   const allQuery = useUserList({})
-  const allItems = React.useMemo(() => allQuery.data?.items ?? [], [allQuery.data])
+  const allItems = React.useMemo(
+    () => (isUnfiltered ? items : (allQuery.data?.items ?? [])),
+    [isUnfiltered, items, allQuery.data],
+  )
   const counts = {
     all: allItems.length,
     active: allItems.filter((u) => u.status === "active").length,

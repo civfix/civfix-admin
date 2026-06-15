@@ -411,12 +411,17 @@ export function ModerationPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
+  // Debounce the search term so a keystroke burst collapses into a single request: `query` drives the
+  // controlled input (responsive), but the *deferred* value feeds the query key, so React holds back the
+  // param update until typing settles instead of firing GET /admin/moderation on every character.
+  const deferredQuery = React.useDeferredValue(query)
+
   const listParams = {
     filter:
       filter === "all"
         ? undefined
         : (filter as "image" | "pattern" | "appeal" | "gps" | "duplicate" | "high"),
-    q: query.trim() || undefined,
+    q: deferredQuery.trim() || undefined,
   }
   const listQuery = useModerationList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])

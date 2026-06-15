@@ -462,9 +462,18 @@ export function EventsPage({ focusId }: SectionPageProps) {
   const listQuery = useEventList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Unfiltered fetch for stable chip counts across filters.
+  // Unfiltered list for stable chip counts across filters. In the default "All" view with no search,
+  // `listParams` serializes to the same query key as `{}` (filter/q both undefined), so this second
+  // `useEventList({})` resolves against the SAME TanStack Query cache entry as `listQuery` — no extra
+  // network round-trip or Zod parse on a plain Events mount; we just reuse the already-fetched `items`.
+  // The duplicate request only fires when a filter/search is active (a different key). Both queries are
+  // keyset-paginated, so these counts cap at the first page (a fully accurate total needs server counts).
+  const isUnfiltered = !listParams.filter && !listParams.q
   const allQuery = useEventList({})
-  const allItems = React.useMemo(() => allQuery.data?.items ?? [], [allQuery.data])
+  const allItems = React.useMemo(
+    () => (isUnfiltered ? items : (allQuery.data?.items ?? [])),
+    [isUnfiltered, items, allQuery.data],
+  )
   const counts = {
     all: allItems.length,
     upcoming: allItems.filter((e) => e.status === "upcoming").length,

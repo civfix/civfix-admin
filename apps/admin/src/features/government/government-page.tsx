@@ -63,6 +63,22 @@ const METHOD_LABELS: Record<GovMethod, string> = {
   cold_outreach: "Cold outreach",
 }
 
+/**
+ * Debounce a rapidly-changing value: returns `value` only after it has stayed put for `delayMs`.
+ * Used for the search box so a multi-character search term produces a single settled query key
+ * instead of one GET per keystroke (each distinct `q` is a fresh React Query cache key, so an
+ * un-debounced input floods the backend with intermediate, immediately-discarded result sets).
+ * The input keeps `value={query}` for instant typing; only this debounced value reaches listParams.q.
+ */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = React.useState(value)
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs)
+    return () => clearTimeout(t)
+  }, [value, delayMs])
+  return debounced
+}
+
 function initials(name: string): string {
   return name
     .split(" ")
@@ -346,9 +362,13 @@ export function GovernmentPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
+  // Only the settled search term reaches the query key (see useDebouncedValue) — typing stays instant
+  // via value={query} below, but the list refetch fires once after the user pauses, not per keystroke.
+  const debouncedQuery = useDebouncedValue(query, 300)
+
   const listParams = {
     filter: filter === "all" ? undefined : (filter as "pending" | "approved" | "rejected"),
-    q: query.trim() || undefined,
+    q: debouncedQuery.trim() || undefined,
   }
   const listQuery = useGovClaimList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])

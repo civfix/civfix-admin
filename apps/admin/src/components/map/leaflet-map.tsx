@@ -118,6 +118,11 @@ export function LeafletMap({
   const mapRef = React.useRef<L.Map | null>(null)
   const tileRef = React.useRef<L.TileLayer | null>(null)
   const markersRef = React.useRef<Record<string, L.Marker>>({})
+  // Per-id memo of the last-rendered visual descriptor (category|draft|kind|active) and position, so
+  // reconcile can skip the expensive DivIcon rebuild + DOM teardown (setIcon) and the setLatLng call
+  // when nothing visible actually changed for that marker. Without this, a single activeId change
+  // re-icons and DOM-replaces ALL N markers; with it, only the de-activated + newly-active markers do.
+  const renderRef = React.useRef<Record<string, { key: string; lat: number; lng: number }>>({})
   // Keep the latest onPinTap without re-running the create effect.
   const onPinTapRef = React.useRef(onPinTap)
   onPinTapRef.current = onPinTap
@@ -163,6 +168,7 @@ export function LeafletMap({
       map.remove()
       mapRef.current = null
       markersRef.current = {}
+      renderRef.current = {}
     }
     // Intentionally run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -195,20 +201,29 @@ export function LeafletMap({
       if (!next[id]) {
         markersRef.current[id]?.remove()
         delete markersRef.current[id]
+        delete renderRef.current[id]
       }
     })
 
     pins.forEach((p) => {
       const existing = markersRef.current[p.id]
-      const icon = pinIcon(p.category, {
-        active: String(p.id) === String(activeId),
-        draft: p.draft,
-        kind: p.kind,
-      })
+      const active = String(p.id) === String(activeId)
+      // One cheap string capturing everything pinIcon() depends on. Equal key => identical DivIcon, so
+      // we can skip rebuilding the HTML/SVG and the setIcon DOM teardown entirely.
+      const key = `${p.category}|${p.draft}|${p.kind}|${active}`
       if (existing) {
-        existing.setLatLng([p.lat, p.lng])
-        existing.setIcon(icon)
+        const prev = renderRef.current[p.id]
+        // Re-icon only when the visual descriptor changed (e.g. this pin just gained/lost active).
+        if (!prev || prev.key !== key) {
+          existing.setIcon(pinIcon(p.category, { active, draft: p.draft, kind: p.kind }))
+        }
+        // Re-position only when the coordinates actually moved.
+        if (!prev || prev.lat !== p.lat || prev.lng !== p.lng) {
+          existing.setLatLng([p.lat, p.lng])
+        }
+        renderRef.current[p.id] = { key, lat: p.lat, lng: p.lng }
       } else {
+        const icon = pinIcon(p.category, { active, draft: p.draft, kind: p.kind })
         const m = L.marker([p.lat, p.lng], { icon, riseOnHover: true }).addTo(map)
         const tip = p.tip || p.label
         if (tip) {
@@ -220,6 +235,7 @@ export function LeafletMap({
         }
         m.on("click", () => onPinTapRef.current?.(p))
         markersRef.current[p.id] = m
+        renderRef.current[p.id] = { key, lat: p.lat, lng: p.lng }
       }
     })
   }, [pins, activeId])

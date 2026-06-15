@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   AppealModerationRequest,
   ApproveModerationRequest,
@@ -28,6 +28,10 @@ export function useModerationList(params: ModerationListQuery) {
   return useQuery<ModerationListResponse>({
     queryKey: queryKeys.moderation.list(params),
     queryFn: () => api.listModeration(params),
+    // Keep the previous page's rows on screen while the next filter/search request is in flight, instead
+    // of unmounting the whole list to a spinner on every key change. Pairs with the debounced search term
+    // in moderation-page.tsx so typing feels stable rather than flickering empty between keystrokes.
+    placeholderData: keepPreviousData,
   })
 }
 

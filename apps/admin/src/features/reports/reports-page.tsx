@@ -101,19 +101,21 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-function ReportRow({
+const ReportRow = React.memo(function ReportRow({
   item,
   selected,
-  onClick,
+  onSelect,
 }: {
   item: AdminReportListItemDTO
   selected: boolean
-  onClick: () => void
+  // Stable setter from the parent (React.useState's dispatcher keeps identity), so memoized rows
+  // only re-render when their own `item`/`selected` actually change — not on every keystroke.
+  onSelect: (id: string) => void
 }) {
   const view = STATUS_VIEW[item.status]
   const pin = catPinSrc(item.category)
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
       <div className="leading has-pin" title={REPORT_CATEGORY_LABELS[item.category]}>
         {pin ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -146,7 +148,7 @@ function ReportRow({
       </div>
     </div>
   )
-}
+})
 
 function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (id: string) => void }) {
   const q = useReport(reportId)
@@ -518,9 +520,21 @@ export function ReportsPage({ focusId }: SectionPageProps) {
   const listQuery = useReportList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Unfiltered fetch for stable chip counts across filters.
+  // Unfiltered list for stable chip counts across filters. In the default "All" view with no search,
+  // `listParams` serializes to the same query key as `{}` (filter/q both undefined), so this second
+  // `useReportList({})` resolves against the SAME TanStack Query cache entry as `listQuery` — no extra
+  // network round-trip or Zod parse on a plain Reports mount; we just reuse the already-fetched `items`.
+  // The duplicate request only fires when a filter/search is active (a different key), which is the
+  // intended "counts stay stable while the visible list is filtered" behavior.
+  //
+  // Note: both queries are keyset-paginated (ADMIN_DEFAULT_LIMIT=25, max 100), so these counts cap at
+  // the first page; a fully accurate count needs server-side per-bucket totals (contract change).
+  const isUnfiltered = !listParams.filter && !listParams.q
   const allQuery = useReportList({})
-  const allItems = React.useMemo(() => allQuery.data?.items ?? [], [allQuery.data])
+  const allItems = React.useMemo(
+    () => (isUnfiltered ? items : (allQuery.data?.items ?? [])),
+    [isUnfiltered, items, allQuery.data],
+  )
   const counts = {
     all: allItems.length,
     submitted: allItems.filter((r) => r.status === "submitted").length,
@@ -598,12 +612,9 @@ export function ReportsPage({ focusId }: SectionPageProps) {
               />
             ) : (
               items.map((r) => (
-                <ReportRow
-                  key={r.id}
-                  item={r}
-                  selected={selId === r.id}
-                  onClick={() => setSelId(r.id)}
-                />
+                // Pass the stable `setSelId` dispatcher (not a fresh arrow) so memoized rows don't
+                // all re-render on each parent render; the row calls onSelect(item.id) on click.
+                <ReportRow key={r.id} item={r} selected={selId === r.id} onSelect={setSelId} />
               ))
             )}
           </div>
