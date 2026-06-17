@@ -17,5 +17,11 @@
   },
   "devDependencies": {
     "turbo": "^2.3.3"
+  },
+  "pnpm": {
+    "//note": "TEMPORARY Phase-4 dev link: overrides @civfix/shared to the LOCAL built civfix-shared (which carries the discussion contract not yet on the registry). The pinned ^0.5.0 range in apps/admin stays unchanged; promoting to a real published version is a Phase-5 release step. Remove this override after release. Requires the local dist to be freshly built (pnpm -C ../civfix-shared/packages/shared build) and a re-run of pnpm install.",
+    "overrides": {
+      "@civfix/shared": "link:../civfix-shared/packages/shared"
+    }
   }
 }

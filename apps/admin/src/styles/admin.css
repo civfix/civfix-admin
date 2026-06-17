@@ -2568,6 +2568,74 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .evt-msg-when { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
 .evt-msg-text { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink); line-height: 1.4; }
 
+/* -- Report discussion (public comment thread; distinct from the Activity timeline) -- */
+.dsc-list { display: flex; flex-direction: column; gap: 10px; }
+.dsc-msg {
+  display: flex; gap: 10px;
+  padding: 10px; border-radius: 10px;
+  background: var(--paper-2); border: 1px solid var(--border-soft);
+}
+.dsc-msg.removed { background: transparent; border-style: dashed; opacity: 0.75; }
+.dsc-msg-av {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, var(--sky), var(--moss));
+}
+.dsc-msg.removed .dsc-msg-av { background: var(--paper-2); color: var(--ink-4); border: 1px solid var(--border-soft); }
+.dsc-msg-body { flex: 1; min-width: 0; }
+.dsc-msg-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.dsc-msg-who { font-weight: 700; font-size: 12.5px; color: var(--ink); }
+.dsc-msg-handle { font-size: 11px; color: var(--ink-3); }
+.dsc-msg-when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
+.dsc-msg-text { font-size: 12.5px; color: var(--ink); line-height: 1.45; margin: 5px 0 0; }
+.dsc-msg-text.tombstone {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-style: italic; color: var(--ink-3); font-size: 12px;
+}
+.dsc-msg-media { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.dsc-msg-thumb {
+  width: 44px; height: 44px; border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper); border: 1px solid var(--border-soft); color: var(--ink-4);
+}
+.dsc-msg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dsc-msg-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.dsc-msg-reactions { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.dsc-reaction {
+  font-size: 10.5px; font-weight: 600; color: var(--ink-2);
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--paper); border: 1px solid var(--border-soft);
+}
+.dsc-reaction.mine { background: var(--bloom-50); color: var(--bloom-700); border-color: color-mix(in oklab, var(--bloom) 20%, transparent); }
+.dsc-msg-replies { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.dsc-msg-replies svg { color: var(--ink-4); }
+
+/* Linked reports/events galleries (event<->report linking). A vertical list of clickable cards: a
+   thumb/glyph, a title, a status/kind sub-row, and an address/organizer line. Used on both the event
+   detail ("Linked reports") and the report detail ("Linked events"). */
+.evt-linked-list { display: flex; flex-direction: column; gap: 8px; }
+.evt-linked-card {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  background: var(--paper-2); border: 1px solid var(--border-soft);
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.evt-linked-card:hover { border-color: var(--border); background: var(--paper); }
+.evt-linked-thumb {
+  width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper); border: 1px solid var(--border-soft); color: var(--ink-3);
+}
+.evt-linked-thumb.hue-sun { background: var(--sun-50, #FFF6DC); color: var(--sun-700); border-color: transparent; }
+.evt-linked-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.evt-linked-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.evt-linked-title { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-linked-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
+.evt-linked-sub .sep { color: var(--ink-4); }
+.evt-linked-cat { font-weight: 600; }
+.evt-linked-addr { font-size: 11px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .user-detail { display: flex; flex-direction: column; height: 100%; }
 .user-detail-head {
   display: flex;
@@ -3293,12 +3361,12 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .bt-map .card { height: 100%; }
 .bt-discovery { grid-column: span 5; }
 .bt-moderation { grid-column: span 5; }
-.bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
+.bt-mail, .bt-users, .bt-verification, .bt-reports, .bt-events { grid-column: span 3; }
 @media (max-width: 1100px) {
   .hub-bento { grid-template-columns: repeat(6, 1fr); }
   .bt-map { grid-column: span 6; grid-row: auto; min-height: 300px; }
   .bt-discovery, .bt-moderation { grid-column: span 6; }
-  .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
+  .bt-mail, .bt-users, .bt-verification, .bt-reports, .bt-events { grid-column: span 3; }
 }
 @media (max-width: 720px) {
   .hub-bento { grid-template-columns: 1fr; }

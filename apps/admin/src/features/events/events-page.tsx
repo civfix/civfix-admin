@@ -4,14 +4,18 @@ import * as React from "react"
 import dynamic from "next/dynamic"
 import {
   EVENT_STATUS_LABELS,
+  REPORT_CATEGORY_LABELS,
   type AdminEventDTO,
   type AdminEventListItemDTO,
   type EventStatus,
+  type LinkedReportRef,
 } from "@civfix/shared"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
+import { reportStatusView } from "@/lib/report-status"
 import {
   useCancelEvent,
   useEvent,
@@ -68,6 +72,8 @@ const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> 
   done: Icons.Check,
   warn: Icons.AlertTriangle,
   cancel: Icons.Trash,
+  linked: Icons.Layers,
+  unlinked: Icons.X,
 }
 
 function firstName(name: string): string {
@@ -86,6 +92,45 @@ function initials(name: string): string {
     .slice(0, 2)
     .join("")
     .toUpperCase()
+}
+
+/** The per-category pin asset for a linked-report card thumbnail ("other" has no asset -> Layers icon). */
+function catPinSrc(category: LinkedReportRef["category"]): string | null {
+  if (category === "other") return null
+  return `/ds/pin-${category}.svg`
+}
+
+/**
+ * A linked-report card in the event's "Linked reports" gallery: the report's media thumb (or its
+ * category pin), title, status pill, and address. Tapping it deep-links into the Reports section with
+ * that report focused (the same nav target the live map uses).
+ */
+function LinkedReportCard({ report, onOpen }: { report: LinkedReportRef; onOpen: () => void }) {
+  const view = reportStatusView(report.status)
+  const pin = catPinSrc(report.category)
+  return (
+    <button className="evt-linked-card" onClick={onOpen} title={report.title}>
+      <span className="evt-linked-thumb" aria-hidden="true">
+        {report.thumbUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={report.thumbUrl} alt="" />
+        ) : pin ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={pin} alt="" />
+        ) : (
+          <Icons.Layers size={16} />
+        )}
+      </span>
+      <span className="evt-linked-body">
+        <span className="evt-linked-title">{report.title}</span>
+        <span className="evt-linked-sub">
+          <span className={`pill ${view.cls} tight`}>{view.label}</span>
+          <span className="evt-linked-cat">{REPORT_CATEGORY_LABELS[report.category]}</span>
+        </span>
+        {report.addr && <span className="evt-linked-addr">{report.addr}</span>}
+      </span>
+    </button>
+  )
 }
 
 function EventRow({
@@ -231,7 +276,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         </span>
         <div className="rep-head-text">
           <div className="crumb" title={event.id}>
-            {shortId(event.id)} · Cleanup event
+            {shortId(event.id)} · {eventKindView(event.eventKind).label}
           </div>
           <h2>{event.title}</h2>
         </div>
@@ -272,9 +317,9 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             </div>
           </div>
 
-          {/* Location map */}
+          {/* Meet location map */}
           <div className="sub">
-            <div className="sub-head">Location</div>
+            <div className="sub-head">Meet location</div>
             <div className="sub-body" style={{ padding: 10 }}>
               <div className="rep-media">
                 <div className="rep-minimap" style={{ flex: 1 }}>
@@ -283,7 +328,9 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                       {
                         id: "e",
                         category: "event",
-                        kind: "event",
+                        // Diverge the minimap pin by kind (cleanup gold vs other-volunteer moss); the
+                        // detail DTO carries eventKind, so the marker can reflect it here.
+                        kind: EVENT_KIND_PIN_KIND[event.eventKind],
                         lat: event.coords[0],
                         lng: event.coords[1],
                       },
@@ -330,6 +377,38 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
               )}
             </div>
           </div>
+
+          {/* Linked reports — the reports this cleanup will handle. Cleanup-only (other_volunteer events
+              never link reports), so the section is hidden for that kind. */}
+          {event.eventKind === "cleanup" && (
+            <div className="sub">
+              <div className="sub-head">
+                Linked reports
+                <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+                  <Icons.Layers size={12} /> {event.linkedReports.length}
+                </span>
+              </div>
+              <div className="sub-body">
+                {event.linkedReports.length === 0 ? (
+                  <EmptyState
+                    title="No linked reports"
+                    sub="This cleanup is not yet linked to any reports."
+                    icon={<Icons.Layers size={20} />}
+                  />
+                ) : (
+                  <div className="evt-linked-list">
+                    {event.linkedReports.map((r) => (
+                      <LinkedReportCard
+                        key={r.id}
+                        report={r}
+                        onOpen={() => nav("reports", r.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="rep-col">

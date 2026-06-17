@@ -10,6 +10,7 @@ import {
   type UserMessageItemDTO,
   type UserReportItemDTO,
   type UserStatus,
+  type VerificationStatus,
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -25,7 +26,7 @@ import {
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
-import { useToast } from "@/store/ui-store"
+import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
@@ -50,6 +51,17 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   suspended: { cls: "status-flag", label: "Suspended" },
   review: { cls: "status-progress", label: "In review" },
   banned: { cls: "status-flag", label: "Banned" },
+}
+
+/**
+ * Pill treatment per document-verification status (pill class + label). `unverified` is the resting
+ * default (no application) — it shows no pill, so only applicants/decisions appear. The pill deep-links
+ * into the Verification queue with this user preselected.
+ */
+const VERIFY_VIEW: Partial<Record<VerificationStatus, { cls: string; label: string }>> = {
+  pending: { cls: "status-new", label: "Verification pending" },
+  verified: { cls: "status-ok", label: "Verified neighbor" },
+  rejected: { cls: "status-flag", label: "Verification rejected" },
 }
 
 function catPinSrc(category: ReportCategory): string | null {
@@ -227,6 +239,7 @@ function tabCount(user: AdminUserDTO, id: TabId): number {
 function UserDetail({ userId }: { userId: string }) {
   const q = useUser(userId)
   const toast = useToast()
+  const nav = useNav()
 
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
@@ -315,6 +328,16 @@ function UserDetail({ userId }: { userId: string }) {
           {user.flagged && (
             <span className="pill status-flag">
               <Icons.Flag size={11} /> Flagged
+            </span>
+          )}
+          {user.verificationStatus && VERIFY_VIEW[user.verificationStatus] && (
+            <span
+              className={`pill ${VERIFY_VIEW[user.verificationStatus]!.cls}`}
+              style={{ cursor: "pointer" }}
+              title="Open in the Verification queue"
+              onClick={() => nav("verification", user.id)}
+            >
+              <Icons.Shield size={11} /> {VERIFY_VIEW[user.verificationStatus]!.label}
             </span>
           )}
           <span className={`pill ${STATUS_VIEW[user.status].cls}`}>

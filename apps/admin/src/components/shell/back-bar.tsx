@@ -14,6 +14,7 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
   events: Icons.Calendar,
   mail: Icons.Mail,
   users: Icons.Users,
+  verification: Icons.Shield,
   analytics: Icons.BarChart,
 }
 
@@ -23,6 +24,7 @@ const SECTION_HUE: Record<SectionId, string> = {
   events: "sun",
   mail: "sky",
   users: "sun",
+  verification: "moss",
   analytics: "moss",
 }
 

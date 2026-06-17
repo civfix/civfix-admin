@@ -4,8 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   AdminReportListQuery,
   AdminReportListResponse,
+  DiscussionPageResponse,
   FlagReportRequest,
+  GetAdminReportDiscussionRequest,
   GetAdminReportResponse,
+  RemoveDiscussionMessageRequest,
   RemoveReportRequest,
   SendFollowupRequest,
   SetReportStatusRequest,
@@ -81,5 +84,39 @@ export function useSendReportFollowup() {
   return useMutation({
     mutationFn: (input: SendFollowupRequest) => api.sendReportFollowup(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
+  })
+}
+
+/**
+ * GET /admin/reports/:id/discussion - the operator view of a report's PUBLIC discussion (the threaded
+ * comment surface, separate from the status timeline). Unlike the citizen read this page INCLUDES
+ * soft-removed/tombstoned messages so operators can see what was taken down. Paginated keyset (the
+ * response carries `nextCursor`); the cursor is part of the query key so paging back never collides with
+ * the first page. Scoped to the report id and only fetched once an id is selected.
+ */
+export function useReportDiscussion(id: string | null, cursor?: string) {
+  const params: Omit<GetAdminReportDiscussionRequest, "id"> = cursor ? { cursor } : {}
+  return useQuery<DiscussionPageResponse>({
+    queryKey: queryKeys.reports.discussion(id ?? "", params),
+    queryFn: () => api.getAdminReportDiscussion({ id: id as string, ...params }),
+    enabled: !!id,
+  })
+}
+
+/**
+ * POST /admin/reports/:id/discussion/:messageId/remove - operator soft-delete of a single discussion
+ * message (audited; optional reason). On success we invalidate THIS report's discussion pages (so the
+ * removed message re-renders as a tombstone), plus the cross-cutting activity feed (a removal is an
+ * operator action). The report detail/list aggregates are untouched - a discussion removal does not
+ * change a report's status, flag, or counts.
+ */
+export function useRemoveDiscussionMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RemoveDiscussionMessageRequest) => api.removeDiscussionMessage(input),
+    onSuccess: (_res, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.reports.discussion(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.activity.all })
+    },
   })
 }

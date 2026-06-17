@@ -22,7 +22,7 @@ export interface MapPin {
   category?: string | null
   /** When true, renders the red "needs attention" pin. */
   draft?: boolean
-  /** "event" renders the yellow event pin. */
+  /** "event" renders the yellow cleanup pin; "event-volunteer" the moss other-volunteer pin. */
   kind?: string | null
   /** Tooltip title. */
   tip?: string
@@ -63,16 +63,29 @@ const GLYPHS: Record<string, string> = {
   recycling: "M12 4 L8 11 H16 L12 4 Z M5 13 L3 17 L7 19 M19 13 L21 17 L17 19 M8 20 H16",
   water: "M12 3 C7 8 4 12 4 15 a8 8 0 0 0 16 0 c0 -3 -3 -7 -8 -12 Z",
   event: "M4 7 a1 1 0 0 1 1 -1 h14 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z M16 4 v4 M8 4 v4 M4 11 h16",
+  // "Other Volunteer" events: a cupped-hands-with-heart glyph, distinct from the cleanup calendar.
+  "event-volunteer":
+    "M12 9 a2 2 0 0 1 3 -1.3 a2 2 0 0 1 0.5 3 L12 14 L8.5 10.7 a2 2 0 0 1 0.5 -3 A2 2 0 0 1 12 9 Z M4 13 v5 a1 1 0 0 0 1 1 h2 v-6 Z M20 13 v5 a1 1 0 0 1 -1 1 h-2 v-6 Z",
 }
-const PIN_FILL: Record<string, string> = { routed: "#8A8378", needs: "#E5564B", event: "#E5AE1C" }
+const PIN_FILL: Record<string, string> = {
+  routed: "#8A8378",
+  needs: "#E5564B",
+  event: "#E5AE1C",
+  "event-volunteer": "#5B8C6E",
+}
+// Marker kinds that render with the "event" family of treatments (no draft/needs override).
+const EVENT_KINDS = new Set(["event", "event-volunteer"])
 
 function pinIcon(
   category: string | null | undefined,
   { active = false, draft = false, kind = null }: { active?: boolean; draft?: boolean; kind?: string | null },
 ): L.DivIcon {
-  const state = kind === "event" ? "event" : draft ? "needs" : "routed"
-  const glyph = GLYPHS[kind === "event" ? "event" : category || "trash"] || GLYPHS.trash
-  const fill = PIN_FILL[state]
+  // Event markers (cleanup / other-volunteer) own their own fill + glyph by kind; everything else is a
+  // report pin (red when it needs attention, gray when handled).
+  const isEvent = kind != null && EVENT_KINDS.has(kind)
+  const state = isEvent ? kind : draft ? "needs" : "routed"
+  const glyph = GLYPHS[isEvent ? kind : category || "trash"] || GLYPHS.trash
+  const fill = PIN_FILL[state] ?? PIN_FILL.routed
   const w = active ? 40 : 31
   const h = w * (76 / 64)
   const html =

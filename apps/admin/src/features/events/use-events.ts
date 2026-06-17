@@ -7,6 +7,7 @@ import type {
   CancelRequest,
   FlagEventRequest,
   GetAdminEventResponse,
+  LinkEventReportsRequest,
   PostMessageRequest,
   SetEventOutcomeRequest,
   SetEventStatusRequest,
@@ -91,5 +92,36 @@ export function useSetEventOutcome() {
   return useMutation({
     mutationFn: (input: SetEventOutcomeRequest) => api.setEventOutcome(input),
     onSuccess: (_res, { id }) => invalidateEvents(qc, id),
+  })
+}
+
+/**
+ * POST /admin/events/:id/link-reports - link one or more reports to a cleanup. Beyond the event caches,
+ * this also changes each report's `linkedEvents` gallery, so the reports caches are invalidated too.
+ */
+export function useLinkReports() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: LinkEventReportsRequest) => api.linkEventReports(input),
+    onSuccess: (_res, { id }) => {
+      invalidateEvents(qc, id)
+      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
+    },
+  })
+}
+
+/**
+ * DELETE /admin/events/:id/reports/:reportId - unlink a single report from a cleanup. Path params only
+ * (no body). Invalidates the event detail/list plus the affected report's detail + the reports lists.
+ */
+export function useUnlinkReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { id: string; reportId: string }) => api.unlinkEventReport(input),
+    onSuccess: (_res, { id, reportId }) => {
+      invalidateEvents(qc, id)
+      qc.invalidateQueries({ queryKey: queryKeys.reports.detail(reportId) })
+      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
+    },
   })
 }

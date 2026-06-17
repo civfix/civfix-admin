@@ -84,6 +84,9 @@ export const queryKeys = {
     all: ["admin", "reports"] as const,
     list: (params?: unknown) => ["admin", "reports", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "reports", "detail", id] as const,
+    // The report's public discussion (scoped to the report id; the params object carries the cursor).
+    discussion: (id: string, params?: unknown) =>
+      ["admin", "reports", id, "discussion", params ?? null] as const,
   },
 
   // ----- events (cleanups) -----
@@ -102,6 +105,15 @@ export const queryKeys = {
     events: (id: string, params?: unknown) => ["admin", "users", id, "events", params ?? null] as const,
     messages: (id: string, params?: unknown) =>
       ["admin", "users", id, "messages", params ?? null] as const,
+  },
+
+  // ----- verification (document "verified neighbor" review) -----
+  verification: {
+    all: ["admin", "verification"] as const,
+    list: (params?: unknown) => ["admin", "verification", "list", params ?? null] as const,
+    detail: (userId: string) => ["admin", "verification", "detail", userId] as const,
+    documentUrl: (userId: string, mediaId: string) =>
+      ["admin", "verification", "document-url", userId, mediaId] as const,
   },
 
   // ----- mail / outreach -----

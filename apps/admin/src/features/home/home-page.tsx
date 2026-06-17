@@ -5,6 +5,7 @@ import type {
   AdminEventListItemDTO,
   AdminReportListItemDTO,
   AdminUserListItemDTO,
+  AdminVerificationDTO,
   DiscoveryTaskDTO,
   HomeSummaryResponse,
   InboundEmailListItemDTO,
@@ -26,6 +27,7 @@ import { useEventList } from "@/features/events/use-events"
 import { useMailList } from "@/features/mail/use-mail"
 import { useInboxList } from "@/features/inbox/use-inbox"
 import { useUserList } from "@/features/users/use-users"
+import { useVerifications } from "@/features/verification/use-verification"
 import { useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -54,6 +56,7 @@ const HUB_ICON: Record<string, IconComponent> = {
   events: Icons.Calendar,
   mail: Icons.Mail,
   users: Icons.Users,
+  verification: Icons.Shield,
   analytics: Icons.BarChart,
 }
 
@@ -294,6 +297,17 @@ function userRow(u: AdminUserListItemDTO): PeekItem {
     meta: u.flagReason ?? (u.city || "—"),
     age: u.lastActive,
     focusId: u.id,
+  }
+}
+
+function verificationRow(v: AdminVerificationDTO): PeekItem {
+  return {
+    kind: "avatar",
+    name: v.userName,
+    title: v.userName,
+    meta: v.handle ?? `${v.documents.length} docs`,
+    age: v.appliedAt,
+    focusId: v.userId,
   }
 }
 
@@ -592,6 +606,9 @@ export function HomePage(_props: SectionPageProps) {
   const mailQuery = useMailList({ limit: PREVIEW_ROWS + 1 })
   const inboxQuery = useInboxList({ status: "all", limit: PREVIEW_ROWS + 1 })
   const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
+  // The Verification queue has no block in the frozen home/summary DTO, so its tile is self-contained:
+  // it reads the pending verification list directly (mirroring the Mail tile's out-of-summary rollup).
+  const verificationQuery = useVerifications({ filter: "pending", limit: PREVIEW_ROWS + 1 })
 
   const summaries = React.useMemo(
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
@@ -618,8 +635,30 @@ export function HomePage(_props: SectionPageProps) {
       ],
     }
   }, [summaries, inboxUnread, summaryQuery.data])
+  // Self-contained Verification summary (no home/summary block): lead = pending applications awaiting
+  // review, derived from the verification list page (capped, so it shows "N+" via the more-label).
+  const verificationItems = verificationQuery.data?.items ?? []
+  const verificationSummary = React.useMemo<SectionSummary>(
+    () => ({
+      id: "verification",
+      page: "verification",
+      label: "Verification",
+      hue: "moss",
+      lead: verificationItems.length,
+      unit: "awaiting review",
+      blurb:
+        "Neighbors who applied to be a verified neighbor. Review their documents, then approve or send them back.",
+      stats: [{ k: "Pending", v: verificationItems.length }],
+      cta: "Review applications",
+    }),
+    [verificationItems.length],
+  )
   const byId = (id: string): SectionSummary | undefined =>
-    id === "mail" ? mailSummary : summaries.find((s) => s.id === id)
+    id === "mail"
+      ? mailSummary
+      : id === "verification"
+        ? verificationSummary
+        : summaries.find((s) => s.id === id)
   const summary = summaryQuery.data
 
   // Resolve each non-analytics tile once (view model + rows + foot label). The bento renders them in the
@@ -691,6 +730,14 @@ export function HomePage(_props: SectionPageProps) {
     "accounts",
   )
   addTile(
+    "verification",
+    "bt-verification",
+    previewState(verificationQuery, PREVIEW_ROWS),
+    verificationItems.slice(0, PREVIEW_ROWS).map(verificationRow),
+    "application",
+    "applications",
+  )
+  addTile(
     "reports",
     "bt-reports",
     previewState(reportsQuery, PREVIEW_ROWS),
@@ -753,6 +800,7 @@ export function HomePage(_props: SectionPageProps) {
             )}
             {renderTile(tile("mail"))}
             {renderTile(tile("users"))}
+            {renderTile(tile("verification"))}
             {renderTile(tile("reports"))}
             {renderTile(tile("events"))}
           </>

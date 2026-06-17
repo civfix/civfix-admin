@@ -45,6 +45,11 @@ export const PAGE_REGISTRY: Record<PageId, LazyPage> = {
   users: React.lazy(() =>
     import("@/features/users/users-page").then((m) => ({ default: m.UsersPage })),
   ),
+  verification: React.lazy(() =>
+    import("@/features/verification/verification-page").then((m) => ({
+      default: m.VerificationPage,
+    })),
+  ),
   analytics: React.lazy(() =>
     import("@/features/analytics/analytics-page").then((m) => ({ default: m.AnalyticsPage })),
   ),
@@ -61,5 +66,6 @@ export const EXPECTED_EXPORTS: Record<PageId, string> = {
   events: "EventsPage",
   mail: "MailPage",
   users: "UsersPage",
+  verification: "VerificationPage",
   analytics: "AnalyticsPage",
 }

@@ -8,6 +8,8 @@ import {
   type AdminReportDTO,
   type AdminReportListItemDTO,
   type AdminReportStatus,
+  type DiscussionMessageDTO,
+  type LinkedEventRef,
   type ReportCategory,
 } from "@civfix/shared"
 
@@ -15,10 +17,13 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { reportBucket, reportStatusView } from "@/lib/report-status"
+import { eventKindView } from "@/lib/event-kind"
 import {
   useFlagReport,
+  useRemoveDiscussionMessage,
   useRemoveReport,
   useReport,
+  useReportDiscussion,
   useReportList,
   useSendReportFollowup,
   useSetReportStatus,
@@ -97,6 +102,258 @@ function shortId(id: string): string {
 /** Pluralize a noun against a count: pluralize(1, "confirm") -> "1 confirm". */
 function pluralize(n: number, singular: string, plural = `${singular}s`): string {
   return `${n} ${n === 1 ? singular : plural}`
+}
+
+/** Format an ISO scheduledAt for the linked-event card (e.g. "Jun 17, 2026"); falls back to the raw value. */
+function eventDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+}
+
+/**
+ * A linked-event (cleanup) card in the report's "Linked events" gallery: the event-kind icon + label,
+ * title, scheduled date, attendee count, and organizer. Tapping it deep-links into the Events section
+ * with that event focused.
+ */
+function LinkedEventCard({ event, onOpen }: { event: LinkedEventRef; onOpen: () => void }) {
+  const view = eventKindView(event.eventKind)
+  const Ico = view.icon
+  return (
+    <button className="evt-linked-card" onClick={onOpen} title={event.title}>
+      <span className="evt-linked-thumb hue-sun" aria-hidden="true">
+        <Ico size={16} />
+      </span>
+      <span className="evt-linked-body">
+        <span className="evt-linked-title">{event.title}</span>
+        <span className="evt-linked-sub">
+          <span className="evt-linked-cat">{view.label}</span>
+          <span className="sep">·</span>
+          <span>{eventDate(event.scheduledAt)}</span>
+          <span className="sep">·</span>
+          <span>{pluralize(event.going, "going", "going")}</span>
+        </span>
+        <span className="evt-linked-addr">{firstName(event.organizer.name)}</span>
+      </span>
+    </button>
+  )
+}
+
+/**
+ * Human label per reaction NAME. The discussion contract's `reactions[].emoji` values are the six ASCII
+ * reaction names (not Unicode glyphs), so the summary chips render the name + count (no emoji font
+ * dependency). An unknown name falls back to itself.
+ */
+const REACTION_LABEL: Record<string, string> = {
+  like: "Like",
+  heart: "Love",
+  celebrate: "Celebrate",
+  support: "Support",
+  insightful: "Insightful",
+  concerned: "Concerned",
+}
+
+/** Format a raw ISO discussion timestamp (createdAt/editedAt) for display; falls back to the raw value. */
+function msgWhen(iso: string): string {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
+}
+
+/**
+ * One discussion message (a public comment on the report). Operators see EVERY message including
+ * soft-removed ones (rendered as a subtle tombstone, not hidden). Replies render indented under their
+ * parent via the `depth` prop. Renders: author (displayName/handle, or "Removed" when soft-deleted /
+ * the author is null), the body, a "Forwarded to city" badge, the per-emoji reaction summary, the reply
+ * count, attachment thumbnails, and a per-message Remove action for live (non-removed) messages.
+ */
+function DiscussionMessageRow({
+  msg,
+  depth,
+  onRemove,
+  removing,
+}: {
+  msg: DiscussionMessageDTO
+  depth: number
+  onRemove: (msg: DiscussionMessageDTO) => void
+  removing: boolean
+}) {
+  // A message is "removed" when it carries a deletedAt tombstone OR the server nulled its author.
+  const removed = !!msg.deletedAt || msg.author === null
+  const authorName = msg.author?.displayName ?? "Removed"
+  const handle = msg.author?.handle
+  const reactions = msg.reactions.filter((r) => r.count > 0)
+
+  return (
+    <div
+      className={`dsc-msg ${removed ? "removed" : ""}`}
+      style={depth > 0 ? { marginLeft: depth * 22 } : undefined}
+    >
+      <span className="dsc-msg-av" aria-hidden="true">
+        {removed ? <Icons.Trash size={13} /> : initials(authorName)}
+      </span>
+      <div className="dsc-msg-body">
+        <div className="dsc-msg-top">
+          <span className="dsc-msg-who">{authorName}</span>
+          {handle && !removed && <span className="dsc-msg-handle mono">{handle}</span>}
+          {msg.forwardedToCity && (
+            <span className="pill status-progress tight" title="Forwarded to the routed city">
+              <Icons.Send size={10} /> Forwarded to city
+            </span>
+          )}
+          <span className="dsc-msg-when">{msgWhen(msg.createdAt)}</span>
+        </div>
+
+        {removed ? (
+          <p className="dsc-msg-text tombstone">
+            <Icons.EyeOff size={12} /> Message removed
+            {msg.deletedAt ? ` · ${msgWhen(msg.deletedAt)}` : ""}
+          </p>
+        ) : (
+          <p className="dsc-msg-text">{msg.body}</p>
+        )}
+
+        {/* Attachment thumbnails (skip on a removed message — its media is gone too). */}
+        {!removed && msg.attachments.length > 0 && (
+          <div className="dsc-msg-media">
+            {msg.attachments.map((m) => {
+              const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
+              return (
+                <span key={m.id} className="dsc-msg-thumb">
+                  {thumb ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumb} alt="" />
+                  ) : (
+                    <Icons.FileText size={14} />
+                  )}
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="dsc-msg-foot">
+          {/* Reaction summary (name + count per non-empty bucket). */}
+          {reactions.length > 0 && (
+            <span className="dsc-msg-reactions">
+              {reactions.map((r) => (
+                <span key={r.emoji} className={`dsc-reaction ${r.mine ? "mine" : ""}`}>
+                  {REACTION_LABEL[r.emoji] ?? r.emoji} {r.count}
+                </span>
+              ))}
+            </span>
+          )}
+          {msg.replyCount > 0 && (
+            <span className="dsc-msg-replies">
+              <Icons.MessageSquare size={11} /> {pluralize(msg.replyCount, "reply", "replies")}
+            </span>
+          )}
+          <div className="spacer" />
+          {/* Remove is shown only for live messages — an already-removed message has no action. */}
+          {!removed && (
+            <button
+              className="btn sm danger"
+              disabled={removing}
+              onClick={() => onRemove(msg)}
+              title="Remove this message (soft-delete; operators still see it as removed)"
+            >
+              <Icons.Trash size={11} /> Remove
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The report's PUBLIC discussion — clearly separate from the status timeline above. The status timeline
+ * is the operator/system action log (setReportStatus + sendReportFollowup); THIS is the neighbors' public
+ * comment thread (read + soft-remove only — operators never post here).
+ *
+ * Replies render indented under their parent: the flat page is grouped into top-level messages, each
+ * followed by its replies (matched on `parentId`). Soft-removed messages stay visible as tombstones so
+ * an operator can see what was taken down. Remove calls removeDiscussionMessage with an optional reason
+ * collected via a prompt, then invalidates the discussion query (the message re-renders as a tombstone).
+ */
+function ReportDiscussion({ reportId }: { reportId: string }) {
+  const q = useReportDiscussion(reportId)
+  const removeMsg = useRemoveDiscussionMessage()
+  const toast = useToast()
+
+  const onRemove = (msg: DiscussionMessageDTO) => {
+    // Optional audited removal reason (mirrors the moderation remove-action shape).
+    const reason = typeof window !== "undefined" ? window.prompt("Reason for removal (optional):") : null
+    // A cancelled prompt returns null — treat it as "abort", an empty string as "no reason given".
+    if (reason === null && typeof window !== "undefined") return
+    removeMsg.mutate(
+      { id: reportId, messageId: msg.id, ...(reason ? { reason } : {}) },
+      { onSuccess: () => toast("Message removed") },
+    )
+  }
+
+  return (
+    <div className="sub">
+      <div className="sub-head">
+        Discussion
+        {!q.isLoading && !q.isError && (
+          <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+            <Icons.MessageSquare size={12} /> {q.data?.items.length ?? 0}
+          </span>
+        )}
+      </div>
+      <div className="sub-body">
+        {q.isLoading ? (
+          <LoadingState label="Loading discussion..." />
+        ) : q.isError ? (
+          <ErrorState error={q.error} onRetry={() => q.refetch()} />
+        ) : (q.data?.items.length ?? 0) === 0 ? (
+          <EmptyState
+            title="No discussion yet"
+            sub="Public comments neighbors leave on this report appear here."
+            icon={<Icons.MessageSquare size={20} />}
+          />
+        ) : (
+          <div className="dsc-list">
+            {(() => {
+              const items = q.data!.items
+              // Group into top-level messages then their replies (one level of nesting, matched on
+              // parentId). Replies whose parent is absent from this page render as top-level fallbacks.
+              const byParent = new Map<string, DiscussionMessageDTO[]>()
+              for (const m of items) {
+                if (m.parentId) {
+                  const arr = byParent.get(m.parentId) ?? []
+                  arr.push(m)
+                  byParent.set(m.parentId, arr)
+                }
+              }
+              const seen = new Set<string>()
+              const rows: React.ReactNode[] = []
+              const push = (m: DiscussionMessageDTO, depth: number) => {
+                if (seen.has(m.id)) return
+                seen.add(m.id)
+                rows.push(
+                  <DiscussionMessageRow
+                    key={m.id}
+                    msg={m}
+                    depth={depth}
+                    onRemove={onRemove}
+                    removing={removeMsg.isPending}
+                  />,
+                )
+                for (const reply of byParent.get(m.id) ?? []) push(reply, depth + 1)
+              }
+              for (const m of items) {
+                if (!m.parentId) push(m, 0)
+              }
+              // Any reply whose parent is off-page: render it at the top level so nothing is dropped.
+              for (const m of items) push(m, 0)
+              return rows
+            })()}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 const ReportRow = React.memo(function ReportRow({
@@ -386,6 +643,30 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               )}
             </div>
           </div>
+
+          {/* Linked events — the cleanup events that will handle this report. Only rendered when the
+              report is linked to at least one event. */}
+          {report.linkedEvents.length > 0 && (
+            <div className="sub">
+              <div className="sub-head">
+                Linked events
+                <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+                  <Icons.Calendar size={12} /> {report.linkedEvents.length}
+                </span>
+              </div>
+              <div className="sub-body">
+                <div className="evt-linked-list">
+                  {report.linkedEvents.map((e) => (
+                    <LinkedEventCard key={e.id} event={e} onOpen={() => nav("events", e.id)} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Public discussion — the neighbors' comment thread. Distinct from the Activity timeline
+              above (operator/system actions): this is read + soft-remove only. */}
+          <ReportDiscussion reportId={report.id} />
         </div>
 
         <div className="rep-col">
