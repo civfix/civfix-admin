@@ -7,6 +7,7 @@ import type { HomeMapPin } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { useHomeMap } from "@/hooks/use-admin-home"
 import { useNav } from "@/store/ui-store"
+import { EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import type { MapPin, MapTint } from "@/components/map/leaflet-map"
 
 /**
@@ -48,7 +49,10 @@ function toMapPin(p: HomeMapPin): MapPin & {
     lng: p.lng,
     category: isEvent ? "event" : p.category,
     draft: needs,
-    kind: isEvent ? "event" : null,
+    // Diverge the event marker by kind: cleanup -> gold "event" pin, other_volunteer -> moss
+    // "event-volunteer" pin. HomeMapPin carries eventKind (null for report pins); fall back to the
+    // cleanup treatment when an event pin somehow lacks a kind. Report pins stay kind=null.
+    kind: isEvent ? EVENT_KIND_PIN_KIND[p.eventKind ?? "cleanup"] : null,
     tip: p.title,
     place: p.place,
     status: p.status,

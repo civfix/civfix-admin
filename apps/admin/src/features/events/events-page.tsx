@@ -7,6 +7,7 @@ import {
   REPORT_CATEGORY_LABELS,
   type AdminEventDTO,
   type AdminEventListItemDTO,
+  type AdminReportListItemDTO,
   type EventStatus,
   type LinkedReportRef,
 } from "@civfix/shared"
@@ -21,10 +22,13 @@ import {
   useEvent,
   useEventList,
   useFlagEvent,
+  useLinkReports,
   usePostEventMessage,
   useSetEventOutcome,
   useSetEventStatus,
+  useUnlinkReport,
 } from "@/features/events/use-events"
+import { useReportList } from "@/features/reports/use-reports"
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -102,13 +106,25 @@ function catPinSrc(category: LinkedReportRef["category"]): string | null {
 
 /**
  * A linked-report card in the event's "Linked reports" gallery: the report's media thumb (or its
- * category pin), title, status pill, and address. Tapping it deep-links into the Reports section with
- * that report focused (the same nav target the live map uses).
+ * category pin), title, status pill, and address. Tapping the card deep-links into the Reports section
+ * with that report focused (the same nav target the live map uses). When `onUnlink` is supplied
+ * (cleanup events only) a trailing operator "Remove" control sits beside the card — a sibling, never
+ * nested, because the card itself is a <button>.
  */
-function LinkedReportCard({ report, onOpen }: { report: LinkedReportRef; onOpen: () => void }) {
+function LinkedReportCard({
+  report,
+  onOpen,
+  onUnlink,
+  unlinking,
+}: {
+  report: LinkedReportRef
+  onOpen: () => void
+  onUnlink?: () => void
+  unlinking?: boolean
+}) {
   const view = reportStatusView(report.status)
   const pin = catPinSrc(report.category)
-  return (
+  const card = (
     <button className="evt-linked-card" onClick={onOpen} title={report.title}>
       <span className="evt-linked-thumb" aria-hidden="true">
         {report.thumbUrl ? (
@@ -131,6 +147,140 @@ function LinkedReportCard({ report, onOpen }: { report: LinkedReportRef; onOpen:
       </span>
     </button>
   )
+  if (!onUnlink) return card
+  return (
+    <div className="evt-linked-row">
+      {card}
+      <button
+        className="evt-linked-unlink"
+        disabled={unlinking}
+        onClick={onUnlink}
+        title="Unlink this report from the cleanup"
+      >
+        <Icons.X size={12} /> Remove
+      </button>
+    </div>
+  )
+}
+
+/**
+ * The "Link reports" picker — a lightweight modal (the shared .modal shell) over the admin reports list
+ * (the same GET /admin/reports the Reports section uses). Operators search, multi-select candidate
+ * reports (already-linked ids are excluded), and "Link selected" calls the link mutation. The selection
+ * is local; submitting fires one linkEventReports with the chosen ids.
+ */
+function LinkReportsPicker({
+  excludeIds,
+  pending,
+  onClose,
+  onLink,
+}: {
+  excludeIds: Set<string>
+  pending: boolean
+  onClose: () => void
+  onLink: (reportIds: string[]) => void
+}) {
+  const [query, setQuery] = React.useState("")
+  const [picked, setPicked] = React.useState<Set<string>>(() => new Set())
+
+  // Reuse the Reports section's list hook (GET /admin/reports) as the candidate source.
+  const listQuery = useReportList({ q: query.trim() || undefined })
+  const candidates = React.useMemo<AdminReportListItemDTO[]>(
+    () => (listQuery.data?.items ?? []).filter((r) => !excludeIds.has(r.id)),
+    [listQuery.data, excludeIds],
+  )
+
+  const toggle = (id: string) => {
+    setPicked((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const canLink = picked.size > 0 && !pending
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3>Link reports</h3>
+          <button className="closebtn" onClick={onClose}>
+            <Icons.X size={16} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="evt-pick-search">
+            <Icons.Search size={14} />
+            <input
+              type="text"
+              placeholder="Search title, place, reporter…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+            />
+          </div>
+          {listQuery.isLoading ? (
+            <LoadingState label="Loading reports..." />
+          ) : listQuery.isError ? (
+            <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
+          ) : candidates.length === 0 ? (
+            <EmptyState
+              title="No reports to link"
+              sub={query.trim() ? "Try a different search." : "Every matching report is already linked."}
+              icon={<Icons.Search size={20} />}
+            />
+          ) : (
+            <div className="evt-pick-list">
+              {candidates.map((r) => {
+                const on = picked.has(r.id)
+                const view = reportStatusView(r.status)
+                return (
+                  <button
+                    key={r.id}
+                    className={`evt-pick-row ${on ? "on" : ""}`}
+                    onClick={() => toggle(r.id)}
+                    title={r.title}
+                  >
+                    <span className="evt-pick-check" aria-hidden="true">
+                      {on && <Icons.Check size={12} />}
+                    </span>
+                    <span className="evt-pick-body">
+                      <span className="evt-pick-title">{r.title}</span>
+                      <span className="evt-pick-sub">
+                        <span className={`pill ${view.cls} tight`}>{view.label}</span>
+                        <span className="evt-linked-cat">{REPORT_CATEGORY_LABELS[r.category]}</span>
+                        <span className="sep">·</span>
+                        <span>{r.place}</span>
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+        <div className="modal-foot">
+          <span className="compose-from">
+            {picked.size > 0 ? `${picked.size} selected` : "Select reports to link"}
+          </span>
+          <div className="spacer" />
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className={`btn ${canLink ? "primary" : ""}`}
+            disabled={!canLink}
+            style={!canLink ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+            onClick={() => onLink([...picked])}
+          >
+            <Icons.Layers size={13} /> Link selected
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function EventRow({
@@ -142,11 +292,15 @@ function EventRow({
   selected: boolean
   onClick: () => void
 }) {
+  // Distinguish a Cleanup vs Other Volunteer event in the queue (matches the detail header crumb): the
+  // leading icon comes from the kind treatment, not a hardcoded calendar.
+  const kindView = eventKindView(item.eventKind)
+  const KindIco = kindView.icon
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
       <div className="leading">
-        <span className="evt-row-ico hue-sun">
-          <Icons.Calendar size={15} />
+        <span className="evt-row-ico hue-sun" title={kindView.label}>
+          <KindIco size={15} />
         </span>
       </div>
       <div className="body">
@@ -189,9 +343,12 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   const cancel = useCancelEvent()
   const postMessage = usePostEventMessage()
   const outcome = useSetEventOutcome()
+  const linkReports = useLinkReports()
+  const unlinkReport = useUnlinkReport()
 
   const [text, setText] = React.useState("")
   const [bagsInput, setBagsInput] = React.useState("")
+  const [pickerOpen, setPickerOpen] = React.useState(false)
 
   if (q.isLoading) return <LoadingState label="Loading event..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -263,6 +420,36 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           onCancelled(event.id)
         },
       },
+    )
+  }
+
+  // Link the picked reports to this cleanup (one POST /admin/events/:id/link-reports). The hook
+  // invalidates the event query, so the gallery refreshes with the new cards on success.
+  const onLink = (reportIds: string[]) => {
+    linkReports.mutate(
+      { id: event.id, reportIds },
+      {
+        onSuccess: () => {
+          setPickerOpen(false)
+          toast(
+            reportIds.length === 1
+              ? `${shortId(event.id)} · 1 report linked`
+              : `${shortId(event.id)} · ${reportIds.length} reports linked`,
+          )
+        },
+      },
+    )
+  }
+
+  // Unlink a single report (DELETE /admin/events/:id/reports/:reportId), behind a confirm. The hook
+  // invalidates the event query, so the card drops out of the gallery on success.
+  const onUnlink = (report: LinkedReportRef) => {
+    if (typeof window !== "undefined" && !window.confirm(`Unlink "${report.title}" from this cleanup?`)) {
+      return
+    }
+    unlinkReport.mutate(
+      { id: event.id, reportId: report.id },
+      { onSuccess: () => toast(`${shortId(event.id)} · report unlinked`) },
     )
   }
 
@@ -384,7 +571,15 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             <div className="sub">
               <div className="sub-head">
                 Linked reports
-                <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+                <button
+                  className="btn sm ghost"
+                  style={{ marginLeft: "auto" }}
+                  disabled={linkReports.isPending}
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <Icons.Plus size={12} /> Link reports
+                </button>
+                <span className="rep-confirms">
                   <Icons.Layers size={12} /> {event.linkedReports.length}
                 </span>
               </div>
@@ -402,6 +597,8 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                         key={r.id}
                         report={r}
                         onOpen={() => nav("reports", r.id)}
+                        onUnlink={() => onUnlink(r)}
+                        unlinking={unlinkReport.isPending}
                       />
                     ))}
                   </div>
@@ -583,6 +780,16 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           <Icons.Trash size={13} /> Cancel event
         </button>
       </div>
+
+      {/* Link-reports picker (cleanup events only) — opened from the "Linked reports" header. */}
+      {pickerOpen && event.eventKind === "cleanup" && (
+        <LinkReportsPicker
+          excludeIds={new Set(event.linkedReports.map((r) => r.id))}
+          pending={linkReports.isPending}
+          onClose={() => setPickerOpen(false)}
+          onLink={onLink}
+        />
+      )}
     </div>
   )
 }

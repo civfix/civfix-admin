@@ -2636,6 +2636,45 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .evt-linked-cat { font-weight: 600; }
 .evt-linked-addr { font-size: 11px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* A linked-report row: the deep-link card plus a trailing operator unlink control (a card is a
+   <button>, so the remove control is a sibling, never nested). The card flexes; the control is fixed. */
+.evt-linked-row { display: flex; align-items: stretch; gap: 8px; }
+.evt-linked-row .evt-linked-card { flex: 1; min-width: 0; }
+.evt-linked-unlink {
+  flex-shrink: 0; align-self: stretch;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 0 11px; border-radius: 10px;
+  background: var(--paper-2); border: 1px solid var(--border-soft);
+  color: var(--ink-3); font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.evt-linked-unlink:hover { border-color: var(--danger); background: var(--paper); color: var(--danger); }
+.evt-linked-unlink:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* "Link reports" picker (uses the shared .modal shell). A scrollable, multi-select list of candidate
+   reports with a search box; each row is a checkbox-styled toggle matching the card aesthetic. */
+.evt-pick-search { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 10px; border: 1px solid var(--border); color: var(--ink-3); }
+.evt-pick-search input { flex: 1; border: none; outline: none; background: none; font-family: var(--font-body); font-size: 13.5px; color: var(--ink); }
+.evt-pick-list { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
+.evt-pick-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  background: var(--paper-2); border: 1px solid var(--border-soft);
+  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
+}
+.evt-pick-row:hover { border-color: var(--border); background: var(--paper); }
+.evt-pick-row.on { border-color: var(--sky); background: var(--paper); }
+.evt-pick-check {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--border); color: transparent; background: var(--paper);
+}
+.evt-pick-row.on .evt-pick-check { border-color: var(--sky); background: var(--sky); color: #fff; }
+.evt-pick-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.evt-pick-title { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-pick-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
+.evt-pick-sub .sep { color: var(--ink-4); }
+
 .user-detail { display: flex; flex-direction: column; height: 100%; }
 .user-detail-head {
   display: flex;
