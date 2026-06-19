@@ -11,6 +11,7 @@ import {
   type DiscussionMessageDTO,
   type LinkedEventRef,
   type ReportCategory,
+  type ReportOutreachStatus,
 } from "@civfix/shared"
 
 import { Icons, type IconComponent } from "@/components/icons"
@@ -25,6 +26,7 @@ import {
   useReport,
   useReportDiscussion,
   useReportList,
+  useRouteReport,
   useSendReportFollowup,
   useSetReportStatus,
 } from "@/features/reports/use-reports"
@@ -68,6 +70,23 @@ const TL_ICON: Record<AdminReportDTO["timeline"][number]["kind"], IconComponent>
   warn: Icons.AlertTriangle,
   followup: Icons.Mail,
   remove: Icons.Trash,
+  // A jurisdiction reply threaded back onto the report (the city responded to our outreach).
+  reply: Icons.MessageSquare,
+}
+
+/**
+ * Pill treatment per outreach status (the email lifecycle of a report's send to its jurisdiction —
+ * orthogonal to the civic report status). Reuses the admin design-system `.pill` status classes.
+ */
+const OUTREACH_VIEW: Record<
+  ReportOutreachStatus,
+  { cls: string; icon: IconComponent; label: string }
+> = {
+  not_sent: { cls: "status-new", icon: Icons.Mail, label: "Not sent" },
+  sent: { cls: "status-progress", icon: Icons.Send, label: "Sent" },
+  delivered: { cls: "status-progress", icon: Icons.Check, label: "Delivered" },
+  replied: { cls: "status-ok", icon: Icons.MessageSquare, label: "Replied" },
+  bounced: { cls: "status-flag", icon: Icons.AlertTriangle, label: "Bounced" },
 }
 
 function catPinSrc(category: ReportCategory): string | null {
@@ -416,9 +435,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const flag = useFlagReport()
   const remove = useRemoveReport()
   const followup = useSendReportFollowup()
+  const route = useRouteReport()
 
   const [to, setTo] = React.useState<"reporter" | "city">("reporter")
   const [text, setText] = React.useState("")
+  // "Approve & send to jurisdiction" composer: collapsed until opened. The target address is seeded from
+  // the resolved city contact but editable (the per-report one-off override); the note is optional.
+  const [routeOpen, setRouteOpen] = React.useState(false)
+  const [routeTo, setRouteTo] = React.useState("")
+  const [routeNote, setRouteNote] = React.useState("")
 
   if (q.isLoading) return <LoadingState label="Loading report..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -426,6 +451,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   if (!report) return null
 
   const view = reportStatusView(report.status)
+  // noUncheckedIndexedAccess makes a Record lookup `T | undefined`; fall back to "not sent" so an
+  // unexpected/forward-compat status never crashes the detail pane.
+  const outreachView = OUTREACH_VIEW[report.outreach.status] ?? OUTREACH_VIEW.not_sent
+  const OutreachIco = outreachView.icon
   const canCity = !!report.city.contact
   // A follow-up to the reporter needs a reporter account to notify. An anonymous report has none (the API
   // rejects it with a 422), so the "Reporter" tab is gated exactly like "City" — issue #12.
@@ -454,6 +483,36 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         onSuccess: () => {
           setText("")
           toast(`Follow-up sent to ${target === "reporter" ? "reporter" : "city"}`)
+        },
+      },
+    )
+  }
+
+  // Open the approve-&-send composer, seeding the target address from the resolved city contact (the
+  // operator can edit it to a one-off override). Re-seeding each open keeps it in sync with the contact.
+  const openRoute = () => {
+    setRouteTo(report.city.contact ?? "")
+    setRouteNote("")
+    setRouteOpen(true)
+  }
+
+  const sendToJurisdiction = () => {
+    const toAddr = routeTo.trim()
+    if (!toAddr || route.isPending) return
+    const note = routeNote.trim()
+    route.mutate(
+      {
+        id: report.id,
+        // Send the typed address as the per-report override only when it differs from the resolved
+        // contact; otherwise let the backend use the resolved contact (override stays null).
+        ...(toAddr !== (report.city.contact ?? "") ? { contactEmailOverride: toAddr } : {}),
+        ...(note ? { note } : {}),
+      },
+      {
+        onSuccess: () => {
+          setRouteOpen(false)
+          setRouteNote("")
+          toast("Sent to jurisdiction")
         },
       },
     )
@@ -518,12 +577,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <Icons.Flag size={11} /> Flagged
           </span>
         )}
+        {/* The outreach (email-to-jurisdiction) lifecycle chip, alongside the civic status pill. */}
         <span
-          className={`pill ${view.cls}`}
+          className={`pill ${outreachView.cls} tight`}
           style={report.flagged ? undefined : { marginLeft: "auto" }}
+          title="Outreach to the jurisdiction"
         >
-          {view.label}
+          <OutreachIco size={11} /> {outreachView.label}
         </span>
+        <span className={`pill ${view.cls}`}>{view.label}</span>
       </div>
 
       <div className="rep-grid">
@@ -700,7 +762,21 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
           {/* Routed city / department */}
           <div className="sub">
-            <div className="sub-head">Routed to</div>
+            <div className="sub-head">
+              Routed to
+              {report.geoid && (
+                // Deep-link to the report's jurisdiction row (to edit its routing contact). Only when the
+                // report actually resolved to a GEOID; otherwise there is no directory row to open.
+                <button
+                  className="btn sm ghost"
+                  style={{ marginLeft: "auto" }}
+                  onClick={() => nav("discovery", report.geoid)}
+                  title="Open this jurisdiction in Jurisdictions"
+                >
+                  <Icons.Building size={11} /> Jurisdiction →
+                </button>
+              )}
+            </div>
             <div className="sub-body">
               <div className="rep-city">
                 <span className="rep-city-ico">
@@ -723,6 +799,96 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   <Icons.AlertTriangle size={12} />
                   <span>No contact on file — set one in Jurisdictions</span>
                 </div>
+              )}
+
+              {/* Outreach state: the email lifecycle + a link into the per-report city conversation. */}
+              <div className="rep-city-contact" style={{ marginTop: 8 }}>
+                <OutreachIco size={12} />
+                <span>
+                  Outreach: <b>{outreachView.label}</b>
+                  {report.outreach.routedTo && report.outreach.status !== "not_sent" && (
+                    <>
+                      {" "}
+                      · <span className="mono">{report.outreach.routedTo}</span>
+                    </>
+                  )}
+                </span>
+              </div>
+              {report.outreach.threadId && (
+                <button
+                  className="btn sm ghost full"
+                  style={{ marginTop: 6 }}
+                  onClick={() => nav("mail", report.outreach.threadId)}
+                  title="Open the jurisdiction conversation in Mail"
+                >
+                  <Icons.MessageSquare size={12} /> View conversation →
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Approve & send to jurisdiction — emails the full report packet (photos attached) to the
+              jurisdiction contact and opens a per-report thread so the city's reply routes back here. */}
+          <div className="sub">
+            <div className="sub-head">Send to jurisdiction</div>
+            <div className="sub-body">
+              {!routeOpen ? (
+                <>
+                  <button className="btn primary full" onClick={openRoute}>
+                    <Icons.Send size={13} /> Approve &amp; send to jurisdiction
+                  </button>
+                  {report.geoid === null && (
+                    <div className="hint" style={{ marginTop: 8 }}>
+                      No jurisdiction resolved for this report — set a contact in Jurisdictions, or type a
+                      one-off address below.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="field" style={{ marginTop: 0 }}>
+                    <label className="eyebrow">Send to</label>
+                    <input
+                      type="email"
+                      placeholder="contact@city.gov"
+                      value={routeTo}
+                      onChange={(e) => setRouteTo(e.target.value)}
+                    />
+                  </div>
+                  {report.geoid === null && (
+                    <div className="hint" style={{ marginTop: 4 }}>
+                      No jurisdiction on file — this is a one-off address for THIS report. Add a permanent
+                      contact in Jurisdictions to route future reports automatically.
+                    </div>
+                  )}
+                  <textarea
+                    className="rep-followup"
+                    style={{ marginTop: 8 }}
+                    rows={3}
+                    placeholder="Optional note to include in the email packet…"
+                    value={routeNote}
+                    onChange={(e) => setRouteNote(e.target.value)}
+                  />
+                  <div className="rep-to" style={{ marginTop: 8 }}>
+                    <button
+                      className="btn primary full"
+                      disabled={!routeTo.trim() || route.isPending}
+                      onClick={sendToJurisdiction}
+                      style={
+                        !routeTo.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined
+                      }
+                    >
+                      <Icons.Send size={13} /> Send
+                    </button>
+                    <button
+                      className="btn"
+                      disabled={route.isPending}
+                      onClick={() => setRouteOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
