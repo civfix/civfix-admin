@@ -199,7 +199,13 @@ function JurisdictionRow({
         <div className="top">
           <span className="title">{item.org}</span>
           <span className="pill category">{LAYER_LABEL[item.layer]}</span>
-          {needs ? (
+          {item.status === "bounced" ? (
+            // A hard-bounced contact takes precedence over the routed/needs-contact posture: the address
+            // on file is dead and the jurisdiction needs a fresh contact.
+            <span className="pill status-flag tight" title="The routing contact hard-bounced">
+              <Icons.AlertTriangle size={9} /> Bounced
+            </span>
+          ) : needs ? (
             <span className="pill attention tight">
               <span className="dot" />
               Needs contact
@@ -251,6 +257,10 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   // Operator-note textarea state. Local-only (the directory carries no persisted notes; the design's
   // Notes card textarea was non-persisting too). See PARITY.
   const [opNote, setOpNote] = React.useState("")
+  // The jurisdiction-level default email (the fallback/all-categories address) and reporting-form URL,
+  // seeded from the row. Persisted via the contract's SaveContactsRequest.defaultEmails + formUrl.
+  const [defaultEmail, setDefaultEmail] = React.useState(dto.email ?? "")
+  const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
 
   const counts = dto.perCategoryCounts
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
@@ -259,7 +269,9 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     (c) => routingCount(counts, c.id) > 0 && !contacts[c.id],
   ).length
   const filledCount = REPORT_TYPES.filter((c) => contacts[c.id]).length
-  const canSave = filledCount > 0
+  // Routable when there's at least one per-category contact OR a jurisdiction-level default email (the
+  // fallback address every category falls back to).
+  const canSave = filledCount > 0 || defaultEmail.trim() !== ""
   const needs = needsAttention(dto)
   const dom = dominantCategory(counts)
   const headPin = dom ? catPinSrc(dom) : null
@@ -279,6 +291,18 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     return out
   }
 
+  // The jurisdiction-level default email + reporting-form URL, shaped for the contract: `defaultEmails`
+  // is the fallback/all-categories address list (a single entry here); `formUrl` is the city's form URL
+  // (null to clear). Only included when set, so an untouched field doesn't overwrite server state.
+  const jurisdictionFields = (): { defaultEmails?: string[]; formUrl?: string | null } => {
+    const out: { defaultEmails?: string[]; formUrl?: string | null } = {}
+    const email = defaultEmail.trim()
+    if (email) out.defaultEmails = [email]
+    const url = formUrl.trim()
+    if (url) out.formUrl = url
+    return out
+  }
+
   const onFlag = () => {
     patch.mutate(
       { geoid: dto.geoid, flagged: !isFlagged },
@@ -294,12 +318,13 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     // (the backend PATCH supports `notes`). Skip a no-op save when neither a contact nor a note is set.
     const note = opNote.trim()
     const contacts = contactsPayload()
-    if (Object.keys(contacts).length === 0 && note === "") {
+    const jf = jurisdictionFields()
+    if (Object.keys(contacts).length === 0 && Object.keys(jf).length === 0 && note === "") {
       toast("Nothing to save yet")
       return
     }
     patch.mutate(
-      { geoid: dto.geoid, contacts, ...(note ? { notes: note } : {}) },
+      { geoid: dto.geoid, contacts, ...jf, ...(note ? { notes: note } : {}) },
       { onSuccess: () => toast(`Draft saved for ${dto.org}`) },
     )
   }
@@ -307,7 +332,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const onSaveAndRoute = () => {
     if (!canSave) return
     saveContacts.mutate(
-      { geoid: dto.geoid, contacts: contactsPayload() },
+      { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
       { onSuccess: () => toast(`Contacts saved for ${dto.org}. Outreach queued.`) },
     )
   }
@@ -329,7 +354,15 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
           </div>
           <h2>{dto.org}</h2>
         </div>
-        {needs ? (
+        {dto.status === "bounced" ? (
+          <span
+            className="pill status-flag"
+            style={{ marginLeft: "auto" }}
+            title="The routing contact hard-bounced — re-enter a contact to clear it"
+          >
+            <Icons.AlertTriangle size={11} /> Bounced
+          </span>
+        ) : needs ? (
           <span className="pill attention" style={{ marginLeft: "auto" }}>
             <span className="dot" />
             Needs contact
@@ -382,6 +415,36 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
 
         <div className="rep-col">
+          {/* Default contact + reporting form — the jurisdiction-level fallback used for any category
+              without its own per-type contact, plus the city's public reporting-form URL. */}
+          <div className="sub">
+            <div className="sub-head">Default contact</div>
+            <div className="sub-body">
+              <div className="ccat-email">
+                <Icons.Mail size={13} />
+                <input
+                  type="email"
+                  value={defaultEmail}
+                  placeholder="reports@city.gov — fallback for every category"
+                  onChange={(e) => setDefaultEmail(e.target.value)}
+                />
+              </div>
+              <div className="ccat-email" style={{ marginTop: 8 }}>
+                <Icons.Building size={13} />
+                <input
+                  type="url"
+                  value={formUrl}
+                  placeholder="https://city.gov/report — reporting form URL (optional)"
+                  onChange={(e) => setFormUrl(e.target.value)}
+                />
+              </div>
+              <div className="hint" style={{ marginTop: 8 }}>
+                The default email routes any category without its own contact below; the form URL is the
+                city’s public reporting page.
+              </div>
+            </div>
+          </div>
+
           {/* Routing contacts */}
           <div className="sub">
             <div className="sub-head">

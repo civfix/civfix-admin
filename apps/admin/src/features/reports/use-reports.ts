@@ -10,6 +10,7 @@ import type {
   GetAdminReportResponse,
   RemoveDiscussionMessageRequest,
   RemoveReportRequest,
+  RouteReportRequest,
   SendFollowupRequest,
   SetReportStatusRequest,
 } from "@civfix/shared"
@@ -83,6 +84,20 @@ export function useSendReportFollowup() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SendFollowupRequest) => api.sendReportFollowup(input),
+    onSuccess: (_res, { id }) => invalidateReports(qc, id),
+  })
+}
+
+/**
+ * POST /admin/reports/:id/route - "Approve & send to jurisdiction". Emails the full report packet to the
+ * resolved routing contact (or to `contactEmailOverride` when the operator types a one-off address), opens
+ * a per-report mail thread so the city's reply auto-routes back, and advances the report toward
+ * `acknowledged`. Invalidates the report views so the new outreach chip + timeline row appear immediately.
+ */
+export function useRouteReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RouteReportRequest) => api.routeReport(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
   })
 }
