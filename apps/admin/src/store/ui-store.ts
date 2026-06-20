@@ -17,6 +17,7 @@ export const SECTIONS = [
   "events",
   "mail",
   "users",
+  "moderation",
   "verification",
   "analytics",
 ] as const
@@ -32,6 +33,7 @@ export const PAGE_LABEL: Record<PageId, string> = {
   events: "Events",
   mail: "Mail",
   users: "Users",
+  moderation: "Moderation",
   verification: "Verification",
   analytics: "Analytics",
 }

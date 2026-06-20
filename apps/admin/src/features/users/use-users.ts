@@ -6,6 +6,7 @@ import type {
   AdminUserListResponse,
   FlagUserRequest,
   GetAdminUserResponse,
+  RemoveUserMessageRequest,
   SetUserStatusRequest,
   UserEventsResponse,
   UserMessagesResponse,
@@ -93,6 +94,24 @@ export function useSetUserStatus() {
   return useMutation({
     mutationFn: (input: SetUserStatusRequest) => api.setUserStatus(input),
     onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+  })
+}
+
+/**
+ * POST /admin/users/:id/messages/:messageId/remove - operator soft-delete of one of a user's chat
+ * messages (audited; optional reason). On success we invalidate THIS user's messages list (the removed
+ * message re-renders as a tombstone), the user detail + list aggregates (the messages count / activity
+ * may shift), plus the cross-cutting home + activity feeds (a removal is an operator action). Mirrors
+ * useRemoveDiscussionMessage in use-reports.ts.
+ */
+export function useRemoveUserMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: RemoveUserMessageRequest) => api.removeUserMessage(input),
+    onSuccess: (_res, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.users.messages(id) })
+      invalidateUsers(qc, id)
+    },
   })
 }
 

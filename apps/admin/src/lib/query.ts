@@ -131,6 +131,13 @@ export const queryKeys = {
     detail: (id: string) => ["admin", "inbox", "detail", id] as const,
   },
 
+  // ----- moderation (UGC content-report queue + held media / clusters / appeals) -----
+  moderation: {
+    all: ["admin", "moderation"] as const,
+    list: (params?: unknown) => ["admin", "moderation", "list", params ?? null] as const,
+    detail: (id: string) => ["admin", "moderation", "detail", id] as const,
+  },
+
   // ----- analytics -----
   analytics: {
     all: ["admin", "analytics"] as const,

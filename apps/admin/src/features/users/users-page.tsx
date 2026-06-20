@@ -19,6 +19,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { reportStatusView } from "@/lib/report-status"
 import {
   useFlagUser,
+  useRemoveUserMessage,
   useSetUserStatus,
   useUser,
   useUserEvents,
@@ -144,17 +145,45 @@ function ProfileEventRow({ e }: { e: UserEventItemDTO }) {
   )
 }
 
-function ProfileMessageRow({ m }: { m: UserMessageItemDTO }) {
+/**
+ * One row in the user's Messages tab. The admin sees EVERY message — including ones the user themselves
+ * deleted (a `deletedAt` tombstone), rendered as "[deleted by user]" while STILL showing the original
+ * text (operators keep full visibility). A per-message Remove action (operator soft-delete) is offered on
+ * messages the user has NOT already deleted, mirroring the discussion-message Remove pattern.
+ */
+function ProfileMessageRow({
+  m,
+  onRemove,
+  removing,
+}: {
+  m: UserMessageItemDTO
+  onRemove: (m: UserMessageItemDTO) => void
+  removing: boolean
+}) {
+  const userDeleted = !!m.deletedAt
   return (
-    <div className="prow">
+    <div className={`prow ${userDeleted ? "removed" : ""}`}>
       <span className="prow-ico hue-sky">
-        <Icons.MessageSquare size={14} />
+        {userDeleted ? <Icons.Trash size={14} /> : <Icons.MessageSquare size={14} />}
       </span>
       <div className="prow-body">
-        <div className="prow-title">{m.text}</div>
+        <div className="prow-title">
+          {userDeleted && <span className="pill status-flag tight">[deleted by user]</span>} {m.text}
+        </div>
         <div className="prow-meta">in {m.thread}</div>
       </div>
       <span className="prow-age">{m.when}</span>
+      {/* Operator remove is offered only on a message the user hasn't already deleted. */}
+      {!userDeleted && (
+        <button
+          className="btn sm danger"
+          disabled={removing}
+          onClick={() => onRemove(m)}
+          title="Remove this message (soft-delete; operators still see it as removed)"
+        >
+          <Icons.Trash size={11} /> Remove
+        </button>
+      )}
     </div>
   )
 }
@@ -166,6 +195,19 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   const reports = useUserReports(tab === "reports" ? userId : null)
   const events = useUserEvents(tab === "events" ? userId : null)
   const messages = useUserMessages(tab === "messages" ? userId : null)
+  const removeMsg = useRemoveUserMessage()
+  const toast = useToast()
+
+  const onRemoveMessage = (m: UserMessageItemDTO) => {
+    // Optional audited removal reason (mirrors the discussion/moderation remove-action shape).
+    const reason = typeof window !== "undefined" ? window.prompt("Reason for removal (optional):") : null
+    // A cancelled prompt returns null — treat it as "abort", an empty string as "no reason given".
+    if (reason === null && typeof window !== "undefined") return
+    removeMsg.mutate(
+      { id: userId, messageId: m.id, ...(reason ? { reason } : {}) },
+      { onSuccess: () => toast("Message removed") },
+    )
+  }
 
   if (tab === "reports") {
     if (reports.isLoading) return <LoadingState label="Loading reports..." />
@@ -223,7 +265,12 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   return (
     <>
       {items.map((m) => (
-        <ProfileMessageRow key={m.id} m={m} />
+        <ProfileMessageRow
+          key={m.id}
+          m={m}
+          onRemove={onRemoveMessage}
+          removing={removeMsg.isPending}
+        />
       ))}
     </>
   )
@@ -258,6 +305,11 @@ function UserDetail({ userId }: { userId: string }) {
       />
     )
   }
+
+  // A self-deleted (tombstoned) account: the admin still sees the REAL identity + full activity (the
+  // public DTOs render "Deleted User"; admin keeps the truth). Account-level status actions are disabled
+  // (there is no live session/account to suspend or ban), but per-content removal stays available.
+  const deleted = !!user.deletedAt
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "reports", label: "Reports" },
@@ -325,6 +377,11 @@ function UserDetail({ userId }: { userId: string }) {
           </div>
         </div>
         <div className="udh-badges">
+          {deleted && (
+            <span className="pill status-flag tight" title="This account was self-deleted (tombstoned)">
+              <Icons.Trash size={11} /> Deleted
+            </span>
+          )}
           {user.flagged && (
             <span className="pill status-flag">
               <Icons.Flag size={11} /> Flagged
@@ -382,27 +439,32 @@ function UserDetail({ userId }: { userId: string }) {
       </div>
 
       <div className="user-actions">
+        {deleted && (
+          <span className="rep-actions-label">
+            Account self-deleted — status actions disabled. Per-content removal stays available.
+          </span>
+        )}
         <div className="spacer" />
         <button
           className={`btn ${user.flagged ? "flag-on" : ""}`}
-          disabled={flag.isPending}
+          disabled={flag.isPending || deleted}
           onClick={onFlag}
         >
           <Icons.Flag size={13} /> {user.flagged ? "Flagged" : "Flag account"}
         </button>
-        {(user.status === "banned" || user.status === "suspended") && (
+        {!deleted && (user.status === "banned" || user.status === "suspended") && (
           <button className="btn" disabled={setStatus.isPending} onClick={onReactivate}>
             <Icons.Check size={13} /> {user.status === "banned" ? "Un-ban" : "Reactivate"}
           </button>
         )}
-        {user.status === "active" && (
+        {!deleted && user.status === "active" && (
           <button className="btn" disabled={setStatus.isPending} onClick={onSuspend}>
             <Icons.Lock size={13} /> Suspend
           </button>
         )}
         <button
           className="btn danger"
-          disabled={setStatus.isPending || user.status === "banned"}
+          disabled={setStatus.isPending || user.status === "banned" || deleted}
           onClick={onBan}
         >
           <Icons.Trash size={13} /> {user.status === "banned" ? "Banned" : "Ban account"}
@@ -452,6 +514,11 @@ function UserRow({
         </div>
       </div>
       <div className="trailing">
+        {user.deletedAt && (
+          <span className="pill status-flag tight" title="Self-deleted (tombstoned) account">
+            Deleted
+          </span>
+        )}
         <span className={`pill ${STATUS_VIEW[user.status].cls} tight`}>
           {STATUS_VIEW[user.status].label}
         </span>
@@ -465,17 +532,31 @@ export function UsersPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
+  // The "deleted" facet is CLIENT-SIDE: the frozen AdminUserListQuery filter union is
+  // all|active|suspended|flagged (no `deleted`), so selecting it fetches `all` and narrows on deletedAt
+  // below. Every other chip maps straight to a server facet.
   const listParams = {
-    filter: filter === "all" ? undefined : (filter as "active" | "suspended" | "flagged"),
+    filter:
+      filter === "all" || filter === "deleted"
+        ? undefined
+        : (filter as "active" | "suspended" | "flagged"),
     q: query.trim() || undefined,
   }
   const listQuery = useUserList(listParams)
-  const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
+  const items = React.useMemo(() => {
+    const all = listQuery.data?.items ?? []
+    return filter === "deleted" ? all.filter((u) => u.deletedAt) : all
+  }, [listQuery.data, filter])
 
   // Chip counts come from the SERVER (response.counts): accurate per-facet totals over the searched set,
   // not capped to the first keyset page and stable as the facet changes. `suspended` is the explicit
-  // suspended status (matching the server facet). Falls back to zeros pre-load.
+  // suspended status (matching the server facet). Falls back to zeros pre-load. The `deleted` chip count
+  // is derived client-side (no server facet for it) from the loaded page.
   const counts = listQuery.data?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
+  const deletedCount = React.useMemo(
+    () => (listQuery.data?.items ?? []).filter((u) => u.deletedAt).length,
+    [listQuery.data],
+  )
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
@@ -504,6 +585,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
             { value: "active", label: "Active", count: counts.active },
             { value: "suspended", label: "Suspended", count: counts.suspended },
             { value: "flagged", label: "Flagged", count: counts.flagged },
+            { value: "deleted", label: "Deleted", count: deletedCount },
           ]}
           value={filter}
           onChange={setFilter}
