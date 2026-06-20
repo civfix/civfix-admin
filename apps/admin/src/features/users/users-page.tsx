@@ -10,7 +10,6 @@ import {
   type UserMessageItemDTO,
   type UserReportItemDTO,
   type UserStatus,
-  type VerificationStatus,
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -21,13 +20,14 @@ import {
   useFlagUser,
   useRemoveUserMessage,
   useSetUserStatus,
+  useSetUserVerified,
   useUser,
   useUserEvents,
   useUserList,
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
-import { useNav, useToast } from "@/store/ui-store"
+import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
@@ -52,17 +52,6 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   suspended: { cls: "status-flag", label: "Suspended" },
   review: { cls: "status-progress", label: "In review" },
   banned: { cls: "status-flag", label: "Banned" },
-}
-
-/**
- * Pill treatment per document-verification status (pill class + label). `unverified` is the resting
- * default (no application) — it shows no pill, so only applicants/decisions appear. The pill deep-links
- * into the Verification queue with this user preselected.
- */
-const VERIFY_VIEW: Partial<Record<VerificationStatus, { cls: string; label: string }>> = {
-  pending: { cls: "status-new", label: "Verification pending" },
-  verified: { cls: "status-ok", label: "Verified neighbor" },
-  rejected: { cls: "status-flag", label: "Verification rejected" },
 }
 
 function catPinSrc(category: ReportCategory): string | null {
@@ -286,10 +275,10 @@ function tabCount(user: AdminUserDTO, id: TabId): number {
 function UserDetail({ userId }: { userId: string }) {
   const q = useUser(userId)
   const toast = useToast()
-  const nav = useNav()
 
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
+  const setVerified = useSetUserVerified()
 
   const [tab, setTab] = React.useState<TabId>("reports")
 
@@ -355,6 +344,30 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
+  // Verified-neighbor toggle: operators set this directly after a verification call (there is no
+  // application queue). True = mark verified; false = clear the verified mark.
+  const isVerified = user.verificationStatus === "verified"
+
+  // The raw account UUID is operator/DB-only (never rendered to the public, where the @handle is the
+  // identity). Surface it here, copyable, so operators can cross-reference the DB / logs / API.
+  const onCopyId = () => {
+    const id = user.id
+    void Promise.resolve(navigator?.clipboard?.writeText(id))
+      .then(() => toast("User ID copied"))
+      .catch(() => toast("Couldn't copy — select the ID manually"))
+  }
+
+  const onToggleVerified = () => {
+    const next = !isVerified
+    setVerified.mutate(
+      { id: user.id, verified: next },
+      {
+        onSuccess: () =>
+          toast(next ? `${user.name} · verified` : `${user.name} · verification removed`),
+      },
+    )
+  }
+
   return (
     <div className="user-detail">
       <div className="user-detail-head">
@@ -387,14 +400,9 @@ function UserDetail({ userId }: { userId: string }) {
               <Icons.Flag size={11} /> Flagged
             </span>
           )}
-          {user.verificationStatus && VERIFY_VIEW[user.verificationStatus] && (
-            <span
-              className={`pill ${VERIFY_VIEW[user.verificationStatus]!.cls}`}
-              style={{ cursor: "pointer" }}
-              title="Open in the Verification queue"
-              onClick={() => nav("verification", user.id)}
-            >
-              <Icons.Shield size={11} /> {VERIFY_VIEW[user.verificationStatus]!.label}
+          {isVerified && (
+            <span className="pill status-ok" title="Verified neighbor">
+              <Icons.Shield size={11} /> Verified neighbor
             </span>
           )}
           <span className={`pill ${STATUS_VIEW[user.status].cls}`}>
@@ -416,6 +424,17 @@ function UserDetail({ userId }: { userId: string }) {
             <Icons.Pin size={13} /> {user.city}
           </span>
         )}
+        {/* Operator/DB-only raw account UUID (the public surfaces the @handle, never this). Copyable for
+            cross-referencing the DB / logs / API; the value itself is also selectable mono text. */}
+        <button
+          type="button"
+          className="pm-item pm-copy"
+          onClick={onCopyId}
+          title="Copy the raw account UUID (admin/DB only — not shown to neighbors)"
+        >
+          <Icons.Hash size={13} /> <span className="mono">{user.id}</span>
+          <Icons.Copy size={12} />
+        </button>
       </div>
 
       <div className="profile-tabs">
@@ -451,6 +470,18 @@ function UserDetail({ userId }: { userId: string }) {
           onClick={onFlag}
         >
           <Icons.Flag size={13} /> {user.flagged ? "Flagged" : "Flag account"}
+        </button>
+        <button
+          className={`btn ${isVerified ? "" : "success"}`}
+          disabled={setVerified.isPending || deleted}
+          onClick={onToggleVerified}
+          title={
+            isVerified
+              ? "Remove the verified-neighbor mark"
+              : "Mark verified (after a verification call)"
+          }
+        >
+          <Icons.Shield size={13} /> {isVerified ? "Unverify" : "Verify"}
         </button>
         {!deleted && (user.status === "banned" || user.status === "suspended") && (
           <button className="btn" disabled={setStatus.isPending} onClick={onReactivate}>

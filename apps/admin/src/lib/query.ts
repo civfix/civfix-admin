@@ -107,15 +107,6 @@ export const queryKeys = {
       ["admin", "users", id, "messages", params ?? null] as const,
   },
 
-  // ----- verification (document "verified neighbor" review) -----
-  verification: {
-    all: ["admin", "verification"] as const,
-    list: (params?: unknown) => ["admin", "verification", "list", params ?? null] as const,
-    detail: (userId: string) => ["admin", "verification", "detail", userId] as const,
-    documentUrl: (userId: string, mediaId: string) =>
-      ["admin", "verification", "document-url", userId, mediaId] as const,
-  },
-
   // ----- mail / outreach -----
   mail: {
     all: ["admin", "mail"] as const,

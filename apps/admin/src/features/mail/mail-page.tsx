@@ -25,6 +25,7 @@ import {
 import { useInboxList, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import { useNav, useToast } from "@/store/ui-store"
+import { errorMessage } from "@/lib/error-messages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
@@ -101,17 +102,21 @@ function pct(fraction: number, digits = 0): string {
 }
 
 /**
- * Resolve the human correspondent for a thread reader. The thread-level `from` carries our own
- * outreach address (or "") for outbound-only threads, so prefer the latest INBOUND message's sender;
- * fall back to the thread `from`, then to a placeholder. (A precise "to" address for a purely
- * outbound thread is not in the DTO — that needs a contract field.)
+ * Resolve the human correspondent for a thread reader — the municipal party, never our own outreach
+ * address. Prefer the latest INBOUND message's sender; for an outbound-only thread (compose / resend
+ * with no reply yet) fall back to the latest OUTBOUND message's recipient (`to`), then the thread-level
+ * `to`, then a placeholder.
  */
 function correspondent(sel: MailThreadDTO): string {
   for (let i = sel.messages.length - 1; i >= 0; i--) {
     const m = sel.messages[i]!
     if (m.dir === "in" && m.from) return m.from
   }
-  return sel.from || "—"
+  for (let i = sel.messages.length - 1; i >= 0; i--) {
+    const m = sel.messages[i]!
+    if (m.dir === "out" && m.to) return m.to
+  }
+  return sel.to || "—"
 }
 
 function ComposeModal({
@@ -221,7 +226,10 @@ function MailRow({
       <div className="mail-row-body">
         <div className="mail-row-top">
           <span className="mail-from">
-            {item.org || (item.dir === "in" ? item.from || "(no sender)" : "(no organization)")}
+            {item.org ||
+              (item.dir === "in"
+                ? item.from || "(no sender)"
+                : item.to || "(no recipient)")}
           </span>
           <span className="mail-ts mono" title={tsTitle(item.ts)}>
             {ts(item.ts)}
@@ -258,6 +266,11 @@ function MailReader({ threadId }: { threadId: string }) {
   const sel = q.data
   if (!sel) return <EmptyState title="No message selected" icon={<Icons.Mail size={20} />} />
 
+  // The municipal party for this thread (recipient or inbound sender) — never our own outreach address,
+  // and used for the "To"/confirmation copy (sel.org is empty for a bare composed thread).
+  const who = correspondent(sel)
+  const whoLabel = sel.org || who
+
   const sendReply = () => {
     const body = text.trim()
     if (!body) return
@@ -266,11 +279,13 @@ function MailReader({ threadId }: { threadId: string }) {
       {
         onSuccess: () => {
           setText("")
-          toast(`Reply sent to ${sel.org}`)
+          toast(`Reply sent to ${whoLabel}`)
           setTimeout(() => {
             if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
           }, 50)
         },
+        onError: (err) =>
+          toast(errorMessage(err, {}, { fallback: "Couldn't send the reply. Please try again." })),
       },
     )
   }
@@ -278,12 +293,21 @@ function MailReader({ threadId }: { threadId: string }) {
   const markDone = () => {
     setStatus.mutate(
       { id: sel.id, status: "replied" },
-      { onSuccess: () => toast("Marked done") },
+      {
+        onSuccess: () => toast("Marked done"),
+        onError: (err) => toast(errorMessage(err, {}, { fallback: "Couldn't update the thread." })),
+      },
     )
   }
 
   const onResend = () => {
-    resend.mutate({ id: sel.id }, { onSuccess: () => toast("Message resent") })
+    resend.mutate(
+      { id: sel.id },
+      {
+        onSuccess: () => toast("Message resent"),
+        onError: (err) => toast(errorMessage(err, {}, { fallback: "Couldn't resend the message." })),
+      },
+    )
   }
 
   // Only meaningful when the thread links a jurisdiction — otherwise there is no routing contact to
@@ -291,8 +315,6 @@ function MailReader({ threadId }: { threadId: string }) {
   const onFixRouting = () => {
     if (sel.jurisdictionGeoid) nav("discovery", sel.jurisdictionGeoid)
   }
-
-  const who = correspondent(sel)
 
   return (
     <div className="mail-reader">
@@ -303,8 +325,12 @@ function MailReader({ threadId }: { threadId: string }) {
             {sel.dir === "in" ? <Icons.ArrowDown size={12} /> : <Icons.ArrowUp size={12} />}
           </span>
           <span className="mono">{who}</span>
-          <span className="sep">·</span>
-          <span>{sel.org || "(no organization)"}</span>
+          {sel.org && (
+            <>
+              <span className="sep">·</span>
+              <span>{sel.org}</span>
+            </>
+          )}
           <span className="spacer" />
           <span className={`pill ${STATUS_CLS[sel.status]} tight`}>
             {MAIL_STATUS_LABELS[sel.status]}
@@ -314,19 +340,24 @@ function MailReader({ threadId }: { threadId: string }) {
 
       <div className="mail-reader-body" ref={bodyRef}>
         <div className="mail-thread">
-          {sel.messages.map((msg) => (
-            <div key={msg.id} className={`mail-msg ${msg.dir === "out" ? "out" : "in"}`}>
-              <div className="mail-msg-head">
-                <span className="mail-msg-who">{msg.who}</span>
-                <span className="mail-msg-addr mono">{msg.from}</span>
-                <span className="spacer" />
-                <span className="mail-msg-ts mono" title={tsTitle(msg.ts)}>
-                  {ts(msg.ts)}
-                </span>
+          {sel.messages.map((msg) => {
+            const isOut = msg.dir === "out"
+            // Show the party each message concerns: the recipient on our outbound, the sender inbound.
+            const addr = isOut ? (msg.to ? `to ${msg.to}` : "") : msg.from
+            return (
+              <div key={msg.id} className={`mail-msg ${isOut ? "out" : "in"}`}>
+                <div className="mail-msg-head">
+                  <span className="mail-msg-who">{msg.who}</span>
+                  {addr && <span className="mail-msg-addr mono">{addr}</span>}
+                  <span className="spacer" />
+                  <span className="mail-msg-ts mono" title={tsTitle(msg.ts)}>
+                    {ts(msg.ts)}
+                  </span>
+                </div>
+                <p className="mail-msg-body">{msg.body}</p>
               </div>
-              <p className="mail-msg-body">{msg.body}</p>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {sel.status === "bounced" && (
@@ -514,6 +545,11 @@ export function MailPage({ focusId }: SectionPageProps) {
         setSelId(null)
         toast(`Message sent to ${input.to}`)
       },
+      // Keep the modal open on failure (the user's draft is preserved) and surface why, so a failed
+      // send is never a silent no-op.
+      onError: (err) => {
+        toast(errorMessage(err, {}, { fallback: "Couldn't send the message. Please try again." }))
+      },
     })
   }
 
@@ -620,28 +656,14 @@ export function MailPage({ focusId }: SectionPageProps) {
           })()
         ) : null)}
 
-      {/* Sending-domain health (outreach only) — the getMailStats domainHealth[] rows the strip omits.
-          No bespoke CSS: reuses the pill/mono tokens + light inline layout (as elsewhere in this file). */}
+      {/* Sending-domain health (outreach only) — the getMailStats domainHealth[] rows the strip omits. */}
       {outreach && stats && stats.domainHealth.length > 0 && (
-        <div
-          className="mail-domains"
-          style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}
-        >
+        <div className="mail-domains">
           {stats.domainHealth.map((d) => (
-            <div
-              key={d.domain}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 10px",
-                border: "1px solid var(--border-soft)",
-                borderRadius: 8,
-              }}
-            >
+            <div key={d.domain} className="mail-domain">
               <span className={`pill ${DOMAIN_HEALTH_CLS[d.status]} tight`}>{d.status}</span>
-              <span className="mono">{d.domain}</span>
-              <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{d.note}</span>
+              <span className="mail-domain-name mono">{d.domain}</span>
+              <span className="mail-domain-note">{d.note}</span>
             </div>
           ))}
         </div>

@@ -8,6 +8,7 @@ import type {
   GetAdminUserResponse,
   RemoveUserMessageRequest,
   SetUserStatusRequest,
+  SetUserVerifiedRequest,
   UserEventsResponse,
   UserMessagesResponse,
   UserReportsResponse,
@@ -93,6 +94,19 @@ export function useSetUserStatus() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetUserStatusRequest) => api.setUserStatus(input),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+  })
+}
+
+/**
+ * POST /admin/users/:id/verify - set the "verified neighbor" status directly (operators do this after a
+ * verification call; there is no application queue). Invalidates the user caches so the detail's verified
+ * pill updates immediately.
+ */
+export function useSetUserVerified() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetUserVerifiedRequest) => api.setUserVerified(input),
     onSuccess: (_res, { id }) => invalidateUsers(qc, id),
   })
 }

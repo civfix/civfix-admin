@@ -15,7 +15,6 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
   mail: Icons.Mail,
   users: Icons.Users,
   moderation: Icons.Shield,
-  verification: Icons.Shield,
   analytics: Icons.BarChart,
 }
 
@@ -26,7 +25,6 @@ const SECTION_HUE: Record<SectionId, string> = {
   mail: "sky",
   users: "sun",
   moderation: "lilac",
-  verification: "moss",
   analytics: "moss",
 }
 
