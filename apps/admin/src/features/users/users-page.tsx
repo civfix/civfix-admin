@@ -3,6 +3,8 @@
 import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
+  avatarColor,
+  monogram,
   type AdminUserDTO,
   type AdminUserListItemDTO,
   type ReportCategory,
@@ -59,13 +61,37 @@ function catPinSrc(category: ReportCategory): string | null {
   return `/ds/pin-${category}.svg`
 }
 
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
+/**
+ * A user avatar rendered IDENTICALLY to web/mobile (the shared `@civfix/ui` Avatar primitive): show the
+ * uploaded/provider photo (rounded, cover-cropped) when `avatarUrl` is present, otherwise the first-letter
+ * `monogram` over a per-seed brand color. The fill matches the shared Avatar exactly — the FIRST stop of
+ * the DTO `avatar` [from,to] pair, falling back to `avatarColor(id)` when the pair is absent — so the same
+ * account looks the same here as on the apps (no more single hardcoded gradient). `avatar`/`avatarUrl` are
+ * read defensively (optional) so an older server that does not yet project them still renders the monogram.
+ */
+function UserAvatar({
+  user,
+  large = false,
+}: {
+  user: Pick<AdminUserListItemDTO, "id" | "name"> & {
+    avatar?: AdminUserListItemDTO["avatar"]
+    avatarUrl?: string | null
+  }
+  large?: boolean
+}) {
+  const color = user.avatar?.[0] ?? avatarColor(user.id)
+  const cls = `user-av${large ? " lg" : ""}`
+  if (user.avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img className={cls} src={user.avatarUrl} alt="" />
+    )
+  }
+  return (
+    <span className={cls} style={{ background: color }}>
+      {monogram(user.name)}
+    </span>
+  )
 }
 
 /** The server returns a "-" sentinel for an absent timestamp; treat it (and empty) as missing. */
@@ -371,12 +397,8 @@ function UserDetail({ userId }: { userId: string }) {
   return (
     <div className="user-detail">
       <div className="user-detail-head">
-        <span
-          className="user-av lg"
-          style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
-        >
-          {initials(user.name)}
-        </span>
+        <UserAvatar user={user} large />
+
         <div className="udh-text">
           <h2>{user.name}</h2>
           <div className="udh-sub">
@@ -516,12 +538,7 @@ function UserRow({
 }) {
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
-      <span
-        className="user-av"
-        style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
-      >
-        {initials(user.name)}
-      </span>
+      <UserAvatar user={user} />
       <div className="body">
         <div className="top">
           <span className="title">{user.name}</span>
