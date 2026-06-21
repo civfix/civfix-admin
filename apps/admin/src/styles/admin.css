@@ -3262,7 +3262,10 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 .main-home .hub-bento {
   flex: 1;
   min-height: 0;
-  grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.82fr) minmax(0, 1.15fr);
+  /* The analytics tile lives in the middle row and carries the most fixed content (lead + spark + the
+     2x2 stat grid). Give that row near-equal height (it used to be the shortest at 0.82fr, which clipped
+     the bottom stats on shorter desktops) so all four stats fit without a page scroll. */
+  grid-template-rows: minmax(0, 1.08fr) minmax(0, 1fr) minmax(0, 1.08fr);
 }
 .main-home .bt-map { min-height: 0; }
 .main-home .stile { overflow: hidden; gap: 9px; }
@@ -3276,6 +3279,15 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 .main-home .bt-moderation .hub-spark { height: 30px; }
 .main-home .smg-cell { padding: 7px 10px; }
 @media (max-width: 1100px) {
+  .main-home { height: auto; max-height: none; overflow: visible; padding-bottom: 56px; }
+  .main-home .hub, .main-home .hub-bento { flex: none; }
+  .main-home .hub-bento { grid-template-rows: none; }
+  .main-home .bt-map { min-height: 300px; }
+}
+/* Short viewports: the fixed 100vh bento can't fit its rows, so the analytics tile's stat grid would
+   clip. Below this height, release the dashboard to natural scrolling (same escape as the narrow-width
+   case) so every stat stays visible instead of being cut off. */
+@media (max-height: 800px) {
   .main-home { height: auto; max-height: none; overflow: visible; padding-bottom: 56px; }
   .main-home .hub, .main-home .hub-bento { flex: none; }
   .main-home .hub-bento { grid-template-rows: none; }

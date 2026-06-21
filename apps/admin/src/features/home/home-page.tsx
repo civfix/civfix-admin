@@ -195,7 +195,7 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
         { k: "Resolved", v: `${d.analytics.resolvedPct}%` },
         { k: "Coverage", v: `${d.analytics.coveragePct}%` },
         { k: "Events", v: d.analytics.eventsThisMonth },
-        { k: "Volunteers", v: d.analytics.volunteers },
+        { k: "New users", v: d.analytics.newUsers },
       ],
       cta: "See analytics",
     },
