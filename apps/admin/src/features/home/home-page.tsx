@@ -1,16 +1,18 @@
 "use client"
 
 import * as React from "react"
-import type {
-  AdminEventListItemDTO,
-  AdminReportListItemDTO,
-  AdminUserListItemDTO,
-  DiscoveryTaskDTO,
-  HomeSummaryResponse,
-  InboundEmailListItemDTO,
-  MailDirection,
-  MailThreadListItemDTO,
-  ReportCategory,
+import {
+  MODERATION_KIND_LABELS,
+  type AdminEventListItemDTO,
+  type AdminReportListItemDTO,
+  type AdminUserListItemDTO,
+  type DiscoveryTaskDTO,
+  type HomeSummaryResponse,
+  type InboundEmailListItemDTO,
+  type MailDirection,
+  type MailThreadListItemDTO,
+  type ModerationListItemDTO,
+  type ReportCategory,
 } from "@civfix/shared"
 import type { UseQueryResult } from "@tanstack/react-query"
 
@@ -26,6 +28,7 @@ import { useEventList } from "@/features/events/use-events"
 import { useMailList } from "@/features/mail/use-mail"
 import { useInboxList } from "@/features/inbox/use-inbox"
 import { useUserList } from "@/features/users/use-users"
+import { useModerationList } from "@/features/moderation/use-moderation"
 import { useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -54,11 +57,19 @@ const HUB_ICON: Record<string, IconComponent> = {
   events: Icons.Calendar,
   mail: Icons.Mail,
   users: Icons.Users,
+  moderation: Icons.Shield,
   analytics: Icons.BarChart,
 }
 
 /** How many preview rows each tile shows (the design previewed 3). */
 const PREVIEW_ROWS = 3
+
+/**
+ * Page size for the Moderation tile. It shows the same {PREVIEW_ROWS} preview rows, but fetches a larger
+ * page so the header's "N in the queue" lead is an accurate open-queue size (moderation has no count in
+ * the frozen home-summary contract); anything beyond this is still flagged by the "… and more" footer.
+ */
+const MODERATION_PEEK_LIMIT = 24
 
 interface SectionStat {
   k: string
@@ -294,6 +305,27 @@ function userRow(u: AdminUserListItemDTO): PeekItem {
     meta: u.flagReason ?? (u.city || "—"),
     age: u.lastActive,
     focusId: u.id,
+  }
+}
+
+/**
+ * Moderation queue row. Citizen content reports (the in-app "Report" button) arrive as
+ * `kind === "user_report"` carrying a `subjectType` ("Reported comment" / "Reported photo" / …); held
+ * media, clusters, and appeals fall back to their kind label. The reason + reporter form the meta line.
+ */
+function moderationRow(m: ModerationListItemDTO): PeekItem {
+  const title =
+    m.kind === "user_report" && m.subjectType
+      ? `Reported ${m.subjectType}`
+      : MODERATION_KIND_LABELS[m.kind]
+  return {
+    kind: "icon",
+    icon: Icons.Flag,
+    hue: "lilac",
+    title,
+    meta: `${m.reason} · ${m.reporter}`,
+    age: m.age,
+    focusId: m.id,
   }
 }
 
@@ -592,6 +624,11 @@ export function HomePage(_props: SectionPageProps) {
   const mailQuery = useMailList({ limit: PREVIEW_ROWS + 1 })
   const inboxQuery = useInboxList({ status: "all", limit: PREVIEW_ROWS + 1 })
   const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
+  // Moderation has no entry in the frozen home-summary contract, so — unlike the siblings that fetch only
+  // PREVIEW_ROWS+1 and read their lead total from the summary — this tile derives its "N in the queue"
+  // lead from the list itself. Fetch a modest page so that count is accurate for any realistic review
+  // queue; the "… and more" footer still covers the rare overflow.
+  const moderationQuery = useModerationList({ limit: MODERATION_PEEK_LIMIT })
 
   const summaries = React.useMemo(
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
@@ -618,12 +655,35 @@ export function HomePage(_props: SectionPageProps) {
       ],
     }
   }, [summaries, inboxUnread, summaryQuery.data])
+  // The moderation queue is not part of the frozen home-summary contract, so its tile view model is built
+  // from the moderation list itself (like the inbox-derived part of Mail): the lead is the open-queue size
+  // from the fetched page, and the "… and more" footer signals any overflow beyond it.
+  const moderationItems = moderationQuery.data?.items ?? []
+  const moderationCount = moderationItems.length
+  const moderationSummary = React.useMemo<SectionSummary>(
+    () => ({
+      id: "moderation",
+      page: "moderation",
+      label: "Moderation",
+      hue: "lilac",
+      lead: moderationCount,
+      unit: "in the queue",
+      stats: [],
+      cta: "Open moderation",
+    }),
+    [moderationCount],
+  )
   const byId = (id: string): SectionSummary | undefined =>
-    id === "mail" ? mailSummary : summaries.find((s) => s.id === id)
+    id === "mail"
+      ? mailSummary
+      : id === "moderation"
+        ? moderationSummary
+        : summaries.find((s) => s.id === id)
   const summary = summaryQuery.data
 
   // Resolve each non-analytics tile once (view model + rows + foot label). The bento renders them in the
-  // design's order (discovery feature, analytics, mail, users, reports, events) with the map first.
+  // design's order (discovery feature, analytics, then the bottom row: moderation, mail, users, reports,
+  // events) with the map first.
   const analytics = byId("analytics")
   const previewTiles: PreviewTile[] = []
   const addTile = (
@@ -681,6 +741,14 @@ export function HomePage(_props: SectionPageProps) {
     [...mailPeek, ...inboxPeek].slice(0, PREVIEW_ROWS),
     "message",
     "messages",
+  )
+  addTile(
+    "moderation",
+    "bt-moderation",
+    previewState(moderationQuery, PREVIEW_ROWS),
+    moderationItems.slice(0, PREVIEW_ROWS).map(moderationRow),
+    "item",
+    "items",
   )
   addTile(
     "users",
@@ -747,10 +815,11 @@ export function HomePage(_props: SectionPageProps) {
           <>
             {renderTile(tile("discovery"))}
             {analytics && (
-              <div className="bt-cell bt-moderation">
+              <div className="bt-cell bt-analytics">
                 <SectionTile s={analytics} />
               </div>
             )}
+            {renderTile(tile("moderation"))}
             {renderTile(tile("mail"))}
             {renderTile(tile("users"))}
             {renderTile(tile("reports"))}

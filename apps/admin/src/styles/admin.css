@@ -3280,9 +3280,9 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 .main-home .stile-list { min-height: 0; overflow: hidden; flex: 1; }
 .main-home .stile-list .slr { flex: 1 1 0; }
 /* Analytics tile: let the 2x2 stat grid grow and spread out vertically */
-.main-home .bt-moderation .stile-metricgrid { flex: 1; align-content: space-between; row-gap: 10px; margin-top: 12px; }
-.main-home .bt-moderation .stile-num { font-size: 32px; }
-.main-home .bt-moderation .hub-spark { height: 30px; }
+.main-home .bt-analytics .stile-metricgrid { flex: 1; align-content: space-between; row-gap: 10px; margin-top: 12px; }
+.main-home .bt-analytics .stile-num { font-size: 32px; }
+.main-home .bt-analytics .hub-spark { height: 30px; }
 .main-home .smg-cell { padding: 7px 10px; }
 @media (max-width: 1100px) {
   .main-home { height: auto; max-height: none; overflow: visible; padding-bottom: 56px; }
@@ -3436,22 +3436,24 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 /* -- Layout A: Bento -------------------------------------- */
 .hub-bento {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  /* 15 cols (= 3 × 5) so the tall map (9) + a feature tile (6) fill a row, and the bottom row holds FIVE
+     equal span-3 tiles (moderation + mail + users + reports + events) on one line. */
+  grid-template-columns: repeat(15, 1fr);
   gap: var(--gutter);
   grid-auto-rows: minmax(10px, auto);
 }
 .bt-cell { min-width: 0; display: flex; }
 .bt-cell > .stile, .bt-cell > .card { width: 100%; }
-.bt-map { grid-column: span 7; grid-row: span 2; min-height: 384px; }
+.bt-map { grid-column: span 9; grid-row: span 2; min-height: 384px; }
 .bt-map .card { height: 100%; }
-.bt-discovery { grid-column: span 5; }
-.bt-moderation { grid-column: span 5; }
-.bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
+.bt-discovery { grid-column: span 6; }
+.bt-analytics { grid-column: span 6; }
+.bt-moderation, .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
 @media (max-width: 1100px) {
   .hub-bento { grid-template-columns: repeat(6, 1fr); }
   .bt-map { grid-column: span 6; grid-row: auto; min-height: 300px; }
-  .bt-discovery, .bt-moderation { grid-column: span 6; }
-  .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
+  .bt-discovery, .bt-analytics { grid-column: span 6; }
+  .bt-moderation, .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
 }
 @media (max-width: 720px) {
   .hub-bento { grid-template-columns: 1fr; }
