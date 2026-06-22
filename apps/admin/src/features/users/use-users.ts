@@ -7,6 +7,7 @@ import type {
   FlagUserRequest,
   GetAdminUserResponse,
   RemoveUserMessageRequest,
+  SetUserReportVerifiedRequest,
   SetUserStatusRequest,
   SetUserVerifiedRequest,
   UserEventsResponse,
@@ -107,6 +108,19 @@ export function useSetUserVerified() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetUserVerifiedRequest) => api.setUserVerified(input),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+  })
+}
+
+/**
+ * POST /admin/users/:id/report-verify - set the account's "report-verified" trust state directly (a
+ * distinct axis from the verified-neighbor toggle above). Invalidates the user caches so the detail's
+ * report-verified badge updates immediately. Mirrors useSetUserVerified.
+ */
+export function useSetUserReportVerified() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetUserReportVerifiedRequest) => api.setUserReportVerified(input),
     onSuccess: (_res, { id }) => invalidateUsers(qc, id),
   })
 }

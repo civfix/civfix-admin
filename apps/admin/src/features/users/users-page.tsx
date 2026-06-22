@@ -21,6 +21,7 @@ import { reportStatusView } from "@/lib/report-status"
 import {
   useFlagUser,
   useRemoveUserMessage,
+  useSetUserReportVerified,
   useSetUserStatus,
   useSetUserVerified,
   useUser,
@@ -305,6 +306,7 @@ function UserDetail({ userId }: { userId: string }) {
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
   const setVerified = useSetUserVerified()
+  const setReportVerified = useSetUserReportVerified()
 
   const [tab, setTab] = React.useState<TabId>("reports")
 
@@ -394,6 +396,24 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
+  // Report-verified is a DISTINCT trust axis from the verified-neighbor mark above: it gates a reporter's
+  // auto-forward to their jurisdiction. Toggled directly by an operator.
+  const isReportVerified = !!user.reportVerified
+  const onToggleReportVerified = () => {
+    const next = !isReportVerified
+    setReportVerified.mutate(
+      { id: user.id, value: next },
+      {
+        onSuccess: () =>
+          toast(
+            next
+              ? `${user.name} · report-verified`
+              : `${user.name} · report-verification removed`,
+          ),
+      },
+    )
+  }
+
   return (
     <div className="user-detail">
       <div className="user-detail-head">
@@ -425,6 +445,14 @@ function UserDetail({ userId }: { userId: string }) {
           {isVerified && (
             <span className="pill status-ok" title="Verified neighbor">
               <Icons.Shield size={11} /> Verified neighbor
+            </span>
+          )}
+          {isReportVerified && (
+            <span
+              className="pill status-new"
+              title="Report-verified — this reporter's reports auto-forward to their jurisdiction"
+            >
+              <Icons.Check size={11} /> Report-verified
             </span>
           )}
           <span className={`pill ${STATUS_VIEW[user.status].cls}`}>
@@ -504,6 +532,18 @@ function UserDetail({ userId }: { userId: string }) {
           }
         >
           <Icons.Shield size={13} /> {isVerified ? "Unverify" : "Verify"}
+        </button>
+        <button
+          className="btn"
+          disabled={setReportVerified.isPending || deleted}
+          onClick={onToggleReportVerified}
+          title={
+            isReportVerified
+              ? "Remove the report-verified mark (their reports stop auto-forwarding)"
+              : "Mark report-verified (their reports auto-forward to their jurisdiction)"
+          }
+        >
+          <Icons.Check size={13} /> {isReportVerified ? "Unverify report" : "Verify report"}
         </button>
         {!deleted && (user.status === "banned" || user.status === "suspended") && (
           <button className="btn" disabled={setStatus.isPending} onClick={onReactivate}>

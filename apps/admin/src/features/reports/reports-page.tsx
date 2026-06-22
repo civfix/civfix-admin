@@ -29,6 +29,7 @@ import {
   useRouteReport,
   useSendReportFollowup,
   useSetReportStatus,
+  useSetReportVerdict,
 } from "@/features/reports/use-reports"
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -436,6 +437,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const remove = useRemoveReport()
   const followup = useSendReportFollowup()
   const route = useRouteReport()
+  const verdict = useSetReportVerdict()
 
   const [to, setTo] = React.useState<"reporter" | "city">("reporter")
   const [text, setText] = React.useState("")
@@ -554,6 +556,16 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     )
   }
 
+  const onVerdict = (v: "approved" | "rejected") => {
+    verdict.mutate(
+      { id: report.id, verdict: v },
+      {
+        onSuccess: () =>
+          toast(`${shortId(report.id)} · ${v === "approved" ? "approved" : "rejected"}`),
+      },
+    )
+  }
+
   return (
     <div className="rep-detail">
       {/* Header */}
@@ -568,7 +580,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         </span>
         <div className="rep-head-text">
           <div className="crumb" title={report.id}>
-            {shortId(report.id)} · {REPORT_CATEGORY_LABELS[report.category]} · {report.place}
+            <span className="mono" style={{ color: "var(--ink-3)" }}>
+              {report.referenceCode ?? shortId(report.id)}
+            </span>{" "}
+            · {REPORT_CATEGORY_LABELS[report.category]} · {report.place}
           </div>
           <h2>{report.title}</h2>
         </div>
@@ -619,12 +634,17 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           <div className="sub">
             <div className="sub-head">
               Location
-              {report.hasPhoto && (
-                <span
-                  style={{ marginLeft: "auto", fontSize: 10, color: "var(--ink-3)", fontWeight: 600 }}
+              {report.coords && (
+                <a
+                  className="btn sm ghost"
+                  style={{ marginLeft: "auto" }}
+                  href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${report.coords[0]},${report.coords[1]}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open this location in Google Street View"
                 >
-                  photo attached
-                </span>
+                  <Icons.Eye size={11} /> Street View
+                </a>
               )}
             </div>
             <div className="sub-body" style={{ padding: 10 }}>
@@ -668,6 +688,43 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               </div>
             </div>
           </div>
+
+          {/* Full media gallery — every photo/video on the report so the operator can review them all
+              before giving a verdict (the Location box above shows only the lead still). */}
+          {report.media.length > 0 && (
+            <div className="sub">
+              <div className="sub-head">
+                Photos
+                <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+                  <Icons.Eye size={12} /> {report.media.length}
+                </span>
+              </div>
+              <div className="sub-body" style={{ padding: 10 }}>
+                <div className="dsc-msg-media">
+                  {report.media.map((m) => {
+                    const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
+                    return (
+                      <a
+                        key={m.id}
+                        className="dsc-msg-thumb"
+                        href={m.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open full media in a new tab"
+                      >
+                        {thumb ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={thumb} alt="" />
+                        ) : (
+                          <Icons.FileText size={14} />
+                        )}
+                      </a>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Activity timeline */}
           <div className="sub">
@@ -824,6 +881,62 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   <Icons.MessageSquare size={12} /> View conversation →
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* Report verification — operator verdict (Approve/Reject), orthogonal to the civic status. An
+              approved verdict can earn the reporter the report-verified trust state. */}
+          <div className="sub">
+            <div className="sub-head">
+              Verification
+              <span
+                className={`pill tight ${
+                  report.verificationVerdict === "approved"
+                    ? "status-ok"
+                    : report.verificationVerdict === "rejected"
+                      ? "status-flag"
+                      : "status-new"
+                }`}
+                style={{ marginLeft: "auto" }}
+              >
+                {report.verificationVerdict === "approved"
+                  ? "Approved"
+                  : report.verificationVerdict === "rejected"
+                    ? "Rejected"
+                    : "Not yet reviewed"}
+              </span>
+            </div>
+            <div className="sub-body">
+              <div className="rep-loc">
+                <span className="rep-loc-item">
+                  <Icons.Shield size={13} /> Reporter:{" "}
+                  {report.reporterReportVerified ? "report-verified" : "not report-verified"}
+                </span>
+                {report.verifiedAt && (
+                  <>
+                    <span className="rep-loc-sep">·</span>
+                    <span className="rep-loc-item">
+                      <Icons.Clock size={13} /> {msgWhen(report.verifiedAt)}
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="rep-to" style={{ marginTop: 8 }}>
+                <button
+                  className={`btn full ${report.verificationVerdict === "approved" ? "" : "success"}`}
+                  disabled={verdict.isPending}
+                  onClick={() => onVerdict("approved")}
+                >
+                  <Icons.Check size={13} /> Approve
+                </button>
+                <button
+                  className="btn danger"
+                  disabled={verdict.isPending}
+                  onClick={() => onVerdict("rejected")}
+                >
+                  <Icons.X size={13} /> Reject
+                </button>
+              </div>
             </div>
           </div>
 

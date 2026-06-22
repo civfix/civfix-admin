@@ -13,6 +13,7 @@ import type {
   RouteReportRequest,
   SendFollowupRequest,
   SetReportStatusRequest,
+  SetReportVerdictRequest,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
@@ -99,6 +100,22 @@ export function useRouteReport() {
   return useMutation({
     mutationFn: (input: RouteReportRequest) => api.routeReport(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
+  })
+}
+
+/**
+ * POST /admin/reports/:id/verdict - set the report-verification verdict (Approve/Reject), orthogonal to
+ * the civic status. An approved verdict may earn the reporter the report-verified state. Invalidates the
+ * report views so the verdict sub-panel reflects the new verdict immediately.
+ */
+export function useSetReportVerdict() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetReportVerdictRequest) => api.setReportVerdict(input),
+    onSuccess: (_res, { id }) => {
+      invalidateReports(qc, id)
+      qc.invalidateQueries({ queryKey: queryKeys.users.all })
+    },
   })
 }
 

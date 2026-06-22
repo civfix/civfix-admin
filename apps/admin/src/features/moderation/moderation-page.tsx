@@ -432,9 +432,15 @@ export function ModerationPage({ focusId }: SectionPageProps) {
   }, [listQuery.data, filter])
 
   // Client-side count for the "User reports" chip (the frozen list response carries no per-kind counts).
+  // Always derive it from the unfiltered `all` set (matching the current search) — NOT the active chip's
+  // page — so the badge reports a stable, accurate open-user-report total even when a different server
+  // filter is selected (where the page would otherwise hold no user_report rows). React Query dedupes
+  // this against the main list query when the chip is "all"/"User reports".
+  const allParams: ModerationListQuery = query.trim() ? { q: query.trim() } : {}
+  const allForCount = useModerationList(allParams)
   const userReportCount = React.useMemo(
-    () => (listQuery.data?.items ?? []).filter((x) => x.kind === "user_report").length,
-    [listQuery.data],
+    () => (allForCount.data?.items ?? []).filter((x) => x.kind === "user_report").length,
+    [allForCount.data],
   )
 
   React.useEffect(() => {
