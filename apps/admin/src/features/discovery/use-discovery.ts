@@ -45,8 +45,8 @@ export function useDiscoveryTask(id: string | null) {
   })
 }
 
-/** The server-driven directory query: search (`q`) + routing-posture `filter` + `sort`. `cursor`/`limit` are paged internally. */
-export type JurisdictionDirectoryParams = Pick<JurisdictionListQuery, "q" | "filter" | "sort">
+/** The server-driven directory query: search (`q`) + routing-posture `filter` + type `layer` + `sort`. `cursor`/`limit` are paged internally. */
+export type JurisdictionDirectoryParams = Pick<JurisdictionListQuery, "q" | "filter" | "layer" | "sort">
 
 /** Page size for the directory infinite scroll (the wire caps at 100; 50 keeps each page snappy). */
 const DIRECTORY_PAGE_SIZE = 50

@@ -691,6 +691,8 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<"all" | "attention" | "clear">("all")
+  // Jurisdiction TYPE narrow ("all" = every type). Independent of the routing-posture chips; both apply.
+  const [layer, setLayer] = React.useState<"all" | JurisdictionLayer>("all")
   const [sort, setSort] = React.useState<"pop" | "reports">("pop")
   // A deep-link focusId is a GEOID; seed the search with it so the server surfaces that exact jurisdiction
   // (it's rarely on the first page of 28k), then it gets selected below.
@@ -713,6 +715,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const listQuery = useJurisdictionDirectory({
     filter: serverFilter,
     sort: serverSort,
+    ...(layer !== "all" ? { layer } : {}),
     ...(debouncedQ ? { q: debouncedQ } : {}),
   })
 
@@ -773,6 +776,21 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+        </div>
+        <div className="sortbox">
+          <span className="sortbox-label">Type</span>
+          <select
+            value={layer}
+            onChange={(e) => setLayer(e.target.value as "all" | JurisdictionLayer)}
+            aria-label="Filter by jurisdiction type"
+          >
+            <option value="all">All types</option>
+            <option value="state">States</option>
+            <option value="county">Counties</option>
+            <option value="place">Cities</option>
+            <option value="federal">Federal land</option>
+            <option value="tribal">Tribal</option>
+          </select>
         </div>
         <div className="sortbox">
           <span className="sortbox-label">Sort</span>
