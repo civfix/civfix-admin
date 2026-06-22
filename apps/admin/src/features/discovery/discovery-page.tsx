@@ -10,6 +10,7 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { toAppError } from "@/lib/api"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
@@ -261,6 +262,9 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   // seeded from the row. Persisted via the contract's SaveContactsRequest.defaultEmails + formUrl.
   const [defaultEmail, setDefaultEmail] = React.useState(dto.email ?? "")
   const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
+  // The discussion @handle (the "@sf" mentionable in a report discussion). Seeded from the row; persisted
+  // via PATCH handle on "Save draft". Stored bare (no leading "@"); the input shows the "@" as a prefix.
+  const [handle, setHandle] = React.useState(dto.handle ?? "")
 
   const counts = dto.perCategoryCounts
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
@@ -315,17 +319,36 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
   const onSaveDraft = () => {
     // Include the operator note in the PATCH so it persists server-side instead of being silently dropped
-    // (the backend PATCH supports `notes`). Skip a no-op save when neither a contact nor a note is set.
+    // (the backend PATCH supports `notes`). Skip a no-op save when nothing changed.
     const note = opNote.trim()
     const contacts = contactsPayload()
     const jf = jurisdictionFields()
-    if (Object.keys(contacts).length === 0 && Object.keys(jf).length === 0 && note === "") {
+    // The handle, normalized to a bare lowercase slug (a leading "@" / casing is forgiven). Send it only
+    // when it actually changed from the row's stored value; an empty string clears it (server -> NULL).
+    const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
+    const handleChanged = normalizedHandle !== (dto.handle ?? "")
+    if (
+      Object.keys(contacts).length === 0 &&
+      Object.keys(jf).length === 0 &&
+      note === "" &&
+      !handleChanged
+    ) {
       toast("Nothing to save yet")
       return
     }
     patch.mutate(
-      { geoid: dto.geoid, contacts, ...jf, ...(note ? { notes: note } : {}) },
-      { onSuccess: () => toast(`Draft saved for ${dto.org}`) },
+      {
+        geoid: dto.geoid,
+        contacts,
+        ...jf,
+        ...(note ? { notes: note } : {}),
+        ...(handleChanged ? { handle: normalizedHandle } : {}),
+      },
+      {
+        onSuccess: () => toast(`Draft saved for ${dto.org}`),
+        // Surface a rejected handle (reserved / already taken / bad format) instead of failing silently.
+        onError: (err) => toast(toAppError(err).message),
+      },
     )
   }
 
@@ -415,6 +438,35 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
 
         <div className="rep-col">
+          {/* Discussion @handle — the "@sf" residents tag in a report's discussion to forward it here.
+              Stored bare (no leading "@"); saved via the detail's "Save draft" (PATCH handle). */}
+          <div className="sub">
+            <div className="sub-head">Discussion @handle</div>
+            <div className="sub-body">
+              <div className="ccat-email">
+                <span aria-hidden="true" style={{ fontWeight: 700, color: "var(--ink-3)" }}>
+                  @
+                </span>
+                <input
+                  type="text"
+                  value={handle}
+                  placeholder="sf — tag this jurisdiction in a report discussion"
+                  onChange={(e) => setHandle(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-label="Jurisdiction discussion handle"
+                />
+              </div>
+              <div className="hint" style={{ marginTop: 8 }}>
+                Residents can tag “@
+                {handle.trim().replace(/^@+/, "").toLowerCase() || "handle"}” in a report’s discussion to
+                forward it to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to
+                clear. Saved with “Save draft”.
+              </div>
+            </div>
+          </div>
+
           {/* Default contact + reporting form — the jurisdiction-level fallback used for any category
               without its own per-type contact, plus the city's public reporting-form URL. */}
           <div className="sub">
