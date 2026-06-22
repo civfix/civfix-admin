@@ -44,6 +44,7 @@ const CAT_COLOR: Record<ReportCategory, string> = {
   recycling: "var(--cat-recycling)",
   graffiti: "var(--cat-graffiti)",
   hazard: "var(--cat-hazard)",
+  encampment: "var(--cat-encampment)",
   water: "var(--cat-water)",
   other: "var(--ink-3)",
 }
