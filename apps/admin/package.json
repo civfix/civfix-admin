@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "next lint --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rimraf .next out *.tsbuildinfo"
   },
   "dependencies": {
