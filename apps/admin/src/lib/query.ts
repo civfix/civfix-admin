@@ -77,6 +77,7 @@ export const queryKeys = {
   jurisdictions: {
     all: ["admin", "jurisdictions"] as const,
     list: (params?: unknown) => ["admin", "jurisdictions", "list", params ?? null] as const,
+    geometry: (geoid: string) => ["admin", "jurisdictions", "geometry", geoid] as const,
   },
 
   // ----- reports -----

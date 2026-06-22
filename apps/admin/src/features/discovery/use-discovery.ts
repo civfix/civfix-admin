@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   AddNoteRequest,
   DiscoveryListQuery,
@@ -8,6 +8,7 @@ import type {
   FlagDiscoveryRequest,
   GetDiscoveryTaskResponse,
   JurisdictionDirectoryResponse,
+  JurisdictionGeometryResponse,
   JurisdictionListQuery,
   PatchJurisdictionRequest,
   SaveContactsRequest,
@@ -44,16 +45,47 @@ export function useDiscoveryTask(id: string | null) {
   })
 }
 
+/** The server-driven directory query: search (`q`) + routing-posture `filter` + `sort`. `cursor`/`limit` are paged internally. */
+export type JurisdictionDirectoryParams = Pick<JurisdictionListQuery, "q" | "filter" | "sort">
+
+/** Page size for the directory infinite scroll (the wire caps at 100; 50 keeps each page snappy). */
+const DIRECTORY_PAGE_SIZE = 50
+
 /**
  * GET /admin/jurisdictions - the full jurisdiction directory: EVERY jurisdiction reports map to (incl.
- * federal land), with its type, routing posture, waiting-report counts, and existing contacts. This is
- * the persistent list the Jurisdictions page is sourced from (routed jurisdictions stay listed, unlike
- * the discovery-task queue which drops them once routed).
+ * federal land), with its type, routing posture, waiting-report counts, and existing contacts.
+ *
+ * Server-driven: search/filter/sort happen in Postgres and the page scrolls via `nextCursor`, so the
+ * operator can reach ALL ~28k jurisdictions (the prior client-only `limit:100` showed only the first
+ * page, alphabetically Alabama). `total` + `facets` ride along on the first page for the header + chips.
  */
-export function useJurisdictionDirectory(params: JurisdictionListQuery) {
-  return useQuery<JurisdictionDirectoryResponse>({
+export function useJurisdictionDirectory(params: JurisdictionDirectoryParams) {
+  return useInfiniteQuery<JurisdictionDirectoryResponse>({
     queryKey: queryKeys.jurisdictions.list(params),
-    queryFn: () => api.listJurisdictions(params),
+    queryFn: ({ pageParam }) =>
+      api.listJurisdictions({
+        ...params,
+        limit: DIRECTORY_PAGE_SIZE,
+        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  })
+}
+
+/**
+ * GET /admin/jurisdictions/:geoid/geometry - one jurisdiction's simplified boundary (GeoJSON + bbox +
+ * interior point) for the directory's verification map. Disabled for the synthetic "Unmapped" row and
+ * until a real geoid is selected. A 404 (no stored boundary) surfaces as the query error, and the detail
+ * panel falls back to the text label.
+ */
+export function useJurisdictionGeometry(geoid: string | null) {
+  return useQuery<JurisdictionGeometryResponse>({
+    queryKey: queryKeys.jurisdictions.geometry(geoid ?? ""),
+    queryFn: () => api.getJurisdictionGeometry({ geoid: geoid as string }),
+    enabled: !!geoid,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   })
 }
 

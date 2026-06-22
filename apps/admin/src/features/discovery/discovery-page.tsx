@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import {
   type DiscoveryContact,
   type JurisdictionDirectoryDTO,
@@ -15,9 +16,17 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
   useJurisdictionDirectory,
+  useJurisdictionGeometry,
   usePatchJurisdiction,
   useSaveJurisdictionContacts,
 } from "@/features/discovery/use-discovery"
+
+// Client-only (Leaflet imports `window` at module load), like the other admin maps. ssr:false so the
+// static export still builds.
+const BoundaryMap = dynamic(
+  () => import("@/components/map/boundary-map").then((m) => m.BoundaryMap),
+  { ssr: false },
+)
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -245,6 +254,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const toast = useToast()
   const patch = usePatchJurisdiction()
   const saveContacts = useSaveJurisdictionContacts()
+  // The boundary geometry for the verification map (lazy per selected geoid; 404 -> fall back to label).
+  const geometry = useJurisdictionGeometry(dto.geoid)
 
   // Per-category contact emails (controlled inputs), seeded once from the row's stored contacts. The
   // parent keys this component by geoid, so it remounts (and re-seeds) when the selection changes.
@@ -403,14 +414,26 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
           <div className="sub">
             <div className="sub-head">Jurisdiction</div>
             <div className="sub-body" style={{ padding: 10 }}>
-              <div className="mini-map">
-                <div className="juris-label">{dto.org}</div>
+              <div className="mini-map" style={geometry.data ? { height: 220 } : undefined}>
+                {geometry.data ? (
+                  <BoundaryMap
+                    geometry={geometry.data.geometry}
+                    bbox={geometry.data.bbox}
+                    layer={geometry.data.layer}
+                  />
+                ) : (
+                  <div className="juris-label">
+                    {geometry.isLoading ? "Loading boundary…" : dto.org}
+                  </div>
+                )}
               </div>
               <div className="juris-stats">
                 <div>
                   <div className="eyebrow">Population</div>
                   <div className="juris-stat-n">{dto.population.toLocaleString()}</div>
-                  <div className="juris-stat-sub">TIGER 2024</div>
+                  <div className="juris-stat-sub">
+                    {dto.population > 0 ? "US Census ACS" : "Not available"}
+                  </div>
                 </div>
                 <div>
                   <div className="eyebrow">Reports waiting</div>
@@ -667,49 +690,61 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 }
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState("all")
+  const [filter, setFilter] = React.useState<"all" | "attention" | "clear">("all")
   const [sort, setSort] = React.useState<"pop" | "reports">("pop")
-  const [query, setQuery] = React.useState("")
+  // A deep-link focusId is a GEOID; seed the search with it so the server surfaces that exact jurisdiction
+  // (it's rarely on the first page of 28k), then it gets selected below.
+  const [query, setQuery] = React.useState(focusId ?? "")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  // The full directory. Search + the attention/clear facet + the pop/reports sort are applied
-  // client-side (matching the design, which filtered its in-memory set). A generous page covers the
-  // expected jurisdiction count; large deployments would move search/sort server-side (follow-up).
-  const listQuery = useJurisdictionDirectory({ limit: 100 })
-  const all = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
-  const attentionCount = React.useMemo(() => all.filter(needsAttention).length, [all])
-
-  const items = React.useMemo(() => {
-    const q = query.trim().toLowerCase()
-    let xs = q
-      ? all.filter((x) => x.org.toLowerCase().includes(q) || x.geoid.toLowerCase().includes(q))
-      : all.slice()
-    if (filter === "attention") xs = xs.filter(needsAttention)
-    else if (filter === "clear") xs = xs.filter((x) => !needsAttention(x))
-    xs.sort((a, b) =>
-      sort === "reports" ? b.reportsWaiting - a.reportsWaiting : b.population - a.population,
-    )
-    return xs
-  }, [all, query, filter, sort])
-
-  // Keep a selection: honor focusId, else fall back to the first row of the current view.
+  // Debounce the search box so a server query fires after the operator pauses, not per keystroke.
+  const [debouncedQ, setDebouncedQ] = React.useState("")
   React.useEffect(() => {
-    if (focusId) setSelId(focusId)
-  }, [focusId])
+    const t = setTimeout(() => setDebouncedQ(query.trim()), 250)
+    return () => clearTimeout(t)
+  }, [query])
+
+  // The directory is server-driven: Postgres does the search/filter/sort + paging, so the operator can
+  // reach ALL jurisdictions (the prior client-side limit:100 surfaced only the first page, all Alabama).
+  // UI chips -> routing-posture facet ("Needs contact" = none on file; "Routed" = any contact); the sort
+  // dropdown -> the population/reports server sort.
+  const serverFilter = filter === "attention" ? "none" : filter === "clear" ? "routed" : "all"
+  const serverSort = sort === "reports" ? "reports" : "population"
+  const listQuery = useJurisdictionDirectory({
+    filter: serverFilter,
+    sort: serverSort,
+    ...(debouncedQ ? { q: debouncedQ } : {}),
+  })
+
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [listQuery.data],
+  )
+  // total + facets ride on the first page only (see the contract); they back the header + chip counts.
+  const total = listQuery.data?.pages[0]?.total ?? null
+  const facets = listQuery.data?.pages[0]?.facets ?? null
+
+  // Re-focus + re-search when the shell hands a new deep-link target while the page is mounted.
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.geoid)
-    if (selId && items.length && !items.some((x) => x.geoid === selId)) {
-      setSelId(items[0]!.geoid)
+    if (focusId) {
+      setSelId(focusId)
+      setQuery(focusId)
     }
-  }, [items, selId])
+  }, [focusId])
 
-  const selected = items.find((x) => x.geoid === selId) ?? null
+  // Effective selection, derived synchronously (no effect): the clicked/deep-linked row when it's in the
+  // loaded set, else the first row. Avoids the empty-state flash on a search/filter/sort change.
+  const selected =
+    (selId ? (items.find((x) => x.geoid === selId) ?? null) : null) ?? items[0] ?? null
 
   const catFilters = [
-    { value: "all", label: "All", count: all.length },
-    { value: "attention", label: "Need attention", count: attentionCount },
-    { value: "clear", label: "No action required", count: all.length - attentionCount },
+    { value: "all", label: "All", count: total ?? 0 },
+    { value: "attention", label: "Needs contact", count: facets?.unrouted ?? 0 },
+    { value: "clear", label: "Routed", count: facets?.routed ?? 0 },
   ]
+  // Header count tracks the active chip (the list below is filtered, so the unfiltered total would mislead).
+  const headerCount =
+    filter === "attention" ? facets?.unrouted : filter === "clear" ? facets?.routed : total
 
   return (
     <>
@@ -724,7 +759,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
       />
 
       <div className="toolbar">
-        <FilterChips options={catFilters} value={filter} onChange={setFilter} />
+        <FilterChips
+          options={catFilters}
+          value={filter}
+          onChange={(v) => setFilter(v as "all" | "attention" | "clear")}
+        />
         <div className="toolbar-spacer" />
         <div className="searchbox">
           <Icons.Search size={14} />
@@ -748,7 +787,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         <section className="card md-list">
           <div className="card-head">
             <h3>
-              {items.length} {items.length === 1 ? "jurisdiction" : "jurisdictions"}
+              {(headerCount ?? items.length).toLocaleString()}{" "}
+              {(headerCount ?? items.length) === 1 ? "jurisdiction" : "jurisdictions"}
             </h3>
             <div className="spacer" />
             <span className="meta">click a row →</span>
@@ -765,14 +805,27 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
                 icon={<Icons.Search size={20} />}
               />
             ) : (
-              items.map((item) => (
-                <JurisdictionRow
-                  key={item.geoid}
-                  item={item}
-                  selected={selId === item.geoid}
-                  onClick={() => setSelId(item.geoid)}
-                />
-              ))
+              <>
+                {items.map((item) => (
+                  <JurisdictionRow
+                    key={item.geoid}
+                    item={item}
+                    selected={selected?.geoid === item.geoid}
+                    onClick={() => setSelId(item.geoid)}
+                  />
+                ))}
+                {listQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={listQuery.isFetchingNextPage}
+                    onClick={() => listQuery.fetchNextPage()}
+                  >
+                    {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>
