@@ -3,6 +3,7 @@
 import * as React from "react"
 import {
   INBOUND_EMAIL_STATUS_LABELS,
+  relativeAgo,
   type InboundEmailListItemDTO,
   type InboundEmailStatus,
 } from "@civfix/shared"
@@ -13,22 +14,13 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { useToast } from "@/store/ui-store"
 
-/**
- * Inbox view-parts (row + reader) for catch-all *@civfix.org mail that is NOT an outreach reply
- * (support@, cold inbound, etc.). These compose into the unified Mail screen's "Inbox" folder
- * (features/mail/mail-page.tsx) alongside the outreach thread parts — the two streams share the same
- * master-detail chrome and CSS (.mail-row / .mail-reader). Triage only: mark read / archive
- * (setInboxStatus); the reader renders the plain-text body (we never inject raw HTML).
- */
 
-/** Pill treatment per inbox status (shares the status-* pill classes with the outreach stream). */
 const STATUS_CLS: Record<InboundEmailStatus, string> = {
   unread: "status-flag",
   read: "status-ok",
   archived: "status-progress",
 }
 
-/** A single inbox list row — visually consistent with MailRow (down-arrow glyph; local-part lead). */
 export function InboxRow({
   item,
   selected,
@@ -49,7 +41,9 @@ export function InboxRow({
       <div className="mail-row-body">
         <div className="mail-row-top">
           <span className="mail-from">{item.from || "(unknown sender)"}</span>
-          <span className="mail-ts mono">{item.ts}</span>
+          <span className="mail-ts mono" title={new Date(item.ts).toLocaleString()}>
+            {relativeAgo(item.ts)}
+          </span>
         </div>
         <div className="mail-subject">
           {item.subject || "(no subject)"}
@@ -73,7 +67,6 @@ export function InboxRow({
   )
 }
 
-/** The inbox reader: one inbound message (plain-text body + attachment links) + a triage footer. */
 export function InboxReader({ id }: { id: string }) {
   const q = useInboxMessage(id)
   const toast = useToast()

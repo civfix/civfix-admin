@@ -25,20 +25,7 @@ import {
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Analytics (ported from pages-misc.jsx AnalyticsPage, enumeration 2.G). Layout: PageHead + a
- * client-side CSV Export, a KPI strip (the analyticsKpis contract cells), and the
- * analytics card grid. Each card is an INDEPENDENT read with its own loading / error / empty state so
- * one failing aggregate does not blank the page (enumeration 2.A.6). The eight prototype cards render in
- * the same design language.
- *
- * Reconciliation: by-category / resolution-by-category use the 6 canonical civfix categories
- * (REPORT_CATEGORY_LABELS); the design's "cleanup" is the Events domain, not a report category. Category
- * bar colors come from the ported `--cat-*` CSS vars (no hardcoded hex); "other" has no dedicated var so
- * it uses the tertiary ink (the design's warm gray).
- */
 
-/** Bar color per civfix report category, from the ported design-system CSS vars (no hardcoded hex). */
 const CAT_COLOR: Record<ReportCategory, string> = {
   trash: "var(--cat-trash)",
   recycling: "var(--cat-recycling)",
@@ -49,7 +36,6 @@ const CAT_COLOR: Record<ReportCategory, string> = {
   other: "var(--ink-3)",
 }
 
-/** Initials for a contributor avatar (first two words); falls back to "?" for an empty/blank name. */
 function initials(name: string): string {
   const out = name
     .split(" ")
@@ -60,11 +46,6 @@ function initials(name: string): string {
   return out || "?"
 }
 
-/**
- * Humanize a median-resolution duration in hours: 0 reads as "—" (no resolved reports yet, distinct
- * from a fast "<1h"), sub-hour as "<1h", under a day as "Xh", and a day or more as "Xd Yh" (the trailing
- * "Yh" is dropped when it is a whole number of days).
- */
 function humanizeHours(hours: number): string {
   if (hours <= 0) return "—"
   if (hours < 1) return "<1h"
@@ -74,11 +55,6 @@ function humanizeHours(hours: number): string {
   return rem > 0 ? `${days}d ${rem}h` : `${days}d`
 }
 
-/**
- * A card wrapper that owns its title + meta and renders the matching loading / error / empty state for
- * its query, so each analytics aggregate fails independently. `isEmpty` decides the empty state; the
- * children render once data is present.
- */
 function AnalyticsCard<T>({
   title,
   meta,
@@ -125,11 +101,6 @@ function AnalyticsCard<T>({
   )
 }
 
-/**
- * A KPI delta caption (the design's up/down arrow + delta). The color and arrow track the direction so
- * a down delta reads negative and a flat delta reads neutral (the old version always drew a green
- * up-arrow): up -> moss + ArrowUp, down -> danger + ArrowDown, flat -> tertiary ink + no arrow.
- */
 function KpiDelta({ delta, dir }: { delta: string; dir: "up" | "down" | "flat" }) {
   const color = dir === "up" ? "var(--moss-700)" : dir === "down" ? "var(--danger)" : "var(--ink-3)"
   return (
@@ -140,20 +111,12 @@ function KpiDelta({ delta, dir }: { delta: string; dir: "up" | "down" | "flat" }
   )
 }
 
-/**
- * The KPI strip: the analyticsKpis contract cells (route-time hidden). The events stats ("Events this
- * month" / "Volunteers") come from this same contract with their own real deltas, so the strip no longer
- * hand-builds duplicate events cells from the events aggregate (those collided with the contract cells).
- * The cleanup-events totals still render once in the dedicated "Cleanup events" card below.
- */
 function KpiStrip({ kpis }: { kpis: AnalyticsKpisResponse }) {
   return (
     <>
       {kpis.kpis
         .filter((k) => !/route/i.test(k.label))
         .map((k) => {
-          // Percent KPIs (e.g. "Resolved") carry the bare number; render whole-number percent + "%" so
-          // they match the whole-number count KPIs instead of showing a float like "88.9%".
           const isPct = /resolved/i.test(k.label)
           return (
             <div key={k.label} className="statcell">
@@ -185,16 +148,16 @@ export function AnalyticsPage(_props: SectionPageProps) {
   const kpis = kpisQuery.data
   const events = eventsQuery.data
 
-  // Client-side CSV export (no endpoint): KPIs + events + by-category, downloaded as civfix-analytics.csv.
   const canExport = !!kpis
   const exportCsv = () => {
     if (!kpis) return
     const rows: (string | number)[][] = [["Metric", "Value", "Change"]]
-    kpis.kpis.forEach((k) => rows.push([k.label, k.num, k.delta]))
+    kpis.kpis
+      .filter((k) => !/route/i.test(k.label))
+      .forEach((k) => rows.push([k.label, k.num, k.delta]))
     if (events) {
       rows.push(["Cleanup events (month)", events.thisMonth, ""])
       rows.push(["Volunteers", events.volunteers, ""])
-      // "Bags collected" has no production write path (always 0), so it is omitted from the export.
     }
     rows.push([])
     rows.push(["Category", "Reports", "Share %"])
@@ -235,7 +198,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
         </button>
       </PageHead>
 
-      {/* KPI strip. Loading/error render as a clean strip-level panel, not jammed into a stat cell. */}
+      { }
       {kpisQuery.isLoading ? (
         <div className="strip-state">
           <LoadingState label="Loading KPIs..." />
@@ -251,7 +214,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
       ) : null}
 
       <div className="analytics-grid">
-        {/* Pins per week */}
+        { }
         <AnalyticsCard
           title="Pins per week"
           meta="8-week trend"
@@ -262,13 +225,11 @@ export function AnalyticsPage(_props: SectionPageProps) {
           {(d) => <BarChart values={d.weeks} labels={d.labels} />}
         </AnalyticsCard>
 
-        {/* By category */}
+        { }
         <AnalyticsCard
           title="By category"
           meta="this month"
           query={byCategoryQuery}
-          // The contract always returns all 6 category rows, so length is always 6; the card is empty
-          // only when every category has a zero count.
           isEmpty={(d) => d.rows.every((r) => r.count === 0)}
         >
           {(d) => (
@@ -287,7 +248,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        {/* Report funnel */}
+        { }
         <AnalyticsCard
           title="Report funnel"
           meta="pin → resolved"
@@ -317,7 +278,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        {/* Mapping coverage */}
+        { }
         <AnalyticsCard
           title="Mapping coverage"
           meta="jurisdictions"
@@ -350,14 +311,12 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        {/* Median resolution time */}
+        { }
         <AnalyticsCard
           title="Median resolution time"
           meta="by report type"
           span2
           query={resolutionQuery}
-          // The contract always returns all 6 category rows, so length is always 6; the card is empty
-          // only when every category has zero recorded resolution hours.
           isEmpty={(d) => d.rows.every((r) => r.hours === 0)}
         >
           {(d) => {
@@ -379,7 +338,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
           }}
         </AnalyticsCard>
 
-        {/* Cleanup events */}
+        { }
         <AnalyticsCard
           title="Cleanup events"
           meta="8-month trend"
@@ -398,8 +357,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
                   <span className="es-num">{d.volunteers.toLocaleString()}</span>
                   <span className="es-lbl">volunteers</span>
                 </div>
-                {/* "Bags collected" has no production write path; hide it while it is always 0 rather
-                    than showing a fabricated zero stat. */}
+                { }
                 {d.bags > 0 ? (
                   <div className="es-stat">
                     <span className="es-num">{d.bags.toLocaleString()}</span>
@@ -412,7 +370,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        {/* Top jurisdictions */}
+        { }
         <AnalyticsCard
           title="Top jurisdictions"
           meta="by pin volume"
@@ -429,13 +387,11 @@ export function AnalyticsPage(_props: SectionPageProps) {
                 <span>Resolved</span>
               </div>
               {d.rows.map((j, i) => (
-                // org can repeat across rows, so pair it with the index for a stable unique key.
                 <div key={`${j.org}-${i}`} className="trow jt">
                   <span className="td-strong">{j.org}</span>
                   <span className="mono">{j.pins}</span>
                   <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
-                    {/* resolved is a percentage; the contract carries the bare number, so append "%"
-                        at render time to match the design's "91%". */}
+                    { }
                     {j.resolved}%
                   </span>
                 </div>
@@ -444,7 +400,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        {/* Top contributors */}
+        { }
         <AnalyticsCard
           title="Top contributors"
           meta="reports + cleanups"
@@ -461,7 +417,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
                 <span>Cleanups</span>
               </div>
               {d.rows.map((c, i) => (
-                // name/city can repeat across rows, so pair them with the index for a stable unique key.
                 <div key={`${c.name}-${c.city}-${i}`} className="trow ct">
                   <span className="contrib-cell">
                     <span className="contrib-av">{initials(c.name)}</span>

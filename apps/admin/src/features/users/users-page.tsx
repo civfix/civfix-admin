@@ -3,11 +3,13 @@
 import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
+  RISK_LABELS,
   avatarColor,
   monogram,
   type AdminUserDTO,
   type AdminUserListItemDTO,
   type ReportCategory,
+  type Role,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -18,10 +20,13 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { reportStatusView } from "@/lib/report-status"
+import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { useDebounced } from "@/hooks/use-debounced"
 import {
   useFlagUser,
   useRemoveUserMessage,
   useSetUserReportVerified,
+  useSetUserRole,
   useSetUserStatus,
   useSetUserVerified,
   useUser,
@@ -33,23 +38,7 @@ import {
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Users (ported from pages-users.jsx, enumeration 2.F). Master-detail: the account list on the left
- * (filter chips All / Active / Suspended / Flagged + counts, search name/handle/city) and the full
- * account detail on the right (head avatar/name/handle/city + Flagged/status badges, profile meta, the
- * Reports/Events/Messages tabs each with a count, and the action bar: flag toggle + status controls
- * (Suspend when active, Un-ban/Reactivate when suspended/banned, Ban)). All wired to the typed admin
- * client.
- *
- * Difference from the prototype: the three tabs render REAL data from getUserReports / getUserEvents /
- * getUserMessages (the prototype synthesized rows client-side). Each tab has its own loading / error /
- * empty state. The action bar extends the design's flag/ban with reversible Suspend / Reactivate.
- */
 
-/**
- * Visual treatment per civfix account status (pill class + design label). The pill renders `label`
- * (the design's Active / Suspended / In review / Banned).
- */
 const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   active: { cls: "status-ok", label: "Active" },
   suspended: { cls: "status-flag", label: "Suspended" },
@@ -57,19 +46,26 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   banned: { cls: "status-flag", label: "Banned" },
 }
 
+const ROLE_ORDER: Role[] = ["citizen", "gov_user", "gov_admin", "operator"]
+
+const ROLE_LABEL: Record<Role, string> = {
+  citizen: "Citizen",
+  gov_user: "Gov user",
+  gov_admin: "Gov admin",
+  operator: "Operator",
+}
+
+const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]>, string> = {
+  chat: "Cleanup chat",
+  dm: "Direct message",
+  report: "Report comment",
+}
+
 function catPinSrc(category: ReportCategory): string | null {
   if (category === "other") return null
   return `/ds/pin-${category}.svg`
 }
 
-/**
- * A user avatar rendered IDENTICALLY to web/mobile (the shared `@civfix/ui` Avatar primitive): show the
- * uploaded/provider photo (rounded, cover-cropped) when `avatarUrl` is present, otherwise the first-letter
- * `monogram` over a per-seed brand color. The fill matches the shared Avatar exactly — the FIRST stop of
- * the DTO `avatar` [from,to] pair, falling back to `avatarColor(id)` when the pair is absent — so the same
- * account looks the same here as on the apps (no more single hardcoded gradient). `avatar`/`avatarUrl` are
- * read defensively (optional) so an older server that does not yet project them still renders the monogram.
- */
 function UserAvatar({
   user,
   large = false,
@@ -95,13 +91,11 @@ function UserAvatar({
   )
 }
 
-/** The server returns a "-" sentinel for an absent timestamp; treat it (and empty) as missing. */
 function isMissing(v: string | null | undefined): boolean {
   const t = (v ?? "").trim()
   return t === "" || t === "-"
 }
 
-/** Best-effort date-only rendering of a join timestamp; falls back to the raw string if unparseable. */
 function joinDate(v: string): string {
   const d = new Date(v)
   if (Number.isNaN(d.getTime())) return v
@@ -161,12 +155,6 @@ function ProfileEventRow({ e }: { e: UserEventItemDTO }) {
   )
 }
 
-/**
- * One row in the user's Messages tab. The admin sees EVERY message — including ones the user themselves
- * deleted (a `deletedAt` tombstone), rendered as "[deleted by user]" while STILL showing the original
- * text (operators keep full visibility). A per-message Remove action (operator soft-delete) is offered on
- * messages the user has NOT already deleted, mirroring the discussion-message Remove pattern.
- */
 function ProfileMessageRow({
   m,
   onRemove,
@@ -186,10 +174,12 @@ function ProfileMessageRow({
         <div className="prow-title">
           {userDeleted && <span className="pill status-flag tight">[deleted by user]</span>} {m.text}
         </div>
-        <div className="prow-meta">in {m.thread}</div>
+        <div className="prow-meta">
+          {m.source && <span className="pill priority-low tight">{SOURCE_LABEL[m.source]}</span>} in{" "}
+          {m.thread}
+        </div>
       </div>
       <span className="prow-age">{m.when}</span>
-      {/* Operator remove is offered only on a message the user hasn't already deleted. */}
       {!userDeleted && (
         <button
           className="btn sm danger"
@@ -206,7 +196,6 @@ function ProfileMessageRow({
 
 type TabId = "reports" | "events" | "messages"
 
-/** The Reports / Events / Messages tab content, each wired to its own sub-activity query. */
 function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   const reports = useUserReports(tab === "reports" ? userId : null)
   const events = useUserEvents(tab === "events" ? userId : null)
@@ -214,11 +203,9 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   const removeMsg = useRemoveUserMessage()
   const toast = useToast()
 
-  const onRemoveMessage = (m: UserMessageItemDTO) => {
-    // Optional audited removal reason (mirrors the discussion/moderation remove-action shape).
-    const reason = typeof window !== "undefined" ? window.prompt("Reason for removal (optional):") : null
-    // A cancelled prompt returns null — treat it as "abort", an empty string as "no reason given".
-    if (reason === null && typeof window !== "undefined") return
+  const onRemoveMessage = async (m: UserMessageItemDTO) => {
+    const reason = await promptDialog({ title: "Remove message", label: "Reason (optional)" })
+    if (reason === null) return
     removeMsg.mutate(
       { id: userId, messageId: m.id, ...(reason ? { reason } : {}) },
       { onSuccess: () => toast("Message removed") },
@@ -292,7 +279,6 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   )
 }
 
-/** Tab counts come from the user's own counters (reports / cleanups / messages), all on the detail DTO. */
 function tabCount(user: AdminUserDTO, id: TabId): number {
   if (id === "reports") return user.reports
   if (id === "events") return user.cleanups
@@ -307,6 +293,7 @@ function UserDetail({ userId }: { userId: string }) {
   const setStatus = useSetUserStatus()
   const setVerified = useSetUserVerified()
   const setReportVerified = useSetUserReportVerified()
+  const setRole = useSetUserRole()
 
   const [tab, setTab] = React.useState<TabId>("reports")
 
@@ -323,9 +310,6 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
-  // A self-deleted (tombstoned) account: the admin still sees the REAL identity + full activity (the
-  // public DTOs render "Deleted User"; admin keeps the truth). Account-level status actions are disabled
-  // (there is no live session/account to suspend or ban), but per-content removal stays available.
   const deleted = !!user.deletedAt
 
   const tabs: { id: TabId; label: string }[] = [
@@ -344,40 +328,53 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
-  const onBan = () => {
+  const onBan = async () => {
     if (user.status === "banned") return
-    if (!window.confirm(`Ban ${user.name}? This revokes all of their sessions.`)) return
+    const ok = await confirmDialog({
+      title: "Ban user",
+      body: `Ban ${user.name}? This revokes all of their sessions.`,
+      danger: true,
+      confirmLabel: "Ban",
+    })
+    if (!ok) return
     setStatus.mutate(
       { id: user.id, status: "banned" },
       { onSuccess: () => toast(`${user.name} · account banned`) },
     )
   }
 
-  const onSuspend = () => {
+  const onSuspend = async () => {
     if (user.status !== "active") return
-    if (!window.confirm(`Suspend ${user.name}? They keep their account but can't post.`)) return
+    const ok = await confirmDialog({
+      title: "Suspend user",
+      body: `Suspend ${user.name}? They keep their account but can't post.`,
+      danger: true,
+      confirmLabel: "Suspend",
+    })
+    if (!ok) return
     setStatus.mutate(
       { id: user.id, status: "suspended" },
       { onSuccess: () => toast(`${user.name} · account suspended`) },
     )
   }
 
-  const onReactivate = () => {
+  const onReactivate = async () => {
     if (user.status !== "banned" && user.status !== "suspended") return
     const verb = user.status === "banned" ? "Un-ban" : "Reactivate"
-    if (!window.confirm(`${verb} ${user.name}? This restores their access.`)) return
+    const ok = await confirmDialog({
+      title: `${verb} user`,
+      body: `${verb} ${user.name}? This restores their access.`,
+      confirmLabel: verb,
+    })
+    if (!ok) return
     setStatus.mutate(
       { id: user.id, status: "active" },
       { onSuccess: () => toast(`${user.name} · account reactivated`) },
     )
   }
 
-  // Verified-neighbor toggle: operators set this directly after a verification call (there is no
-  // application queue). True = mark verified; false = clear the verified mark.
   const isVerified = user.verificationStatus === "verified"
 
-  // The raw account UUID is operator/DB-only (never rendered to the public, where the @handle is the
-  // identity). Surface it here, copyable, so operators can cross-reference the DB / logs / API.
   const onCopyId = () => {
     const id = user.id
     void Promise.resolve(navigator?.clipboard?.writeText(id))
@@ -396,8 +393,6 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
-  // Report-verified is a DISTINCT trust axis from the verified-neighbor mark above: it gates a reporter's
-  // auto-forward to their jurisdiction. Toggled directly by an operator.
   const isReportVerified = !!user.reportVerified
   const onToggleReportVerified = () => {
     const next = !isReportVerified
@@ -411,6 +406,22 @@ function UserDetail({ userId }: { userId: string }) {
               : `${user.name} · report-verification removed`,
           ),
       },
+    )
+  }
+
+  const onChangeRole = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const next = e.target.value as Role
+    if (next === user.role) return
+    const ok = await confirmDialog({
+      title: "Change role?",
+      body: `Change ${user.name} from ${ROLE_LABEL[user.role]} to ${ROLE_LABEL[next]}? This changes their permissions across civfix.`,
+      danger: true,
+      confirmLabel: "Change role",
+    })
+    if (!ok) return
+    setRole.mutate(
+      { id: user.id, role: next },
+      { onSuccess: () => toast(`${user.name} · role set to ${ROLE_LABEL[next]}`) },
     )
   }
 
@@ -474,8 +485,11 @@ function UserDetail({ userId }: { userId: string }) {
             <Icons.Pin size={13} /> {user.city}
           </span>
         )}
-        {/* Operator/DB-only raw account UUID (the public surfaces the @handle, never this). Copyable for
-            cross-referencing the DB / logs / API; the value itself is also selectable mono text. */}
+        <span className="pm-item">
+          <Icons.AlertTriangle size={13} /> Risk: {RISK_LABELS[user.risk]} · {user.strikes}{" "}
+          {user.strikes === 1 ? "strike" : "strikes"} · {user.removals}{" "}
+          {user.removals === 1 ? "removal" : "removals"}
+        </span>
         <button
           type="button"
           className="pm-item pm-copy"
@@ -514,6 +528,23 @@ function UserDetail({ userId }: { userId: string }) {
           </span>
         )}
         <div className="spacer" />
+        {!deleted && (
+          <div className="sortbox">
+            <span className="sortbox-label">Role</span>
+            <select
+              value={user.role}
+              disabled={setRole.isPending}
+              onChange={onChangeRole}
+              aria-label="Account role"
+            >
+              {ROLE_ORDER.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <button
           className={`btn ${user.flagged ? "flag-on" : ""}`}
           disabled={flag.isPending || deleted}
@@ -618,17 +649,15 @@ function UserRow({
 export function UsersPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState("all")
   const [query, setQuery] = React.useState("")
+  const debouncedQuery = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  // The "deleted" facet is CLIENT-SIDE: the frozen AdminUserListQuery filter union is
-  // all|active|suspended|flagged (no `deleted`), so selecting it fetches `all` and narrows on deletedAt
-  // below. Every other chip maps straight to a server facet.
   const listParams = {
     filter:
       filter === "all" || filter === "deleted"
         ? undefined
         : (filter as "active" | "suspended" | "flagged"),
-    q: query.trim() || undefined,
+    q: debouncedQuery.trim() || undefined,
   }
   const listQuery = useUserList(listParams)
   const items = React.useMemo(() => {
@@ -636,10 +665,6 @@ export function UsersPage({ focusId }: SectionPageProps) {
     return filter === "deleted" ? all.filter((u) => u.deletedAt) : all
   }, [listQuery.data, filter])
 
-  // Chip counts come from the SERVER (response.counts): accurate per-facet totals over the searched set,
-  // not capped to the first keyset page and stable as the facet changes. `suspended` is the explicit
-  // suspended status (matching the server facet). Falls back to zeros pre-load. The `deleted` chip count
-  // is derived client-side (no server facet for it) from the loaded page.
   const counts = listQuery.data?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
   const deletedCount = React.useMemo(
     () => (listQuery.data?.items ?? []).filter((u) => u.deletedAt).length,

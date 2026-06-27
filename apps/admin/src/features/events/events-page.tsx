@@ -15,6 +15,8 @@ import {
 import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { confirmDialog } from "@/components/shared/dialog"
+import { useDebounced } from "@/hooks/use-debounced"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { reportStatusView } from "@/lib/report-status"
 import {
@@ -32,27 +34,12 @@ import { useReportList } from "@/features/reports/use-reports"
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Events = cleanups (ported from pages-events.jsx, enumeration 2.D). Master-detail: the event queue on
- * the left (filter chips All / Upcoming / In progress / Completed / Flagged, search) and the full event
- * detail on the right (about, location minimap, activity timeline, turnout, organizer, message-attendees
- * composer, and the action bar: set status, flag, cancel). All wired to the typed admin client.
- *
- * Reconciliation: event status is upcoming | in_progress | completed | cancelled (underscore form). The
- * set-status buttons drive the three operator buckets (upcoming / in_progress / completed); "Cancel
- * event" -> cancelled. The row / header pill render whatever status the DTO carries.
- */
 
-// Client-only Leaflet minimap (must not run during the static export).
 const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-/**
- * Pill treatment per event status (class + design label). The pill renders `label` (the design's
- * Upcoming / In progress / Completed / Cancelled); toasts keep EVENT_STATUS_LABELS.
- */
 const STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
   upcoming: { cls: "status-new", label: "Upcoming" },
   in_progress: { cls: "status-progress", label: "In progress" },
@@ -60,14 +47,12 @@ const STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
   cancelled: { cls: "status-flag", label: "Cancelled" },
 }
 
-/** The three operator status buckets (the design's Upcoming / In progress / Completed). */
 const STATUS_ACTIONS: { value: EventStatus; label: string }[] = [
   { value: "upcoming", label: "Upcoming" },
   { value: "in_progress", label: "In progress" },
   { value: "completed", label: "Completed" },
 ]
 
-/** Icon per timeline entry kind. */
 const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> = {
   create: Icons.Pin,
   status: Icons.Clock,
@@ -84,7 +69,6 @@ function firstName(name: string): string {
   return name.split(" ")[0] ?? name
 }
 
-/** Short, readable event ident from the raw UUID (e.g. "#1a2b3c4d"); full id stays on a title attr. */
 function shortId(id: string): string {
   return `#${id.replace(/-/g, "").slice(0, 8)}`
 }
@@ -98,19 +82,11 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-/** The per-category pin asset for a linked-report card thumbnail ("other" has no asset -> Layers icon). */
 function catPinSrc(category: LinkedReportRef["category"]): string | null {
   if (category === "other") return null
   return `/ds/pin-${category}.svg`
 }
 
-/**
- * A linked-report card in the event's "Linked reports" gallery: the report's media thumb (or its
- * category pin), title, status pill, and address. Tapping the card deep-links into the Reports section
- * with that report focused (the same nav target the live map uses). When `onUnlink` is supplied
- * (cleanup events only) a trailing operator "Remove" control sits beside the card — a sibling, never
- * nested, because the card itself is a <button>.
- */
 function LinkedReportCard({
   report,
   onOpen,
@@ -163,12 +139,6 @@ function LinkedReportCard({
   )
 }
 
-/**
- * The "Link reports" picker — a lightweight modal (the shared .modal shell) over the admin reports list
- * (the same GET /admin/reports the Reports section uses). Operators search, multi-select candidate
- * reports (already-linked ids are excluded), and "Link selected" calls the link mutation. The selection
- * is local; submitting fires one linkEventReports with the chosen ids.
- */
 function LinkReportsPicker({
   excludeIds,
   pending,
@@ -183,7 +153,6 @@ function LinkReportsPicker({
   const [query, setQuery] = React.useState("")
   const [picked, setPicked] = React.useState<Set<string>>(() => new Set())
 
-  // Reuse the Reports section's list hook (GET /admin/reports) as the candidate source.
   const listQuery = useReportList({ q: query.trim() || undefined })
   const candidates = React.useMemo<AdminReportListItemDTO[]>(
     () => (listQuery.data?.items ?? []).filter((r) => !excludeIds.has(r.id)),
@@ -292,8 +261,6 @@ function EventRow({
   selected: boolean
   onClick: () => void
 }) {
-  // Distinguish a Cleanup vs Other Volunteer event in the queue (matches the detail header crumb): the
-  // leading icon comes from the kind treatment, not a hardcoded calendar.
   const kindView = eventKindView(item.eventKind)
   const KindIco = kindView.icon
   return (
@@ -383,7 +350,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     if (event.status === status) return
     setStatus.mutate(
       { id: event.id, status },
-      { onSuccess: () => toast(`${event.id} · status → ${EVENT_STATUS_LABELS[status]}`) },
+      { onSuccess: () => toast(`${shortId(event.id)} · status → ${EVENT_STATUS_LABELS[status]}`) },
     )
   }
 
@@ -406,25 +373,35 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
       { id: event.id },
       {
         onSuccess: () =>
-          toast(event.flagged ? `${event.id} · flag cleared` : `${event.id} · flagged for review`),
+          toast(
+            event.flagged
+              ? `${shortId(event.id)} · flag cleared`
+              : `${shortId(event.id)} · flagged for review`,
+          ),
       },
     )
   }
 
-  const onCancel = () => {
+  const onCancel = async () => {
+    const ok = await confirmDialog({
+      title: "Cancel this event?",
+      body: "Attendees will be notified that the event is cancelled. This can't be undone.",
+      danger: true,
+      confirmLabel: "Cancel event",
+      cancelLabel: "Keep event",
+    })
+    if (!ok) return
     cancel.mutate(
       { id: event.id },
       {
         onSuccess: () => {
-          toast(`${event.id} · event cancelled`)
+          toast(`${shortId(event.id)} · event cancelled`)
           onCancelled(event.id)
         },
       },
     )
   }
 
-  // Link the picked reports to this cleanup (one POST /admin/events/:id/link-reports). The hook
-  // invalidates the event query, so the gallery refreshes with the new cards on success.
   const onLink = (reportIds: string[]) => {
     linkReports.mutate(
       { id: event.id, reportIds },
@@ -441,8 +418,6 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     )
   }
 
-  // Unlink a single report (DELETE /admin/events/:id/reports/:reportId), behind a confirm. The hook
-  // invalidates the event query, so the card drops out of the gallery on success.
   const onUnlink = (report: LinkedReportRef) => {
     if (typeof window !== "undefined" && !window.confirm(`Unlink "${report.title}" from this cleanup?`)) {
       return
@@ -482,7 +457,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
 
       <div className="rep-grid">
         <div className="rep-col">
-          {/* About */}
+          { }
           <div className="sub">
             <div className="sub-head">
               About
@@ -504,7 +479,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             </div>
           </div>
 
-          {/* Meet location map */}
+          { }
           <div className="sub">
             <div className="sub-head">Meet location</div>
             <div className="sub-body" style={{ padding: 10 }}>
@@ -515,8 +490,6 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                       {
                         id: "e",
                         category: "event",
-                        // Diverge the minimap pin by kind (cleanup gold vs other-volunteer moss); the
-                        // detail DTO carries eventKind, so the marker can reflect it here.
                         kind: EVENT_KIND_PIN_KIND[event.eventKind],
                         lat: event.coords[0],
                         lng: event.coords[1],
@@ -532,7 +505,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             </div>
           </div>
 
-          {/* Activity */}
+          { }
           <div className="sub">
             <div className="sub-head">Activity</div>
             <div className="sub-body">
@@ -565,8 +538,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             </div>
           </div>
 
-          {/* Linked reports — the reports this cleanup will handle. Cleanup-only (other_volunteer events
-              never link reports), so the section is hidden for that kind. */}
+          { }
           {event.eventKind === "cleanup" && (
             <div className="sub">
               <div className="sub-head">
@@ -609,7 +581,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         </div>
 
         <div className="rep-col">
-          {/* Turnout */}
+          { }
           <div className="sub">
             <div className="sub-head">Turnout</div>
             <div className="sub-body">
@@ -653,7 +625,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                   </div>
                 )
               )}
-              {/* Log the cleanup outcome (the only write path for bags) — once the cleanup is under way. */}
+              { }
               {(event.status === "in_progress" || event.status === "completed") && (
                 <div className="evt-stat-row" style={{ gap: 8, alignItems: "center", marginTop: 6 }}>
                   <input
@@ -676,7 +648,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             </div>
           </div>
 
-          {/* Organizer */}
+          { }
           <div className="sub">
             <div className="sub-head">Organizer</div>
             <div className="sub-body">
@@ -706,7 +678,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
             </div>
           </div>
 
-          {/* Message attendees */}
+          { }
           <div className="sub">
             <div className="sub-head">Message attendees</div>
             <div className="sub-body">
@@ -736,6 +708,12 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                 value={text}
                 disabled={event.attendees === 0}
                 onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    send()
+                  }
+                }}
               />
               <button
                 className="btn primary full"
@@ -747,14 +725,14 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                     : undefined
                 }
               >
-                <Icons.Send size={13} /> Post update
+                <Icons.Send size={13} /> Post update <span className="kbdhint">⌘⏎</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action bar */}
+      { }
       <div className="rep-actions">
         <span className="rep-actions-label">Set status</span>
         {STATUS_ACTIONS.map((s) => (
@@ -781,7 +759,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         </button>
       </div>
 
-      {/* Link-reports picker (cleanup events only) — opened from the "Linked reports" header. */}
+      { }
       {pickerOpen && event.eventKind === "cleanup" && (
         <LinkReportsPicker
           excludeIds={new Set(event.linkedReports.map((r) => r.id))}
@@ -799,18 +777,17 @@ export function EventsPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
+  const debouncedQuery = useDebounced(query, 250)
   const listParams = {
     filter:
       filter === "all"
         ? undefined
         : (filter as "upcoming" | "in_progress" | "completed" | "flagged"),
-    q: query.trim() || undefined,
+    q: debouncedQuery.trim() || undefined,
   }
   const listQuery = useEventList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Chip counts come from the SERVER (response.counts): accurate per-facet totals over the searched set,
-  // not capped to the first keyset page and stable as the facet changes. Falls back to zeros pre-load.
   const counts = listQuery.data?.counts ?? {
     all: 0,
     upcoming: 0,

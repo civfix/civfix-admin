@@ -12,6 +12,7 @@ import {
 
 import { Icons } from "@/components/icons"
 import { toAppError } from "@/lib/api"
+import { promptDialog } from "@/components/shared/dialog"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
@@ -21,8 +22,6 @@ import {
   useSaveJurisdictionContacts,
 } from "@/features/discovery/use-discovery"
 
-// Client-only (Leaflet imports `window` at module load), like the other admin maps. ssr:false so the
-// static export still builds.
 const BoundaryMap = dynamic(
   () => import("@/components/map/boundary-map").then((m) => m.BoundaryMap),
   { ssr: false },
@@ -30,28 +29,7 @@ const BoundaryMap = dynamic(
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Jurisdictions (the section the design titles "Jurisdictions"; ported from pages-discovery.jsx,
- * enumeration 2.B). Master-detail: a persistent list of EVERY jurisdiction reports map to on the left
- * (filter chips All / Need attention / No action required, search, sort) and the per-jurisdiction
- * contact-research panel on the right.
- *
- * DATA SOURCE (re-sourced): the list comes from GET /admin/jurisdictions (the full directory) rather
- * than the discovery-task queue, so a jurisdiction STAYS listed after it is routed (the queue dropped
- * routed tasks) and jurisdictions seeded with contacts also appear. Each row carries its TYPE
- * (City / County / State / Federal land / Tribal), waiting-report counts, and existing contacts, so the
- * detail renders straight from the selected row (no second fetch). The right panel writes a per-category
- * routing contact for the GEOID ("Save & route"), saves a draft (PATCH, no routing), and flags for
- * review (PATCH flagged) - all via the typed admin client.
- *
- * PARITY: faithful to the design's DOM/classes (.qrow, .pill, .sub, .ccat-grid, master-detail). The
- * directory DTO carries no mini-map geometry or persisted operator notes, so the Jurisdiction card shows
- * the design's text-label map fallback and the Notes textarea is local-only (non-persisting), as the
- * prototype's note field already was. A jurisdiction TYPE chip (.pill.category) is added to each row +
- * the detail crumb. See .parity/ for the recorded divergence.
- */
 
-/** Human label for the jurisdiction TYPE chip (the design groups jurisdictions by this). */
 const LAYER_LABEL: Record<JurisdictionLayer, string> = {
   place: "City",
   county: "County",
@@ -60,15 +38,8 @@ const LAYER_LABEL: Record<JurisdictionLayer, string> = {
   tribal: "Tribal",
 }
 
-/**
- * Sentinel geoid for the synthetic "Unmapped / Unknown jurisdiction" row (mirrors the backend
- * UNMAPPED_GEOID in jurisdiction-contacts-service.ts). It aggregates waiting reports whose location did
- * not resolve to a known jurisdiction. It is NOT a real jurisdiction — Save & route / PATCH would 404 —
- * so the row + detail render read-only triage (waiting backlog only, no routing controls).
- */
 const UNMAPPED_GEOID = "__unmapped__"
 
-/** Format an ISO timestamp as a short "Mon D" label (the DTO ships lastRouted as a raw ISO string). */
 function fmtRouted(iso: string | null): string {
   if (!iso) return "—"
   const d = new Date(iso)
@@ -76,57 +47,38 @@ function fmtRouted(iso: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
-/**
- * The routing grid's category id. The design's `window.CATEGORIES` carries a 7th routing type,
- * `cleanup`, that shared's `ReportCategorySchema` deliberately excludes (cleanups are a separate
- * entity). We model the grid locally with this superset and map back to `ReportCategory` at the save
- * boundary (`contactsPayload`). See PARITY note below.
- */
-type DiscoveryRoutingCategory = ReportCategory | "cleanup"
-
-/**
- * The 6 civfix report categories + the design-only `cleanup` row + a synthetic "Other" row, in the
- * exact order the design's routing grid renders: Trash, Recycling, Graffiti, Hazard, Cleanup, Water,
- * Other. `pin` is the leading pin asset (`/ds/pin-<id>.svg`); the "other" row has no pin.
- *
- * PARITY: `cleanup` is rendered for visual parity only - the admin contacts endpoints type `contacts`
- * as `Record<ReportCategory, ...>`, which cannot carry a `cleanup` key, so a Cleanup contact is dropped
- * at the save boundary (input stays save-safe). Its waiting count comes from `perCategoryCounts`, which
- * is also `ReportCategory`-keyed, so it has no `cleanup` entry -> defaults to 0.
- */
-const REPORT_TYPES: { id: DiscoveryRoutingCategory; label: string; pin: string | null }[] = [
+const REPORT_TYPES: { id: ReportCategory; label: string; pin: string | null }[] = [
   { id: "trash", label: "Trash", pin: "/ds/pin-trash.svg" },
   { id: "recycling", label: "Recycling", pin: "/ds/pin-recycling.svg" },
   { id: "graffiti", label: "Graffiti", pin: "/ds/pin-graffiti.svg" },
   { id: "hazard", label: "Hazard", pin: "/ds/pin-hazard.svg" },
-  { id: "cleanup", label: "Cleanup", pin: "/ds/pin-cleanup.svg" },
+  { id: "encampment", label: "Encampment", pin: null },
   { id: "water", label: "Water", pin: "/ds/pin-water.svg" },
   { id: "other", label: "Other", pin: null },
 ]
 
-/** The 6 civfix report categories in canonical order (for the dominant-pin pick). */
 const CATEGORIES: readonly ReportCategory[] = [
   "trash",
   "recycling",
   "graffiti",
   "hazard",
+  "encampment",
   "water",
   "other",
 ]
 
-/** Waiting-report count for a routing-grid category. `cleanup` is never in the map -> 0. */
-function routingCount(counts: PerCategoryCounts, id: DiscoveryRoutingCategory): number {
-  if (id === "cleanup") return 0
+const PIN_SRC = new Map<ReportCategory, string>(
+  REPORT_TYPES.flatMap((c) => (c.pin ? [[c.id, c.pin] as const] : [])),
+)
+
+function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
   return counts[id] ?? 0
 }
 
-/** Pin asset for a category. "other" has no pin (rendered as a Layers glyph by the caller). */
 function catPinSrc(category: ReportCategory): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
+  return PIN_SRC.get(category) ?? null
 }
 
-/** The dominant waiting category (drives the leading row pin); null when nothing is waiting. */
 function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
   let best: ReportCategory | null = null
   let bestN = 0
@@ -140,7 +92,6 @@ function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
   return best
 }
 
-/** A jurisdiction needs attention when it has waiting reports and no routing contact on file at all. */
 function needsAttention(dto: JurisdictionDirectoryDTO): boolean {
   return dto.reportsWaiting > 0 && dto.method === "none"
 }
@@ -164,8 +115,6 @@ function JurisdictionRow({
   const dom = dominantCategory(item.perCategoryCounts)
   const pin = dom ? catPinSrc(dom) : null
 
-  // The synthetic "Unmapped" row: waiting reports whose location did not resolve to a jurisdiction. Render
-  // a distinct, contact-free triage row (no type chip / GEOID / population — none apply).
   if (isUnmapped) {
     return (
       <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
@@ -210,8 +159,6 @@ function JurisdictionRow({
           <span className="title">{item.org}</span>
           <span className="pill category">{LAYER_LABEL[item.layer]}</span>
           {item.status === "bounced" ? (
-            // A hard-bounced contact takes precedence over the routed/needs-contact posture: the address
-            // on file is dead and the jurisdiction needs a fresh contact.
             <span className="pill status-flag tight" title="The routing contact hard-bounced">
               <Icons.AlertTriangle size={9} /> Bounced
             </span>
@@ -254,11 +201,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const toast = useToast()
   const patch = usePatchJurisdiction()
   const saveContacts = useSaveJurisdictionContacts()
-  // The boundary geometry for the verification map (lazy per selected geoid; 404 -> fall back to label).
   const geometry = useJurisdictionGeometry(dto.geoid)
 
-  // Per-category contact emails (controlled inputs), seeded once from the row's stored contacts. The
-  // parent keys this component by geoid, so it remounts (and re-seeds) when the selection changes.
   const [contacts, setContacts] = React.useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {}
     dto.contacts.forEach((c: DiscoveryContact) => {
@@ -266,49 +210,34 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     })
     return seed
   })
-  // Operator-note textarea state. Local-only (the directory carries no persisted notes; the design's
-  // Notes card textarea was non-persisting too). See PARITY.
   const [opNote, setOpNote] = React.useState("")
-  // The jurisdiction-level default email (the fallback/all-categories address) and reporting-form URL,
-  // seeded from the row. Persisted via the contract's SaveContactsRequest.defaultEmails + formUrl.
   const [defaultEmail, setDefaultEmail] = React.useState(dto.email ?? "")
   const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
-  // The discussion @handle (the "@sf" mentionable in a report discussion). Seeded from the row; persisted
-  // via PATCH handle on "Save draft". Stored bare (no leading "@"); the input shows the "@" as a prefix.
   const [handle, setHandle] = React.useState(dto.handle ?? "")
 
   const counts = dto.perCategoryCounts
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
-  const slug = dto.org.split(",")[0]?.toLowerCase().replace(/\s+/g, "-") ?? "city"
+  const hasDefault = defaultEmail.trim() !== ""
   const missingContacts = REPORT_TYPES.filter(
-    (c) => routingCount(counts, c.id) > 0 && !contacts[c.id],
+    (c) => routingCount(counts, c.id) > 0 && !contacts[c.id] && !hasDefault,
   ).length
   const filledCount = REPORT_TYPES.filter((c) => contacts[c.id]).length
-  // Routable when there's at least one per-category contact OR a jurisdiction-level default email (the
-  // fallback address every category falls back to).
-  const canSave = filledCount > 0 || defaultEmail.trim() !== ""
+  const canSave = filledCount > 0 || hasDefault
   const needs = needsAttention(dto)
   const dom = dominantCategory(counts)
   const headPin = dom ? catPinSrc(dom) : null
   const isFlagged = dto.flaggedAt !== null
   const busy = saveContacts.isPending || patch.isPending
 
-  // Build the per-category contact map for a write (only non-empty emails). The design-only `cleanup`
-  // row is skipped: it is not a `ReportCategory`, so the contract's `Record<ReportCategory, ...>` cannot
-  // carry it. Skipping it keeps the input save-safe instead of crashing.
   const contactsPayload = (): Partial<Record<ReportCategory, string | null>> => {
     const out: Partial<Record<ReportCategory, string | null>> = {}
     REPORT_TYPES.forEach((c) => {
-      if (c.id === "cleanup") return
       const v = contacts[c.id]?.trim()
       if (v) out[c.id] = v
     })
     return out
   }
 
-  // The jurisdiction-level default email + reporting-form URL, shaped for the contract: `defaultEmails`
-  // is the fallback/all-categories address list (a single entry here); `formUrl` is the city's form URL
-  // (null to clear). Only included when set, so an untouched field doesn't overwrite server state.
   const jurisdictionFields = (): { defaultEmails?: string[]; formUrl?: string | null } => {
     const out: { defaultEmails?: string[]; formUrl?: string | null } = {}
     const email = defaultEmail.trim()
@@ -318,24 +247,26 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     return out
   }
 
-  const onFlag = () => {
+  const onFlag = async () => {
+    if (!isFlagged) {
+      const reason = await promptDialog({ title: "Flag jurisdiction", label: "Reason (optional)" })
+      if (reason === null) return
+      patch.mutate(
+        { geoid: dto.geoid, flagged: true, flagReason: reason || undefined },
+        { onSuccess: () => toast(`${dto.org} flagged for review`) },
+      )
+      return
+    }
     patch.mutate(
-      { geoid: dto.geoid, flagged: !isFlagged },
-      {
-        onSuccess: () =>
-          toast(isFlagged ? `Flag cleared for ${dto.org}` : `${dto.org} flagged for review`),
-      },
+      { geoid: dto.geoid, flagged: false },
+      { onSuccess: () => toast(`Flag cleared for ${dto.org}`) },
     )
   }
 
   const onSaveDraft = () => {
-    // Include the operator note in the PATCH so it persists server-side instead of being silently dropped
-    // (the backend PATCH supports `notes`). Skip a no-op save when nothing changed.
     const note = opNote.trim()
     const contacts = contactsPayload()
     const jf = jurisdictionFields()
-    // The handle, normalized to a bare lowercase slug (a leading "@" / casing is forgiven). Send it only
-    // when it actually changed from the row's stored value; an empty string clears it (server -> NULL).
     const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
     const handleChanged = normalizedHandle !== (dto.handle ?? "")
     if (
@@ -357,7 +288,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       },
       {
         onSuccess: () => toast(`Draft saved for ${dto.org}`),
-        // Surface a rejected handle (reserved / already taken / bad format) instead of failing silently.
         onError: (err) => toast(toAppError(err).message),
       },
     )
@@ -410,7 +340,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
       <div className="rep-grid">
         <div className="rep-col">
-          {/* Jurisdiction map + stats */}
+          { }
           <div className="sub">
             <div className="sub-head">Jurisdiction</div>
             <div className="sub-body" style={{ padding: 10 }}>
@@ -444,7 +374,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          {/* Notes */}
+          { }
           <div className="sub">
             <div className="sub-head">Notes &amp; history</div>
             <div className="sub-body">
@@ -461,8 +391,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
 
         <div className="rep-col">
-          {/* Discussion @handle — the "@sf" residents tag in a report's discussion to forward it here.
-              Stored bare (no leading "@"); saved via the detail's "Save draft" (PATCH handle). */}
+          { }
           <div className="sub">
             <div className="sub-head">Discussion @handle</div>
             <div className="sub-body">
@@ -490,8 +419,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          {/* Default contact + reporting form — the jurisdiction-level fallback used for any category
-              without its own per-type contact, plus the city's public reporting-form URL. */}
+          { }
           <div className="sub">
             <div className="sub-head">Default contact</div>
             <div className="sub-body">
@@ -500,7 +428,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 <input
                   type="email"
                   value={defaultEmail}
-                  placeholder="reports@city.gov — fallback for every category"
+                  placeholder="e.g. reports@city.gov"
                   onChange={(e) => setDefaultEmail(e.target.value)}
                 />
               </div>
@@ -509,7 +437,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 <input
                   type="url"
                   value={formUrl}
-                  placeholder="https://city.gov/report — reporting form URL (optional)"
+                  placeholder="e.g. https://city.gov/report"
                   onChange={(e) => setFormUrl(e.target.value)}
                 />
               </div>
@@ -520,7 +448,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          {/* Routing contacts */}
+          { }
           <div className="sub">
             <div className="sub-head">
               Routing contacts
@@ -534,7 +462,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
               <div className="ccat-grid one-col">
                 {REPORT_TYPES.map((c) => {
                   const n = routingCount(counts, c.id)
-                  const attention = n > 0 && !contacts[c.id]
+                  const attention = n > 0 && !contacts[c.id] && !hasDefault
                   const pin = c.pin
                   return (
                     <div
@@ -565,7 +493,9 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                           type="email"
                           value={contacts[c.id] ?? ""}
                           placeholder={
-                            attention ? "Add a contact — reports waiting" : `${c.id}@${slug}.gov`
+                            attention
+                              ? "Add a contact — reports waiting"
+                              : "e.g. publicworks@city.gov"
                           }
                           onChange={(e) => setCat(c.id, e.target.value)}
                         />
@@ -587,7 +517,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
       </div>
 
-      {/* Action bar */}
+      { }
       <div className="rep-actions">
         <span className="rep-actions-label">
           {filledCount} of {REPORT_TYPES.length} contacts set
@@ -612,11 +542,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   )
 }
 
-/**
- * Read-only triage view for the synthetic "Unmapped / Unknown jurisdiction" row. It is NOT a real
- * jurisdiction (Save & route / PATCH would 404), so it shows only the waiting backlog + guidance, with no
- * contact/routing controls.
- */
 function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const counts = dto.perCategoryCounts
   const waiting = REPORT_TYPES.filter((c) => routingCount(counts, c.id) > 0)
@@ -691,25 +616,17 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<"all" | "attention" | "clear">("all")
-  // Jurisdiction TYPE narrow ("all" = every type). Independent of the routing-posture chips; both apply.
   const [layer, setLayer] = React.useState<"all" | JurisdictionLayer>("all")
   const [sort, setSort] = React.useState<"pop" | "reports">("pop")
-  // A deep-link focusId is a GEOID; seed the search with it so the server surfaces that exact jurisdiction
-  // (it's rarely on the first page of 28k), then it gets selected below.
   const [query, setQuery] = React.useState(focusId ?? "")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  // Debounce the search box so a server query fires after the operator pauses, not per keystroke.
   const [debouncedQ, setDebouncedQ] = React.useState("")
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(query.trim()), 250)
     return () => clearTimeout(t)
   }, [query])
 
-  // The directory is server-driven: Postgres does the search/filter/sort + paging, so the operator can
-  // reach ALL jurisdictions (the prior client-side limit:100 surfaced only the first page, all Alabama).
-  // UI chips -> routing-posture facet ("Needs contact" = none on file; "Routed" = any contact); the sort
-  // dropdown -> the population/reports server sort.
   const serverFilter = filter === "attention" ? "none" : filter === "clear" ? "routed" : "all"
   const serverSort = sort === "reports" ? "reports" : "population"
   const listQuery = useJurisdictionDirectory({
@@ -723,11 +640,9 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
     [listQuery.data],
   )
-  // total + facets ride on the first page only (see the contract); they back the header + chip counts.
   const total = listQuery.data?.pages[0]?.total ?? null
   const facets = listQuery.data?.pages[0]?.facets ?? null
 
-  // Re-focus + re-search when the shell hands a new deep-link target while the page is mounted.
   React.useEffect(() => {
     if (focusId) {
       setSelId(focusId)
@@ -735,8 +650,6 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     }
   }, [focusId])
 
-  // Effective selection, derived synchronously (no effect): the clicked/deep-linked row when it's in the
-  // loaded set, else the first row. Avoids the empty-state flash on a search/filter/sort change.
   const selected =
     (selId ? (items.find((x) => x.geoid === selId) ?? null) : null) ?? items[0] ?? null
 
@@ -745,7 +658,6 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     { value: "attention", label: "Needs contact", count: facets?.unrouted ?? 0 },
     { value: "clear", label: "Routed", count: facets?.routed ?? 0 },
   ]
-  // Header count tracks the active chip (the list below is filtered, so the unfiltered total would mislead).
   const headerCount =
     filter === "attention" ? facets?.unrouted : filter === "clear" ? facets?.routed : total
 

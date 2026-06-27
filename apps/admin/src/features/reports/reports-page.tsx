@@ -17,8 +17,10 @@ import {
 import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { reportBucket, reportStatusView } from "@/lib/report-status"
+import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { BUCKET_VIEW, reportBucket, reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
+import { useDebounced } from "@/hooks/use-debounced"
 import {
   useFlagReport,
   useRemoveDiscussionMessage,
@@ -34,34 +36,18 @@ import {
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Reports (ported from pages-reports.jsx, enumeration 2.C). Master-detail: the report queue on the left
- * (filter chips All / Submitted / In progress / Completed / Flagged, search) and the full report detail
- * on the right (description, location + minimap, activity timeline, reporter, routing, follow-up
- * composer, and the action bar: quick status, flag, remove). All wired to the typed admin client.
- *
- * Reconciliation: the design's submitted|in-progress|completed becomes the civfix status enum. The
- * quick-status buttons drive the three real buckets (submitted | in_progress | resolved); the row /
- * header pill render the design bucket label for whatever civfix status the DTO carries via the canonical
- * reportStatusView helper (src/lib/report-status.ts). "flagged" is the orthogonal abuse marker, not a
- * status. NOTE: a freshly created authed pin is `published` (live, awaiting city action) — it reads as
- * "Submitted", NOT "Completed".
- */
 
-// Client-only Leaflet minimap (must not run during the static export).
 const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-/** The three quick-status buckets (the design's Submitted / In progress / Completed). */
 const STATUS_ACTIONS: { value: AdminReportStatus; label: string }[] = [
   { value: "submitted", label: "Submitted" },
   { value: "in_progress", label: "In progress" },
   { value: "resolved", label: "Completed" },
 ]
 
-/** Icon per timeline entry kind (ported from TL_ICON). */
 const TL_ICON: Record<AdminReportDTO["timeline"][number]["kind"], IconComponent> = {
   submit: Icons.Pin,
   route: Icons.Send,
@@ -71,14 +57,9 @@ const TL_ICON: Record<AdminReportDTO["timeline"][number]["kind"], IconComponent>
   warn: Icons.AlertTriangle,
   followup: Icons.Mail,
   remove: Icons.Trash,
-  // A jurisdiction reply threaded back onto the report (the city responded to our outreach).
   reply: Icons.MessageSquare,
 }
 
-/**
- * Pill treatment per outreach status (the email lifecycle of a report's send to its jurisdiction —
- * orthogonal to the civic report status). Reuses the admin design-system `.pill` status classes.
- */
 const OUTREACH_VIEW: Record<
   ReportOutreachStatus,
   { cls: string; icon: IconComponent; label: string }
@@ -95,7 +76,6 @@ function catPinSrc(category: ReportCategory): string | null {
   return `/ds/pin-${category}.svg`
 }
 
-/** Per-category hue var for the held-photo placeholder tint ("other" -> neutral ink). */
 function catColor(category: ReportCategory): string {
   if (category === "other") return "var(--ink-4)"
   return `var(--cat-${category})`
@@ -114,28 +94,20 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-/** A human-friendly short report id ("#" + first 8 chars of the uuid) for display only. */
 function shortId(id: string): string {
   return `#${id.slice(0, 8)}`
 }
 
-/** Pluralize a noun against a count: pluralize(1, "confirm") -> "1 confirm". */
 function pluralize(n: number, singular: string, plural = `${singular}s`): string {
   return `${n} ${n === 1 ? singular : plural}`
 }
 
-/** Format an ISO scheduledAt for the linked-event card (e.g. "Jun 17, 2026"); falls back to the raw value. */
 function eventDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
 }
 
-/**
- * A linked-event (cleanup) card in the report's "Linked events" gallery: the event-kind icon + label,
- * title, scheduled date, attendee count, and organizer. Tapping it deep-links into the Events section
- * with that event focused.
- */
 function LinkedEventCard({ event, onOpen }: { event: LinkedEventRef; onOpen: () => void }) {
   const view = eventKindView(event.eventKind)
   const Ico = view.icon
@@ -159,11 +131,6 @@ function LinkedEventCard({ event, onOpen }: { event: LinkedEventRef; onOpen: () 
   )
 }
 
-/**
- * Human label per reaction NAME. The discussion contract's `reactions[].emoji` values are the six ASCII
- * reaction names (not Unicode glyphs), so the summary chips render the name + count (no emoji font
- * dependency). An unknown name falls back to itself.
- */
 const REACTION_LABEL: Record<string, string> = {
   like: "Like",
   heart: "Love",
@@ -173,19 +140,11 @@ const REACTION_LABEL: Record<string, string> = {
   concerned: "Concerned",
 }
 
-/** Format a raw ISO discussion timestamp (createdAt/editedAt) for display; falls back to the raw value. */
 function msgWhen(iso: string): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
 
-/**
- * One discussion message (a public comment on the report). Operators see EVERY message including
- * soft-removed ones (rendered as a subtle tombstone, not hidden). Replies render indented under their
- * parent via the `depth` prop. Renders: author (displayName/handle, or "Removed" when soft-deleted /
- * the author is null), the body, a "Forwarded to city" badge, the per-emoji reaction summary, the reply
- * count, attachment thumbnails, and a per-message Remove action for live (non-removed) messages.
- */
 function DiscussionMessageRow({
   msg,
   depth,
@@ -197,7 +156,6 @@ function DiscussionMessageRow({
   onRemove: (msg: DiscussionMessageDTO) => void
   removing: boolean
 }) {
-  // A message is "removed" when it carries a deletedAt tombstone OR the server nulled its author.
   const removed = !!msg.deletedAt || msg.author === null
   const authorName = msg.author?.displayName ?? "Removed"
   const handle = msg.author?.handle
@@ -232,7 +190,7 @@ function DiscussionMessageRow({
           <p className="dsc-msg-text">{msg.body}</p>
         )}
 
-        {/* Attachment thumbnails (skip on a removed message — its media is gone too). */}
+        { }
         {!removed && msg.attachments.length > 0 && (
           <div className="dsc-msg-media">
             {msg.attachments.map((m) => {
@@ -252,7 +210,7 @@ function DiscussionMessageRow({
         )}
 
         <div className="dsc-msg-foot">
-          {/* Reaction summary (name + count per non-empty bucket). */}
+          { }
           {reactions.length > 0 && (
             <span className="dsc-msg-reactions">
               {reactions.map((r) => (
@@ -268,7 +226,7 @@ function DiscussionMessageRow({
             </span>
           )}
           <div className="spacer" />
-          {/* Remove is shown only for live messages — an already-removed message has no action. */}
+          { }
           {!removed && (
             <button
               className="btn sm danger"
@@ -285,26 +243,18 @@ function DiscussionMessageRow({
   )
 }
 
-/**
- * The report's PUBLIC discussion — clearly separate from the status timeline above. The status timeline
- * is the operator/system action log (setReportStatus + sendReportFollowup); THIS is the neighbors' public
- * comment thread (read + soft-remove only — operators never post here).
- *
- * Replies render indented under their parent: the flat page is grouped into top-level messages, each
- * followed by its replies (matched on `parentId`). Soft-removed messages stay visible as tombstones so
- * an operator can see what was taken down. Remove calls removeDiscussionMessage with an optional reason
- * collected via a prompt, then invalidates the discussion query (the message re-renders as a tombstone).
- */
 function ReportDiscussion({ reportId }: { reportId: string }) {
   const q = useReportDiscussion(reportId)
   const removeMsg = useRemoveDiscussionMessage()
   const toast = useToast()
 
-  const onRemove = (msg: DiscussionMessageDTO) => {
-    // Optional audited removal reason (mirrors the moderation remove-action shape).
-    const reason = typeof window !== "undefined" ? window.prompt("Reason for removal (optional):") : null
-    // A cancelled prompt returns null — treat it as "abort", an empty string as "no reason given".
-    if (reason === null && typeof window !== "undefined") return
+  const onRemove = async (msg: DiscussionMessageDTO) => {
+    const reason = await promptDialog({
+      title: "Remove comment",
+      label: "Reason (optional)",
+      placeholder: "Why is this being removed?",
+    })
+    if (reason === null) return
     removeMsg.mutate(
       { id: reportId, messageId: msg.id, ...(reason ? { reason } : {}) },
       { onSuccess: () => toast("Message removed") },
@@ -336,8 +286,6 @@ function ReportDiscussion({ reportId }: { reportId: string }) {
           <div className="dsc-list">
             {(() => {
               const items = q.data!.items
-              // Group into top-level messages then their replies (one level of nesting, matched on
-              // parentId). Replies whose parent is absent from this page render as top-level fallbacks.
               const byParent = new Map<string, DiscussionMessageDTO[]>()
               for (const m of items) {
                 if (m.parentId) {
@@ -365,7 +313,6 @@ function ReportDiscussion({ reportId }: { reportId: string }) {
               for (const m of items) {
                 if (!m.parentId) push(m, 0)
               }
-              // Any reply whose parent is off-page: render it at the top level so nothing is dropped.
               for (const m of items) push(m, 0)
               return rows
             })()}
@@ -383,8 +330,6 @@ const ReportRow = React.memo(function ReportRow({
 }: {
   item: AdminReportListItemDTO
   selected: boolean
-  // Stable setter from the parent (React.useState's dispatcher keeps identity), so memoized rows
-  // only re-render when their own `item`/`selected` actually change — not on every keystroke.
   onSelect: (id: string) => void
 }) {
   const view = reportStatusView(item.status)
@@ -415,8 +360,12 @@ const ReportRow = React.memo(function ReportRow({
           <span className="strong">{item.place}</span>
           <span className="sep">·</span>
           <span>{firstName(item.reporter.name)}</span>
-          <span className="sep">·</span>
-          <span>{pluralize(item.confirmations, "confirm")}</span>
+          {item.confirmations > 0 && (
+            <>
+              <span className="sep">·</span>
+              <span>{pluralize(item.confirmations, "confirm")}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="trailing">
@@ -441,8 +390,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
   const [to, setTo] = React.useState<"reporter" | "city">("reporter")
   const [text, setText] = React.useState("")
-  // "Approve & send to jurisdiction" composer: collapsed until opened. The target address is seeded from
-  // the resolved city contact but editable (the per-report one-off override); the note is optional.
   const [routeOpen, setRouteOpen] = React.useState(false)
   const [routeTo, setRouteTo] = React.useState("")
   const [routeNote, setRouteNote] = React.useState("")
@@ -453,28 +400,22 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   if (!report) return null
 
   const view = reportStatusView(report.status)
-  // noUncheckedIndexedAccess makes a Record lookup `T | undefined`; fall back to "not sent" so an
-  // unexpected/forward-compat status never crashes the detail pane.
   const outreachView = OUTREACH_VIEW[report.outreach.status] ?? OUTREACH_VIEW.not_sent
   const OutreachIco = outreachView.icon
   const canCity = !!report.city.contact
-  // A follow-up to the reporter needs a reporter account to notify. An anonymous report has none (the API
-  // rejects it with a 422), so the "Reporter" tab is gated exactly like "City" — issue #12.
   const canReporter = !!report.reporter.id
-  // Never target a channel that doesn't exist: if "reporter" is selected but unreachable, fall back to city.
   const target: "reporter" | "city" = to === "reporter" && !canReporter ? "city" : to
   const canSend = target === "reporter" ? canReporter : canCity
   const pin = catPinSrc(report.category)
-  // The best still to show in the 116px box. media now carries presigned, browser-loadable URLs: prefer the
-  // first image (thumb over full), else a video's poster thumbnail. A video with no generated poster has no
-  // image to render, so we leave photoUrl null and fall back to the category-pin placeholder rather than
-  // putting a video URL in an <img>. Null -> placeholder.
   const previewMedia = report.media.find((m) => m.kind === "image") ?? report.media[0]
   const photoUrl = previewMedia
     ? previewMedia.kind === "image"
       ? (previewMedia.thumbUrl ?? previewMedia.url)
       : (previewMedia.thumbUrl ?? null)
     : null
+  const galleryMedia = previewMedia
+    ? report.media.filter((m) => m.id !== previewMedia?.id)
+    : report.media
 
   const send = () => {
     const body = text.trim()
@@ -490,23 +431,25 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     )
   }
 
-  // Open the approve-&-send composer, seeding the target address from the resolved city contact (the
-  // operator can edit it to a one-off override). Re-seeding each open keeps it in sync with the contact.
   const openRoute = () => {
     setRouteTo(report.city.contact ?? "")
     setRouteNote("")
     setRouteOpen(true)
   }
 
-  const sendToJurisdiction = () => {
+  const sendToJurisdiction = async () => {
     const toAddr = routeTo.trim()
     if (!toAddr || route.isPending) return
     const note = routeNote.trim()
+    const ok = await confirmDialog({
+      title: "Send to the city?",
+      body: `This emails the report to ${toAddr}. Attached photos are included.`,
+      confirmLabel: "Send",
+    })
+    if (!ok) return
     route.mutate(
       {
         id: report.id,
-        // Send the typed address as the per-report override only when it differs from the resolved
-        // contact; otherwise let the backend use the resolved contact (override stays null).
         ...(toAddr !== (report.city.contact ?? "") ? { contactEmailOverride: toAddr } : {}),
         ...(note ? { note } : {}),
       },
@@ -520,10 +463,20 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     )
   }
 
-  const onStatus = (status: AdminReportStatus) => {
-    // The quick-status buttons act on BUCKETS, not raw statuses: a `published` report is already in the
-    // Submitted bucket, so clicking "Submitted" is a no-op rather than a downgrade to literal `submitted`.
-    if (reportBucket(report.status) === reportBucket(status)) return
+  const onStatus = async (status: AdminReportStatus) => {
+    const curBucket = reportBucket(report.status)
+    if (curBucket === reportBucket(status)) {
+      toast(`Already ${BUCKET_VIEW[curBucket].label}`)
+      return
+    }
+    if (status === "submitted" && curBucket !== "submitted") {
+      const ok = await confirmDialog({
+        title: "Move report back?",
+        body: "This moves a live report back to a pre-publish state.",
+        danger: true,
+      })
+      if (!ok) return
+    }
     setStatus.mutate(
       { id: report.id, status },
       { onSuccess: () => toast(`${shortId(report.id)} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`) },
@@ -544,7 +497,14 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     )
   }
 
-  const onRemove = () => {
+  const onRemove = async () => {
+    const ok = await confirmDialog({
+      title: "Remove report",
+      body: "This removes the report from the public map and queue.",
+      danger: true,
+      confirmLabel: "Remove",
+    })
+    if (!ok) return
     remove.mutate(
       { id: report.id },
       {
@@ -556,7 +516,16 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     )
   }
 
-  const onVerdict = (v: "approved" | "rejected") => {
+  const onVerdict = async (v: "approved" | "rejected") => {
+    if (v === "rejected") {
+      const ok = await confirmDialog({
+        title: "Reject report",
+        body: "This rejects the report's verification verdict.",
+        danger: true,
+        confirmLabel: "Reject",
+      })
+      if (!ok) return
+    }
     verdict.mutate(
       { id: report.id, verdict: v },
       {
@@ -568,7 +537,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
   return (
     <div className="rep-detail">
-      {/* Header */}
+      { }
       <div className="rep-head">
         <span className="rep-head-pin">
           {pin ? (
@@ -592,7 +561,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <Icons.Flag size={11} /> Flagged
           </span>
         )}
-        {/* The outreach (email-to-jurisdiction) lifecycle chip, alongside the civic status pill. */}
+        { }
         <span
           className={`pill ${outreachView.cls} tight`}
           style={report.flagged ? undefined : { marginLeft: "auto" }}
@@ -605,7 +574,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
       <div className="rep-grid">
         <div className="rep-col">
-          {/* Description */}
+          { }
           <div className="sub">
             <div className="sub-head">
               Report
@@ -630,7 +599,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Photo + location */}
+          { }
           <div className="sub">
             <div className="sub-head">
               Location
@@ -664,9 +633,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                         )}
                       </span>
                     )}
-                    <span className="rep-photo-tag">
-                      <Icons.Eye size={12} /> Reporter photo
-                    </span>
+                    {photoUrl && (
+                      <span className="rep-photo-tag">
+                        <Icons.Eye size={12} /> Reporter photo
+                      </span>
+                    )}
                   </div>
                 )}
                 <div className="rep-minimap">
@@ -689,19 +660,18 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Full media gallery — every photo/video on the report so the operator can review them all
-              before giving a verdict (the Location box above shows only the lead still). */}
-          {report.media.length > 0 && (
+          { }
+          {galleryMedia.length > 0 && (
             <div className="sub">
               <div className="sub-head">
                 Photos
                 <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-                  <Icons.Eye size={12} /> {report.media.length}
+                  <Icons.Eye size={12} /> {galleryMedia.length}
                 </span>
               </div>
               <div className="sub-body" style={{ padding: 10 }}>
                 <div className="dsc-msg-media">
-                  {report.media.map((m) => {
+                  {galleryMedia.map((m) => {
                     const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
                     return (
                       <a
@@ -726,7 +696,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           )}
 
-          {/* Activity timeline */}
+          { }
           <div className="sub">
             <div className="sub-head">Activity</div>
             <div className="sub-body">
@@ -763,8 +733,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Linked events — the cleanup events that will handle this report. Only rendered when the
-              report is linked to at least one event. */}
+          { }
           {report.linkedEvents.length > 0 && (
             <div className="sub">
               <div className="sub-head">
@@ -783,13 +752,12 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           )}
 
-          {/* Public discussion — the neighbors' comment thread. Distinct from the Activity timeline
-              above (operator/system actions): this is read + soft-remove only. */}
+          { }
           <ReportDiscussion reportId={report.id} />
         </div>
 
         <div className="rep-col">
-          {/* Reporter */}
+          { }
           <div className="sub">
             <div className="sub-head">Reporter</div>
             <div className="sub-body">
@@ -817,13 +785,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Routed city / department */}
+          { }
           <div className="sub">
             <div className="sub-head">
               Routed to
               {report.geoid && (
-                // Deep-link to the report's jurisdiction row (to edit its routing contact). Only when the
-                // report actually resolved to a GEOID; otherwise there is no directory row to open.
                 <button
                   className="btn sm ghost"
                   style={{ marginLeft: "auto" }}
@@ -858,7 +824,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 </div>
               )}
 
-              {/* Outreach state: the email lifecycle + a link into the per-report city conversation. */}
+              { }
               <div className="rep-city-contact" style={{ marginTop: 8 }}>
                 <OutreachIco size={12} />
                 <span>
@@ -884,8 +850,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Report verification — operator verdict (Approve/Reject), orthogonal to the civic status. An
-              approved verdict can earn the reporter the report-verified trust state. */}
+          { }
           <div className="sub">
             <div className="sub-head">
               Verification
@@ -940,8 +905,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Approve & send to jurisdiction — emails the full report packet (photos attached) to the
-              jurisdiction contact and opens a per-report thread so the city's reply routes back here. */}
+          { }
           <div className="sub">
             <div className="sub-head">Send to jurisdiction</div>
             <div className="sub-body">
@@ -1006,7 +970,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          {/* Follow-up composer */}
+          { }
           <div className="sub">
             <div className="sub-head">Send a follow-up</div>
             <div className="sub-body">
@@ -1052,12 +1016,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         </div>
       </div>
 
-      {/* Action bar */}
+      { }
       <div className="rep-actions">
         <span className="rep-actions-label">Quick status</span>
         {STATUS_ACTIONS.map((s) => {
-          // Active when the report's CURRENT status shares this button's bucket (so a `published` report
-          // shows "Submitted" as the active step, not nothing).
           const active = reportBucket(report.status) === reportBucket(s.value)
           return (
             <button
@@ -1090,6 +1052,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 export function ReportsPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState("all")
   const [query, setQuery] = React.useState("")
+  const dq = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
   const listParams = {
@@ -1097,14 +1060,11 @@ export function ReportsPage({ focusId }: SectionPageProps) {
       filter === "all"
         ? undefined
         : (filter as "submitted" | "in_progress" | "completed" | "flagged"),
-    q: query.trim() || undefined,
+    q: dq.trim() || undefined,
   }
   const listQuery = useReportList(listParams)
   const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
 
-  // Chip counts come from the SERVER (response.counts): accurate per-bucket totals over the searched set,
-  // not capped to the first keyset page and stable as the status facet changes. The backend buckets
-  // published/held as Submitted (a live pin), matching the pills. Falls back to zeros pre-load.
   const counts = listQuery.data?.counts ?? {
     all: 0,
     submitted: 0,
@@ -1121,7 +1081,6 @@ export function ReportsPage({ focusId }: SectionPageProps) {
     if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
   }, [items, selId])
 
-  // After a removal, drop the selection so the effect re-selects the first remaining row.
   const onRemoved = (id: string) => {
     setSelId((cur) => (cur === id ? null : cur))
   }
@@ -1182,8 +1141,6 @@ export function ReportsPage({ focusId }: SectionPageProps) {
               />
             ) : (
               items.map((r) => (
-                // Pass the stable `setSelId` dispatcher (not a fresh arrow) so memoized rows don't
-                // all re-render on each parent render; the row calls onSelect(item.id) on click.
                 <ReportRow key={r.id} item={r} selected={selId === r.id} onSelect={setSelId} />
               ))
             )}

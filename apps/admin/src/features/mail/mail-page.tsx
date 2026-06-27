@@ -28,28 +28,11 @@ import { useNav, useToast } from "@/store/ui-store"
 import { errorMessage } from "@/lib/error-messages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Mail — the unified mailbox. Consolidates what used to be two separate sections ("Mail" + "Inbox") into
- * ONE screen with a mail-client folder switch:
- *   • Outreach — two-way threads with municipal contacts (compose / reply / resend / deliverability),
- *     backed by GET /admin/mail (threaded, repliable).
- *   • Inbox    — catch-all *@civfix.org mail that is not an outreach reply (support@, cold inbound),
- *     backed by GET /admin/inbox (flat single messages, triage-only: mark read / archive).
- *
- * The two are genuinely different data models (threads vs single messages), so each folder keeps its own
- * typed endpoints, list, reader, and actions — but they share one master-detail shell + CSS. The folder
- * switch is the primary control; the status chips and the deliverability strip are contextual to it.
- *
- * Deep-links: a focusId of "inbox:<id>" opens the Inbox folder on that message; a bare "<id>" opens an
- * outreach thread (see parseFocus + the home Mail tile, which prefixes inbox rows).
- */
 
 type Folder = "outreach" | "inbox"
 
-/** The needs-attention outreach statuses (the design's {needs-action, bounced}). */
 const ATTENTION: MailStatus[] = ["needs_action", "bounced"]
 
-/** Pill treatment per outreach status (matches the design's MAIL_STATUS class mapping). */
 const STATUS_CLS: Record<MailStatus, string> = {
   replied: "status-ok",
   delivered: "status-ok",
@@ -60,7 +43,6 @@ const STATUS_CLS: Record<MailStatus, string> = {
   bounced: "status-flag",
 }
 
-/** The thread-list card title per selected outreach box / inbox box. */
 const BOX_LABEL: Record<string, string> = {
   all: "All",
   in: "Inbound",
@@ -70,43 +52,22 @@ const BOX_LABEL: Record<string, string> = {
   archived: "Archived",
 }
 
-/** Decode a shell focusId into the folder it targets + the bare entry id. */
 function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
   if (!focusId) return { folder: "outreach", id: null }
   if (focusId.startsWith("inbox:")) return { folder: "inbox", id: focusId.slice("inbox:".length) }
   return { folder: "outreach", id: focusId }
 }
 
-/** Pill treatment per sending-domain health status (shares the status-* pill classes). */
-const DOMAIN_HEALTH_CLS: Record<"ok" | "warn" | "bad", string> = {
-  ok: "status-ok",
-  warn: "status-progress",
-  bad: "status-flag",
-}
-
-/** Compact relative "ago" label ("3h"/"2d") for a list/row timestamp; "" for an empty/bad ts. */
 function ts(value: string): string {
   return relativeAgo(value)
 }
 
-/** The full absolute date for a timestamp's hover title (empty for a missing/bad ts). */
 function tsTitle(value: string): string {
   if (!value) return ""
   const d = new Date(value)
   return Number.isNaN(d.getTime()) ? "" : d.toLocaleString()
 }
 
-/** A whole-number percent from a 0-1 deliverability fraction (e.g. 0.95 -> "95"). */
-function pct(fraction: number, digits = 0): string {
-  return (fraction * 100).toFixed(digits)
-}
-
-/**
- * Resolve the human correspondent for a thread reader — the municipal party, never our own outreach
- * address. Prefer the latest INBOUND message's sender; for an outbound-only thread (compose / resend
- * with no reply yet) fall back to the latest OUTBOUND message's recipient (`to`), then the thread-level
- * `to`, then a placeholder.
- */
 function correspondent(sel: MailThreadDTO): string {
   for (let i = sel.messages.length - 1; i >= 0; i--) {
     const m = sel.messages[i]!
@@ -266,8 +227,6 @@ function MailReader({ threadId }: { threadId: string }) {
   const sel = q.data
   if (!sel) return <EmptyState title="No message selected" icon={<Icons.Mail size={20} />} />
 
-  // The municipal party for this thread (recipient or inbound sender) — never our own outreach address,
-  // and used for the "To"/confirmation copy (sel.org is empty for a bare composed thread).
   const who = correspondent(sel)
   const whoLabel = sel.org || who
 
@@ -310,8 +269,6 @@ function MailReader({ threadId }: { threadId: string }) {
     )
   }
 
-  // Only meaningful when the thread links a jurisdiction — otherwise there is no routing contact to
-  // fix, so the button is hidden (see the bounced footer) and this never fires without a geoid.
   const onFixRouting = () => {
     if (sel.jurisdictionGeoid) nav("discovery", sel.jurisdictionGeoid)
   }
@@ -342,7 +299,6 @@ function MailReader({ threadId }: { threadId: string }) {
         <div className="mail-thread">
           {sel.messages.map((msg) => {
             const isOut = msg.dir === "out"
-            // Show the party each message concerns: the recipient on our outbound, the sender inbound.
             const addr = isOut ? (msg.to ? `to ${msg.to}` : "") : msg.from
             return (
               <div key={msg.id} className={`mail-msg ${isOut ? "out" : "in"}`}>
@@ -355,6 +311,24 @@ function MailReader({ threadId }: { threadId: string }) {
                   </span>
                 </div>
                 <p className="mail-msg-body">{msg.body}</p>
+                {msg.attachments.length > 0 && (
+                  <div className="mail-attachments">
+                    {msg.attachments.map((att) => (
+                      <a
+                        key={att.key}
+                        className="btn sm"
+                        href={att.key}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Icons.ExternalLink size={13} /> {att.filename}
+                        <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
+                          {(att.size / 1024).toFixed(0)}k
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -429,8 +403,6 @@ export function MailPage({ focusId }: SectionPageProps) {
   const [composeOpen, setComposeOpen] = React.useState(false)
   const outreach = folder === "outreach"
 
-  // Search the active folder's list (backend MailListQuery.q / InboxListQuery.q). Debounced so we
-  // don't refetch on every keystroke; the trimmed value flows into the active list query below.
   const [query, setQuery] = React.useState("")
   const [debouncedQuery, setDebouncedQuery] = React.useState("")
   React.useEffect(() => {
@@ -444,8 +416,6 @@ export function MailPage({ focusId }: SectionPageProps) {
   const markRead = useMarkMailRead()
   const setInboxStatus = useSetInboxStatus()
 
-  // Filtered list for the ACTIVE folder; the inactive folder fetches its unfiltered list (which
-  // dedupes by query key with the *All queries below, so a folder costs one list fetch + the badges).
   const mailListQuery = useMailList(
     outreach
       ? {
@@ -469,7 +439,6 @@ export function MailPage({ focusId }: SectionPageProps) {
       : { status: "all" as const },
   )
 
-  // Unfiltered fetches for stable folder switch + chip counts (independent of the active search/box).
   const mailAllQuery = useMailList({})
   const inboxAllQuery = useInboxList({ status: "all" })
   const mailAllItems = mailAllQuery.data?.items ?? []
@@ -502,9 +471,6 @@ export function MailPage({ focusId }: SectionPageProps) {
     const p = parseFocus(focusId)
     if (p.id) {
       setFolder(p.folder)
-      // Reset the status filter too: a deep-linked item (e.g. an unread inbox message) must not be
-      // hidden by a stale cross-folder box (e.g. "archived"/"out"), which would then let the
-      // auto-select effect override the requested selection with the filtered list's first row.
       setBox("all")
       setSelId(p.id)
     }
@@ -538,15 +504,11 @@ export function MailPage({ focusId }: SectionPageProps) {
     compose.mutate(input, {
       onSuccess: () => {
         setComposeOpen(false)
-        // Composing always starts an outreach thread; jump to that folder so the new thread (prepended
-        // server-side) opens once the invalidated list re-fetches (the list effect picks items[0]).
         setFolder("outreach")
         setBox("all")
         setSelId(null)
         toast(`Message sent to ${input.to}`)
       },
-      // Keep the modal open on failure (the user's draft is preserved) and surface why, so a failed
-      // send is never a silent no-op.
       onError: (err) => {
         toast(errorMessage(err, {}, { fallback: "Couldn't send the message. Please try again." }))
       },
@@ -582,9 +544,7 @@ export function MailPage({ focusId }: SectionPageProps) {
         </button>
       </PageHead>
 
-      {/* Folder switch — the primary control. Anchored ABOVE the deliverability strip so it never
-          shifts under the cursor when toggling folders shows/hides the strip below it. A radiogroup
-          (pick one of two modes), not tabs: there are no linked tabpanels to navigate. */}
+      { }
       <div className="mailbox-switch" role="radiogroup" aria-label="Mailbox folder">
         <button
           className={`mbx ${outreach ? "active" : ""}`}
@@ -606,68 +566,54 @@ export function MailPage({ focusId }: SectionPageProps) {
         </button>
       </div>
 
-      {/* Deliverability strip (outreach only — these KPIs describe outbound mail health). */}
       {outreach &&
         (statsQuery.isLoading ? (
           <div className="strip-state">
-            <LoadingState label="Loading deliverability..." />
+            <LoadingState label="Loading mail stats..." />
           </div>
         ) : statsQuery.isError ? (
           <div className="strip-state">
             <ErrorState error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
           </div>
         ) : stats ? (
-          (() => {
-            // The stats DTO carries placement/bounce/complaint as 0-1 fractions (delivered/sent etc.);
-            // render them as percents. delivered7d is a raw count — show it plainly, compacting to "k"
-            // only once it crosses ~10k (so 30 reads "30", not "0.0k").
-            const placement = Math.round(stats.placement7d * 100)
-            const aboveTarget = placement >= 80
-            return (
-              <div className="statusstrip mail-strip">
-                <div className={`statcell ${aboveTarget ? "tone-ok" : "tone-alert"}`}>
-                  <div className="statcell-label">Deliverability · 7d</div>
-                  <div className="statcell-num">{placement}%</div>
-                  <div className="statcell-hot">
-                    {aboveTarget ? "Above 80% target" : "Below 80% target"}
-                  </div>
-                </div>
-                <div className="statcell">
-                  <div className="statcell-label">Delivered</div>
-                  <div className="statcell-num">
-                    {stats.delivered7d >= 10000
-                      ? `${(stats.delivered7d / 1000).toFixed(1)}k`
-                      : stats.delivered7d.toLocaleString()}
-                  </div>
-                  <div className="statcell-hot">last 7 days</div>
-                </div>
-                <div className="statcell tone-info">
-                  <div className="statcell-label">Bounce rate</div>
-                  <div className="statcell-num">{pct(stats.bounceRate, 1)}%</div>
-                  <div className="statcell-hot">{pct(stats.complaintRate, 2)}% complaints</div>
-                </div>
-                <div className="statcell">
-                  <div className="statcell-label">Unread</div>
-                  <div className="statcell-num">{stats.unread}</div>
-                  <div className="statcell-hot">awaiting reply</div>
-                </div>
+          stats.sent === 0 && stats.bounced === 0 && stats.failed === 0 ? (
+            <div className="statusstrip mail-strip">
+              <div className="statcell">
+                <div className="statcell-label">Outbound · 7d</div>
+                <div className="statcell-num">—</div>
+                <div className="statcell-hot">No outbound mail in the last 7 days</div>
               </div>
-            )
-          })()
-        ) : null)}
-
-      {/* Sending-domain health (outreach only) — the getMailStats domainHealth[] rows the strip omits. */}
-      {outreach && stats && stats.domainHealth.length > 0 && (
-        <div className="mail-domains">
-          {stats.domainHealth.map((d) => (
-            <div key={d.domain} className="mail-domain">
-              <span className={`pill ${DOMAIN_HEALTH_CLS[d.status]} tight`}>{d.status}</span>
-              <span className="mail-domain-name mono">{d.domain}</span>
-              <span className="mail-domain-note">{d.note}</span>
+              <div className="statcell">
+                <div className="statcell-label">Unread</div>
+                <div className="statcell-num">{stats.unread}</div>
+                <div className="statcell-hot">awaiting reply</div>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="statusstrip mail-strip">
+              <div className="statcell tone-ok">
+                <div className="statcell-label">Sent · 7d</div>
+                <div className="statcell-num">{stats.sent.toLocaleString()}</div>
+                <div className="statcell-hot">outbound to cities</div>
+              </div>
+              <div className={`statcell ${stats.bounced > 0 ? "tone-alert" : ""}`}>
+                <div className="statcell-label">Bounced</div>
+                <div className="statcell-num">{stats.bounced.toLocaleString()}</div>
+                <div className="statcell-hot">last 7 days</div>
+              </div>
+              <div className={`statcell ${stats.failed > 0 ? "tone-alert" : ""}`}>
+                <div className="statcell-label">Failed</div>
+                <div className="statcell-num">{stats.failed.toLocaleString()}</div>
+                <div className="statcell-hot">send rejected</div>
+              </div>
+              <div className="statcell">
+                <div className="statcell-label">Unread</div>
+                <div className="statcell-num">{stats.unread}</div>
+                <div className="statcell-hot">awaiting reply</div>
+              </div>
+            </div>
+          )
+        ) : null)}
 
       <div className="toolbar">
         <FilterChips options={statusOptions} value={box} onChange={setBox} />

@@ -16,6 +16,8 @@ import {
 import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { useDebounced } from "@/hooks/use-debounced"
 import {
   useApproveModeration,
   useAppealModeration,
@@ -27,45 +29,24 @@ import {
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Moderation (the UGC content-report queue + held media / clusters / appeals). Master-detail clone of
- * reports-page.tsx: the queue on the left (filter chips All / User reports / Image / Pattern / Appeal /
- * GPS / Duplicate / High + search), and the full item detail on the right (description, signals grid,
- * user-context snapshot, media, similar items, and the action bar: Approve / Remove / Hold / Appeal).
- *
- * Citizen "Report" flags arrive as `kind === "user_report"` items carrying a `subjectType` (the kind of
- * content reported: comment / message / event / report / profile / photo). The list query's `filter`
- * union (a frozen @civfix/shared contract: all|image|pattern|appeal|gps|duplicate|high) does NOT carry a
- * `user_report` value, so the "User reports" chip fetches `all` and filters CLIENT-SIDE on
- * `kind === "user_report"` (see USER_REPORTS_CHIP + the items memo below). Everything else maps 1:1.
- */
 
-/** The list-query `filter` values the backend accepts (the frozen ModerationListQuery union). */
 type ServerFilter = NonNullable<ModerationListQuery["filter"]>
 
-/**
- * The synthetic chip value for citizen content reports. It is NOT a server filter (the frozen contract's
- * filter union omits `user_report`); selecting it fetches `all` and narrows client-side on kind. Kept
- * distinct from any ServerFilter so the union below stays exhaustive.
- */
 const USER_REPORTS_CHIP = "user_reports" as const
 type ChipValue = "all" | typeof USER_REPORTS_CHIP | ServerFilter
 
-/** Priority pill treatment (low|med|high → the design `.pill status-*` classes). */
 const PRIORITY_VIEW: Record<Priority, { cls: string; label: string }> = {
   low: { cls: "status-new", label: "Low" },
   med: { cls: "status-progress", label: "Med" },
   high: { cls: "status-flag", label: "High" },
 }
 
-/** Signal-tone pill treatment (ok|warn|bad → the design `.pill status-*` classes). */
 const TONE_VIEW: Record<ModerationTone, { cls: string }> = {
   ok: { cls: "status-ok" },
   warn: { cls: "status-progress" },
   bad: { cls: "status-flag" },
 }
 
-/** Icon per moderation kind (the leading glyph in a queue row). */
 const KIND_ICON: Record<ModerationKind, IconComponent> = {
   image: Icons.Eye,
   pattern: Icons.Activity,
@@ -75,11 +56,6 @@ const KIND_ICON: Record<ModerationKind, IconComponent> = {
   user_report: Icons.Flag,
 }
 
-/**
- * Human label for what KIND of content a citizen report points at (ModerationSubjectType). Used to build
- * the row header ("Reported comment" / "Reported message" / ...). A held-media/cluster/appeal item with
- * no subjectType falls back to its kind label.
- */
 const SUBJECT_LABEL: Record<ModerationSubjectType, string> = {
   report: "report",
   user: "user",
@@ -91,10 +67,6 @@ const SUBJECT_LABEL: Record<ModerationSubjectType, string> = {
   photo: "photo",
 }
 
-/**
- * The row title line. For a citizen content report we say "Reported <subject>" (e.g. "Reported comment");
- * otherwise we use the item's kind label (Image / Pattern / Appeal / GPS / Duplicate).
- */
 function rowKindLabel(item: ModerationListItemDTO): string {
   if (item.kind === "user_report" && item.subjectType) {
     return `Reported ${SUBJECT_LABEL[item.subjectType] ?? item.subjectType}`
@@ -109,8 +81,6 @@ function ModerationRow({
 }: {
   item: ModerationListItemDTO
   selected: boolean
-  // Stable setter from the parent (React.useState's dispatcher keeps identity) so memoized rows only
-  // re-render when their own item/selected actually change — not on every keystroke.
   onSelect: (id: string) => void
 }) {
   const KindIco = KIND_ICON[item.kind] ?? Icons.Shield
@@ -141,7 +111,6 @@ function ModerationRow({
 
 const ModerationRowMemo = React.memo(ModerationRow)
 
-/** One signal cell in the detail signals grid (label / value / tone pill). */
 function SignalCell({ signal }: { signal: ModerationSignal }) {
   const tone = TONE_VIEW[signal.tone] ?? TONE_VIEW.ok
   return (
@@ -166,30 +135,48 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
   if (q.isLoading) return <LoadingState label="Loading item..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
   const item: ModerationItemDTO | undefined = q.data
-  if (!item) return null
+  if (!item)
+    return (
+      <EmptyState
+        title="Item not found"
+        sub="This item may already have been resolved."
+        icon={<Icons.Shield size={20} />}
+      />
+    )
 
   const priority = PRIORITY_VIEW[item.priority] ?? PRIORITY_VIEW.low
+  const isUserReport = item.kind === "user_report"
 
-  const onApprove = () => {
-    // Optional audited note (mirrors the report/discussion remove-action shape).
-    const note = typeof window !== "undefined" ? window.prompt("Note (optional):") : null
-    if (note === null && typeof window !== "undefined") return
+  const onApprove = async () => {
+    const note = await promptDialog({
+      title: isUserReport ? "Dismiss report" : "Approve",
+      label: "Note (optional)",
+    })
+    if (note === null) return
     approve.mutate(
       { id: item.id, ...(note ? { note } : {}) },
       {
         onSuccess: () => {
-          toast(`${item.flag} · approved`)
+          toast(`${item.flag} · ${isUserReport ? "report dismissed" : "approved"}`)
           onResolved(item.id)
         },
       },
     )
   }
 
-  const onRemove = () => {
-    if (typeof window !== "undefined" && !window.confirm(`Remove "${item.flag}"? This takes the content down.`))
-      return
-    const reason = typeof window !== "undefined" ? window.prompt("Reason for removal (optional):") : null
-    if (reason === null && typeof window !== "undefined") return
+  const onRemove = async () => {
+    const ok = await confirmDialog({
+      title: "Remove content",
+      body: "This takes the reported content down.",
+      danger: true,
+      confirmLabel: "Remove",
+    })
+    if (!ok) return
+    const reason = await promptDialog({
+      title: "Remove content",
+      label: "Reason (optional)",
+    })
+    if (reason === null) return
     remove.mutate(
       { id: item.id, ...(reason ? { reason } : {}) },
       {
@@ -201,18 +188,29 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
     )
   }
 
-  const onHold = () => {
-    const note = typeof window !== "undefined" ? window.prompt("Hold note (optional):") : null
-    if (note === null && typeof window !== "undefined") return
+  const onHold = async () => {
+    const note = await promptDialog({
+      title: "Hold for review",
+      label: "Note (optional)",
+    })
+    if (note === null) return
     hold.mutate(
       { id: item.id, ...(note ? { note } : {}) },
-      { onSuccess: () => toast(`${item.flag} · held for review`) },
+      {
+        onSuccess: () => {
+          toast(`${item.flag} · held for review`)
+          onResolved(item.id)
+        },
+      },
     )
   }
 
-  const onAppeal = (decision: "uphold" | "overturn") => {
-    const note = typeof window !== "undefined" ? window.prompt(`Note for ${decision} (optional):`) : null
-    if (note === null && typeof window !== "undefined") return
+  const onAppeal = async (decision: "uphold" | "overturn") => {
+    const note = await promptDialog({
+      title: decision === "uphold" ? "Uphold action" : "Overturn action",
+      label: "Note (optional)",
+    })
+    if (note === null) return
     appeal.mutate(
       { id: item.id, decision, ...(note ? { note } : {}) },
       {
@@ -226,7 +224,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
   return (
     <div className="rep-detail">
-      {/* Header */}
+      { }
       <div className="rep-head">
         <span className="rep-head-pin">
           {React.createElement(KIND_ICON[item.kind] ?? Icons.Shield, { size: 20 })}
@@ -245,7 +243,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
       <div className="rep-grid">
         <div className="rep-col">
-          {/* Description + reason */}
+          { }
           <div className="sub">
             <div className="sub-head">Report</div>
             <div className="sub-body">
@@ -272,7 +270,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
             </div>
           </div>
 
-          {/* Media (held photos/videos referenced by the item). */}
+          { }
           {item.media.length > 0 && (
             <div className="sub">
               <div className="sub-head">Media</div>
@@ -296,7 +294,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
             </div>
           )}
 
-          {/* Signals grid. */}
+          { }
           {item.signals.length > 0 && (
             <div className="sub">
               <div className="sub-head">Signals</div>
@@ -311,7 +309,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
             </div>
           )}
 
-          {/* Similar / related items. */}
+          { }
           {item.similar.length > 0 && (
             <div className="sub">
               <div className="sub-head">Similar items</div>
@@ -334,7 +332,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
         </div>
 
         <div className="rep-col">
-          {/* Reporter / user context snapshot. */}
+          { }
           <div className="sub">
             <div className="sub-head">User context</div>
             <div className="sub-body">
@@ -382,7 +380,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
         </div>
       </div>
 
-      {/* Action bar — Approve / Remove / Hold, plus the appeal decision for appeal items. */}
+      { }
       <div className="rep-actions">
         <span className="rep-actions-label">Decision</span>
         {item.kind === "appeal" ? (
@@ -396,7 +394,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
           </>
         ) : (
           <button className="btn sm primary" disabled={busy} onClick={onApprove}>
-            <Icons.Check size={11} /> Approve
+            <Icons.Check size={11} /> {isUserReport ? "Keep" : "Approve"}
           </button>
         )}
         <button className="btn sm" disabled={busy} onClick={onHold}>
@@ -416,14 +414,14 @@ export function ModerationPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  // The "User reports" chip is a CLIENT-SIDE facet: the frozen contract filter union has no `user_report`
-  // value, so we fetch `all` and narrow on kind below. Every other chip maps straight to a server filter.
+  const debouncedQuery = useDebounced(query, 250)
+
   const serverFilter: ServerFilter | undefined =
     filter === "all" || filter === USER_REPORTS_CHIP ? undefined : filter
 
   const listParams: ModerationListQuery = {
     ...(serverFilter ? { filter: serverFilter } : {}),
-    ...(query.trim() ? { q: query.trim() } : {}),
+    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
   const listQuery = useModerationList(listParams)
   const items = React.useMemo(() => {
@@ -431,12 +429,7 @@ export function ModerationPage({ focusId }: SectionPageProps) {
     return filter === USER_REPORTS_CHIP ? all.filter((x) => x.kind === "user_report") : all
   }, [listQuery.data, filter])
 
-  // Client-side count for the "User reports" chip (the frozen list response carries no per-kind counts).
-  // Always derive it from the unfiltered `all` set (matching the current search) — NOT the active chip's
-  // page — so the badge reports a stable, accurate open-user-report total even when a different server
-  // filter is selected (where the page would otherwise hold no user_report rows). React Query dedupes
-  // this against the main list query when the chip is "all"/"User reports".
-  const allParams: ModerationListQuery = query.trim() ? { q: query.trim() } : {}
+  const allParams: ModerationListQuery = debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}
   const allForCount = useModerationList(allParams)
   const userReportCount = React.useMemo(
     () => (allForCount.data?.items ?? []).filter((x) => x.kind === "user_report").length,
@@ -451,8 +444,6 @@ export function ModerationPage({ focusId }: SectionPageProps) {
     if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
   }, [items, selId])
 
-  // After an action resolves the item (it clears from the queue) drop the selection so the effect
-  // re-selects the first remaining row.
   const onResolved = (id: string) => {
     setSelId((cur) => (cur === id ? null : cur))
   }
@@ -517,8 +508,6 @@ export function ModerationPage({ focusId }: SectionPageProps) {
               />
             ) : (
               items.map((m) => (
-                // Pass the stable setSelId dispatcher (not a fresh arrow) so memoized rows don't all
-                // re-render on each parent render; the row calls onSelect(item.id) on click.
                 <ModerationRowMemo
                   key={m.id}
                   item={m}

@@ -32,24 +32,6 @@ import { useModerationList } from "@/features/moderation/use-moderation"
 import { useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-/**
- * Home / dashboard hub (ported from pages-operations.jsx HomePage + HomeBento). The BENTO layout is the
- * shipped default (the prototype's triage/bands variants were a design-tool knob; we ship one).
- *
- * Data split (matches the prototype's launchpad interaction):
- *  - GET /admin/home/summary -> the per-section counts/leads + the analytics mini block (useHomeSummary).
- *  - The existing typed list endpoints -> the first few real entries previewed inside each non-analytics
- *    tile (listDiscovery / listAdminReports / listAdminEvents / listMail / listAdminUsers, fetched with a
- *    small limit). Each preview row deep-links straight into its section with that item preselected
- *    (nav(page, id)) - the design's openEntry -> nav(page, id).
- *  - GET /admin/home/map (LiveMap) - independent so a failing card does not take down the rest of the
- *    dashboard (enumeration 2.A.6).
- *
- * The "... and N more {things}" footer renders an exact count where the summary carries a clean section
- * total (discovery -> queue); for reports / events / mail / users it shows "... and more {things}" when
- * the list page has further items (the home summary endpoint carries no list total for those and the
- * contract is frozen, so an exact remainder is not derivable without a contract change).
- */
 
 const HUB_ICON: Record<string, IconComponent> = {
   discovery: Icons.Pin,
@@ -61,14 +43,8 @@ const HUB_ICON: Record<string, IconComponent> = {
   analytics: Icons.BarChart,
 }
 
-/** How many preview rows each tile shows (the design previewed 3). */
 const PREVIEW_ROWS = 3
 
-/**
- * Page size for the Moderation tile. It shows the same {PREVIEW_ROWS} preview rows, but fetches a larger
- * page so the header's "N in the queue" lead is an accurate open-queue size (moderation has no count in
- * the frozen home-summary contract); anything beyond this is still flagged by the "… and more" footer.
- */
 const MODERATION_PEEK_LIMIT = 24
 
 interface SectionStat {
@@ -77,22 +53,16 @@ interface SectionStat {
   tone?: "warn" | "alert" | null
 }
 
-/** A single preview row (the design's `.slr` item) with its leading glyph and deep-link target id. */
 interface PeekItem {
   kind: "pin" | "icon" | "dir" | "avatar"
-  /** pin: report category for the pin SVG. */
   cat?: ReportCategory
-  /** icon: the Icons.* name + hue. */
   icon?: IconComponent
   hue?: string
-  /** dir: inbound/outbound mail arrow. */
   dir?: MailDirection
-  /** avatar: the name the initials are derived from. */
   name?: string
   title: string
   meta: string
   age: string
-  /** The entry id to deep-link to inside the section. */
   focusId: string
 }
 
@@ -106,12 +76,10 @@ interface SectionSummary {
   blurb?: string
   stats: SectionStat[]
   cta: string
-  /** analytics-only */
   spark?: number[]
   metrics?: { k: string; v: React.ReactNode; delta?: string }[]
 }
 
-/** Build the per-section summary view models from the aggregate home summary (buildSummaries port). */
 function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
   return [
     {
@@ -170,7 +138,7 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
         "Two-way mail with municipal contacts — outbound routing and the replies that come back.",
       stats: [
         { k: "Needs action", v: d.mail.needsAction, tone: d.mail.needsAction > 0 ? "warn" : null },
-        { k: "Bounce", v: `${d.mail.bounceRate}%` },
+        { k: "Unread", v: d.mail.unread },
       ],
       cta: "Open inbox",
     },
@@ -198,10 +166,6 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       blurb: "The numbers are the proof civfix works — dropped, routed, resolved, cleaned up.",
       stats: [{ k: "Cleanups", v: d.analytics.cleanups }],
       spark: d.analytics.pinsByWeek,
-      // No trend badges: the frozen AnalyticsMiniSchema carries no real delta fields, and the design
-      // prototype's "+3pt"/"+5"/... were static literals. Rendering them as live up-arrow trend badges
-      // next to real numbers would present fabricated data as real, so the metrics ship without deltas
-      // until the contract carries real month-over-month values.
       metrics: [
         { k: "Resolved", v: `${d.analytics.resolvedPct}%` },
         { k: "Coverage", v: `${d.analytics.coveragePct}%` },
@@ -227,9 +191,7 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-// --- DTO -> preview row mappers (ported from buildSummaries' per-section `.list` maps) -------------
 
-/** Compact population string ("4.2k", "850"). Empty when pop is 0 so the segment can be suppressed. */
 function compactPop(pop: number): string {
   if (pop <= 0) return ""
   if (pop < 1000) return String(pop)
@@ -291,8 +253,6 @@ function inboxRow(i: InboundEmailListItemDTO): PeekItem {
     title: i.from || i.recipient,
     meta: i.subject || "(no subject)",
     age: i.ts,
-    // The Mail section's unified screen routes an "inbox:"-prefixed focusId into its Inbox folder
-    // (see features/mail/mail-page.tsx parseFocus); a bare id opens an outreach thread.
     focusId: `inbox:${i.id}`,
   }
 }
@@ -308,11 +268,6 @@ function userRow(u: AdminUserListItemDTO): PeekItem {
   }
 }
 
-/**
- * Moderation queue row. Citizen content reports (the in-app "Report" button) arrive as
- * `kind === "user_report"` carrying a `subjectType` ("Reported comment" / "Reported photo" / …); held
- * media, clusters, and appeals fall back to their kind label. The reason + reporter form the meta line.
- */
 function moderationRow(m: ModerationListItemDTO): PeekItem {
   const title =
     m.kind === "user_report" && m.subjectType
@@ -329,7 +284,6 @@ function moderationRow(m: ModerationListItemDTO): PeekItem {
   }
 }
 
-/** Leading glyph for a preview row (ported from PeekGlyph): pin / icon / dir-arrow / avatar. */
 function PeekGlyph({ item }: { item: PeekItem }) {
   if (item.kind === "pin") {
     const src = item.cat ? catPinSrc(item.cat) : null
@@ -362,7 +316,6 @@ function PeekGlyph({ item }: { item: PeekItem }) {
   return <span className="peek-av">{initials(item.name ?? "")}</span>
 }
 
-/** A clickable preview row that deep-links into the section with the item preselected. */
 function PreviewRow({ item, page }: { item: PeekItem; page: PageId }) {
   const nav = useNav()
   const open = () => nav(page, item.focusId)
@@ -395,17 +348,14 @@ function PreviewRow({ item, page }: { item: PeekItem; page: PageId }) {
   )
 }
 
-/** The narrowed query state a preview list needs (avoids UseQueryResult variance across response types). */
 interface PreviewState {
   isLoading: boolean
   isError: boolean
   error: unknown
   onRetry: () => void
-  /** Whether the list page reports further items beyond the preview (cursor or an extra fetched row). */
   hasMore: boolean
 }
 
-/** The preview list (loading / error / empty / rows) shown inside a non-analytics tile. */
 function PreviewList({
   page,
   state,
@@ -445,11 +395,6 @@ function PreviewList({
   )
 }
 
-/**
- * The design's "... and N more {things}" foot label (moreOf port). Exact remainder when a clean section
- * total is known; "... and more {things}" when only the list-page cursor signals further items. Null
- * (no footer) when nothing is loaded yet, the list is empty, or there is no overflow.
- */
 function computeMoreLabel(
   state: PreviewState,
   shown: number,
@@ -465,13 +410,11 @@ function computeMoreLabel(
   return state.hasMore ? `… and more ${things}` : null
 }
 
-/** A cursor-paged list response (the shape every admin list endpoint returns). */
 interface ListPage<T> {
   items: T[]
   nextCursor: string | null
 }
 
-/** Build the narrowed PreviewState + whether more items exist from a list query result. */
 function previewState<T>(query: UseQueryResult<ListPage<T>>, shown: number): PreviewState {
   return {
     isLoading: query.isLoading,
@@ -484,11 +427,6 @@ function previewState<T>(query: UseQueryResult<ListPage<T>>, shown: number): Pre
   }
 }
 
-/**
- * Section tile used by the bento grid (ported from SectionTile). The analytics tile is the metric
- * variant (lead + spark + 2x2 metric grid + stats footer); every other tile shows the preview list +
- * the "... and N more" footer + the Open CTA.
- */
 function SectionTile({
   s,
   feature,
@@ -498,7 +436,6 @@ function SectionTile({
   s: SectionSummary
   feature?: boolean
   preview?: React.ReactNode
-  /** The non-metric foot's "... and N more {things}" label, or null. */
   moreLabel?: string | null
 }) {
   const nav = useNav()
@@ -602,7 +539,6 @@ function SectionTile({
   )
 }
 
-/** A fully-resolved non-analytics tile: its summary view model + preview rows + foot more-label. */
 interface PreviewTile {
   id: string
   cell: string
@@ -616,27 +552,18 @@ interface PreviewTile {
 export function HomePage(_props: SectionPageProps) {
   const summaryQuery = useHomeSummary()
 
-  // Preview rows from the real list endpoints (small page each). Each row's meta still surfaces the
-  // flag reason when present (the design's `u.flagReason || ...`), so review-worthy accounts read clearly.
   const discoveryQuery = useDiscoveryList({ limit: PREVIEW_ROWS + 1 })
   const reportsQuery = useReportList({ limit: PREVIEW_ROWS + 1 })
   const eventsQuery = useEventList({ limit: PREVIEW_ROWS + 1 })
   const mailQuery = useMailList({ limit: PREVIEW_ROWS + 1 })
   const inboxQuery = useInboxList({ status: "all", limit: PREVIEW_ROWS + 1 })
   const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
-  // Moderation has no entry in the frozen home-summary contract, so — unlike the siblings that fetch only
-  // PREVIEW_ROWS+1 and read their lead total from the summary — this tile derives its "N in the queue"
-  // lead from the list itself. Fetch a modest page so that count is accurate for any realistic review
-  // queue; the "… and more" footer still covers the rare overflow.
   const moderationQuery = useModerationList({ limit: MODERATION_PEEK_LIMIT })
 
   const summaries = React.useMemo(
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
     [summaryQuery.data],
   )
-  // The Mail section now unifies outreach threads + the catch-all inbox in one screen, so its tile rolls
-  // both up: the lead is combined unread (outreach unread from the frozen summary + inbox unread derived
-  // from the inbox list, since the summary contract carries no inbox block), with an Inbox-unread stat.
   const inboxUnread = (inboxQuery.data?.items ?? []).filter((i) => i.unread).length
   const mailSummary = React.useMemo<SectionSummary | undefined>(() => {
     const base = summaries.find((s) => s.id === "mail")
@@ -655,9 +582,6 @@ export function HomePage(_props: SectionPageProps) {
       ],
     }
   }, [summaries, inboxUnread, summaryQuery.data])
-  // The moderation queue is not part of the frozen home-summary contract, so its tile view model is built
-  // from the moderation list itself (like the inbox-derived part of Mail): the lead is the open-queue size
-  // from the fetched page, and the "… and more" footer signals any overflow beyond it.
   const moderationItems = moderationQuery.data?.items ?? []
   const moderationCount = moderationItems.length
   const moderationSummary = React.useMemo<SectionSummary>(
@@ -681,9 +605,6 @@ export function HomePage(_props: SectionPageProps) {
         : summaries.find((s) => s.id === id)
   const summary = summaryQuery.data
 
-  // Resolve each non-analytics tile once (view model + rows + foot label). The bento renders them in the
-  // design's order (discovery feature, analytics, then the bottom row: moderation, mail, users, reports,
-  // events) with the map first.
   const analytics = byId("analytics")
   const previewTiles: PreviewTile[] = []
   const addTile = (
@@ -717,8 +638,6 @@ export function HomePage(_props: SectionPageProps) {
     "cities",
     { feature: true, total: summary?.discovery.queue },
   )
-  // One unified Mail tile: a blended peek of recent outreach threads + catch-all inbox messages. Each
-  // row deep-links into the unified Mail screen (inbox rows carry the "inbox:" focusId prefix).
   const mailPeek = (mailQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(mailRow)
   const inboxPeek = (inboxQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(inboxRow)
   const mailState: PreviewState = {

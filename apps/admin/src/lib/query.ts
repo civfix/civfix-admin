@@ -2,14 +2,9 @@
 
 import { QueryClient } from "@tanstack/react-query"
 import { AppError, ErrorCode } from "@civfix/shared"
+import { useUiStore } from "@/store/ui-store"
+import { errorMessage } from "@/lib/error-messages"
 
-/**
- * Create a React Query client tuned for a runtime-fetching admin SPA.
- *
- * Retries are conservative: we never retry 4xx (validation/auth/not-found/forbidden) and only retry
- * transient failures (network/5xx) a couple of times. This keeps the UI responsive when the backend is
- * down (it fails fast into an error state instead of hammering a dead endpoint).
- */
 export function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -32,29 +27,25 @@ export function makeQueryClient(): QueryClient {
       },
       mutations: {
         retry: false,
+        onError: (error) => {
+          try {
+            useUiStore
+              .getState()
+              .showToast(
+                errorMessage(error, {}, { fallback: "Something went wrong. Please try again." }),
+              )
+          } catch {
+            void 0
+          }
+        },
       },
     },
   })
 }
 
-/**
- * Stable query keys for every admin domain. Centralized so invalidation stays consistent.
- *
- * Query-key conventions:
- *  - List keys take the FULL filter/search/sort object (e.g. `reports.list({ filter, q })`) so two
- *    views with different filters do not collide on one cache entry.
- *  - Detail keys take the id (`reports.detail(id)`).
- *  - Each domain exposes a `*.all` PREFIX (React Query matches by key prefix) so a mutation can
- *    invalidate every list/detail variant of that domain at once, e.g.
- *      queryClient.invalidateQueries({ queryKey: queryKeys.reports.all })
- *  - After a mutation also invalidate cross-cutting keys when relevant: `queryKeys.home.all`,
- *    `queryKeys.activity.all` (the activity feed and home aggregates reflect domain writes).
- */
 export const queryKeys = {
-  // ----- auth / session -----
   session: ["admin", "session"] as const,
 
-  // ----- home / dashboard -----
   home: {
     all: ["admin", "home"] as const,
     summary: ["admin", "home", "summary"] as const,
@@ -68,7 +59,6 @@ export const queryKeys = {
     health: ["admin", "system", "health"] as const,
   },
 
-  // ----- discovery / jurisdictions -----
   discovery: {
     all: ["admin", "discovery"] as const,
     list: (params?: unknown) => ["admin", "discovery", "list", params ?? null] as const,
@@ -80,24 +70,20 @@ export const queryKeys = {
     geometry: (geoid: string) => ["admin", "jurisdictions", "geometry", geoid] as const,
   },
 
-  // ----- reports -----
   reports: {
     all: ["admin", "reports"] as const,
     list: (params?: unknown) => ["admin", "reports", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "reports", "detail", id] as const,
-    // The report's public discussion (scoped to the report id; the params object carries the cursor).
     discussion: (id: string, params?: unknown) =>
       ["admin", "reports", id, "discussion", params ?? null] as const,
   },
 
-  // ----- events (cleanups) -----
   events: {
     all: ["admin", "events"] as const,
     list: (params?: unknown) => ["admin", "events", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "events", "detail", id] as const,
   },
 
-  // ----- users -----
   users: {
     all: ["admin", "users"] as const,
     list: (params?: unknown) => ["admin", "users", "list", params ?? null] as const,
@@ -108,7 +94,6 @@ export const queryKeys = {
       ["admin", "users", id, "messages", params ?? null] as const,
   },
 
-  // ----- mail / outreach -----
   mail: {
     all: ["admin", "mail"] as const,
     list: (params?: unknown) => ["admin", "mail", "list", params ?? null] as const,
@@ -116,21 +101,18 @@ export const queryKeys = {
     stats: ["admin", "mail", "stats"] as const,
   },
 
-  // ----- inbox (catch-all inbound mail) -----
   inbox: {
     all: ["admin", "inbox"] as const,
     list: (params?: unknown) => ["admin", "inbox", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "inbox", "detail", id] as const,
   },
 
-  // ----- moderation (UGC content-report queue + held media / clusters / appeals) -----
   moderation: {
     all: ["admin", "moderation"] as const,
     list: (params?: unknown) => ["admin", "moderation", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "moderation", "detail", id] as const,
   },
 
-  // ----- analytics -----
   analytics: {
     all: ["admin", "analytics"] as const,
     kpis: ["admin", "analytics", "kpis"] as const,
@@ -146,7 +128,6 @@ export const queryKeys = {
     retention: ["admin", "analytics", "retention"] as const,
   },
 
-  // ----- audit log -----
   audit: {
     all: ["admin", "audit"] as const,
     list: (params?: unknown) => ["admin", "audit", "list", params ?? null] as const,
