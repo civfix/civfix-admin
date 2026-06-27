@@ -10,28 +10,14 @@ import { useNav } from "@/store/ui-store"
 import { EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import type { MapPin, MapTint } from "@/components/map/leaflet-map"
 
-/**
- * Operations "Live activity" card (ported from map.jsx LiveMap). Wraps the Leaflet map (loaded
- * client-only via next/dynamic, ssr:false so the static export builds) and wires it to GET
- * /admin/home/map. Every marker is a real report or event - gray = handled, red = needs attention,
- * yellow = event. Tapping one previews it; "Open" jumps to its section with that item selected.
- */
 
-// Client-only: Leaflet must not be imported during the static export/prerender.
 const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-/**
- * Report statuses that still need attention on the map: the "Submitted" bucket. An authed pin is created
- * `published` (live, awaiting a city contact), so it — and `held` (under review) — are needs-attention,
- * NOT handled. Mirrors the canonical bucket in src/lib/report-status.ts (kept as a local string set here so
- * the map needs no AdminReportStatus narrowing of the report|event status union).
- */
 const WAITING_REPORT_STATUSES = new Set(["submitted", "held", "published"])
 
-/** Map a HomeMapPin (API) to the Leaflet MapPin shape, computing the needs-attention / event flags. */
 function toMapPin(p: HomeMapPin): MapPin & {
   refType: HomeMapPin["refType"]
   refId: string
@@ -49,9 +35,6 @@ function toMapPin(p: HomeMapPin): MapPin & {
     lng: p.lng,
     category: isEvent ? "event" : p.category,
     draft: needs,
-    // Diverge the event marker by kind: cleanup -> gold "event" pin, other_volunteer -> moss
-    // "event-volunteer" pin. HomeMapPin carries eventKind (null for report pins); fall back to the
-    // cleanup treatment when an event pin somehow lacks a kind. Report pins stay kind=null.
     kind: isEvent ? EVENT_KIND_PIN_KIND[p.eventKind ?? "cleanup"] : null,
     tip: p.title,
     place: p.place,
@@ -93,9 +76,9 @@ export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
   return (
     <section className="card live-map-card">
       <div className="card-head">
-        <h3>Live · United States</h3>
+        <h3>Live map</h3>
         <span className="meta">
-          {reportCount} reports · {eventCount} events
+          {reportCount} reports · {eventCount} events (recent)
         </span>
         <div className="spacer" />
         <button className="head-action" onClick={() => nav("reports")}>

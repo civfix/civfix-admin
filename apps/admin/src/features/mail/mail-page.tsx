@@ -14,7 +14,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
   useComposeMail,
-  useMailList,
+  useMailListInfinite,
   useMailStats,
   useMailThread,
   useMarkMailRead,
@@ -22,7 +22,7 @@ import {
   useResendMail,
   useSetMailStatus,
 } from "@/features/mail/use-mail"
-import { useInboxList, useSetInboxStatus } from "@/features/inbox/use-inbox"
+import { useInboxListInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import { useNav, useToast } from "@/store/ui-store"
 import { errorMessage } from "@/lib/error-messages"
@@ -416,7 +416,7 @@ export function MailPage({ focusId }: SectionPageProps) {
   const markRead = useMarkMailRead()
   const setInboxStatus = useSetInboxStatus()
 
-  const mailListQuery = useMailList(
+  const mailListQuery = useMailListInfinite(
     outreach
       ? {
           dir: box === "in" ? ("in" as const) : box === "out" ? ("out" as const) : undefined,
@@ -425,7 +425,7 @@ export function MailPage({ focusId }: SectionPageProps) {
         }
       : {},
   )
-  const inboxListQuery = useInboxList(
+  const inboxListQuery = useInboxListInfinite(
     !outreach
       ? {
           status:
@@ -439,10 +439,10 @@ export function MailPage({ focusId }: SectionPageProps) {
       : { status: "all" as const },
   )
 
-  const mailAllQuery = useMailList({})
-  const inboxAllQuery = useInboxList({ status: "all" })
-  const mailAllItems = mailAllQuery.data?.items ?? []
-  const inboxAllItems = inboxAllQuery.data?.items ?? []
+  const mailAllQuery = useMailListInfinite({})
+  const inboxAllQuery = useInboxListInfinite({ status: "all" })
+  const mailAllItems = mailAllQuery.data?.pages.flatMap((p) => p.items) ?? []
+  const inboxAllItems = inboxAllQuery.data?.pages.flatMap((p) => p.items) ?? []
   const mailCounts = {
     all: mailAllItems.length,
     in: mailAllItems.filter((t) => t.dir === "in").length,
@@ -455,8 +455,14 @@ export function MailPage({ focusId }: SectionPageProps) {
     archived: inboxAllItems.filter((i) => i.status === "archived").length,
   }
 
-  const mailItems = React.useMemo(() => mailListQuery.data?.items ?? [], [mailListQuery.data])
-  const inboxItems = React.useMemo(() => inboxListQuery.data?.items ?? [], [inboxListQuery.data])
+  const mailItems = React.useMemo(
+    () => mailListQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [mailListQuery.data],
+  )
+  const inboxItems = React.useMemo(
+    () => inboxListQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [inboxListQuery.data],
+  )
   const activeListQuery = outreach ? mailListQuery : inboxListQuery
   const activeCount = outreach ? mailItems.length : inboxItems.length
   const activeIds = React.useMemo(
@@ -655,24 +661,37 @@ export function MailPage({ focusId }: SectionPageProps) {
                   icon={outreach ? <Icons.Mail size={20} /> : <Icons.Inbox size={20} />}
                 />
               )
-            ) : outreach ? (
-              mailItems.map((t) => (
-                <MailRow
-                  key={t.id}
-                  item={t}
-                  selected={selId === t.id}
-                  onClick={() => select(t.id)}
-                />
-              ))
             ) : (
-              inboxItems.map((i) => (
-                <InboxRow
-                  key={i.id}
-                  item={i}
-                  selected={selId === i.id}
-                  onClick={() => select(i.id)}
-                />
-              ))
+              <>
+                {outreach
+                  ? mailItems.map((t) => (
+                      <MailRow
+                        key={t.id}
+                        item={t}
+                        selected={selId === t.id}
+                        onClick={() => select(t.id)}
+                      />
+                    ))
+                  : inboxItems.map((i) => (
+                      <InboxRow
+                        key={i.id}
+                        item={i}
+                        selected={selId === i.id}
+                        onClick={() => select(i.id)}
+                      />
+                    ))}
+                {activeListQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={activeListQuery.isFetchingNextPage}
+                    onClick={() => activeListQuery.fetchNextPage()}
+                  >
+                    {activeListQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>

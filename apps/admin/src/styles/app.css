@@ -229,6 +229,11 @@
 /* -- Home: auxiliary cards row (activity + system health) ----------------- */
 /* The aggregate /admin/home/summary does not carry per-item lists, so the home
    hub pairs the bento grid with these two real-data cards below it. */
+.hub-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--gutter);
+}
 .hub-aux {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);

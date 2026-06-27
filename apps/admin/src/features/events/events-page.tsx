@@ -22,7 +22,7 @@ import { reportStatusView } from "@/lib/report-status"
 import {
   useCancelEvent,
   useEvent,
-  useEventList,
+  useEventListInfinite,
   useFlagEvent,
   useLinkReports,
   usePostEventMessage,
@@ -785,10 +785,13 @@ export function EventsPage({ focusId }: SectionPageProps) {
         : (filter as "upcoming" | "in_progress" | "completed" | "flagged"),
     q: debouncedQuery.trim() || undefined,
   }
-  const listQuery = useEventList(listParams)
-  const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
+  const listQuery = useEventListInfinite(listParams)
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [listQuery.data],
+  )
 
-  const counts = listQuery.data?.counts ?? {
+  const counts = listQuery.data?.pages[0]?.counts ?? {
     all: 0,
     upcoming: 0,
     in_progress: 0,
@@ -863,14 +866,27 @@ export function EventsPage({ focusId }: SectionPageProps) {
                 icon={<Icons.Search size={20} />}
               />
             ) : (
-              items.map((e) => (
-                <EventRow
-                  key={e.id}
-                  item={e}
-                  selected={selId === e.id}
-                  onClick={() => setSelId(e.id)}
-                />
-              ))
+              <>
+                {items.map((e) => (
+                  <EventRow
+                    key={e.id}
+                    item={e}
+                    selected={selId === e.id}
+                    onClick={() => setSelId(e.id)}
+                  />
+                ))}
+                {listQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={listQuery.isFetchingNextPage}
+                    onClick={() => listQuery.fetchNextPage()}
+                  >
+                    {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>

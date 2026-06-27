@@ -113,6 +113,12 @@ export const queryKeys = {
     detail: (id: string) => ["admin", "moderation", "detail", id] as const,
   },
 
+  gov: {
+    all: ["admin", "gov"] as const,
+    list: (params?: unknown) => ["admin", "gov", "list", params ?? null] as const,
+    detail: (id: string) => ["admin", "gov", "detail", id] as const,
+  },
+
   analytics: {
     all: ["admin", "analytics"] as const,
     kpis: ["admin", "analytics", "kpis"] as const,

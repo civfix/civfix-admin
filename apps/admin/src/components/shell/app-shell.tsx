@@ -27,6 +27,12 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey)
   }, [page, nav])
 
+  React.useEffect(() => {
+    const onPop = () => useUiStore.getState().syncFromHash()
+    window.addEventListener("popstate", onPop)
+    return () => window.removeEventListener("popstate", onPop)
+  }, [])
+
   const PageComponent = PAGE_REGISTRY[page]
   const isHome = page === "home"
   const pageProps: SectionPageProps = { focusId }

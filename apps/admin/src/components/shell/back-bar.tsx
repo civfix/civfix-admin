@@ -2,11 +2,7 @@
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { PAGE_LABEL, useNav, type SectionId } from "@/store/ui-store"
-
-/**
- * Slim back affordance shown on every section page (ported from chrome.jsx). The global top bar and
- * sidebar are gone: the dashboard (home) is the hub, and a section returns to it via this bar.
- */
+import { useAdminLogout, useOperatorSession } from "@/hooks/use-admin-auth"
 
 const SECTION_ICON: Record<SectionId, IconComponent> = {
   discovery: Icons.Pin,
@@ -15,6 +11,7 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
   mail: Icons.Mail,
   users: Icons.Users,
   moderation: Icons.Shield,
+  gov: Icons.Building,
   analytics: Icons.BarChart,
 }
 
@@ -25,11 +22,14 @@ const SECTION_HUE: Record<SectionId, string> = {
   mail: "sky",
   users: "sun",
   moderation: "lilac",
+  gov: "sky",
   analytics: "moss",
 }
 
 export function BackBar({ page }: { page: SectionId }) {
   const nav = useNav()
+  const { operator } = useOperatorSession()
+  const logout = useAdminLogout()
   const Ico = SECTION_ICON[page] ?? Icons.Layers
   const hue = SECTION_HUE[page] ?? "bloom"
   return (
@@ -46,6 +46,11 @@ export function BackBar({ page }: { page: SectionId }) {
         {PAGE_LABEL[page]}
       </span>
       <div className="spacer" />
+      {operator && <span className="meta">{operator.name}</span>}
+      <button className="backbar-btn" onClick={() => void logout()}>
+        <Icons.Lock size={14} />
+        <span>Sign out</span>
+      </button>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   AdminUserListQuery,
   AdminUserListResponse,
@@ -24,6 +24,19 @@ export function useUserList(params: AdminUserListQuery) {
   return useQuery<AdminUserListResponse>({
     queryKey: queryKeys.users.list(params),
     queryFn: () => api.listAdminUsers(params),
+  })
+}
+
+export function useUserListInfinite(params: AdminUserListQuery) {
+  return useInfiniteQuery<AdminUserListResponse>({
+    queryKey: queryKeys.users.list(params),
+    queryFn: ({ pageParam }) =>
+      api.listAdminUsers({
+        ...params,
+        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   })
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   AdminReportListQuery,
   AdminReportListResponse,
@@ -19,16 +19,7 @@ import type {
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
-/**
- * Data hooks for the Reports section (enumeration 2.C). Reads use GET /admin/reports (list) and GET
- * /admin/reports/:id (detail); writes use set-status / flag / remove / send-followup. Every mutation
- * invalidates the reports caches plus the cross-cutting home + activity feeds (a status/flag/remove
- * changes the dashboard aggregates and the activity feed), per the scaffold's documented pattern.
- *
- * Query keys: reuses the existing registry (reports.list/detail/all). No local keys were needed.
- */
 
-/** GET /admin/reports - the report list (filter by civfix status + flagged + search via params). */
 export function useReportList(params: AdminReportListQuery) {
   return useQuery<AdminReportListResponse>({
     queryKey: queryKeys.reports.list(params),
@@ -36,7 +27,19 @@ export function useReportList(params: AdminReportListQuery) {
   })
 }
 
-/** GET /admin/reports/:id - full report (desc, timeline, reporter, routing, media). */
+export function useReportListInfinite(params: AdminReportListQuery) {
+  return useInfiniteQuery<AdminReportListResponse>({
+    queryKey: queryKeys.reports.list(params),
+    queryFn: ({ pageParam }) =>
+      api.listAdminReports({
+        ...params,
+        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  })
+}
+
 export function useReport(id: string | null) {
   return useQuery<GetAdminReportResponse>({
     queryKey: queryKeys.reports.detail(id ?? ""),
@@ -45,7 +48,6 @@ export function useReport(id: string | null) {
   })
 }
 
-/** Invalidate every report view plus the home + activity aggregates after a write. */
 function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.reports.all })
@@ -53,7 +55,6 @@ function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
-/** POST /admin/reports/:id/status - quick status change (writes the report timeline). */
 export function useSetReportStatus() {
   const qc = useQueryClient()
   return useMutation({
@@ -62,7 +63,6 @@ export function useSetReportStatus() {
   })
 }
 
-/** POST /admin/reports/:id/flag - flag / unflag a report. */
 export function useFlagReport() {
   const qc = useQueryClient()
   return useMutation({
@@ -71,7 +71,6 @@ export function useFlagReport() {
   })
 }
 
-/** POST /admin/reports/:id/remove - remove a report (-> rejected). */
 export function useRemoveReport() {
   const qc = useQueryClient()
   return useMutation({
@@ -80,7 +79,6 @@ export function useRemoveReport() {
   })
 }
 
-/** POST /admin/reports/:id/message - send a follow-up to the reporter or the routed city contact. */
 export function useSendReportFollowup() {
   const qc = useQueryClient()
   return useMutation({
@@ -89,12 +87,6 @@ export function useSendReportFollowup() {
   })
 }
 
-/**
- * POST /admin/reports/:id/route - "Approve & send to jurisdiction". Emails the full report packet to the
- * resolved routing contact (or to `contactEmailOverride` when the operator types a one-off address), opens
- * a per-report mail thread so the city's reply auto-routes back, and advances the report toward
- * `acknowledged`. Invalidates the report views so the new outreach chip + timeline row appear immediately.
- */
 export function useRouteReport() {
   const qc = useQueryClient()
   return useMutation({
@@ -103,11 +95,6 @@ export function useRouteReport() {
   })
 }
 
-/**
- * POST /admin/reports/:id/verdict - set the report-verification verdict (Approve/Reject), orthogonal to
- * the civic status. An approved verdict may earn the reporter the report-verified state. Invalidates the
- * report views so the verdict sub-panel reflects the new verdict immediately.
- */
 export function useSetReportVerdict() {
   const qc = useQueryClient()
   return useMutation({
@@ -119,13 +106,6 @@ export function useSetReportVerdict() {
   })
 }
 
-/**
- * GET /admin/reports/:id/discussion - the operator view of a report's PUBLIC discussion (the threaded
- * comment surface, separate from the status timeline). Unlike the citizen read this page INCLUDES
- * soft-removed/tombstoned messages so operators can see what was taken down. Paginated keyset (the
- * response carries `nextCursor`); the cursor is part of the query key so paging back never collides with
- * the first page. Scoped to the report id and only fetched once an id is selected.
- */
 export function useReportDiscussion(id: string | null, cursor?: string) {
   const params: Omit<GetAdminReportDiscussionRequest, "id"> = cursor ? { cursor } : {}
   return useQuery<DiscussionPageResponse>({
@@ -135,13 +115,6 @@ export function useReportDiscussion(id: string | null, cursor?: string) {
   })
 }
 
-/**
- * POST /admin/reports/:id/discussion/:messageId/remove - operator soft-delete of a single discussion
- * message (audited; optional reason). On success we invalidate THIS report's discussion pages (so the
- * removed message re-renders as a tombstone), plus the cross-cutting activity feed (a removal is an
- * operator action). The report detail/list aggregates are untouched - a discussion removal does not
- * change a report's status, flag, or counts.
- */
 export function useRemoveDiscussionMessage() {
   const qc = useQueryClient()
   return useMutation({

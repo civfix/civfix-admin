@@ -27,7 +27,7 @@ import {
   useRemoveReport,
   useReport,
   useReportDiscussion,
-  useReportList,
+  useReportListInfinite,
   useRouteReport,
   useSendReportFollowup,
   useSetReportStatus,
@@ -1062,10 +1062,13 @@ export function ReportsPage({ focusId }: SectionPageProps) {
         : (filter as "submitted" | "in_progress" | "completed" | "flagged"),
     q: dq.trim() || undefined,
   }
-  const listQuery = useReportList(listParams)
-  const items = React.useMemo(() => listQuery.data?.items ?? [], [listQuery.data])
+  const listQuery = useReportListInfinite(listParams)
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [listQuery.data],
+  )
 
-  const counts = listQuery.data?.counts ?? {
+  const counts = listQuery.data?.pages[0]?.counts ?? {
     all: 0,
     submitted: 0,
     in_progress: 0,
@@ -1140,9 +1143,22 @@ export function ReportsPage({ focusId }: SectionPageProps) {
                 icon={<Icons.Search size={20} />}
               />
             ) : (
-              items.map((r) => (
-                <ReportRow key={r.id} item={r} selected={selId === r.id} onSelect={setSelId} />
-              ))
+              <>
+                {items.map((r) => (
+                  <ReportRow key={r.id} item={r} selected={selId === r.id} onSelect={setSelId} />
+                ))}
+                {listQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={listQuery.isFetchingNextPage}
+                    onClick={() => listQuery.fetchNextPage()}
+                  >
+                    {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>

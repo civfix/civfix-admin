@@ -18,6 +18,8 @@ import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { LiveMap } from "@/components/map/live-map"
+import { ActivityCard } from "@/features/home/activity-card"
+import { SystemCard } from "@/features/home/system-card"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { reportStatusView } from "@/lib/report-status"
@@ -550,6 +552,7 @@ interface PreviewTile {
 }
 
 export function HomePage(_props: SectionPageProps) {
+  const nav = useNav()
   const summaryQuery = useHomeSummary()
 
   const discoveryQuery = useDiscoveryList({ limit: PREVIEW_ROWS + 1 })
@@ -745,6 +748,15 @@ export function HomePage(_props: SectionPageProps) {
             {renderTile(tile("events"))}
           </>
         )}
+      </div>
+      <div className="hub-tools">
+        <button className="btn sm ghost" onClick={() => nav("gov")}>
+          <Icons.Building size={13} /> Gov claims
+        </button>
+      </div>
+      <div className="hub-aux">
+        <ActivityCard />
+        <SystemCard />
       </div>
     </div>
   )

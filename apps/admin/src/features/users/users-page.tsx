@@ -31,7 +31,7 @@ import {
   useSetUserVerified,
   useUser,
   useUserEvents,
-  useUserList,
+  useUserListInfinite,
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
@@ -659,15 +659,15 @@ export function UsersPage({ focusId }: SectionPageProps) {
         : (filter as "active" | "suspended" | "flagged"),
     q: debouncedQuery.trim() || undefined,
   }
-  const listQuery = useUserList(listParams)
+  const listQuery = useUserListInfinite(listParams)
   const items = React.useMemo(() => {
-    const all = listQuery.data?.items ?? []
+    const all = listQuery.data?.pages.flatMap((p) => p.items) ?? []
     return filter === "deleted" ? all.filter((u) => u.deletedAt) : all
   }, [listQuery.data, filter])
 
-  const counts = listQuery.data?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
+  const counts = listQuery.data?.pages[0]?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
   const deletedCount = React.useMemo(
-    () => (listQuery.data?.items ?? []).filter((u) => u.deletedAt).length,
+    () => (listQuery.data?.pages.flatMap((p) => p.items) ?? []).filter((u) => u.deletedAt).length,
     [listQuery.data],
   )
 
@@ -734,14 +734,27 @@ export function UsersPage({ focusId }: SectionPageProps) {
                 icon={<Icons.Search size={20} />}
               />
             ) : (
-              items.map((u) => (
-                <UserRow
-                  key={u.id}
-                  user={u}
-                  selected={selId === u.id}
-                  onClick={() => setSelId(u.id)}
-                />
-              ))
+              <>
+                {items.map((u) => (
+                  <UserRow
+                    key={u.id}
+                    user={u}
+                    selected={selId === u.id}
+                    onClick={() => setSelId(u.id)}
+                  />
+                ))}
+                {listQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={listQuery.isFetchingNextPage}
+                    onClick={() => listQuery.fetchNextPage()}
+                  >
+                    {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>

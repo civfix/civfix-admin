@@ -23,7 +23,7 @@ import {
   useAppealModeration,
   useHoldModeration,
   useModerationItem,
-  useModerationList,
+  useModerationListInfinite,
   useRemoveModeration,
 } from "@/features/moderation/use-moderation"
 import { useToast } from "@/store/ui-store"
@@ -423,16 +423,19 @@ export function ModerationPage({ focusId }: SectionPageProps) {
     ...(serverFilter ? { filter: serverFilter } : {}),
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
-  const listQuery = useModerationList(listParams)
+  const listQuery = useModerationListInfinite(listParams)
   const items = React.useMemo(() => {
-    const all = listQuery.data?.items ?? []
+    const all = listQuery.data?.pages.flatMap((p) => p.items) ?? []
     return filter === USER_REPORTS_CHIP ? all.filter((x) => x.kind === "user_report") : all
   }, [listQuery.data, filter])
 
   const allParams: ModerationListQuery = debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}
-  const allForCount = useModerationList(allParams)
+  const allForCount = useModerationListInfinite(allParams)
   const userReportCount = React.useMemo(
-    () => (allForCount.data?.items ?? []).filter((x) => x.kind === "user_report").length,
+    () =>
+      (allForCount.data?.pages.flatMap((p) => p.items) ?? []).filter(
+        (x) => x.kind === "user_report",
+      ).length,
     [allForCount.data],
   )
 
@@ -507,14 +510,27 @@ export function ModerationPage({ focusId }: SectionPageProps) {
                 icon={<Icons.Shield size={20} />}
               />
             ) : (
-              items.map((m) => (
-                <ModerationRowMemo
-                  key={m.id}
-                  item={m}
-                  selected={selId === m.id}
-                  onSelect={setSelId}
-                />
-              ))
+              <>
+                {items.map((m) => (
+                  <ModerationRowMemo
+                    key={m.id}
+                    item={m}
+                    selected={selId === m.id}
+                    onSelect={setSelId}
+                  />
+                ))}
+                {listQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={listQuery.isFetchingNextPage}
+                    onClick={() => listQuery.fetchNextPage()}
+                  >
+                    {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </section>
