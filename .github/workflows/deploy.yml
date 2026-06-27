@@ -22,9 +22,14 @@ name: Deploy (Cloudflare Pages)
 # SPA deep links and security/cache headers are handled by the app's public/{_redirects,_headers}
 # (copied into out/).
 
+# Branch -> environment:
+#   main -> production deploy -> civfix-admin.pages.dev -> admin.civfix.org
+#   dev  -> preview deploy    -> dev.civfix-admin.pages.dev -> admin.civfix.dev (via the civfix-infra
+#           staging Caddy, which reverse-proxies the SPA to that alias). The admin app talks to its API
+#           same-origin (/v1/admin/* proxied by Caddy), so NEXT_PUBLIC_API_URL is unset for BOTH branches.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 # One deploy per ref at a time; do not cancel an in-flight publish.
@@ -78,4 +83,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: pnpm dlx wrangler@3 pages deploy
+          # Deterministic prod-vs-preview: --branch=main lands production (civfix-admin.pages.dev),
+          # --branch=dev lands the preview alias (dev.civfix-admin.pages.dev). Passed via env (not
+          # inlined into run) per Actions injection-safety; the trigger limits ref_name to main/dev.
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+        run: pnpm dlx wrangler@3 pages deploy --branch="$DEPLOY_BRANCH"
