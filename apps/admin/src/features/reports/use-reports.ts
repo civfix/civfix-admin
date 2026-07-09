@@ -4,11 +4,10 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import type {
   AdminReportListQuery,
   AdminReportListResponse,
-  DiscussionPageResponse,
+  ChatHistoryResponse,
+  DeleteReportMessageRequest,
   FlagReportRequest,
-  GetAdminReportDiscussionRequest,
   GetAdminReportResponse,
-  RemoveDiscussionMessageRequest,
   RemoveReportRequest,
   RouteReportRequest,
   SendFollowupRequest,
@@ -106,21 +105,30 @@ export function useSetReportVerdict() {
   })
 }
 
-export function useReportDiscussion(id: string | null, cursor?: string) {
-  const params: Omit<GetAdminReportDiscussionRequest, "id"> = cursor ? { cursor } : {}
-  return useQuery<DiscussionPageResponse>({
-    queryKey: queryKeys.reports.discussion(id ?? "", params),
-    queryFn: () => api.getAdminReportDiscussion({ id: id as string, ...params }),
+/**
+ * Read-only report CHAT history for the admin report detail. This hits the SAME endpoint the citizen
+ * client uses (`reportMessages` → GET /reports/:id/messages), so operators see exactly what neighbors
+ * see, including sender-less SYSTEM status events. Admins observe + moderate here — there is no composer.
+ *
+ * Pagination is intentionally minimal: we fetch the first page (newest window, up to `limit`) which is
+ * plenty for an admin glance. `nextCursor` (older messages via `before`) is ignored on purpose.
+ */
+const REPORT_CHAT_LIMIT = 50
+
+export function useReportChatHistory(id: string | null) {
+  return useQuery<ChatHistoryResponse>({
+    queryKey: queryKeys.reports.chat(id ?? ""),
+    queryFn: () => api.reportMessages({ id: id as string, limit: REPORT_CHAT_LIMIT }),
     enabled: !!id,
   })
 }
 
-export function useRemoveDiscussionMessage() {
+export function useDeleteReportMessage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: RemoveDiscussionMessageRequest) => api.removeDiscussionMessage(input),
+    mutationFn: (input: DeleteReportMessageRequest) => api.deleteReportMessage(input),
     onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.reports.discussion(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) })
       qc.invalidateQueries({ queryKey: queryKeys.activity.all })
     },
   })

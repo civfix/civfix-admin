@@ -76,6 +76,8 @@ export const queryKeys = {
     detail: (id: string) => ["admin", "reports", "detail", id] as const,
     discussion: (id: string, params?: unknown) =>
       ["admin", "reports", id, "discussion", params ?? null] as const,
+    chat: (id: string, params?: unknown) =>
+      ["admin", "reports", id, "chat", params ?? null] as const,
   },
 
   events: {
