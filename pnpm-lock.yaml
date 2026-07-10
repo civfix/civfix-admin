@@ -15,8 +15,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/shared':
-        specifier: ^0.24.2
-        version: 0.24.2
+        specifier: ^0.25.0
+        version: 0.25.0
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.101.0(react@19.0.0)
@@ -91,8 +91,8 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@civfix/shared@0.24.2':
-    resolution: {integrity: sha512-GlbccKc3ZoT3EiRtp9vlL80GaGG+FB0ksNytcVfk5C1+xg94MrI+xG7X4pb5L5pnS7ma31xW8uCR7y9y5K88TQ==}
+  '@civfix/shared@0.25.0':
+    resolution: {integrity: sha512-XJs/ec7yGTisO8JT+1rHi0ui/MMLoSBD8monI5dopZjNC7Wch2owSjtmrAbboiJkW07DyjkjA9IWDYPXyGv4Dw==}
     engines: {node: '>=20'}
 
   '@emnapi/core@1.10.0':
@@ -2404,7 +2404,7 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@civfix/shared@0.24.2':
+  '@civfix/shared@0.25.0':
     dependencies:
       zod: 3.25.76
 
