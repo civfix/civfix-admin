@@ -8,7 +8,7 @@ import {
   type AdminReportDTO,
   type AdminReportListItemDTO,
   type AdminReportStatus,
-  type DiscussionMessageDTO,
+  type ChatMessageDTO,
   type LinkedEventRef,
   type ReportCategory,
   type ReportOutreachStatus,
@@ -17,16 +17,16 @@ import {
 import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { confirmDialog } from "@/components/shared/dialog"
 import { BUCKET_VIEW, reportBucket, reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { useDebounced } from "@/hooks/use-debounced"
 import {
+  useDeleteReportMessage,
   useFlagReport,
-  useRemoveDiscussionMessage,
   useRemoveReport,
   useReport,
-  useReportDiscussion,
+  useReportChatHistory,
   useReportListInfinite,
   useRouteReport,
   useSendReportFollowup,
@@ -145,27 +145,53 @@ function msgWhen(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
 
-function DiscussionMessageRow({
+function chatAuthorName(msg: ChatMessageDTO): string {
+  return msg.from?.name ?? "Removed"
+}
+
+function systemLabel(msg: ChatMessageDTO): string {
+  const status = msg.system?.status
+  const note = msg.system?.note?.trim()
+  const body = msg.system?.body?.trim() ?? msg.body?.trim()
+  const head = status ? `System · ${ADMIN_REPORT_STATUS_LABELS[status] ?? status}` : "System"
+  const detail = note || body
+  return detail ? `${head} — ${detail}` : head
+}
+
+/** A sender-less status event (report status changes, etc.). Read-only; can't be deleted. */
+function ChatSystemRow({ msg }: { msg: ChatMessageDTO }) {
+  return (
+    <div className="dsc-msg system" title="Automated status event">
+      <span className="dsc-msg-av" aria-hidden="true">
+        <Icons.Clock size={13} />
+      </span>
+      <div className="dsc-msg-body">
+        <div className="dsc-msg-top">
+          <span className="dsc-msg-who">{systemLabel(msg)}</span>
+          <span className="dsc-msg-when">{msgWhen(msg.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChatMessageRow({
   msg,
-  depth,
   onRemove,
   removing,
 }: {
-  msg: DiscussionMessageDTO
-  depth: number
-  onRemove: (msg: DiscussionMessageDTO) => void
+  msg: ChatMessageDTO
+  onRemove: (msg: ChatMessageDTO) => void
   removing: boolean
 }) {
-  const removed = !!msg.deletedAt || msg.author === null
-  const authorName = msg.author?.displayName ?? "Removed"
-  const handle = msg.author?.handle
-  const reactions = msg.reactions.filter((r) => r.count > 0)
+  const removed = !!msg.deletedAt || msg.from == null
+  const authorName = chatAuthorName(msg)
+  const handle = msg.from?.handle
+  const reactions = (msg.reactions ?? []).filter((r) => r.count > 0)
+  const attachments = msg.attachments ?? []
 
   return (
-    <div
-      className={`dsc-msg ${removed ? "removed" : ""}`}
-      style={depth > 0 ? { marginLeft: depth * 22 } : undefined}
-    >
+    <div className={`dsc-msg ${removed ? "removed" : ""}`}>
       <span className="dsc-msg-av" aria-hidden="true">
         {removed ? <Icons.Trash size={13} /> : initials(authorName)}
       </span>
@@ -190,10 +216,9 @@ function DiscussionMessageRow({
           <p className="dsc-msg-text">{msg.body}</p>
         )}
 
-        { }
-        {!removed && msg.attachments.length > 0 && (
+        {!removed && attachments.length > 0 && (
           <div className="dsc-msg-media">
-            {msg.attachments.map((m) => {
+            {attachments.map((m) => {
               const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
               return (
                 <span key={m.id} className="dsc-msg-thumb">
@@ -210,7 +235,6 @@ function DiscussionMessageRow({
         )}
 
         <div className="dsc-msg-foot">
-          { }
           {reactions.length > 0 && (
             <span className="dsc-msg-reactions">
               {reactions.map((r) => (
@@ -220,13 +244,7 @@ function DiscussionMessageRow({
               ))}
             </span>
           )}
-          {msg.replyCount > 0 && (
-            <span className="dsc-msg-replies">
-              <Icons.MessageSquare size={11} /> {pluralize(msg.replyCount, "reply", "replies")}
-            </span>
-          )}
           <div className="spacer" />
-          { }
           {!removed && (
             <button
               className="btn sm danger"
@@ -243,79 +261,78 @@ function DiscussionMessageRow({
   )
 }
 
+/**
+ * Read-only report chat, as neighbors see it: the same messages from the citizen chat history
+ * endpoint, including sender-less SYSTEM status events. Operators can't post — they observe and
+ * moderate. Delete goes through the report chat DELETE endpoint (soft-delete) and is gated to
+ * non-system rows (a status event has no author and can't be removed).
+ */
 function ReportDiscussion({ reportId }: { reportId: string }) {
-  const q = useReportDiscussion(reportId)
-  const removeMsg = useRemoveDiscussionMessage()
+  const q = useReportChatHistory(reportId)
+  const removeMsg = useDeleteReportMessage()
   const toast = useToast()
 
-  const onRemove = async (msg: DiscussionMessageDTO) => {
-    const reason = await promptDialog({
-      title: "Remove comment",
-      label: "Reason (optional)",
-      placeholder: "Why is this being removed?",
+  const onRemove = async (msg: ChatMessageDTO) => {
+    const ok = await confirmDialog({
+      title: "Remove message",
+      body: "This soft-deletes the message from the report chat. Operators still see it as removed.",
+      danger: true,
+      confirmLabel: "Remove",
     })
-    if (reason === null) return
+    if (!ok) return
     removeMsg.mutate(
-      { id: reportId, messageId: msg.id, ...(reason ? { reason } : {}) },
+      { id: reportId, messageId: msg.id },
       { onSuccess: () => toast("Message removed") },
     )
   }
 
+  // Oldest → newest, matching the order neighbors see in the chat.
+  const items = React.useMemo(() => {
+    const list = [...(q.data?.items ?? [])]
+    list.sort((a, b) => {
+      const ta = Date.parse(a.createdAt)
+      const tb = Date.parse(b.createdAt)
+      if (ta !== tb) return ta - tb
+      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+    })
+    return list
+  }, [q.data])
+
   return (
     <div className="sub">
       <div className="sub-head">
-        Discussion
+        Chat
         {!q.isLoading && !q.isError && (
           <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-            <Icons.MessageSquare size={12} /> {q.data?.items.length ?? 0}
+            <Icons.MessageSquare size={12} /> {items.length}
           </span>
         )}
       </div>
       <div className="sub-body">
         {q.isLoading ? (
-          <LoadingState label="Loading discussion..." />
+          <LoadingState label="Loading chat..." />
         ) : q.isError ? (
           <ErrorState error={q.error} onRetry={() => q.refetch()} />
-        ) : (q.data?.items.length ?? 0) === 0 ? (
+        ) : items.length === 0 ? (
           <EmptyState
-            title="No discussion yet"
-            sub="Public comments neighbors leave on this report appear here."
+            title="No messages yet"
+            sub="Messages neighbors post in this report's chat appear here."
             icon={<Icons.MessageSquare size={20} />}
           />
         ) : (
           <div className="dsc-list">
-            {(() => {
-              const items = q.data!.items
-              const byParent = new Map<string, DiscussionMessageDTO[]>()
-              for (const m of items) {
-                if (m.parentId) {
-                  const arr = byParent.get(m.parentId) ?? []
-                  arr.push(m)
-                  byParent.set(m.parentId, arr)
-                }
-              }
-              const seen = new Set<string>()
-              const rows: React.ReactNode[] = []
-              const push = (m: DiscussionMessageDTO, depth: number) => {
-                if (seen.has(m.id)) return
-                seen.add(m.id)
-                rows.push(
-                  <DiscussionMessageRow
-                    key={m.id}
-                    msg={m}
-                    depth={depth}
-                    onRemove={onRemove}
-                    removing={removeMsg.isPending}
-                  />,
-                )
-                for (const reply of byParent.get(m.id) ?? []) push(reply, depth + 1)
-              }
-              for (const m of items) {
-                if (!m.parentId) push(m, 0)
-              }
-              for (const m of items) push(m, 0)
-              return rows
-            })()}
+            {items.map((m) =>
+              m.kind === "system" || m.from == null ? (
+                <ChatSystemRow key={m.id} msg={m} />
+              ) : (
+                <ChatMessageRow
+                  key={m.id}
+                  msg={m}
+                  onRemove={onRemove}
+                  removing={removeMsg.isPending}
+                />
+              ),
+            )}
           </div>
         )}
       </div>
