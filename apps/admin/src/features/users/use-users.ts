@@ -7,7 +7,6 @@ import type {
   FlagUserRequest,
   GetAdminUserResponse,
   RemoveUserMessageRequest,
-  SetRoleRequest,
   SetUserReportVerifiedRequest,
   SetUserStatusRequest,
   SetUserVerifiedRequest,
@@ -91,14 +90,6 @@ export function useSetUserStatus() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetUserStatusRequest) => api.setUserStatus(input),
-    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
-  })
-}
-
-export function useSetUserRole() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: SetRoleRequest) => api.setUserRole(input),
     onSuccess: (_res, { id }) => invalidateUsers(qc, id),
   })
 }
