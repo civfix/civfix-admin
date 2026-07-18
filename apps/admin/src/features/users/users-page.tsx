@@ -9,7 +9,6 @@ import {
   type AdminUserDTO,
   type AdminUserListItemDTO,
   type ReportCategory,
-  type Role,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -26,7 +25,6 @@ import {
   useFlagUser,
   useRemoveUserMessage,
   useSetUserReportVerified,
-  useSetUserRole,
   useSetUserStatus,
   useSetUserVerified,
   useUser,
@@ -44,15 +42,6 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   suspended: { cls: "status-flag", label: "Suspended" },
   review: { cls: "status-progress", label: "In review" },
   banned: { cls: "status-flag", label: "Banned" },
-}
-
-const ROLE_ORDER: Role[] = ["citizen", "gov_user", "gov_admin", "operator"]
-
-const ROLE_LABEL: Record<Role, string> = {
-  citizen: "Citizen",
-  gov_user: "Gov user",
-  gov_admin: "Gov admin",
-  operator: "Operator",
 }
 
 const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]>, string> = {
@@ -293,7 +282,6 @@ function UserDetail({ userId }: { userId: string }) {
   const setStatus = useSetUserStatus()
   const setVerified = useSetUserVerified()
   const setReportVerified = useSetUserReportVerified()
-  const setRole = useSetUserRole()
 
   const [tab, setTab] = React.useState<TabId>("reports")
 
@@ -409,22 +397,6 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
-  const onChangeRole = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value as Role
-    if (next === user.role) return
-    const ok = await confirmDialog({
-      title: "Change role?",
-      body: `Change ${user.name} from ${ROLE_LABEL[user.role]} to ${ROLE_LABEL[next]}? This changes their permissions across civfix.`,
-      danger: true,
-      confirmLabel: "Change role",
-    })
-    if (!ok) return
-    setRole.mutate(
-      { id: user.id, role: next },
-      { onSuccess: () => toast(`${user.name} · role set to ${ROLE_LABEL[next]}`) },
-    )
-  }
-
   return (
     <div className="user-detail">
       <div className="user-detail-head">
@@ -454,8 +426,8 @@ function UserDetail({ userId }: { userId: string }) {
             </span>
           )}
           {isVerified && (
-            <span className="pill status-ok" title="Verified neighbor">
-              <Icons.Shield size={11} /> Verified neighbor
+            <span className="pill status-ok" title="Verified community organizer">
+              <Icons.Shield size={11} /> Verified community organizer
             </span>
           )}
           {isReportVerified && (
@@ -528,23 +500,6 @@ function UserDetail({ userId }: { userId: string }) {
           </span>
         )}
         <div className="spacer" />
-        {!deleted && (
-          <div className="sortbox">
-            <span className="sortbox-label">Role</span>
-            <select
-              value={user.role}
-              disabled={setRole.isPending}
-              onChange={onChangeRole}
-              aria-label="Account role"
-            >
-              {ROLE_ORDER.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
         <button
           className={`btn ${user.flagged ? "flag-on" : ""}`}
           disabled={flag.isPending || deleted}
@@ -558,7 +513,7 @@ function UserDetail({ userId }: { userId: string }) {
           onClick={onToggleVerified}
           title={
             isVerified
-              ? "Remove the verified-neighbor mark"
+              ? "Remove the verified-community-organizer mark"
               : "Mark verified (after a verification call)"
           }
         >

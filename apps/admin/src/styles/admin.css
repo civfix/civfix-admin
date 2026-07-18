@@ -302,14 +302,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   white-space: nowrap;
 }
 .sidebar .me .me-text { flex: 1; min-width: 0; }
-.sidebar .me .role {
-  font-size: 10.5px;
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-weight: 700;
-  margin-top: 2px;
-}
 
 /* Sidebar collapsed (desktop only) */
 .shell.collapsed .sidebar .nav .label,
