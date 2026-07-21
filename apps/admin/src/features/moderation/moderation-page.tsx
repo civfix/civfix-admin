@@ -18,6 +18,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
+import { getModerationDestination } from "@/features/moderation/moderation-navigation"
 import {
   useApproveModeration,
   useAppealModeration,
@@ -26,7 +27,7 @@ import {
   useModerationListInfinite,
   useRemoveModeration,
 } from "@/features/moderation/use-moderation"
-import { useToast } from "@/store/ui-store"
+import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -124,6 +125,7 @@ function SignalCell({ signal }: { signal: ModerationSignal }) {
 function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: (id: string) => void }) {
   const q = useModerationItem(itemId)
   const toast = useToast()
+  const nav = useNav()
 
   const approve = useApproveModeration()
   const remove = useRemoveModeration()
@@ -146,6 +148,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
   const priority = PRIORITY_VIEW[item.priority] ?? PRIORITY_VIEW.low
   const isUserReport = item.kind === "user_report"
+  const destination = getModerationDestination(item.destinationKind, item.destinationId)
 
   const onApprove = async () => {
     const note = await promptDialog({
@@ -231,7 +234,19 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
         </span>
         <div className="rep-head-text">
           <div className="crumb">
-            {rowKindLabel(item)} · {item.reporter}
+            {rowKindLabel(item)} ·{" "}
+            {item.reporterId ? (
+              <button
+                type="button"
+                className="lnk-inline"
+                title={`Open ${item.reporter}'s profile`}
+                onClick={() => nav("users", item.reporterId!)}
+              >
+                {item.reporter}
+              </button>
+            ) : (
+              item.reporter
+            )}
             {item.place ? <> · {item.place}</> : null}
           </div>
           <h2>{item.flag}</h2>
@@ -266,6 +281,17 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
                   <Icons.AlertTriangle size={12} />
                   <span>{item.autoAction}</span>
                 </div>
+              )}
+              {item.subjectType && destination && (
+                <button
+                  type="button"
+                  className="btn sm"
+                  style={{ marginTop: 10 }}
+                  onClick={() => nav(destination.page, destination.id)}
+                >
+                  <Icons.ExternalLink size={12} /> View reported{" "}
+                  {SUBJECT_LABEL[item.subjectType] ?? item.subjectType}
+                </button>
               )}
             </div>
           </div>
@@ -315,7 +341,17 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
               <div className="sub-head">Similar items</div>
               <div className="sub-body">
                 {item.similar.map((s) => (
-                  <div key={s.id} className="prow">
+                  <div
+                    key={s.id}
+                    className="prow row-link"
+                    role="button"
+                    tabIndex={0}
+                    title="Open this moderation item"
+                    onClick={() => nav("moderation", s.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") nav("moderation", s.id)
+                    }}
+                  >
                     <span className="prow-ico hue-lilac">
                       <Icons.Layers size={14} />
                     </span>
@@ -336,23 +372,44 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
           <div className="sub">
             <div className="sub-head">User context</div>
             <div className="sub-body">
-              <div className="user-head">
-                <span
-                  className="user-av"
-                  style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
-                >
-                  {item.user.name
-                    .split(" ")
-                    .map((w) => w[0] ?? "")
-                    .slice(0, 2)
-                    .join("")
-                    .toUpperCase()}
-                </span>
-                <div>
-                  <div className="user-name">{item.user.name}</div>
-                  <div className="user-handle mono">{item.user.handle}</div>
-                </div>
-              </div>
+              {(() => {
+                const userId = item.user.id
+                const head = (
+                  <div className="user-head">
+                    <span
+                      className="user-av"
+                      style={{ background: "linear-gradient(135deg, var(--sky), var(--moss))" }}
+                    >
+                      {item.user.name
+                        .split(" ")
+                        .map((w) => w[0] ?? "")
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
+                    </span>
+                    <div>
+                      <div className="user-name">{item.user.name}</div>
+                      <div className="user-handle mono">{item.user.handle}</div>
+                    </div>
+                  </div>
+                )
+                return userId ? (
+                  <div
+                    className="row-link"
+                    role="button"
+                    tabIndex={0}
+                    title={`Open ${item.user.name}'s profile`}
+                    onClick={() => nav("users", userId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") nav("users", userId)
+                    }}
+                  >
+                    {head}
+                  </div>
+                ) : (
+                  head
+                )
+              })()}
               <div className="user-meta-rows">
                 <div className="umr">
                   <span>Joined</span>

@@ -55,9 +55,6 @@ export const queryKeys = {
     all: ["admin", "activity"] as const,
     list: (params?: unknown) => ["admin", "activity", params ?? null] as const,
   },
-  system: {
-    health: ["admin", "system", "health"] as const,
-  },
 
   discovery: {
     all: ["admin", "discovery"] as const,
@@ -113,12 +110,6 @@ export const queryKeys = {
     all: ["admin", "moderation"] as const,
     list: (params?: unknown) => ["admin", "moderation", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "moderation", "detail", id] as const,
-  },
-
-  gov: {
-    all: ["admin", "gov"] as const,
-    list: (params?: unknown) => ["admin", "gov", "list", params ?? null] as const,
-    detail: (id: string) => ["admin", "gov", "detail", id] as const,
   },
 
   analytics: {

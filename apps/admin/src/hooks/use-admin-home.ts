@@ -1,12 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import type {
-  HomeSummaryResponse,
-  HomeMapResponse,
-  ActivityListResponse,
-  SystemHealthResponse,
-} from "@civfix/shared"
+import type { HomeSummaryResponse, HomeMapResponse } from "@civfix/shared"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
@@ -30,23 +25,5 @@ export function useHomeMap() {
   return useQuery<HomeMapResponse>({
     queryKey: queryKeys.home.map,
     queryFn: () => api.adminHomeMap(),
-  })
-}
-
-/** GET /admin/activity - the recent activity / audit feed. */
-export function useActivity() {
-  return useQuery<ActivityListResponse>({
-    queryKey: queryKeys.activity.list(),
-    // The activity list query has only optional fields (q/filter/sort/cursor/limit); pass an empty
-    // object to satisfy the typed client signature.
-    queryFn: () => api.adminActivity({}),
-  })
-}
-
-/** GET /admin/system/health - service health summary. */
-export function useSystemHealth() {
-  return useQuery<SystemHealthResponse>({
-    queryKey: queryKeys.system.health,
-    queryFn: () => api.adminSystemHealth(),
   })
 }

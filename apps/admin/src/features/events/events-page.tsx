@@ -263,6 +263,7 @@ function EventRow({
 }) {
   const kindView = eventKindView(item.eventKind)
   const KindIco = kindView.icon
+  const nav = useNav()
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
       <div className="leading">
@@ -287,7 +288,24 @@ function EventRow({
           <span className="sep">·</span>
           <span>{item.attendees} attending</span>
           <span className="sep">·</span>
-          <span>{firstName(item.organizer.name)}</span>
+          <span
+            className="lnk-inline"
+            role="button"
+            tabIndex={0}
+            title={`Open ${item.organizer.name}'s profile`}
+            onClick={(e) => {
+              e.stopPropagation()
+              nav("users", item.organizer.id)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.stopPropagation()
+                nav("users", item.organizer.id)
+              }
+            }}
+          >
+            {firstName(item.organizer.name)}
+          </span>
         </div>
       </div>
       <div className="trailing">

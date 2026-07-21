@@ -293,6 +293,30 @@ function MailReader({ threadId }: { threadId: string }) {
             {MAIL_STATUS_LABELS[sel.status]}
           </span>
         </div>
+        {(sel.jurisdictionGeoid || sel.reportId) && (
+          <div className="mail-reader-links">
+            {sel.jurisdictionGeoid && (
+              <button
+                type="button"
+                className="lnk-inline"
+                title="Open this thread's jurisdiction"
+                onClick={() => nav("discovery", sel.jurisdictionGeoid!)}
+              >
+                <Icons.Building size={12} /> View jurisdiction
+              </button>
+            )}
+            {sel.reportId && (
+              <button
+                type="button"
+                className="lnk-inline"
+                title="Open the report this thread is about"
+                onClick={() => nav("reports", sel.reportId!)}
+              >
+                <Icons.FileText size={12} /> View report
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mail-reader-body" ref={bodyRef}>

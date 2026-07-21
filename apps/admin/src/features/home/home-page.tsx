@@ -18,8 +18,6 @@ import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { LiveMap } from "@/components/map/live-map"
-import { ActivityCard } from "@/features/home/activity-card"
-import { SystemCard } from "@/features/home/system-card"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { reportStatusView } from "@/lib/report-status"
@@ -31,6 +29,10 @@ import { useMailList } from "@/features/mail/use-mail"
 import { useInboxList } from "@/features/inbox/use-inbox"
 import { useUserList } from "@/features/users/use-users"
 import { useModerationList } from "@/features/moderation/use-moderation"
+import {
+  getMailPreviewPresentation,
+  getModerationPreviewPresentation,
+} from "@/features/home/home-preview-presentation"
 import { useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -45,9 +47,9 @@ const HUB_ICON: Record<string, IconComponent> = {
   analytics: Icons.BarChart,
 }
 
-const PREVIEW_ROWS = 3
-
-const MODERATION_PEEK_LIMIT = 24
+// Two preview rows per tile keeps the whole bento within a desktop viewport (see the
+// "Desktop fit-to-viewport" block in admin.css); "… and N more" leads to the full section.
+const PREVIEW_ROWS = 2
 
 interface SectionStat {
   k: string
@@ -322,31 +324,21 @@ function PreviewRow({ item, page }: { item: PeekItem; page: PageId }) {
   const nav = useNav()
   const open = () => nav(page, item.focusId)
   return (
-    <div
+    <button
+      type="button"
       className="slr"
-      role="button"
-      tabIndex={0}
-      onClick={(e) => {
-        e.stopPropagation()
-        open()
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.stopPropagation()
-          open()
-        }
-      }}
+      onClick={open}
     >
       <PeekGlyph item={item} />
-      <div className="slr-body">
-        <div className="slr-title">{item.title}</div>
-        <div className="slr-meta">{item.meta}</div>
-      </div>
+      <span className="slr-body">
+        <span className="slr-title">{item.title}</span>
+        <span className="slr-meta">{item.meta}</span>
+      </span>
       <span className="slr-age">{item.age}</span>
       <span className="slr-arr">
         <Icons.ChevronRight size={13} />
       </span>
-    </div>
+    </button>
   )
 }
 
@@ -445,16 +437,8 @@ function SectionTile({
   const metric = s.id === "analytics"
   const open = () => nav(s.page)
   return (
-    <div
-      className={`stile hue-${s.hue} ${feature ? "feature" : ""}`}
-      role="button"
-      tabIndex={0}
-      onClick={open}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") open()
-      }}
-    >
-      <div className="stile-head">
+    <div className={`stile hue-${s.hue} ${feature ? "feature" : ""}`}>
+      <button type="button" className="stile-head" onClick={open}>
         <span className="stile-ico">
           <Ico size={16} />
         </span>
@@ -464,7 +448,7 @@ function SectionTile({
             <b>{s.lead}</b> {s.unit}
           </span>
         )}
-      </div>
+      </button>
 
       {metric ? (
         <>
@@ -506,29 +490,15 @@ function SectionTile({
         </>
       )}
 
-      <div
-        className="stile-foot opens"
-        role="button"
-        tabIndex={0}
-        onClick={(e) => {
-          e.stopPropagation()
-          open()
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.stopPropagation()
-            open()
-          }
-        }}
-      >
+      <button type="button" className="stile-foot opens" onClick={open}>
         {metric ? (
-          <div className="stile-stats">
+          <span className="stile-stats">
             {s.stats.map((st) => (
               <span key={st.k} className="stile-stat">
                 <b className={st.tone || ""}>{st.v}</b> {st.k}
               </span>
             ))}
-          </div>
+          </span>
         ) : (
           moreLabel && <span className="stile-moreinline">{moreLabel}</span>
         )}
@@ -536,7 +506,7 @@ function SectionTile({
         <span className="stile-cta">
           {metric ? s.cta : "Open"} <Icons.ArrowRight size={13} />
         </span>
-      </div>
+      </button>
     </div>
   )
 }
@@ -552,7 +522,6 @@ interface PreviewTile {
 }
 
 export function HomePage(_props: SectionPageProps) {
-  const nav = useNav()
   const summaryQuery = useHomeSummary()
 
   const discoveryQuery = useDiscoveryList({ limit: PREVIEW_ROWS + 1 })
@@ -561,7 +530,7 @@ export function HomePage(_props: SectionPageProps) {
   const mailQuery = useMailList({ limit: PREVIEW_ROWS + 1 })
   const inboxQuery = useInboxList({ status: "all", limit: PREVIEW_ROWS + 1 })
   const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
-  const moderationQuery = useModerationList({ limit: MODERATION_PEEK_LIMIT })
+  const moderationQuery = useModerationList({ limit: PREVIEW_ROWS + 1 })
 
   const summaries = React.useMemo(
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
@@ -572,33 +541,36 @@ export function HomePage(_props: SectionPageProps) {
     const base = summaries.find((s) => s.id === "mail")
     if (!base) return undefined
     const needsAction = summaryQuery.data?.mail.needsAction ?? 0
+    const presentation = getMailPreviewPresentation(base.lead, inboxUnread)
     return {
       ...base,
-      lead: base.lead + inboxUnread,
-      unit: "unread messages",
+      lead: presentation.lead,
+      unit: presentation.unit,
       blurb:
         "Two-way outreach with municipal contacts plus catch-all inbound to *@civfix.org — replies, support requests, and cold mail in one place.",
       cta: "Open mail",
       stats: [
         { k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null },
-        { k: "Inbox unread", v: inboxUnread },
+        { k: presentation.loadedInboxLabel, v: presentation.loadedInboxUnread },
       ],
     }
   }, [summaries, inboxUnread, summaryQuery.data])
   const moderationItems = moderationQuery.data?.items ?? []
-  const moderationCount = moderationItems.length
+  const moderationPresentation = getModerationPreviewPresentation(
+    moderationItems.slice(0, PREVIEW_ROWS).length,
+  )
   const moderationSummary = React.useMemo<SectionSummary>(
     () => ({
       id: "moderation",
       page: "moderation",
       label: "Moderation",
       hue: "lilac",
-      lead: moderationCount,
-      unit: "in the queue",
+      lead: moderationPresentation.lead,
+      unit: moderationPresentation.unit,
       stats: [],
       cta: "Open moderation",
     }),
-    [moderationCount],
+    [moderationPresentation.lead, moderationPresentation.unit],
   )
   const byId = (id: string): SectionSummary | undefined =>
     id === "mail"
@@ -748,15 +720,6 @@ export function HomePage(_props: SectionPageProps) {
             {renderTile(tile("events"))}
           </>
         )}
-      </div>
-      <div className="hub-tools">
-        <button className="btn sm ghost" onClick={() => nav("gov")}>
-          <Icons.Building size={13} /> Gov claims
-        </button>
-      </div>
-      <div className="hub-aux">
-        <ActivityCard />
-        <SystemCard />
       </div>
     </div>
   )

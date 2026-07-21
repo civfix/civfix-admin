@@ -1020,6 +1020,7 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .qrow:last-child { border-bottom: none; }
 .qrow:hover { background: var(--paper-2); }
+.qrow:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
 .qrow.selected {
   background: linear-gradient(90deg, color-mix(in oklab, var(--bloom) 8%, transparent) 0%, transparent 100%);
 }
@@ -1162,134 +1163,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   font-weight: 600;
 }
 
-/* ---------------------------------------------------------
-   Activity feed
-   --------------------------------------------------------- */
-.activity { display: flex; flex-direction: column; }
-.act-row {
-  display: grid;
-  grid-template-columns: 22px 1fr 44px;
-  gap: 9px;
-  align-items: start;
-  padding: 9px 14px;
-  border-bottom: 1px solid var(--border-soft);
-  font-size: 12px;
-}
-.act-row:last-child { border-bottom: none; }
-.act-row .ico {
-  width: 22px; height: 22px;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
-  flex-shrink: 0;
-}
-.act-row .msg {
-  font-size: 12.5px;
-  color: var(--ink-2);
-  line-height: 1.4;
-  word-break: break-word;
-}
-.act-row .msg .who { color: var(--ink); font-weight: 700; }
-.act-row .msg .what { color: var(--ink); font-weight: 600; }
-.act-row .ts {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--ink-3);
-  text-align: right;
-  margin-top: 3px;
-  font-feature-settings: "tnum" 1;
-}
-
-/* ---------------------------------------------------------
-   Mail + system
-   --------------------------------------------------------- */
-.msys { padding: 12px 14px 12px; display: flex; flex-direction: column; gap: 2px; }
-.msys-deliv {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "label num"
-    "bar bar"
-    "foot foot";
-  align-items: baseline;
-  gap: 4px 8px;
-  padding-bottom: 4px;
-}
-.msys-deliv .msys-label { grid-area: label; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
-.msys-deliv-num {
-  grid-area: num;
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 24, "wdth" 90;
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  color: var(--moss-700);
-  font-feature-settings: "tnum" 1;
-}
-.msys-deliv .msys-bar {
-  grid-area: bar;
-  height: 5px;
-  background: var(--paper-2);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-.msys-deliv-foot {
-  grid-area: foot;
-  font-size: 11.5px;
-  color: var(--ink-3);
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-}
-.msys-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 0;
-  font-size: 12.5px;
-  color: var(--ink-2);
-}
-.msys-label {
-  color: var(--ink-2);
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-}
-.msys-bar {
-  height: 5px;
-  background: var(--paper-2);
-  border-radius: 999px;
-  overflow: hidden;
-}
-.msys-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--moss) 0%, var(--moss-600) 100%);
-  border-radius: 999px;
-  display: block;
-}
-.msys-spacer { flex: 1; min-width: 8px; }
-.msys-val {
-  font-family: var(--font-mono);
-  font-feature-settings: "tnum" 1;
-  font-weight: 700;
-  color: var(--ink);
-  font-size: 12px;
-  white-space: nowrap;
-}
-.msys-val.ok { color: var(--moss-700); }
-.msys-val.warn { color: var(--sun-700); }
-.msys-val.bad { color: var(--bloom-700); }
-.msys-val.muted { color: var(--ink-3); font-weight: 600; }
-.msys-divider {
-  height: 1px;
-  background: var(--border-soft);
-  margin: 8px 0 4px;
-}
 .led {
   display: inline-block;
   width: 7px; height: 7px;
@@ -2745,6 +2618,8 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   border-bottom: 1px solid var(--border-soft);
 }
 .prow:last-child { border-bottom: none; }
+.prow-main { display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0; text-align: left; }
+button.prow-main { color: inherit; font: inherit; background: none; border: 0; padding: 0; }
 .prow-pin { width: 26px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .prow-pin img { width: 100%; height: 100%; object-fit: contain; }
 .prow-ico {
@@ -3009,16 +2884,6 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 .dialog-input:focus { border-color: var(--sky); box-shadow: var(--ring); }
 .dialog-foot { justify-content: flex-end; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
-
-/* =========================================================
-   Government page
-   ========================================================= */
-.gov-claim-row { grid-template-columns: 34px 1fr auto; align-items: center; }
-.gov-claim-actions { display: flex; gap: 8px; flex-shrink: 0; }
-@media (max-width: 600px) {
-  .gov-claim-row { grid-template-columns: 34px 1fr; }
-  .gov-claim-actions { grid-column: 2; margin-top: 8px; }
-}
 
 /* Slide-up sheet (manual contact form) */
 .sheet-overlay {
@@ -3428,7 +3293,11 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 }
 .bt-cell { min-width: 0; display: flex; }
 .bt-cell > .stile, .bt-cell > .card { width: 100%; }
-.bt-map { grid-column: span 9; grid-row: span 2; min-height: 384px; }
+/* Map cell drives the bento's overall height. Now that the aux cards are gone the hub should sit
+   within a desktop viewport (1280x800 / 1440x900) without scrolling; the map scales down on shorter
+   screens via clamp (40vh) rather than forcing the tall 384px and pushing content past the fold.
+   Tune the 300/40vh/384 stops if the fold still clips on a given viewport. */
+.bt-map { grid-column: span 9; grid-row: span 2; min-height: clamp(300px, 40vh, 384px); }
 .bt-map .card { height: 100%; }
 .bt-discovery { grid-column: span 6; }
 .bt-analytics { grid-column: span 6; }
@@ -3443,6 +3312,27 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   .hub-bento { grid-template-columns: 1fr; }
   .bt-cell { grid-column: 1 / -1 !important; }
 }
+/* Desktop fit-to-viewport: keep the ENTIRE dashboard on-screen at typical Mac sizes (1280x800 /
+   1440x900) with no page scroll and nothing cut off. The bento fills the viewport height and its
+   three rows share it; if a single tile's content is taller than its cell, that tile scrolls
+   INSIDE itself (so every row is still reachable — nothing is clipped). Only the 3-row desktop
+   layout is locked; at <=1100px the bento reflows to more rows and the page scrolls normally. */
+@media (min-width: 1101px) {
+  .main-home { height: 100dvh; min-height: 0; overflow: hidden; padding-top: 14px; padding-bottom: 16px; }
+  .main-home .hub { height: 100%; min-height: 0; }
+  .main-home .hub-bento {
+    height: 100%;
+    min-height: 0;
+    grid-auto-rows: unset;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(0, auto);
+  }
+  .main-home .bt-cell { min-height: 0; }
+  .main-home .bt-map { min-height: 0; }
+  .main-home .stile { min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  /* Tighten the analytics tile a touch so it fits its cell without an internal scrollbar at 1280x800. */
+  .main-home .bt-analytics .hub-spark { height: 24px; }
+  .main-home .bt-analytics .stile-metricgrid { margin-top: 8px; row-gap: 8px; }
+}
 
 /* -- Section tile ----------------------------------------- */
 .stile {
@@ -3454,7 +3344,6 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   display: flex;
   flex-direction: column;
   gap: 11px;
-  cursor: pointer;
   position: relative;
   overflow: hidden;
   min-width: 0;
@@ -3469,12 +3358,18 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   border-color: color-mix(in oklab, var(--hue) 28%, var(--border-soft));
   transform: translateY(-2px);
 }
+.stile:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
 .stile:hover::after { opacity: 1; }
 .stile.feature {
   background: linear-gradient(150deg, var(--hue-50) 0%, transparent 44%), #fff;
   border-color: color-mix(in oklab, var(--hue) 20%, transparent);
 }
-.stile-head { display: flex; align-items: center; gap: 9px; }
+.stile-head {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; padding: 0; border: 0; background: none; color: inherit;
+  font: inherit; text-align: left;
+}
+.stile-head:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
 .stile-ico {
   width: 28px; height: 28px; border-radius: 8px;
   background: var(--hue-50); color: var(--hue-700);
@@ -3554,15 +3449,23 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   border-bottom: 1px solid var(--border-soft);
   cursor: pointer;
   transition: background-color 220ms cubic-bezier(0.25, 0.8, 0.3, 1), border-color 220ms ease;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 .slr:hover { background-color: var(--hue-50); border-bottom-color: transparent; }
+.slr:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
 .slr:first-child { padding-top: 7px; }
 .slr:last-child { border-bottom: none; }
 .slr .peek-pin { width: 26px; height: 26px; }
 .slr .peek-ico, .slr .peek-dir, .slr .peek-av { width: 24px; height: 24px; }
-.slr-body { flex: 1; min-width: 0; }
-.slr-title { font-weight: 700; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.005em; }
-.slr-meta { font-size: 11px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.slr-body { display: block; flex: 1; min-width: 0; }
+.slr-title { display: block; font-weight: 700; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.005em; }
+.slr-meta { display: block; font-size: 11px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .slr-age { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 .slr-arr { color: var(--ink-4); flex-shrink: 0; display: flex; opacity: 0; transition: opacity 240ms ease, transform 240ms cubic-bezier(0.25, 0.8, 0.3, 1); transform: translateX(-4px); }
 .slr:hover .slr-arr { opacity: 1; transform: none; color: var(--hue-700); }
@@ -3593,8 +3496,14 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
 .peek-title { font-weight: 700; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .peek-meta { font-size: 11px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
 .stile-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border-soft); }
-.stile-foot.opens { cursor: pointer; margin: auto -6px 0; padding: 8px 6px 2px; border-radius: 0 0 8px 8px; transition: background-color 160ms ease; }
+.stile-foot.opens {
+  cursor: pointer; margin: auto -6px 0; padding: 8px 6px 2px; border-radius: 0 0 8px 8px;
+  border-left: 0; border-right: 0; border-bottom: 0;
+  background: none; color: inherit; font: inherit; text-align: left;
+  transition: background-color 160ms ease;
+}
 .stile-foot.opens:hover { background-color: var(--hue-50); }
+.stile-foot.opens:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
 .stile-moreinline { font-size: 11.5px; font-weight: 600; color: var(--ink-3); white-space: nowrap; flex-shrink: 0; }
 .spacer-flex { flex: 1; min-width: 0; }
 .stile-total { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
@@ -3747,4 +3656,179 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   .band-id { flex: 1; }
   .band-blurb { display: none; }
   .band-stats, .band-side { display: none; }
+}
+
+/* =========================================================
+   Cross-entity clickability affordances (A1)
+   NOTE to following agents: keep new CSS in its own block below this one.
+   - .lnk-inline : a nested inline link inside an otherwise-clickable row (reporter/organizer/author
+     names, mail header links). Must stopPropagation on click so it doesn't also trigger row-select.
+   - .row-link   : a whole row/panel that navigates on click (profile activity rows, moderation
+     similar items + user-context panel).
+   ========================================================= */
+.lnk-inline {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  border-radius: 4px;
+  outline: none;
+  /* reset when rendered as a <button> */
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lnk-inline:hover,
+.lnk-inline:focus-visible {
+  color: var(--hue-700, var(--sky-700));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.row-link { cursor: pointer; }
+.row-link:hover { background: var(--paper-2); }
+.row-link:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
+
+.mail-reader-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+}
+.mail-reader-links .lnk-inline {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sky-700);
+}
+
+/* =========================================================
+   Need-mapping oldest-age column + forward-email template editor (A2)
+   Appended after the A1 clickability block — do not merge into it.
+   ========================================================= */
+
+/* Oldest-waiting-report age chip in the "Need mapping" directory view. */
+.juris-age {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.juris-age.overdue {
+  color: var(--bloom-700);
+  font-weight: 700;
+}
+
+/* Email-template sub-card: variable palette, fields, and live preview. */
+.tpl-reset {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
+}
+.tpl-reset:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
+.tpl-reset:disabled { opacity: 0.4; cursor: default; }
+
+.tpl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tpl-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--sky-700);
+  background: var(--sky-50);
+  border: 1px solid color-mix(in oklab, var(--sky) 22%, transparent);
+  border-radius: 6px;
+  padding: 4px 7px;
+  cursor: pointer;
+  transition: background 120ms var(--ease-out), border-color 120ms var(--ease-out), transform 80ms var(--ease-out);
+}
+.tpl-chip:hover {
+  background: #fff;
+  border-color: var(--sky);
+}
+.tpl-chip:active { transform: translateY(1px); }
+
+.tpl-field { margin-top: 0; margin-bottom: 10px; }
+.tpl-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+.tpl-subject,
+.tpl-body {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--ink);
+  font: inherit;
+  transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+}
+.tpl-body {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.tpl-subject:focus,
+.tpl-body:focus {
+  outline: none;
+  border-color: var(--bloom);
+  box-shadow: var(--ring);
+}
+
+.tpl-preview {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  border: 1px solid var(--border-soft);
+}
+.tpl-preview-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 8px;
+}
+.tpl-email {
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tpl-email-subject {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.tpl-email-body {
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 40px;
 }

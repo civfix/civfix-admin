@@ -3,6 +3,8 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import {
+  FORWARD_TEMPLATE_VARIABLES,
+  interpolateForwardTemplate,
   type DiscoveryContact,
   type JurisdictionDirectoryDTO,
   type JurisdictionLayer,
@@ -15,12 +17,20 @@ import { toAppError } from "@/lib/api"
 import { promptDialog } from "@/components/shared/dialog"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import {
   useJurisdictionDirectory,
   useJurisdictionGeometry,
   usePatchJurisdiction,
   useSaveJurisdictionContacts,
 } from "@/features/discovery/use-discovery"
+import {
+  getJurisdictionSort,
+  getNeedsMappingCountDisplay,
+  getForwardTemplateFields,
+  type JurisdictionFilter,
+  type JurisdictionSort,
+} from "@/features/discovery/discovery-ui-state"
 
 const BoundaryMap = dynamic(
   () => import("@/components/map/boundary-map").then((m) => m.BoundaryMap),
@@ -45,6 +55,64 @@ function fmtRouted(iso: string | null): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return "—"
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+const HOUR_MS = 60 * 60 * 1000
+
+/** Compact relative age ("just now", "5h", "3d", "2w", "4mo", "1y") for the oldest waiting report. */
+function fmtAge(iso: string | null): string {
+  if (!iso) return "—"
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return "—"
+  const diff = Date.now() - then
+  if (diff < 60 * 1000) return "just now"
+  const mins = Math.floor(diff / (60 * 1000))
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(diff / HOUR_MS)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(diff / (24 * HOUR_MS))
+  if (days < 14) return `${days}d`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 8) return `${weeks}w`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo`
+  return `${Math.floor(days / 365)}y`
+}
+
+/** Overdue once the oldest waiting report is older than ~24h. */
+function isOverdue(iso: string | null): boolean {
+  if (!iso) return false
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return false
+  return Date.now() - then > 24 * HOUR_MS
+}
+
+/** Fallback subject shown in the live preview when the operator hasn't authored one (mirrors the built-in default shape). */
+const DEFAULT_SUBJECT_HINT = "New {category} report in {place} — {referenceCode}"
+
+/** Realistic example values for every bare token, driving the template editor's live preview. */
+const SAMPLE_VALUES: Record<string, string> = {
+  referenceCode: "CVX-4821",
+  reportId: "rpt_9f3a2c",
+  shortId: "9f3a2c",
+  title: "Pothole on Broadway",
+  category: "pothole",
+  status: "Submitted",
+  place: "Oakland, CA",
+  address: "1200 Broadway",
+  coordinates: "37.80, -122.27",
+  lat: "37.80",
+  lng: "-122.27",
+  mapLink: "https://www.openstreetmap.org/?mlat=37.80&mlon=-122.27#map=18/37.80/-122.27",
+  description: "Deep pothole in the right lane, roughly 2 ft across, near the crosswalk.",
+  reporterName: "Jordan M.",
+  confirmations: "3",
+  submittedDate: "Jul 18, 2026",
+  jurisdictionName: "City of Oakland",
+  dept: "Public Works",
+  operatorNote: "Second report at this spot this month.",
+  photoLinks: "https://civfix.org/p/abc123\nhttps://civfix.org/p/def456",
+  photoCount: "2",
 }
 
 const REPORT_TYPES: { id: ReportCategory; label: string; pin: string | null }[] = [
@@ -105,19 +173,33 @@ function JurisdictionRow({
   item,
   selected,
   onClick,
+  showOldest = false,
 }: {
   item: JurisdictionDirectoryDTO
   selected: boolean
   onClick: () => void
+  showOldest?: boolean
 }) {
   const isUnmapped = item.geoid === UNMAPPED_GEOID
+  const overdue = showOldest && isOverdue(item.oldestReportAt)
   const needs = needsAttention(item)
   const dom = dominantCategory(item.perCategoryCounts)
   const pin = dom ? catPinSrc(dom) : null
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!isKeyboardActivationKey(event.key)) return
+    event.preventDefault()
+    onClick()
+  }
 
   if (isUnmapped) {
     return (
-      <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+      <div
+        className={`qrow ${selected ? "selected" : ""}`}
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={onKeyDown}
+      >
         <div className="leading has-pin" title="Unmapped">
           <Icons.AlertTriangle size={16} />
         </div>
@@ -136,6 +218,12 @@ function JurisdictionRow({
           </div>
         </div>
         <div className="trailing">
+          {showOldest && item.oldestReportAt && (
+            <span className={`age juris-age ${overdue ? "overdue" : ""}`} title="Oldest waiting report">
+              {overdue && <Icons.AlertTriangle size={10} />}
+              {fmtAge(item.oldestReportAt)}
+            </span>
+          )}
           <span className="row-arrow">
             <Icons.ChevronRight size={14} />
           </span>
@@ -145,7 +233,13 @@ function JurisdictionRow({
   }
 
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+    >
       <div className="leading has-pin" title={LAYER_LABEL[item.layer]}>
         {pin ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -188,7 +282,17 @@ function JurisdictionRow({
         </div>
       </div>
       <div className="trailing">
-        <span className="age">{fmtRouted(item.lastRouted)}</span>
+        {showOldest ? (
+          <span
+            className={`age juris-age ${overdue ? "overdue" : ""}`}
+            title={item.oldestReportAt ? "Oldest waiting report" : "No waiting reports"}
+          >
+            {overdue && <Icons.AlertTriangle size={10} />}
+            {fmtAge(item.oldestReportAt)}
+          </span>
+        ) : (
+          <span className="age">{fmtRouted(item.lastRouted)}</span>
+        )}
         <span className="row-arrow">
           <Icons.ChevronRight size={14} />
         </span>
@@ -214,6 +318,40 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const [defaultEmail, setDefaultEmail] = React.useState(dto.email ?? "")
   const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
   const [handle, setHandle] = React.useState(dto.handle ?? "")
+
+  // Forward-email template override (subject/body). Empty string means "use the built-in default"
+  // (saved as null). Chips insert a `{token}` at the last-focused field's cursor.
+  const [subjectTpl, setSubjectTpl] = React.useState(dto.forwardSubjectTemplate ?? "")
+  const [bodyTpl, setBodyTpl] = React.useState(dto.forwardBodyTemplate ?? "")
+  const subjectRef = React.useRef<HTMLInputElement | null>(null)
+  const bodyRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const focusedTplField = React.useRef<"subject" | "body">("body")
+  const subjectTemplateId = React.useId()
+  const bodyTemplateId = React.useId()
+
+  const insertToken = (token: string) => {
+    const field = focusedTplField.current
+    const el = field === "subject" ? subjectRef.current : bodyRef.current
+    const value = field === "subject" ? subjectTpl : bodyTpl
+    const setValue = field === "subject" ? setSubjectTpl : setBodyTpl
+    const start = el?.selectionStart ?? value.length
+    const end = el?.selectionEnd ?? value.length
+    const next = value.slice(0, start) + token + value.slice(end)
+    setValue(next)
+    // Restore focus + place the caret just after the inserted token.
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      const caret = start + token.length
+      el.setSelectionRange(caret, caret)
+    })
+  }
+
+  const templateChanged =
+    subjectTpl !== (dto.forwardSubjectTemplate ?? "") || bodyTpl !== (dto.forwardBodyTemplate ?? "")
+  const templateEmpty = subjectTpl.trim() === "" && bodyTpl.trim() === ""
+  const previewSubject = interpolateForwardTemplate(subjectTpl || DEFAULT_SUBJECT_HINT, SAMPLE_VALUES)
+  const previewBody = interpolateForwardTemplate(bodyTpl, SAMPLE_VALUES)
 
   const counts = dto.perCategoryCounts
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
@@ -273,11 +411,14 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       Object.keys(contacts).length === 0 &&
       Object.keys(jf).length === 0 &&
       note === "" &&
-      !handleChanged
+      !handleChanged &&
+      !templateChanged
     ) {
       toast("Nothing to save yet")
       return
     }
+    // Send "" as null so an emptied template clears the override back to the built-in default.
+    const templateFields = getForwardTemplateFields(templateChanged, subjectTpl, bodyTpl)
     patch.mutate(
       {
         geoid: dto.geoid,
@@ -285,6 +426,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         ...jf,
         ...(note ? { notes: note } : {}),
         ...(handleChanged ? { handle: normalizedHandle } : {}),
+        ...templateFields,
       },
       {
         onSuccess: () => toast(`Draft saved for ${dto.org}`),
@@ -296,7 +438,12 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const onSaveAndRoute = () => {
     if (!canSave) return
     saveContacts.mutate(
-      { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
+      {
+        geoid: dto.geoid,
+        contacts: contactsPayload(),
+        ...jurisdictionFields(),
+        ...getForwardTemplateFields(templateChanged, subjectTpl, bodyTpl),
+      },
       { onSuccess: () => toast(`Contacts saved for ${dto.org}. Outreach queued.`) },
     )
   }
@@ -514,6 +661,87 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
               </div>
             </div>
           </div>
+
+          { }
+          <div className="sub">
+            <div className="sub-head">
+              Email template
+              <button
+                type="button"
+                className="tpl-reset"
+                style={{ marginLeft: "auto" }}
+                disabled={templateEmpty}
+                onClick={() => {
+                  setSubjectTpl("")
+                  setBodyTpl("")
+                }}
+                title="Clear both fields — the built-in default template will be used"
+              >
+                Reset to default
+              </button>
+            </div>
+            <div className="sub-body">
+              <div className="tpl-legend" aria-label="Insert a variable">
+                {FORWARD_TEMPLATE_VARIABLES.map((v) => (
+                  <button
+                    key={v.token}
+                    type="button"
+                    className="tpl-chip"
+                    title={`${v.label} — ${v.description}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => insertToken(v.token)}
+                  >
+                    {v.token}
+                  </button>
+                ))}
+              </div>
+              <div className="hint" style={{ marginTop: 8, marginBottom: 10 }}>
+                Click a variable to insert it at your cursor. Unknown {"{tokens}"} are left as-is so typos
+                show up in the preview.
+              </div>
+
+              <div className="field tpl-field">
+                <label className="tpl-label" htmlFor={subjectTemplateId}>Subject</label>
+                <input
+                  id={subjectTemplateId}
+                  ref={subjectRef}
+                  type="text"
+                  className="tpl-subject"
+                  value={subjectTpl}
+                  placeholder={DEFAULT_SUBJECT_HINT}
+                  onFocus={() => (focusedTplField.current = "subject")}
+                  onChange={(e) => setSubjectTpl(e.target.value)}
+                />
+              </div>
+              <div className="field tpl-field">
+                <label className="tpl-label" htmlFor={bodyTemplateId}>Body</label>
+                <textarea
+                  id={bodyTemplateId}
+                  ref={bodyRef}
+                  className="tpl-body"
+                  rows={7}
+                  value={bodyTpl}
+                  placeholder="Leave blank to use the built-in default forwarding email…"
+                  onFocus={() => (focusedTplField.current = "body")}
+                  onChange={(e) => setBodyTpl(e.target.value)}
+                />
+              </div>
+
+              <div className="tpl-preview" aria-label="Live preview">
+                <div className="tpl-preview-tag">Preview · sample report</div>
+                <div className="tpl-email">
+                  <div className="tpl-email-subject">{previewSubject}</div>
+                  <div className="tpl-email-body">{previewBody}</div>
+                </div>
+                {templateEmpty && (
+                  <div className="hint" style={{ marginTop: 8 }}>
+                    Both fields are empty — civfix will send its built-in default forwarding email. The
+                    subject above shows the default shape.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -615,9 +843,9 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 }
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState<"all" | "attention" | "clear">("all")
+  const [filter, setFilter] = React.useState<JurisdictionFilter>("all")
   const [layer, setLayer] = React.useState<"all" | JurisdictionLayer>("all")
-  const [sort, setSort] = React.useState<"pop" | "reports">("pop")
+  const [sort, setSort] = React.useState<JurisdictionSort>("pop")
   const [query, setQuery] = React.useState(focusId ?? "")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
@@ -627,11 +855,20 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     return () => clearTimeout(t)
   }, [query])
 
-  const serverFilter = filter === "attention" ? "none" : filter === "clear" ? "routed" : "all"
-  const serverSort = sort === "reports" ? "reports" : "population"
+  const serverFilter =
+    filter === "attention" ? "needs_mapping" : filter === "clear" ? "routed" : "all"
+  const effectiveSort = getJurisdictionSort(filter, sort)
+  const serverSort = effectiveSort === "reports" ? "reports" : effectiveSort === "oldest" ? "oldest" : "population"
+  const oldestView = filter === "attention"
   const listQuery = useJurisdictionDirectory({
     filter: serverFilter,
     sort: serverSort,
+    ...(layer !== "all" ? { layer } : {}),
+    ...(debouncedQ ? { q: debouncedQ } : {}),
+  })
+  const needsMappingCountQuery = useJurisdictionDirectory({
+    filter: "needs_mapping",
+    sort: "oldest",
     ...(layer !== "all" ? { layer } : {}),
     ...(debouncedQ ? { q: debouncedQ } : {}),
   })
@@ -642,6 +879,13 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   )
   const total = listQuery.data?.pages[0]?.total ?? null
   const facets = listQuery.data?.pages[0]?.facets ?? null
+  const needsMappingTotal = needsMappingCountQuery.data?.pages[0]?.total ?? null
+  const needsMappingCountDisplay = getNeedsMappingCountDisplay({
+    count: needsMappingTotal,
+    isLoading: needsMappingCountQuery.isLoading,
+    isError: needsMappingCountQuery.isError,
+  })
+  const allTotal = facets ? facets.routed + facets.unrouted : filter === "all" ? total : null
 
   React.useEffect(() => {
     if (focusId) {
@@ -654,12 +898,21 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     (selId ? (items.find((x) => x.geoid === selId) ?? null) : null) ?? items[0] ?? null
 
   const catFilters = [
-    { value: "all", label: "All", count: total ?? 0 },
-    { value: "attention", label: "Needs contact", count: facets?.unrouted ?? 0 },
+    { value: "all", label: "All", count: allTotal ?? 0 },
+    { value: "attention", label: "Need mapping", count: needsMappingCountDisplay },
     { value: "clear", label: "Routed", count: facets?.routed ?? 0 },
   ]
+
+  const onFilterChange = (v: JurisdictionFilter) => {
+    setFilter(v)
+    // The "need mapping" view is about the most-overdue reports first, so default it to the
+    // oldest-first sort; leaving the view falls back to population unless the operator picked reports.
+    if (v === "attention") setSort("oldest")
+    else if (sort === "oldest") setSort("pop")
+  }
   const headerCount =
-    filter === "attention" ? facets?.unrouted : filter === "clear" ? facets?.routed : total
+    filter === "attention" ? needsMappingTotal : filter === "clear" ? facets?.routed : total
+  const headerCountDisplay = filter === "attention" ? needsMappingCountDisplay : headerCount ?? items.length
 
   return (
     <>
@@ -677,7 +930,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         <FilterChips
           options={catFilters}
           value={filter}
-          onChange={(v) => setFilter(v as "all" | "attention" | "clear")}
+          onChange={(v) => onFilterChange(v as JurisdictionFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">
@@ -706,9 +959,15 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         </div>
         <div className="sortbox">
           <span className="sortbox-label">Sort</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value as "pop" | "reports")}>
+          <select
+            value={effectiveSort}
+            disabled={oldestView}
+            onChange={(e) => setSort(e.target.value as JurisdictionSort)}
+            aria-label="Sort jurisdictions"
+          >
             <option value="pop">Population</option>
             <option value="reports">Reports waiting</option>
+            <option value="oldest">Oldest reports</option>
           </select>
         </div>
       </div>
@@ -717,8 +976,10 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         <section className="card md-list">
           <div className="card-head">
             <h3>
-              {(headerCount ?? items.length).toLocaleString()}{" "}
-              {(headerCount ?? items.length) === 1 ? "jurisdiction" : "jurisdictions"}
+              {typeof headerCountDisplay === "number"
+                ? headerCountDisplay.toLocaleString()
+                : headerCountDisplay}{" "}
+              {headerCountDisplay === 1 ? "jurisdiction" : "jurisdictions"}
             </h3>
             <div className="spacer" />
             <span className="meta">click a row →</span>
@@ -742,6 +1003,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
                     item={item}
                     selected={selected?.geoid === item.geoid}
                     onClick={() => setSelId(item.geoid)}
+                    showOldest={oldestView}
                   />
                 ))}
                 {listQuery.hasNextPage && (

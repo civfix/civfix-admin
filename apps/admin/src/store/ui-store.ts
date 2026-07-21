@@ -9,7 +9,6 @@ export const SECTIONS = [
   "mail",
   "users",
   "moderation",
-  "gov",
   "analytics",
 ] as const
 
@@ -24,7 +23,6 @@ export const PAGE_LABEL: Record<PageId, string> = {
   mail: "Mail",
   users: "Users",
   moderation: "Moderation",
-  gov: "Gov claims",
   analytics: "Analytics",
 }
 

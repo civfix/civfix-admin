@@ -20,6 +20,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { BUCKET_VIEW, reportBucket, reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
+import { getReporterProfileId } from "@/features/reports/reporter-navigation"
 import { useDebounced } from "@/hooks/use-debounced"
 import {
   useDeleteReportMessage,
@@ -179,14 +180,17 @@ function ChatMessageRow({
   msg,
   onRemove,
   removing,
+  nav,
 }: {
   msg: ChatMessageDTO
   onRemove: (msg: ChatMessageDTO) => void
   removing: boolean
+  nav: ReturnType<typeof useNav>
 }) {
   const removed = !!msg.deletedAt || msg.from == null
   const authorName = chatAuthorName(msg)
   const handle = msg.from?.handle
+  const authorId = msg.from?.id
   const reactions = (msg.reactions ?? []).filter((r) => r.count > 0)
   const attachments = msg.attachments ?? []
 
@@ -197,7 +201,28 @@ function ChatMessageRow({
       </span>
       <div className="dsc-msg-body">
         <div className="dsc-msg-top">
-          <span className="dsc-msg-who">{authorName}</span>
+          {authorId && !removed ? (
+            <span
+              className="dsc-msg-who lnk-inline"
+              role="button"
+              tabIndex={0}
+              title={`Open ${authorName}'s profile`}
+              onClick={(e) => {
+                e.stopPropagation()
+                nav("users", authorId)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.stopPropagation()
+                  nav("users", authorId)
+                }
+              }}
+            >
+              {authorName}
+            </span>
+          ) : (
+            <span className="dsc-msg-who">{authorName}</span>
+          )}
           {handle && !removed && <span className="dsc-msg-handle mono">{handle}</span>}
           {msg.forwardedToCity && (
             <span className="pill status-progress tight" title="Forwarded to the routed city">
@@ -271,6 +296,7 @@ function ReportDiscussion({ reportId }: { reportId: string }) {
   const q = useReportChatHistory(reportId)
   const removeMsg = useDeleteReportMessage()
   const toast = useToast()
+  const nav = useNav()
 
   const onRemove = async (msg: ChatMessageDTO) => {
     const ok = await confirmDialog({
@@ -330,6 +356,7 @@ function ReportDiscussion({ reportId }: { reportId: string }) {
                   msg={m}
                   onRemove={onRemove}
                   removing={removeMsg.isPending}
+                  nav={nav}
                 />
               ),
             )}
@@ -351,6 +378,8 @@ const ReportRow = React.memo(function ReportRow({
 }) {
   const view = reportStatusView(item.status)
   const pin = catPinSrc(item.category)
+  const nav = useNav()
+  const reporterId = getReporterProfileId(item.reporter.id)
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
       <div className="leading has-pin" title={REPORT_CATEGORY_LABELS[item.category]}>
@@ -376,7 +405,21 @@ const ReportRow = React.memo(function ReportRow({
         <div className="sub">
           <span className="strong">{item.place}</span>
           <span className="sep">·</span>
-          <span>{firstName(item.reporter.name)}</span>
+          {reporterId ? (
+            <button
+              type="button"
+              className="lnk-inline"
+              title={`Open ${item.reporter.name}'s profile`}
+              onClick={(e) => {
+                e.stopPropagation()
+                nav("users", reporterId)
+              }}
+            >
+              {firstName(item.reporter.name)}
+            </button>
+          ) : (
+            <span>{firstName(item.reporter.name)}</span>
+          )}
           {item.confirmations > 0 && (
             <>
               <span className="sep">·</span>
@@ -420,7 +463,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const outreachView = OUTREACH_VIEW[report.outreach.status] ?? OUTREACH_VIEW.not_sent
   const OutreachIco = outreachView.icon
   const canCity = !!report.city.contact
-  const canReporter = !!report.reporter.id
+  const reporterProfileId = getReporterProfileId(report.reporter.id)
+  const canReporter = reporterProfileId !== null
   const target: "reporter" | "city" = to === "reporter" && !canReporter ? "city" : to
   const canSend = target === "reporter" ? canReporter : canCity
   const pin = catPinSrc(report.category)
@@ -796,9 +840,14 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   <span className="mono">{report.reporter.joined}</span>
                 </div>
               </div>
-              <button className="btn sm ghost full" onClick={() => nav("users", report.reporter.id)}>
-                View full account →
-              </button>
+              {reporterProfileId && (
+                <button
+                  className="btn sm ghost full"
+                  onClick={() => nav("users", reporterProfileId)}
+                >
+                  View full account →
+                </button>
+              )}
             </div>
           </div>
 

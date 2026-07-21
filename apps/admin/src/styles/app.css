@@ -187,12 +187,6 @@
   color: var(--ink-3);
 }
 
-/* Neutral "off" LED for a deliberately not-deployed service (system health card): reads as dormant,
-   not as an amber warning. The design's LED palette only had ok/warn/bad; this adds the dormant tone. */
-.led.off {
-  background: var(--ink-4);
-}
-
 /* Skeleton shimmer for card/list placeholders. */
 .skel {
   position: relative;
@@ -223,25 +217,5 @@
   .op-spin,
   .op-boot-spin {
     animation: none;
-  }
-}
-
-/* -- Home: auxiliary cards row (activity + system health) ----------------- */
-/* The aggregate /admin/home/summary does not carry per-item lists, so the home
-   hub pairs the bento grid with these two real-data cards below it. */
-.hub-tools {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--gutter);
-}
-.hub-aux {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: var(--gutter);
-  margin-top: var(--gutter);
-}
-@media (max-width: 900px) {
-  .hub-aux {
-    grid-template-columns: 1fr;
   }
 }

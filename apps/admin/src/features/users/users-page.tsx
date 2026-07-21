@@ -33,8 +33,11 @@ import {
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
-import { useToast } from "@/store/ui-store"
+import { getUserMessageDestination } from "./profile-activity-navigation"
+import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
+
+type NavFn = ReturnType<typeof useNav>
 
 
 const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
@@ -44,8 +47,9 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   banned: { cls: "status-flag", label: "Banned" },
 }
 
-const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]>, string> = {
+const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]> | "group", string> = {
   chat: "Cleanup chat",
+  group: "Group chat",
   dm: "Direct message",
   report: "Report comment",
 }
@@ -91,10 +95,19 @@ function joinDate(v: string): string {
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 }
 
-function ProfileReportRow({ r }: { r: UserReportItemDTO }) {
+function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
   const pin = catPinSrc(r.category)
+  const open = () => nav("reports", r.id)
   return (
-    <div className="prow">
+    <div
+      className="prow row-link"
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") open()
+      }}
+    >
       <span className="prow-pin" title={REPORT_CATEGORY_LABELS[r.category]}>
         {pin ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -117,10 +130,19 @@ function ProfileReportRow({ r }: { r: UserReportItemDTO }) {
   )
 }
 
-function ProfileEventRow({ e }: { e: UserEventItemDTO }) {
+function ProfileEventRow({ e, nav }: { e: UserEventItemDTO; nav: NavFn }) {
   const organized = e.role === "organizer"
+  const open = () => nav("events", e.id)
   return (
-    <div className="prow">
+    <div
+      className="prow row-link"
+      role="button"
+      tabIndex={0}
+      onClick={open}
+      onKeyDown={(ev) => {
+        if (ev.key === "Enter") open()
+      }}
+    >
       <span className="prow-ico hue-moss">
         <Icons.Calendar size={14} />
       </span>
@@ -148,14 +170,18 @@ function ProfileMessageRow({
   m,
   onRemove,
   removing,
+  nav,
 }: {
   m: UserMessageItemDTO
   onRemove: (m: UserMessageItemDTO) => void
   removing: boolean
+  nav: NavFn
 }) {
   const userDeleted = !!m.deletedAt
-  return (
-    <div className={`prow ${userDeleted ? "removed" : ""}`}>
+  const linkTo: { page: PageId; id: string } | null = getUserMessageDestination(m)
+  const open = linkTo ? () => nav(linkTo.page, linkTo.id) : undefined
+  const content = (
+    <>
       <span className="prow-ico hue-sky">
         {userDeleted ? <Icons.Trash size={14} /> : <Icons.MessageSquare size={14} />}
       </span>
@@ -169,6 +195,17 @@ function ProfileMessageRow({
         </div>
       </div>
       <span className="prow-age">{m.when}</span>
+    </>
+  )
+  return (
+    <div className={`prow ${userDeleted ? "removed" : ""}`}>
+      {open ? (
+        <button type="button" className="prow-main row-link" onClick={open}>
+          {content}
+        </button>
+      ) : (
+        <div className="prow-main">{content}</div>
+      )}
       {!userDeleted && (
         <button
           className="btn sm danger"
@@ -186,6 +223,7 @@ function ProfileMessageRow({
 type TabId = "reports" | "events" | "messages"
 
 function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
+  const nav = useNav()
   const reports = useUserReports(tab === "reports" ? userId : null)
   const events = useUserEvents(tab === "events" ? userId : null)
   const messages = useUserMessages(tab === "messages" ? userId : null)
@@ -216,7 +254,7 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
     return (
       <>
         {items.map((r) => (
-          <ProfileReportRow key={r.id} r={r} />
+          <ProfileReportRow key={r.id} r={r} nav={nav} />
         ))}
       </>
     )
@@ -237,7 +275,7 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
     return (
       <>
         {items.map((e) => (
-          <ProfileEventRow key={e.id} e={e} />
+          <ProfileEventRow key={e.id} e={e} nav={nav} />
         ))}
       </>
     )
@@ -262,6 +300,7 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
           m={m}
           onRemove={onRemoveMessage}
           removing={removeMsg.isPending}
+          nav={nav}
         />
       ))}
     </>

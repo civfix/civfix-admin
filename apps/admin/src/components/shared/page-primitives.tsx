@@ -35,7 +35,7 @@ export function PageHead({
 }
 
 /** One option in a FilterChips control: either a bare string or a { value, label, count }. */
-export type FilterOption = string | { value: string; label: string; count?: number }
+export type FilterOption = string | { value: string; label: string; count?: React.ReactNode }
 
 /** Segmented filter control (`.filter-chips`). */
 export function FilterChips({
