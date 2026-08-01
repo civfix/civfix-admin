@@ -66,6 +66,7 @@ const SUBJECT_LABEL: Record<ModerationSubjectType, string> = {
   event: "event",
   profile: "profile",
   photo: "photo",
+  post: "post",
 }
 
 function rowKindLabel(item: ModerationListItemDTO): string {
