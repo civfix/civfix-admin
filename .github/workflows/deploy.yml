@@ -75,6 +75,7 @@ jobs:
         # NEXT_PUBLIC_* values are inlined into the export here at build time.
         env:
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_CARTO_API_KEY: ${{ vars.NEXT_PUBLIC_CARTO_API_KEY }}
         run: pnpm build
 
       - name: Publish civfix-admin to Cloudflare Pages
