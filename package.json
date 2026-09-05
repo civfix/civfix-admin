@@ -1,6 +1,6 @@
 {
   "name": "civfix-admin",
-  "version": "0.0.0",
+  "version": "1.2.0",
   "private": true,
   "description": "civfix admin / operator dashboard workspace (admin.civfix.org). Consumes the @civfix/shared contract from the private npm registry.",
   "packageManager": "pnpm@9.12.0",
