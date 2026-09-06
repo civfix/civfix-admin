@@ -1,0 +1,40 @@
+import type {
+  AdminEventPageListItemDTO,
+  AdminEventPageListQuery,
+  EventPageDTO,
+  EventPageStatus,
+} from "@civfix/shared"
+
+export const PAGE_FILTERS = ["all", "published", "unpublished", "draft", "flagged"] as const
+export type PageFilter = (typeof PAGE_FILTERS)[number]
+
+function isPageFilter(value: string): value is PageFilter {
+  return (PAGE_FILTERS as readonly string[]).includes(value)
+}
+
+export function pageListParams(
+  filter: string,
+  search: string,
+): Pick<AdminEventPageListQuery, "status" | "flagged" | "q"> {
+  const q = search.trim() === "" ? undefined : search.trim()
+  if (!isPageFilter(filter) || filter === "all") return { q }
+  if (filter === "flagged") return { flagged: true, q }
+  return { status: filter satisfies EventPageStatus, q }
+}
+
+export function pageRowFromDTO(page: EventPageDTO): AdminEventPageListItemDTO {
+  return {
+    cleanupId: page.cleanupId,
+    slug: page.slug,
+    title: page.seo.title ?? (page.slug === null ? "Signup page" : `/${page.slug}`),
+    status: page.status,
+    visibility: page.visibility,
+    organizer: null,
+    orgName: null,
+    viewCount: page.viewCount ?? 0,
+    publishedAt: page.publishedAt ?? null,
+    flaggedAt: page.flaggedAt ?? null,
+    flagReason: page.flagReason ?? null,
+    flaggedBy: null,
+  }
+}

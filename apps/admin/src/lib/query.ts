@@ -127,6 +127,42 @@ export const queryKeys = {
     retention: ["admin", "analytics", "retention"] as const,
   },
 
+  orgs: {
+    all: ["admin", "orgs"] as const,
+    verifications: (params?: unknown) =>
+      ["admin", "orgs", "verifications", params ?? null] as const,
+    detail: (id: string) => ["admin", "orgs", "detail", id] as const,
+    payments: (id: string) => ["admin", "orgs", "payments", id] as const,
+  },
+
+  media: {
+    all: ["admin", "media"] as const,
+    document: (mediaId: string) => ["admin", "media", "document", mediaId] as const,
+  },
+
+  hosts: {
+    all: ["admin", "hosts"] as const,
+    list: (params?: unknown) => ["admin", "hosts", "list", params ?? null] as const,
+    broadcasts: (params?: unknown) => ["admin", "hosts", "broadcasts", params ?? null] as const,
+  },
+
+  pages: {
+    all: ["admin", "pages"] as const,
+    list: (params?: unknown) => ["admin", "pages", "list", params ?? null] as const,
+    preview: (cleanupId: string) => ["admin", "pages", "preview", cleanupId] as const,
+  },
+
+  donations: {
+    all: ["admin", "donations"] as const,
+    list: (params?: unknown) => ["admin", "donations", "list", params ?? null] as const,
+    eligibility: (params?: unknown) =>
+      ["admin", "donations", "eligibility", params ?? null] as const,
+    totalsByOrg: (params?: unknown) =>
+      ["admin", "donations", "totals-by-org", params ?? null] as const,
+    settings: ["admin", "donations", "settings"] as const,
+    legal: ["admin", "donations", "legal"] as const,
+  },
+
   audit: {
     all: ["admin", "audit"] as const,
     list: (params?: unknown) => ["admin", "audit", "list", params ?? null] as const,

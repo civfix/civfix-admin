@@ -8,6 +8,7 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { downloadCsv } from "@/lib/csv"
 import { PageHead, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { BarChart } from "@/features/analytics/analytics-charts"
@@ -164,16 +165,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
     ;(byCategoryQuery.data?.rows ?? []).forEach((c) =>
       rows.push([REPORT_CATEGORY_LABELS[c.cat], c.count, c.pct]),
     )
-    const csv = rows
-      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
-      .join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = "civfix-analytics.csv"
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadCsv("civfix-analytics.csv", rows)
     toast("Analytics exported · civfix-analytics.csv")
   }
 
