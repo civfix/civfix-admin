@@ -12,6 +12,10 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
   users: Icons.Users,
   moderation: Icons.Shield,
   analytics: Icons.BarChart,
+  orgs: Icons.Building,
+  hosts: Icons.Send,
+  pages: Icons.Globe,
+  donations: Icons.Star,
 }
 
 const SECTION_HUE: Record<SectionId, string> = {
@@ -22,6 +26,10 @@ const SECTION_HUE: Record<SectionId, string> = {
   users: "sun",
   moderation: "lilac",
   analytics: "moss",
+  orgs: "sky",
+  hosts: "bloom",
+  pages: "lilac",
+  donations: "moss",
 }
 
 export function BackBar({ page }: { page: SectionId }) {

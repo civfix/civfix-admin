@@ -33,7 +33,7 @@ import {
   getMailPreviewPresentation,
   getModerationPreviewPresentation,
 } from "@/features/home/home-preview-presentation"
-import { useNav, type PageId } from "@/store/ui-store"
+import { PAGE_LABEL, useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -47,8 +47,6 @@ const HUB_ICON: Record<string, IconComponent> = {
   analytics: Icons.BarChart,
 }
 
-// Two preview rows per tile keeps the whole bento within a desktop viewport (see the
-// "Desktop fit-to-viewport" block in admin.css); "… and N more" leads to the full section.
 const PREVIEW_ROWS = 2
 
 interface SectionStat {
@@ -421,6 +419,56 @@ function previewState<T>(query: UseQueryResult<ListPage<T>>, shown: number): Pre
   }
 }
 
+const HOST_PLATFORM_SECTIONS: {
+  page: Extract<PageId, "orgs" | "hosts" | "pages" | "donations">
+  hue: string
+  icon: IconComponent
+  sub: string
+}[] = [
+  {
+    page: "orgs",
+    hue: "sky",
+    icon: Icons.Building,
+    sub: "Verification queue, evidence and payments",
+  },
+  { page: "hosts", hue: "bloom", icon: Icons.Send, sub: "Broadcast counters and the kill switch" },
+  { page: "pages", hue: "lilac", icon: Icons.Globe, sub: "Public signup pages: flag or unpublish" },
+  { page: "donations", hue: "moss", icon: Icons.Star, sub: "AB 488, eligibility and PL-4 totals" },
+]
+
+function HostPlatformLauncher() {
+  const nav = useNav()
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h3>Host platform</h3>
+      </div>
+      <div className="host-launch">
+        {HOST_PLATFORM_SECTIONS.map((section) => {
+          const Ico = section.icon
+          return (
+            <button
+              key={section.page}
+              type="button"
+              className={`launch-row hue-${section.hue}`}
+              onClick={() => nav(section.page)}
+            >
+              <span className="launch-ico">
+                <Ico size={15} />
+              </span>
+              <span className="launch-text">
+                <span className="launch-label">{PAGE_LABEL[section.page]}</span>
+                <span className="launch-sub">{section.sub}</span>
+              </span>
+              <Icons.ChevronRight size={14} />
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 function SectionTile({
   s,
   feature,
@@ -720,6 +768,10 @@ export function HomePage(_props: SectionPageProps) {
             {renderTile(tile("events"))}
           </>
         )}
+
+        <div className="bt-cell bt-host">
+          <HostPlatformLauncher />
+        </div>
       </div>
     </div>
   )
