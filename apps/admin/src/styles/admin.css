@@ -514,6 +514,10 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   flex-direction: column;
   gap: 3px;
   position: relative;
+  min-width: 0;
+  /* Each cell is a container so its display number can scale with the CELL width (money like
+     "$1,234,567.89" used to overflow a 150px KPI cell at a fixed 30px). */
+  container-type: inline-size;
 }
 .statcell:last-child { border-right: none; }
 .statcell-label {
@@ -522,18 +526,23 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-3);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .statcell-num {
   font-family: var(--font-display);
   font-variation-settings: "opsz" 38, "wdth" 88;
   font-weight: 700;
-  font-size: 30px;
+  font-size: clamp(20px, 13cqi, 30px);
   letter-spacing: -0.025em;
   line-height: 1;
   color: var(--ink);
   font-feature-settings: "tnum" 1, "lnum" 1;
   margin-top: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
+.statcell-hot { min-width: 0; overflow-wrap: anywhere; }
 .statcell-hot {
   font-size: 11.5px;
   color: var(--ink-3);
@@ -1077,10 +1086,17 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--ink-3);
-  flex-shrink: 0;
+  /* Handles/slugs keep their full width while it fits; an unusually long one truncates instead
+     of pushing the row wider than its column. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   font-feature-settings: "tnum" 1;
 }
+.qrow .body .top > .pill { flex-shrink: 0; }
 .qrow .body .sub {
   display: flex;
   align-items: center;
@@ -1092,10 +1108,13 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
   background: transparent;
   border: none;
   border-radius: 0;
 }
+.qrow .body .sub > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.qrow .body .sub > .sep, .qrow .body .sub > .pill { flex-shrink: 0; }
 .qrow .body .sub .sep { color: var(--ink-4); }
 .qrow .body .sub .strong { color: var(--ink-2); font-weight: 600; }
 
@@ -1103,6 +1122,13 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+/* Phones: the trailing pills/age move under the body (same column) instead of squeezing the title
+   into a sliver. */
+@media (max-width: 480px) {
+  .qrow { grid-template-columns: 32px minmax(0, 1fr); row-gap: 4px; }
+  .qrow .trailing { grid-column: 2; flex-wrap: wrap; row-gap: 4px; }
 }
 .qrow .age {
   font-family: var(--font-mono);
@@ -1451,7 +1477,8 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   position: relative;
   border: 1px solid var(--border-soft);
 }
-.juris-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.juris-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 10px; margin-top: 12px; }
+.juris-stats > * { min-width: 0; }
 .juris-stats .eyebrow { font-size: 9.5px; margin-bottom: 4px; }
 .juris-stat-n {
   font-family: var(--font-display);
@@ -1532,7 +1559,8 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   color: var(--ink-3);
   font-weight: 600;
   white-space: nowrap;
-  max-width: 200px;
+  max-width: min(200px, 100%);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1645,10 +1673,11 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 /* -- Per-report-type routing contacts --------------------- */
 .ccat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
   gap: 10px;
 }
 .ccat-grid.one-col { grid-template-columns: 1fr; }
+.ccat-grid > * { min-width: 0; }
 .ccat-cell {
   display: flex;
   flex-direction: column;
@@ -1917,10 +1946,16 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   border: 1px solid var(--border-soft);
   border-radius: 8px;
   color: var(--ink-3);
-  min-width: 220px;
+  min-width: min(220px, 100%);
+  max-width: 100%;
   transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
 }
 .searchbox:focus-within { border-color: var(--bloom); box-shadow: var(--ring); }
+.searchbox svg { flex-shrink: 0; }
+@media (max-width: 640px) {
+  /* On phones the search takes its own full-width row of the (wrapping) toolbar. */
+  .searchbox { flex: 1 1 100%; min-width: 0; }
+}
 .searchbox input {
   border: none;
   background: transparent;
@@ -1992,6 +2027,12 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 
 /* Generic table */
 .table { display: flex; flex-direction: column; }
+/* Horizontal scroll container for grid "tables" on narrow viewports: the table keeps a sane
+   minimum width and the WRAPPER scrolls, so the page itself never scrolls sideways. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
+.table-scroll > .table { min-width: 100%; }
+.table-scroll > .table:has(> .trow:not(.jt):not(.ct)) { min-width: 640px; }
+.table-scroll > .table:has(> .trow.jt), .table-scroll > .table:has(> .trow.ct) { min-width: 300px; }
 .trow {
   display: grid;
   grid-template-columns: 1.5fr 1.2fr 1.6fr 1.2fr 0.9fr 1fr;
@@ -2004,6 +2045,7 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   cursor: pointer;
   transition: background 100ms var(--ease-out);
 }
+.trow > * { min-width: 0; overflow-wrap: anywhere; }
 .trow:last-child { border-bottom: none; }
 .trow:not(.thead):hover { background: var(--paper-2); }
 .trow.thead {
@@ -2074,9 +2116,9 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 @media (max-width: 720px) { .mod-detail-grid { grid-template-columns: 1fr; } }
 .mod-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
-.mod-media { display: flex; gap: 12px; }
+.mod-media { display: flex; gap: 12px; flex-wrap: wrap; }
 .mod-photo {
-  width: 120px; height: 120px;
+  width: 120px; height: 120px; max-width: 100%;
   border-radius: 10px;
   background:
     repeating-linear-gradient(45deg, color-mix(in oklab, var(--cat) 18%, var(--paper-2)) 0 10px, var(--paper-2) 10px 20px);
@@ -2204,7 +2246,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 }
 .umr {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 14px;
   padding: 7px 0;
@@ -2213,7 +2255,10 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   border-bottom: 1px solid var(--border-soft);
 }
 .umr > span:first-child { white-space: nowrap; }
-.umr > span:last-child { text-align: right; min-width: 0; }
+/* Values can be long unbroken strings (website URLs, IRS legal names, Stripe disabled reasons):
+   break them anywhere rather than pushing the panel sideways. */
+.umr > span:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.umr > span:last-child a { overflow-wrap: anywhere; }
 .user-meta-rows.boxed .umr:last-child { border-bottom: none; }
 .umr .strong { color: var(--ink); font-weight: 700; }
 .btn.full { width: 100%; justify-content: center; margin-top: 10px; }
@@ -2310,9 +2355,9 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .user-actions .btn.flag-on { margin-right: 0; }
 .rep-confirms { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--moss-700); }
 
-.rep-media { display: flex; gap: 10px; }
+.rep-media { display: flex; gap: 10px; flex-wrap: wrap; }
 .rep-photo {
-  width: 116px; height: 116px; flex-shrink: 0;
+  width: 116px; height: 116px; flex-shrink: 0; max-width: 100%;
   border-radius: 10px;
   background: repeating-linear-gradient(45deg, color-mix(in oklab, var(--cat) 18%, var(--paper-2)) 0 10px, var(--paper-2) 10px 20px);
   border: 1px solid var(--border-soft);
@@ -2610,6 +2655,14 @@ button.pm-copy:hover .mono { color: var(--ink-1); }
   padding: 0 6px; border-radius: 999px; font-feature-settings: "tnum" 1;
 }
 .profile-tab.on .profile-tab-n { color: var(--ink-2); }
+/* Tabs share the strip evenly and may shrink; on phones the count sits under the label so three
+   tabs ("Messages 10141") still fit a 375px card. */
+.profile-tabs { min-width: 0; }
+.profile-tab { min-width: 0; }
+.profile-tab-n { flex-shrink: 0; }
+@media (max-width: 480px) {
+  .profile-tab { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 12px; }
+}
 
 .profile-list { display: flex; flex-direction: column; padding: 6px 16px 4px; flex: 1; }
 .prow {
@@ -2932,7 +2985,13 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 /* =========================================================
    Analytics
    ========================================================= */
-.kpi-strip { margin-bottom: 0; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* min(100%, 150px) keeps the auto-fit floor from exceeding the strip itself on a 375px phone. */
+.kpi-strip { margin-bottom: 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+@media (max-width: 880px) {
+  /* The generic 2-col statusstrip border rules assume 4 cells; auto-fit strips draw their own. */
+  .kpi-strip .statcell { border-right: none; border-bottom: 1px solid var(--border-soft); }
+  .kpi-strip .statcell:last-child { border-bottom: none; }
+}
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2950,7 +3009,9 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   gap: 10px;
   height: 180px;
 }
-.barchart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
+/* min-width: 0 lets columns shrink below their label width (8 months × "September" used to push
+   the chart past the card on phones); labels truncate instead. */
+.barchart-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
 .barchart-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .barchart-bar {
   width: 100%;
@@ -2973,7 +3034,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   color: var(--ink-2);
   white-space: nowrap;
 }
-.barchart-label { font-size: 10.5px; color: var(--ink-3); font-weight: 600; }
+.barchart-label { font-size: 10.5px; color: var(--ink-3); font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 
 .cat-breakdown { display: flex; flex-direction: column; gap: 9px; }
 .cat-bd-row { display: grid; grid-template-columns: 9px 76px 1fr 36px; gap: 9px; align-items: center; font-size: 12.5px; }
@@ -3122,7 +3183,10 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 /* =========================================================
    FLAT SHELL - no global top bar, no sidebar
    ========================================================= */
-.shell-flat { min-height: 100vh; background: var(--paper); }
+/* overflow-x: clip is a last-line guard against sideways page scroll (a stray nowrap in a future
+   panel); the real fixes are min-width:0 / overflow-wrap on the components themselves. `clip`
+   (not hidden) so the sticky back bar keeps working. */
+.shell-flat { min-height: 100vh; background: var(--paper); overflow-x: clip; }
 .main {
   max-width: 1600px;
   margin: 0 auto;
@@ -3217,6 +3281,20 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   padding: 1px 5px; border-radius: 4px;
 }
 @media (max-width: 560px) { .backbar-brand { display: none; } }
+/* Back bar never overflows: the section name + operator name truncate, the buttons never shrink,
+   and on phones the button labels collapse to their icons. */
+.backbar { min-width: 0; }
+.backbar-btn { flex-shrink: 0; white-space: nowrap; }
+.backbar-here { min-width: 0; }
+.backbar-here > .backbar-ico { flex-shrink: 0; }
+.backbar > .meta { min-width: 0; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--ink-3); }
+@media (max-width: 560px) {
+  .backbar { gap: 8px; }
+  .backbar > .meta { display: none; }
+  .backbar-btn > span { display: none; }
+  .backbar-btn { padding: 0 8px; }
+  .backbar-here { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 
 /* =========================================================
    DASHBOARD HUB
@@ -3312,24 +3390,15 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   .hub-bento { grid-template-columns: 1fr; }
   .bt-cell { grid-column: 1 / -1 !important; }
 }
-/* Desktop fit-to-viewport: keep the ENTIRE dashboard on-screen at typical Mac sizes (1280x800 /
-   1440x900) with no page scroll and nothing cut off. The bento fills the viewport height and its
-   three rows share it; if a single tile's content is taller than its cell, that tile scrolls
-   INSIDE itself (so every row is still reachable — nothing is clipped). Only the 3-row desktop
-   layout is locked; at <=1100px the bento reflows to more rows and the page scrolls normally. */
+/* Desktop: the bento is NOT locked to the viewport height. An earlier fit-to-viewport lock
+   (height: 100dvh + overflow: hidden + 1fr rows) silently cut off the fourth row (host platform
+   launcher) on 13"/14" laptops and forced tiles to scroll inside themselves. Rows now size to their
+   content; the map cell stretches to match the discovery + analytics tiles beside it (grid-row:
+   span 2 + min-height clamp above) so the composition still reads as a bento, and the page scrolls
+   naturally when the whole board is taller than the viewport. */
 @media (min-width: 1101px) {
-  .main-home { height: 100dvh; min-height: 0; overflow: hidden; padding-top: 14px; padding-bottom: 16px; }
-  .main-home .hub { height: 100%; min-height: 0; }
-  .main-home .hub-bento {
-    height: 100%;
-    min-height: 0;
-    grid-auto-rows: unset;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(0, auto);
-  }
-  .main-home .bt-cell { min-height: 0; }
-  .main-home .bt-map { min-height: 0; }
-  .main-home .stile { min-height: 0; overflow-y: auto; overflow-x: hidden; }
-  /* Tighten the analytics tile a touch so it fits its cell without an internal scrollbar at 1280x800. */
+  .main-home { padding-top: 14px; padding-bottom: 24px; }
+  /* Tighten the analytics tile a touch so it lines up with the discovery tile at 1280 wide. */
   .main-home .bt-analytics .hub-spark { height: 24px; }
   .main-home .bt-analytics .stile-metricgrid { margin-top: 8px; row-gap: 8px; }
 }
@@ -3347,6 +3416,10 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   position: relative;
   overflow: hidden;
   min-width: 0;
+  /* Tiles are grid cells of very different widths (span 3 ≈ 230px at 1280, span 6 ≈ 480px), so
+     their internal layout responds to the TILE width via container queries, not the viewport. */
+  container-type: inline-size;
+  container-name: stile;
   transition: box-shadow 150ms var(--ease-out), border-color 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .stile::after {
@@ -3366,7 +3439,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .stile-head {
   display: flex; align-items: center; gap: 9px;
-  width: 100%; padding: 0; border: 0; background: none; color: inherit;
+  width: 100%; min-width: 0; padding: 0; border: 0; background: none; color: inherit;
   font: inherit; text-align: left;
 }
 .stile-head:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
@@ -3375,12 +3448,33 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   background: var(--hue-50); color: var(--hue-700);
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.stile-label { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
-.stile-headcount {
-  margin-left: auto;
-  font-size: 11.5px; font-weight: 600; color: var(--ink-3); white-space: nowrap;
+.stile-label {
+  font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em;
+  flex-shrink: 0; white-space: nowrap;
 }
-.stile-headcount b { color: var(--hue-700); font-weight: 700; font-feature-settings: "tnum" 1; }
+/* The headcount ("11460 reports flagged") is the flexible part of the head: it takes the remaining
+   width, right-aligned, and WRAPS onto a second line instead of clipping mid-word when the tile is
+   narrow (the old margin-left:auto + nowrap pair overflowed every span-3 tile at 1280 wide). */
+.stile-headcount {
+  flex: 1 1 auto; min-width: 0;
+  text-align: right;
+  font-size: 11.5px; font-weight: 600; color: var(--ink-3);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.stile-headcount b { color: var(--hue-700); font-weight: 700; font-feature-settings: "tnum" 1; white-space: nowrap; }
+/* Narrow tiles (span-3 cells at 1101-1400px, single-column phones): stack the headcount under the
+   label, aligned with the label's left edge, so neither the label nor the count is truncated. */
+@container stile (max-width: 300px) {
+  .stile-head { flex-wrap: wrap; row-gap: 1px; }
+  .stile-headcount {
+    flex-basis: 100%;
+    text-align: left;
+    padding-left: 37px; /* icon 28px + gap 9px */
+    margin-top: -4px;
+  }
+}
 .stile-status {
   margin-left: auto;
   display: inline-flex; align-items: center; gap: 5px;
@@ -3391,20 +3485,25 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .stile-status.tone-warn  { color: var(--sun-700); }   .stile-status.tone-warn .led  { background: var(--sun-600); }
 .stile-status.tone-ok    { color: var(--moss-700); }  .stile-status.tone-ok .led    { background: var(--moss); }
 .stile-mid { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
-.stile-lead { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.stile-lead { display: flex; align-items: baseline; gap: 7px; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; row-gap: 4px; }
 .stile-num {
   font-family: var(--font-display);
   font-variation-settings: "wdth" 86;
   font-weight: 700;
-  font-size: 38px;
+  /* Scales with the TILE width (cqi) so a 5-digit lead never collides with the spark in a narrow
+     analytics tile; tops out at the design's 38px. */
+  font-size: clamp(26px, 9cqi, 38px);
   line-height: 0.85;
   letter-spacing: -0.03em;
   font-feature-settings: "tnum" 1;
   color: var(--ink);
 }
-.stile.feature .stile-num { font-size: 40px; }
-.stile-unit { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
-.stile-metric { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.stile.feature .stile-num { font-size: clamp(28px, 9cqi, 40px); }
+.stile-unit { font-size: 11.5px; color: var(--ink-3); font-weight: 600; min-width: 0; }
+.stile-metric { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; min-width: 0; }
+/* The spark keeps its 116px design width while there is room, and shrinks (never overflows) when
+   the lead number needs the space. */
+.stile-metric .hub-spark { flex: 0 1 116px; min-width: 56px; }
 .stile-blurb { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin: 0; text-wrap: pretty; }
 
 /* Analytics tile - mini stat grid + category bars */
@@ -3419,13 +3518,15 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 7px 10px;
+  min-width: 0;
 }
-.smg-top { display: flex; align-items: baseline; gap: 6px; }
+.smg-top { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .smg-v {
   font-family: var(--font-display);
   font-variation-settings: "wdth" 88;
-  font-weight: 700; font-size: 18px; letter-spacing: -0.02em; line-height: 1;
+  font-weight: 700; font-size: clamp(15px, 4.5cqi, 18px); letter-spacing: -0.02em; line-height: 1.1;
   color: var(--ink); font-feature-settings: "tnum" 1;
+  min-width: 0; overflow-wrap: anywhere;
 }
 .smg-delta { display: inline-flex; align-items: center; gap: 1px; font-size: 10px; font-weight: 700; color: var(--moss-700); }
 .smg-k { font-size: 10.5px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
@@ -3504,7 +3605,9 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .stile-foot.opens:hover { background-color: var(--hue-50); }
 .stile-foot.opens:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-.stile-moreinline { font-size: 11.5px; font-weight: 600; color: var(--ink-3); white-space: nowrap; flex-shrink: 0; }
+/* The "… and N more" hint yields to the CTA: it truncates with an ellipsis (the full count is one
+   click away) instead of pushing the CTA out of the tile. */
+.stile-moreinline { font-size: 11.5px; font-weight: 600; color: var(--ink-3); white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .spacer-flex { flex: 1; min-width: 0; }
 .stile-total { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; }
 .stile-total b { color: var(--ink); font-weight: 700; font-feature-settings: "tnum" 1; }
@@ -3516,7 +3619,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .stile-cta {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 11.5px; font-weight: 700; color: var(--hue-700);
-  white-space: nowrap; opacity: 0.72;
+  white-space: nowrap; opacity: 0.72; flex-shrink: 0;
   transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
 }
 .stile-foot.opens:hover .stile-cta { opacity: 1; transform: translateX(2px); }
@@ -3574,8 +3677,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .launch-row:hover .launch-ico { background: #fff; }
 .launch-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.launch-label { font-weight: 700; font-size: 13px; color: var(--ink); }
-.launch-sub { font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.launch-label { font-weight: 700; font-size: 13px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.launch-sub { font-size: 11px; color: var(--ink-3); font-weight: 600; min-width: 0; line-height: 1.3; overflow-wrap: anywhere; text-wrap: pretty; }
 .launch-sub.tone-alert { color: var(--bloom-700); }
 .launch-sub.tone-warn { color: var(--sun-700); }
 .launch-sub.tone-ok { color: var(--moss-700); }

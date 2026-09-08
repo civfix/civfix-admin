@@ -227,13 +227,10 @@
    ========================================================================= */
 
 /* -- Dashboard launcher --------------------------------------------------- */
+/* Full-width fourth bento row. Rows are content-sized (see the desktop note on .hub-bento in
+   admin.css), so this row is never cut off by a viewport-height lock. */
 .bt-host { grid-column: span 15; }
 @media (max-width: 1100px) { .bt-host { grid-column: span 6; } }
-@media (min-width: 1101px) {
-  .main-home .hub-bento {
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(0, auto) minmax(0, auto);
-  }
-}
 .host-launch {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -345,6 +342,7 @@
   color: var(--ink-3);
 }
 .pay-reqs-list { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--ink-2); }
+.pay-reqs-list li { overflow-wrap: anywhere; }
 .pay-evidence-list { display: flex; flex-direction: column; gap: 8px; }
 .pay-evidence {
   border: 1px solid var(--border-soft);
@@ -374,7 +372,11 @@
   font-size: 12px;
   color: var(--ink-2);
 }
+.pay-history-row > span { min-width: 0; overflow-wrap: anywhere; }
 .pay-history-row:last-child { border-bottom: none; }
+@media (max-width: 640px) {
+  .pay-history-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+}
 
 /* -- Host messaging ------------------------------------------------------- */
 .bcast-log { display: flex; flex-direction: column; gap: 9px; }
@@ -404,6 +406,8 @@
 .bcast-meta .tone-alert { color: var(--bloom-700); }
 .bcast-hash { margin-top: 4px; font-size: 11px; color: var(--ink-4); }
 .host-events { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Event titles can be long: the chip caps at the row width and truncates, never runs off it. */
+.host-events .btn { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: 32px; }
 
 /* -- Signup page preview -------------------------------------------------- */
 .pg-preview { display: flex; flex-direction: column; gap: 10px; }
@@ -446,8 +450,8 @@
 }
 
 /* -- Donations ------------------------------------------------------------ */
-.don-filings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-@media (max-width: 720px) { .don-filings { grid-template-columns: 1fr; } }
+.don-filings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.don-filings > * { min-width: 0; }
 .don-filing {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
@@ -502,7 +506,11 @@
   font-size: 12px;
   color: var(--ink-2);
 }
+.don-legal-row > span { min-width: 0; overflow-wrap: anywhere; }
 .don-legal-row:last-child { border-bottom: none; }
+@media (max-width: 640px) {
+  .don-legal-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+}
 .don-legal-row.tone-alert { color: var(--bloom-700); }
 .don-legal-type { font-weight: 700; text-transform: capitalize; }
 .don-table { display: flex; flex-direction: column; }
@@ -518,6 +526,12 @@
   cursor: pointer;
   text-align: right;
 }
+/* The organization name is the flexible column (wraps anywhere); money and counts never break
+   mid-number. Narrower viewports drop the derived columns (fee/refunded, then net) rather than
+   squeezing them; every hidden value is on the organization's own page. */
+.don-trow > span { min-width: 0; }
+.don-trow > span:first-child { overflow-wrap: anywhere; }
+.don-trow > span:not(:first-child) { white-space: nowrap; }
 .don-trow:last-child { border-bottom: none; }
 .don-trow:hover:not(.head) { background: var(--paper-2); }
 .don-trow:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
@@ -533,9 +547,13 @@
 .don-trow.head > span:first-child { text-align: left; }
 .don-org { font-weight: 700; color: var(--ink); }
 .don-mnos-org { display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px; }
-@media (max-width: 720px) {
-  .don-trow { grid-template-columns: 1.6fr 1fr 1fr; }
-  .don-trow > span:nth-child(n + 4) { display: none; }
+@media (max-width: 980px) {
+  .don-trow { grid-template-columns: minmax(0, 1.6fr) auto auto auto; }
+  .don-trow > span:nth-child(4), .don-trow > span:nth-child(5) { display: none; }
+}
+@media (max-width: 560px) {
+  .don-trow { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .don-trow > span:nth-child(6) { display: none; }
 }
 
 /* -- Shared list affordances --------------------------------------------- */
