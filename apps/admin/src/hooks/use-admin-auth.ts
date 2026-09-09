@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { AppError, ErrorCode, type AdminLoginResponse } from "@civfix/shared"
+import { ErrorCode, type AdminLoginResponse } from "@civfix/shared"
 
-import { api } from "@/lib/api"
+import { api, toAppError } from "@/lib/api"
 import { navigateToAccessLogout } from "@/lib/access-auth"
 import { useAuthStore, selectIsOperator, selectOperator } from "@/store/auth-store"
 
@@ -84,7 +84,7 @@ export function useOperatorBootstrap(): () => Promise<BootstrapOutcome> {
       return "ok"
     } catch (err) {
       // A clean 403 means Access authenticated the user but they are not on the operator allowlist.
-      if (err instanceof AppError && err.code === ErrorCode.FORBIDDEN) {
+      if (toAppError(err).code === ErrorCode.FORBIDDEN) {
         setStatus("forbidden")
         return "forbidden"
       }

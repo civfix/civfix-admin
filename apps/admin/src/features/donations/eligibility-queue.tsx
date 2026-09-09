@@ -15,6 +15,7 @@ import {
 import { EligibilityEvidenceRow } from "@/components/shared/eligibility-evidence"
 import { mnosCheckLog } from "@/features/donations/donations-reporting"
 import { usePaymentsEligibilityInfinite } from "@/features/donations/use-donations"
+import { orgFocus } from "@/features/orgs/org-focus"
 import { useNav } from "@/store/ui-store"
 
 const VERDICT_FILTERS: { value: string; label: string; verdict?: EligibilityVerdict }[] = [
@@ -88,7 +89,7 @@ export function EligibilityQueue() {
                   <div
                     key={row.organizationId}
                     className="qrow"
-                    onClick={() => nav("orgs", row.organizationId)}
+                    onClick={() => nav("orgs", orgFocus(row.organizationId, "payments"))}
                   >
                     <div className="leading">
                       <span className="evt-row-ico hue-moss" title="Organization">
@@ -173,9 +174,9 @@ export function EligibilityQueue() {
                       className="lnk-inline"
                       role="button"
                       tabIndex={0}
-                      onClick={() => nav("orgs", entry.organizationId)}
+                      onClick={() => nav("orgs", orgFocus(entry.organizationId, "payments"))}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") nav("orgs", entry.organizationId)
+                        if (e.key === "Enter") nav("orgs", orgFocus(entry.organizationId, "payments"))
                       }}
                     >
                       {entry.orgName}

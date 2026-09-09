@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest"
+
+import { canRemoveMember, roleChangeCopy, roleTargets } from "./org-members"
+
+describe("member role rules", () => {
+  it("offers every role but the current one, including an ownership transfer", () => {
+    expect(roleTargets("member")).toEqual(["owner", "admin"])
+    expect(roleTargets("admin")).toEqual(["owner", "member"])
+    expect(roleTargets("owner")).toEqual(["admin", "member"])
+  })
+
+  it("never lets the owner row be removed", () => {
+    expect(canRemoveMember("owner")).toBe(false)
+    expect(canRemoveMember("admin")).toBe(true)
+    expect(canRemoveMember("member")).toBe(true)
+  })
+})
+
+describe("roleChangeCopy", () => {
+  it("spells out an ownership transfer and the old owner's demotion", () => {
+    const copy = roleChangeCopy({
+      memberName: "Ada",
+      from: "admin",
+      to: "owner",
+      orgName: "River Friends",
+      currentOwnerName: "Grace",
+    })
+    expect(copy.transfer).toBe(true)
+    expect(copy.title).toBe("Transfer ownership of River Friends to Ada?")
+    expect(copy.body).toContain("exactly one owner")
+    expect(copy.body).toContain("Grace becomes an admin")
+    expect(copy.confirmLabel).toBe("Transfer ownership")
+  })
+
+  it("falls back to generic wording when the current owner is unknown", () => {
+    const copy = roleChangeCopy({ memberName: "Ada", from: "member", to: "owner", orgName: "X" })
+    expect(copy.body).toContain("the current owner becomes an admin")
+  })
+
+  it("tells the operator to transfer first when demoting the owner", () => {
+    const copy = roleChangeCopy({ memberName: "Grace", from: "owner", to: "member", orgName: "X" })
+    expect(copy.transfer).toBe(false)
+    expect(copy.body).toContain("transfer ownership to another member first")
+  })
+
+  it("describes a plain promotion or demotion", () => {
+    expect(
+      roleChangeCopy({ memberName: "Ada", from: "member", to: "admin", orgName: "X" }).title,
+    ).toBe("Make Ada an admin of X?")
+    expect(
+      roleChangeCopy({ memberName: "Ada", from: "admin", to: "member", orgName: "X" }).confirmLabel,
+    ).toBe("Make member")
+  })
+})
