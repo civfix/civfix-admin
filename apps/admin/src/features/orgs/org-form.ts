@@ -137,6 +137,8 @@ function sameSocial(a: SocialLinks | null, b: SocialLinks | null | undefined): b
 /**
  * The PATCH body for an edit: only the fields that differ from the loaded org are sent, a cleared
  * optional field is sent as null. Returns null when nothing changed (the caller skips the request).
+ * Both sides are compared trimmed, so an org stored with stray whitespace is not "dirty" on open and
+ * an unchanged field is never sent.
  */
 export function buildUpdateRequest(
   org: AdminOrgDTO,
@@ -146,7 +148,7 @@ export function buildUpdateRequest(
   const body: AdminUpdateOrgRequest = { id: org.id, reason: reason.trim() }
   let changed = false
   const name = draft.name.trim()
-  if (name !== org.name) {
+  if (name !== org.name.trim()) {
     body.name = name
     changed = true
   }
@@ -156,12 +158,12 @@ export function buildUpdateRequest(
     changed = true
   }
   const description = draft.description.trim()
-  if (description !== (org.description ?? "")) {
+  if (description !== (org.description ?? "").trim()) {
     body.description = description === "" ? null : description
     changed = true
   }
   const websiteUrl = draft.websiteUrl.trim()
-  if (websiteUrl !== (org.websiteUrl ?? "")) {
+  if (websiteUrl !== (org.websiteUrl ?? "").trim()) {
     body.websiteUrl = websiteUrl === "" ? null : websiteUrl
     changed = true
   }
@@ -175,14 +177,17 @@ export function buildUpdateRequest(
 
 /**
  * Map a failed create/update to inline field errors. A CONFLICT is the slug (the only unique field an
- * operator supplies); a VALIDATION error carries `fields` keyed by request field. Anything else is
- * left to the global mutation toast and returns an empty object.
+ * operator supplies) — but only when the request actually carried a slug, which an edit that leaves
+ * the slug alone does not; a VALIDATION error carries `fields` keyed by request field. Anything else
+ * returns an empty object so the caller falls back to the error toast.
  */
-export function fieldErrorsFromError(raw: unknown): OrgProfileErrors {
+export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }): OrgProfileErrors {
   if (!(raw instanceof Error)) return {}
   const err = toAppError(raw)
   if (err.code === ErrorCode.CONFLICT) {
-    return { slug: "This slug is already taken." }
+    return request === undefined || request.slug !== undefined
+      ? { slug: "This slug is already taken." }
+      : {}
   }
   if (err.code === ErrorCode.VALIDATION && err.fields) {
     const out: OrgProfileErrors = {}
@@ -203,4 +208,37 @@ export function fieldErrorsFromError(raw: unknown): OrgProfileErrors {
     return out
   }
   return {}
+}
+
+/**
+ * Drop the server-reported errors for every profile field whose value changed between two drafts:
+ * the operator is fixing that field, so the stale server message must not stick to it. Returns the
+ * same object when nothing was cleared, so callers can skip a state update.
+ */
+export function clearChangedFieldErrors(
+  errors: OrgProfileErrors,
+  prev: OrgProfileDraft,
+  next: OrgProfileDraft,
+): OrgProfileErrors {
+  const changed: OrgProfileField[] = []
+  if (prev.name !== next.name) changed.push("name")
+  if (prev.slug !== next.slug) changed.push("slug")
+  if (prev.description !== next.description) changed.push("description")
+  if (prev.websiteUrl !== next.websiteUrl) changed.push("websiteUrl")
+  for (const p of SOCIAL_PLATFORMS) if (prev.social[p] !== next.social[p]) changed.push(p)
+  const stale = changed.filter((key) => errors[key] !== undefined)
+  if (stale.length === 0) return errors
+  const out = { ...errors }
+  for (const key of stale) delete out[key]
+  return out
+}
+
+/** Keep only the errors under `keys` — the fields a given form actually renders. */
+export function pickFieldErrors(
+  errors: OrgProfileErrors,
+  keys: readonly (keyof OrgProfileErrors)[],
+): OrgProfileErrors {
+  const out: OrgProfileErrors = {}
+  for (const key of keys) if (errors[key] !== undefined) out[key] = errors[key]
+  return out
 }

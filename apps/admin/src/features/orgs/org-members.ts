@@ -34,9 +34,31 @@ export function canRemoveMember(role: OrganizationMemberRole): boolean {
 export interface RoleChangeCopy {
   title: string
   body: string
-  confirmLabel: string
+  /** Absent when the change cannot proceed (demoting the owner): the dialog only explains. */
+  confirmLabel?: string
   /** True when the change is an ownership transfer (rendered with the stronger, danger styling). */
   transfer: boolean
+}
+
+/**
+ * Keyboard navigation inside a `role="menu"`: the index of the item to focus after `key`, given the
+ * currently focused index (-1 when none) and the item count, or null when the key is not a menu key.
+ * Arrows wrap; Home/End jump.
+ */
+export function menuFocusIndex(key: string, current: number, count: number): number | null {
+  if (count === 0) return null
+  switch (key) {
+    case "ArrowDown":
+      return current < 0 ? 0 : (current + 1) % count
+    case "ArrowUp":
+      return current < 0 ? count - 1 : (current - 1 + count) % count
+    case "Home":
+      return 0
+    case "End":
+      return count - 1
+    default:
+      return null
+  }
 }
 
 /**
@@ -65,7 +87,6 @@ export function roleChangeCopy(opts: {
     return {
       title: `Demote ${memberName} to ${ORG_ROLE_LABEL[to].toLowerCase()}?`,
       body: `${memberName} is the owner of ${orgName}. An organization must keep an owner, so transfer ownership to another member first, then change this role.`,
-      confirmLabel: `Make ${ORG_ROLE_LABEL[to].toLowerCase()}`,
       transfer: false,
     }
   }

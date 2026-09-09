@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { AppError, ErrorCode, type AdminOrgDTO } from "@civfix/shared"
+import { AppError, ErrorCode, type AdminOrgDTO, type AdminUpdateOrgRequest } from "@civfix/shared"
 
 import {
   buildCreateRequest,
   buildUpdateRequest,
+  clearChangedFieldErrors,
   draftFromOrg,
   emptyProfileDraft,
   fieldErrorsFromError,
+  pickFieldErrors,
   socialLinksFromDraft,
   validateProfileDraft,
 } from "./org-form"
@@ -104,6 +106,30 @@ describe("buildUpdateRequest", () => {
     draft.slug = "river-friends-la"
     expect(buildUpdateRequest(org, draft, "r")?.slug).toBe("river-friends-la")
   })
+
+  it("compares trimmed against trimmed, so stored whitespace is not a change", () => {
+    const padded: AdminOrgDTO = {
+      ...org,
+      name: " River Friends ",
+      description: "We clean the river.\n",
+      websiteUrl: " https://river.example.org",
+    }
+    // The draft mirrors the org verbatim: nothing to send.
+    expect(buildUpdateRequest(padded, draftFromOrg(padded), "r")).toBeNull()
+    // Typing surrounding whitespace into the draft is not a change either.
+    const draft = draftFromOrg(org)
+    draft.name = `  ${org.name}  `
+    draft.description = `${org.description}\n\n`
+    draft.websiteUrl = ` ${org.websiteUrl} `
+    expect(buildUpdateRequest(org, draft, "r")).toBeNull()
+    // A real edit next to a padded field only sends the edited key.
+    draft.description = "We clean the river, weekly."
+    expect(buildUpdateRequest(org, draft, "r")).toEqual({
+      id: org.id,
+      reason: "r",
+      description: "We clean the river, weekly.",
+    })
+  })
 })
 
 describe("fieldErrorsFromError", () => {
@@ -111,6 +137,15 @@ describe("fieldErrorsFromError", () => {
     expect(fieldErrorsFromError(new AppError(ErrorCode.CONFLICT, "slug taken"))).toEqual({
       slug: "This slug is already taken.",
     })
+  })
+
+  it("maps a conflict to the slug only when the request carried one", () => {
+    const conflict = new AppError(ErrorCode.CONFLICT, "conflict")
+    expect(fieldErrorsFromError(conflict, { slug: "river-friends" })).toEqual({
+      slug: "This slug is already taken.",
+    })
+    const noSlug: AdminUpdateOrgRequest = { id: org.id, reason: "r", name: "X" }
+    expect(fieldErrorsFromError(conflict, noSlug)).toEqual({})
   })
 
   it("maps VALIDATION.fields onto the form fields it knows", () => {
@@ -130,5 +165,32 @@ describe("fieldErrorsFromError", () => {
   it("returns nothing for other errors so the toast handles them", () => {
     expect(fieldErrorsFromError(new AppError(ErrorCode.FORBIDDEN, "no"))).toEqual({})
     expect(fieldErrorsFromError(new Error("network"))).toEqual({})
+  })
+})
+
+describe("clearChangedFieldErrors", () => {
+  const errors = { name: "too long", slug: "taken", x: "bad handle", ownerUserId: "unknown" }
+
+  it("drops the errors of the fields that changed and keeps the rest", () => {
+    const prev = draftFromOrg(org)
+    const next = { ...prev, slug: "river-friends-la", social: { ...prev.social, x: "river" } }
+    expect(clearChangedFieldErrors(errors, prev, next)).toEqual({
+      name: "too long",
+      ownerUserId: "unknown",
+    })
+  })
+
+  it("returns the same object when no errored field changed", () => {
+    const prev = draftFromOrg(org)
+    const next = { ...prev, description: "edited" }
+    expect(clearChangedFieldErrors(errors, prev, next)).toBe(errors)
+  })
+})
+
+describe("pickFieldErrors", () => {
+  it("keeps only the keys a form renders", () => {
+    expect(pickFieldErrors({ name: "a", reason: "b", ownerUserId: "c" }, ["name", "slug"])).toEqual({
+      name: "a",
+    })
   })
 })

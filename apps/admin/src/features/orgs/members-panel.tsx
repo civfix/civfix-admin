@@ -6,6 +6,7 @@ import type { AdminOrgDTO, AdminOrgMemberDTO, OrganizationMemberRole } from "@ci
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDate } from "@/lib/dates"
 import {
@@ -13,6 +14,7 @@ import {
   ORG_ROLE_PILL,
   ORG_ROLES,
   canRemoveMember,
+  menuFocusIndex,
   roleChangeCopy,
   roleTargets,
 } from "@/features/orgs/org-members"
@@ -124,8 +126,12 @@ function MemberRow({
   const [menuPos, setMenuPos] = React.useState<{ top?: number; bottom?: number; right: number } | null>(
     null,
   )
-  const menuRef = React.useRef<HTMLDivElement>(null)
+  const wrapRef = React.useRef<HTMLDivElement>(null)
+  const popRef = React.useRef<HTMLDivElement>(null)
   const triggerRef = React.useRef<HTMLButtonElement>(null)
+  // True from a menu choice until its dialog resolves: the menu is closed by then, but a keyboard
+  // user can reopen it and pick again while the prompt is still up.
+  const prompting = React.useRef(false)
   const menuOpen = menuPos !== null
   const busy = setRole.isPending || remove.isPending
   const removable = canRemoveMember(member.role)
@@ -137,17 +143,34 @@ function MemberRow({
     const flipUp = rect.bottom + 220 > window.innerHeight
     setMenuPos(flipUp ? { bottom: window.innerHeight - rect.top + 4, right } : { top: rect.bottom + 4, right })
   }
-  const setMenuOpen = (open: boolean) => (open ? openMenu() : setMenuPos(null))
+  /** Close the menu; `returnFocus` hands focus back to the trigger (keyboard dismissals). */
+  const closeMenu = React.useCallback((returnFocus: boolean) => {
+    setMenuPos(null)
+    if (returnFocus) triggerRef.current?.focus({ preventScroll: true })
+  }, [])
 
+  const menuItems = () =>
+    Array.from(
+      popRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
+    )
+
+  // A real menu: the first item takes focus on open; arrows/Home/End move (wrapping), Escape closes
+  // and returns focus to the trigger, and focus leaving the menu (Tab, a click elsewhere) closes it.
   React.useEffect(() => {
     if (!menuOpen) return
+    menuItems()[0]?.focus({ preventScroll: true })
     const onDoc = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuPos(null)
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) closeMenu(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuPos(null)
+      if (e.key === "Escape") {
+        // The menu owns this Escape: nothing above it (the shell's go-home) should also react.
+        e.preventDefault()
+        e.stopPropagation()
+        closeMenu(true)
+      }
     }
-    const onScroll = () => setMenuPos(null)
+    const onScroll = () => closeMenu(false)
     document.addEventListener("mousedown", onDoc)
     document.addEventListener("keydown", onKey)
     window.addEventListener("scroll", onScroll, true)
@@ -158,10 +181,24 @@ function MemberRow({
       window.removeEventListener("scroll", onScroll, true)
       window.removeEventListener("resize", onScroll)
     }
-  }, [menuOpen])
+  }, [menuOpen, closeMenu])
+
+  const onMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = menuItems()
+    const current = items.findIndex((el) => el === document.activeElement)
+    const next = menuFocusIndex(e.key, current, items.length)
+    if (next === null) return
+    e.preventDefault()
+    items[next]?.focus({ preventScroll: true })
+  }
+  const onMenuBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    const to = e.relatedTarget as Node | null
+    if (!to || !wrapRef.current?.contains(to)) closeMenu(false)
+  }
 
   const onChangeRole = async (to: OrganizationMemberRole) => {
-    setMenuOpen(false)
+    closeMenu(true)
+    if (prompting.current || busy) return
     const copy = roleChangeCopy({
       memberName: member.user.name,
       from: member.role,
@@ -169,27 +206,33 @@ function MemberRow({
       orgName: org.name,
       currentOwnerName: ownerName,
     })
-    if (member.role === "owner") {
-      // An org must keep an owner: the backend refuses a plain demotion, so explain instead of trying.
-      await confirmDialog({
+    prompting.current = true
+    let reason: string | null
+    try {
+      if (member.role === "owner") {
+        // An org must keep an owner: the backend refuses a plain demotion, so explain instead of trying.
+        await confirmDialog({
+          title: copy.title,
+          body: copy.body,
+          confirmLabel: "Got it",
+          cancelLabel: "Close",
+        })
+        return
+      }
+      reason = await promptDialog({
         title: copy.title,
         body: copy.body,
-        confirmLabel: "Got it",
-        cancelLabel: "Close",
+        label: "Reason (required)",
+        placeholder: copy.transfer
+          ? "Founder stepped down; board appointed a new lead…"
+          : "Requested by the organization's owner…",
+        confirmLabel: copy.confirmLabel,
+        required: true,
+        danger: copy.transfer,
       })
-      return
+    } finally {
+      prompting.current = false
     }
-    const reason = await promptDialog({
-      title: copy.title,
-      body: copy.body,
-      label: "Reason (required)",
-      placeholder: copy.transfer
-        ? "Founder stepped down; board appointed a new lead…"
-        : "Requested by the organization's owner…",
-      confirmLabel: copy.confirmLabel,
-      required: true,
-      danger: copy.transfer,
-    })
     if (reason === null || reason.trim() === "") return
     setRole.mutate(
       { id: org.id, userId: member.user.id, role: to, reason: reason.trim() },
@@ -205,16 +248,23 @@ function MemberRow({
   }
 
   const onRemove = async () => {
-    setMenuOpen(false)
-    const reason = await promptDialog({
-      title: `Remove ${member.user.name} from ${org.name}?`,
-      body: "They lose access to the organization, its events and its broadcasts immediately. Their account is untouched. The reason is written to the audit log.",
-      label: "Reason (required)",
-      placeholder: "Left the organization; confirmed by the owner…",
-      confirmLabel: "Remove member",
-      required: true,
-      danger: true,
-    })
+    closeMenu(true)
+    if (prompting.current || busy) return
+    prompting.current = true
+    let reason: string | null
+    try {
+      reason = await promptDialog({
+        title: `Remove ${member.user.name} from ${org.name}?`,
+        body: "They lose access to the organization, its events and its broadcasts immediately. Their account is untouched. The reason is written to the audit log.",
+        label: "Reason (required)",
+        placeholder: "Left the organization; confirmed by the owner…",
+        confirmLabel: "Remove member",
+        required: true,
+        danger: true,
+      })
+    } finally {
+      prompting.current = false
+    }
     if (reason === null || reason.trim() === "") return
     remove.mutate(
       { id: org.id, userId: member.user.id, reason: reason.trim() },
@@ -236,7 +286,9 @@ function MemberRow({
             title="Open profile"
             onClick={() => nav("users", member.user.id)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") nav("users", member.user.id)
+              if (!isKeyboardActivationKey(e.key)) return
+              e.preventDefault()
+              nav("users", member.user.id)
             }}
           >
             {member.user.name}
@@ -257,7 +309,7 @@ function MemberRow({
         <span className={`pill ${ORG_ROLE_PILL[member.role]} tight`}>
           {member.role === "owner" && <Icons.Star size={9} />} {ORG_ROLE_LABEL[member.role]}
         </span>
-        <div className="row-menu" ref={menuRef}>
+        <div className="row-menu" ref={wrapRef}>
           <button
             ref={triggerRef}
             type="button"
@@ -266,12 +318,27 @@ function MemberRow({
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             disabled={busy || !!org.deletedAt}
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={() => (menuOpen ? closeMenu(false) : openMenu())}
+            onKeyDown={(e) => {
+              // ArrowDown on a closed menu button opens it (WAI-ARIA menu-button pattern).
+              if (!menuOpen && e.key === "ArrowDown") {
+                e.preventDefault()
+                openMenu()
+              }
+            }}
           >
             <Icons.MoreH size={14} />
           </button>
           {menuPos && (
-            <div className="row-menu-pop" role="menu" style={menuPos}>
+            <div
+              className="row-menu-pop"
+              role="menu"
+              aria-label={`Actions for ${member.user.name}`}
+              ref={popRef}
+              style={menuPos}
+              onKeyDown={onMenuKeyDown}
+              onBlur={onMenuBlur}
+            >
               <div className="row-menu-label">Change role</div>
               {roleTargets(member.role).map((r) => (
                 <button
@@ -326,19 +393,28 @@ function AddMemberForm({
   const [role, setRole] = React.useState<OrganizationMemberRole>("member")
   const [reason, setReason] = React.useState("")
   const [attempted, setAttempted] = React.useState(false)
+  // Guards a second Enter while the transfer confirmation is open.
+  const confirming = React.useRef(false)
   const transfer = role === "owner"
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (confirming.current || add.isPending) return
     setAttempted(true)
     if (!user || reason.trim() === "") return
     if (transfer) {
-      const ok = await confirmDialog({
-        title: `Transfer ownership of ${org.name} to ${user.name}?`,
-        body: `An organization has exactly one owner. ${user.name} becomes the owner and ${ownerName ?? "the current owner"} becomes an admin in the same change.`,
-        confirmLabel: "Transfer ownership",
-        danger: true,
-      })
+      confirming.current = true
+      let ok: boolean
+      try {
+        ok = await confirmDialog({
+          title: `Transfer ownership of ${org.name} to ${user.name}?`,
+          body: `An organization has exactly one owner. ${user.name} becomes the owner and ${ownerName ?? "the current owner"} becomes an admin in the same change.`,
+          confirmLabel: "Transfer ownership",
+          danger: true,
+        })
+      } finally {
+        confirming.current = false
+      }
       if (!ok) return
     }
     add.mutate(

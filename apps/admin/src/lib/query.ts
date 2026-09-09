@@ -85,6 +85,8 @@ export const queryKeys = {
   users: {
     all: ["admin", "users"] as const,
     list: (params?: unknown) => ["admin", "users", "list", params ?? null] as const,
+    /** One flat page (home preview, user picker) — kept apart from the infinite `list` cache entries. */
+    page: (params?: unknown) => ["admin", "users", "page", params ?? null] as const,
     detail: (id: string) => ["admin", "users", "detail", id] as const,
     reports: (id: string, params?: unknown) => ["admin", "users", id, "reports", params ?? null] as const,
     events: (id: string, params?: unknown) => ["admin", "users", id, "events", params ?? null] as const,
@@ -128,8 +130,6 @@ export const queryKeys = {
 
   orgs: {
     all: ["admin", "orgs"] as const,
-    verifications: (params?: unknown) =>
-      ["admin", "orgs", "verifications", params ?? null] as const,
     list: (params?: unknown) => ["admin", "orgs", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "orgs", "detail", id] as const,
     payments: (id: string) => ["admin", "orgs", "payments", id] as const,

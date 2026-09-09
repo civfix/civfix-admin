@@ -671,6 +671,10 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 @media (max-width: 520px) {
   .social-grid { grid-template-columns: 1fr; }
 }
+/* Inside a slide-over column the grid follows the column's width, not the viewport's. */
+@container panel-col (max-width: 360px) {
+  .social-grid { grid-template-columns: 1fr; }
+}
 .social-links { display: inline-flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 .social-links a.pill { text-decoration: none; }
 
@@ -690,6 +694,9 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   background: #fff;
   max-height: 224px;
   overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 .user-pick-row {
   display: flex; align-items: center; gap: 10px;
@@ -700,7 +707,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   font: inherit; color: inherit; text-align: left;
   cursor: pointer;
 }
-.user-pick-row:last-child { border-bottom: none; }
+.user-pick-results li:last-child .user-pick-row { border-bottom: none; }
 .user-pick-row:hover, .user-pick-row:focus-visible { background: var(--paper-2); outline: none; }
 .user-pick-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .user-pick-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

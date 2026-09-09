@@ -13,16 +13,19 @@ import { promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import {
+  SOCIAL_PLATFORMS as PROFILE_SOCIALS,
   buildUpdateRequest,
+  clearChangedFieldErrors,
   draftFromOrg,
   fieldErrorsFromError,
+  pickFieldErrors,
   validateProfileDraft,
   type OrgProfileDraft,
   type OrgProfileErrors,
 } from "@/features/orgs/org-form"
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
-import { useUpdateOrg } from "@/features/orgs/use-orgs"
+import { toastUnlessShownInline, useUpdateOrg } from "@/features/orgs/use-orgs"
 import { ORG_KIND_LABEL, ORG_STATUS_VIEW } from "@/features/orgs/verification-panel"
 import { useNav, useToast } from "@/store/ui-store"
 
@@ -154,48 +157,71 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
   )
 }
 
+/** The fields the editor renders; a server error on anything else (the reason, say) is toasted. */
+const EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
+  "name",
+  "slug",
+  "description",
+  "websiteUrl",
+  ...PROFILE_SOCIALS,
+]
+
 function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }) {
   const update = useUpdateOrg()
   const toast = useToast()
   const [draft, setDraft] = React.useState<OrgProfileDraft>(() => draftFromOrg(org))
-  const [errors, setErrors] = React.useState<OrgProfileErrors>({})
+  const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
   const [attempted, setAttempted] = React.useState(false)
+  // True from the click until the reason prompt resolves: a second click while the prompt is open
+  // must not queue a second prompt (and a second PATCH) behind it.
+  const busy = React.useRef(false)
 
   const liveErrors = React.useMemo(
-    () => (attempted ? { ...validateProfileDraft(draft), ...errors } : errors),
-    [attempted, draft, errors],
+    () => (attempted ? { ...validateProfileDraft(draft), ...serverErrors } : serverErrors),
+    [attempted, draft, serverErrors],
   )
   const dirty = buildUpdateRequest(org, draft, "x") !== null
   const slugChanged = draft.slug.trim().toLowerCase() !== org.slug
 
   const save = async () => {
+    if (busy.current || update.isPending) return
     setAttempted(true)
     const local = validateProfileDraft(draft)
-    setErrors({})
     if (Object.keys(local).length > 0) return
-    const reason = await promptDialog({
-      title: `Save changes to ${org.name}?`,
-      body: slugChanged
-        ? `The slug changes from /${org.slug} to /${draft.slug.trim().toLowerCase()}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
-        : "The change is visible on the public page immediately. The reason is written to the audit log.",
-      label: "Reason (required)",
-      placeholder: "Corrected the website at the org's request…",
-      confirmLabel: "Save changes",
-      required: true,
-      danger: slugChanged,
-    })
+    busy.current = true
+    let reason: string | null
+    try {
+      reason = await promptDialog({
+        title: `Save changes to ${org.name}?`,
+        body: slugChanged
+          ? `The slug changes from /${org.slug} to /${draft.slug.trim().toLowerCase()}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
+          : "The change is visible on the public page immediately. The reason is written to the audit log.",
+        label: "Reason (required)",
+        placeholder: "Corrected the website at the org's request…",
+        confirmLabel: "Save changes",
+        required: true,
+        danger: slugChanged,
+      })
+    } finally {
+      busy.current = false
+    }
     if (reason === null || reason.trim() === "") return
     const body = buildUpdateRequest(org, draft, reason)
     if (!body) {
       onDone()
       return
     }
+    setServerErrors({})
     update.mutate(body, {
       onSuccess: () => {
         toast(`${draft.name.trim()} updated`)
         onDone()
       },
-      onError: (err) => setErrors(fieldErrorsFromError(err)),
+      onError: (err) => {
+        const shown = pickFieldErrors(fieldErrorsFromError(err, body), EDITOR_FIELDS)
+        setServerErrors(shown)
+        toastUnlessShownInline(err, shown)
+      },
     })
   }
 
@@ -213,8 +239,8 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
             draft={draft}
             errors={liveErrors}
             onChange={(next) => {
+              setServerErrors((prev) => clearChangedFieldErrors(prev, draft, next))
               setDraft(next)
-              if (next.slug !== draft.slug && errors.slug) setErrors(({ slug: _s, ...rest }) => rest)
             }}
             mode="edit"
             disabled={update.isPending}

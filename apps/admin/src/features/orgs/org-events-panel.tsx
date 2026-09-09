@@ -5,6 +5,7 @@ import type { AdminOrgDTO, AdminOrgEventWhen } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState, FilterChips } from "@/components/shared/page-primitives"
 import { eventKindView } from "@/lib/event-kind"
 import { eventStatusView } from "@/lib/event-status"
@@ -72,7 +73,9 @@ export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
                     title="Open in Events"
                     onClick={() => nav("events", item.id)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") nav("events", item.id)
+                      if (!isKeyboardActivationKey(e.key)) return
+                      e.preventDefault()
+                      nav("events", item.id)
                     }}
                   >
                     <div className="leading">

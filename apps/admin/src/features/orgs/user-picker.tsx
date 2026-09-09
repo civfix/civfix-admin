@@ -4,12 +4,10 @@ import * as React from "react"
 import { avatarColor, monogram, type AdminUserListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-
 import { LoadingState } from "@/components/shared/data-states"
+import { useUserList } from "@/features/users/use-users"
 import { useDebounced } from "@/hooks/use-debounced"
-import { api, toAppError } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { toAppError } from "@/lib/api"
 
 /** The minimum a picked user needs to render: id, name, handle (avatar optional). */
 export interface PickedUser {
@@ -55,12 +53,7 @@ export function UserPicker({
   const [query, setQuery] = React.useState("")
   const debounced = useDebounced(query, 200)
   const q = debounced.trim()
-  const params = { q: q === "" ? undefined : q, limit: 8 }
-  const list = useQuery({
-    queryKey: queryKeys.users.list(params),
-    queryFn: () => api.listAdminUsers(params),
-    placeholderData: keepPreviousData,
-  })
+  const list = useUserList({ q: q === "" ? undefined : q, limit: 8 }, { keepPreviousData: true })
   const results = React.useMemo(
     () => (list.data?.items ?? []).filter((u) => !excludeIds?.has(u.id)),
     [list.data, excludeIds],
@@ -87,54 +80,62 @@ export function UserPicker({
         <Icons.Search size={14} />
         <input
           type="text"
+          aria-label="Search users by name, handle or email"
+          autoComplete="off"
           autoFocus={autoFocus}
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
-      <div className="user-pick-results" role="listbox">
-        {list.isLoading ? (
+      {/* Plain buttons in a list: each result is an ordinary Tab stop that picks the user. */}
+      {list.isLoading ? (
+        <div className="user-pick-results">
           <LoadingState label="Searching…" />
-        ) : list.isError ? (
+        </div>
+      ) : list.isError ? (
+        <div className="user-pick-results">
           <div className="user-pick-note tone-alert">{toAppError(list.error).message}</div>
-        ) : results.length === 0 ? (
-          <div className="user-pick-note">
+        </div>
+      ) : results.length === 0 ? (
+        <div className="user-pick-results">
+          <div className="user-pick-note" role="status">
             {q === "" ? "Type to search users." : `No user matches “${q}”.`}
           </div>
-        ) : (
-          results.map((u) => (
-            <button
-              key={u.id}
-              type="button"
-              role="option"
-              aria-selected={false}
-              className="user-pick-row"
-              onClick={() =>
-                onChange({
-                  id: u.id,
-                  name: u.name,
-                  handle: u.handle,
-                  avatar: u.avatar,
-                  avatarUrl: u.avatarUrl,
-                })
-              }
-            >
-              <PickedUserAvatar user={u} />
-              <span className="user-pick-text">
-                <span className="user-pick-name">{u.name}</span>
-                <span className="user-pick-handle">
-                  {u.handle}
-                  {u.city && u.city !== "-" ? ` · ${u.city}` : ""}
+        </div>
+      ) : (
+        <ul className="user-pick-results" aria-label="Matching users">
+          {results.map((u) => (
+            <li key={u.id}>
+              <button
+                type="button"
+                className="user-pick-row"
+                onClick={() =>
+                  onChange({
+                    id: u.id,
+                    name: u.name,
+                    handle: u.handle,
+                    avatar: u.avatar,
+                    avatarUrl: u.avatarUrl,
+                  })
+                }
+              >
+                <PickedUserAvatar user={u} />
+                <span className="user-pick-text">
+                  <span className="user-pick-name">{u.name}</span>
+                  <span className="user-pick-handle">
+                    {u.handle}
+                    {u.city && u.city !== "-" ? ` · ${u.city}` : ""}
+                  </span>
                 </span>
-              </span>
-              {u.status !== "active" && (
-                <span className="pill status-flag tight">{u.status}</span>
-              )}
-            </button>
-          ))
-        )}
-      </div>
+                {u.status !== "active" && (
+                  <span className="pill status-flag tight">{u.status}</span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

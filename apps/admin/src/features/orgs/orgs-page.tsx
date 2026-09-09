@@ -4,6 +4,7 @@ import * as React from "react"
 import { monogram, type AdminOrgDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
@@ -31,14 +32,13 @@ import { useAdminOrg, useOrgsInfinite, useSetOrgSuspended } from "@/features/org
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-const DETAIL_TABS: { id: DetailTab; label: string }[] = [
+const DETAIL_TABS: { id: OrgDetailTab; label: string }[] = [
   { id: "profile", label: "Profile" },
   { id: "verification", label: "Verification" },
   { id: "members", label: "Members" },
   { id: "events", label: "Events" },
   { id: "payments", label: "Payments" },
 ]
-type DetailTab = OrgDetailTab
 
 function OrgLogo({ org, size = 32 }: { org: Pick<AdminOrgDTO, "name" | "logoUrl">; size?: number }) {
   const style: React.CSSProperties = { width: size, height: size }
@@ -71,7 +71,9 @@ function OrgRow({
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => {
-        if (e.key === "Enter") onClick()
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
       }}
     >
       <div className="leading">
@@ -122,12 +124,14 @@ function OrgDetail({
   onTab,
 }: {
   orgId: string
-  tab: DetailTab
-  onTab: (t: DetailTab) => void
+  tab: OrgDetailTab
+  onTab: (t: OrgDetailTab) => void
 }) {
   const q = useAdminOrg(orgId)
   const suspend = useSetOrgSuspended()
   const toast = useToast()
+  // Guards the button against a second click while the reason prompt is open.
+  const busy = React.useRef(false)
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />
   if (q.isError) {
@@ -141,19 +145,26 @@ function OrgDetail({
   const suspended = !!org.suspendedAt
 
   const onSuspend = async () => {
-    const reason = await promptDialog({
-      title: suspended ? `Restore ${org.name}?` : `Suspend ${org.name}?`,
-      body: suspended
-        ? "Lifting the suspension restores exactly what was there: verification, members and donations settings are untouched. The reason is written to the audit log."
-        : "A suspended organization keeps its data and members, but every write under its name — events, broadcasts, donations, invites — is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
-      label: "Reason (required)",
-      placeholder: suspended
-        ? "Resolved after the org replaced its contact…"
-        : "Repeated broadcast abuse reports; pending review with the org…",
-      confirmLabel: suspended ? "Restore organization" : "Suspend organization",
-      required: true,
-      danger: !suspended,
-    })
+    if (busy.current || suspend.isPending) return
+    busy.current = true
+    let reason: string | null
+    try {
+      reason = await promptDialog({
+        title: suspended ? `Restore ${org.name}?` : `Suspend ${org.name}?`,
+        body: suspended
+          ? "Lifting the suspension restores exactly what was there: verification, members and donations settings are untouched. The reason is written to the audit log."
+          : "A suspended organization keeps its data and members, but every write under its name — events, broadcasts, donations, invites — is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
+        label: "Reason (required)",
+        placeholder: suspended
+          ? "Resolved after the org replaced its contact…"
+          : "Repeated broadcast abuse reports; pending review with the org…",
+        confirmLabel: suspended ? "Restore organization" : "Suspend organization",
+        required: true,
+        danger: !suspended,
+      })
+    } finally {
+      busy.current = false
+    }
     if (reason === null || reason.trim() === "") return
     suspend.mutate(
       { id: org.id, suspended: !suspended, reason: reason.trim() },
@@ -260,7 +271,7 @@ export function OrgsPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<string>("all")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focus.id)
-  const [tab, setTab] = React.useState<DetailTab>(focus.tab ?? "profile")
+  const [tab, setTab] = React.useState<OrgDetailTab>(focus.tab ?? "profile")
   const [creating, setCreating] = React.useState(false)
   const toast = useToast()
 

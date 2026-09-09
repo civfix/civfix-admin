@@ -1,6 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import type {
   AdminUserListQuery,
   AdminUserListResponse,
@@ -18,11 +24,16 @@ import type {
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
-
-export function useUserList(params: AdminUserListQuery) {
+/**
+ * One flat page of users (home preview, the org user picker). Keyed under `users.page`, not
+ * `users.list`, so its plain response can never land in — or be read as — the users page's infinite
+ * cache entry for the same params. `keepPreviousData` holds the last results while a new search runs.
+ */
+export function useUserList(params: AdminUserListQuery, opts: { keepPreviousData?: boolean } = {}) {
   return useQuery<AdminUserListResponse>({
-    queryKey: queryKeys.users.list(params),
+    queryKey: queryKeys.users.page(params),
     queryFn: () => api.listAdminUsers(params),
+    ...(opts.keepPreviousData ? { placeholderData: keepPreviousData } : {}),
   })
 }
 

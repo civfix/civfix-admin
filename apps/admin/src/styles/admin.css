@@ -542,12 +542,13 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.statcell-hot { min-width: 0; overflow-wrap: anywhere; }
 .statcell-hot {
   font-size: 11.5px;
   color: var(--ink-3);
   margin-top: 2px;
   font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .statcell.tone-alert .statcell-hot { color: var(--bloom-700); font-weight: 700; }
 .statcell.tone-alert .statcell-label { color: var(--bloom-700); }
@@ -1367,6 +1368,7 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   flex-direction: column;
   gap: 16px;
   padding: 16px 20px;
+  container: panel-body / inline-size;
 }
 .panel-top {
   display: grid;
@@ -1379,8 +1381,11 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  container: panel-col / inline-size;
 }
-@media (max-width: 880px) {
+/* The panel is min(960px, 70vw), so its width — not the viewport's — decides whether two columns
+   fit: below ~720px of panel (a viewport under ~1030px) each column would be under 330px. */
+@container panel-body (max-width: 720px) {
   .panel-top { grid-template-columns: 1fr; }
 }
 
