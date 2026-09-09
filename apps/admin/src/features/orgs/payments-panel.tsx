@@ -4,7 +4,7 @@ import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { EligibilityEvidenceRow } from "@/components/shared/eligibility-evidence"
-import { promptDialog } from "@/components/shared/dialog"
+import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { formatMoneyMinor } from "@/lib/money"
 import {
@@ -16,13 +16,23 @@ import {
   paymentsStateView,
   requirementGroups,
 } from "@/lib/payments-view"
-import { useAdminOrgPayments, useSetOrgDonationsEnabled } from "@/features/orgs/use-orgs"
+import {
+  useAdminOrgPayments,
+  useConfirmOrgCentralOrg,
+  useEvaluateOrgEligibility,
+  useSetOrgDonationsEnabled,
+  useSetOrgEligibilityEin,
+} from "@/features/orgs/use-orgs"
 import { useToast } from "@/store/ui-store"
 
 export function PaymentsPanel({ orgId }: { orgId: string }) {
   const q = useAdminOrgPayments(orgId)
   const setEnabled = useSetOrgDonationsEnabled()
+  const setEin = useSetOrgEligibilityEin()
+  const confirmCentral = useConfirmOrgCentralOrg()
+  const evaluate = useEvaluateOrgEligibility()
   const toast = useToast()
+  const eligibilityBusy = setEin.isPending || confirmCentral.isPending || evaluate.isPending
 
   if (q.isLoading) return <LoadingState label="Loading payments..." />
   if (q.isError) {
@@ -70,6 +80,71 @@ export function PaymentsPanel({ orgId }: { orgId: string }) {
       {
         onSuccess: () =>
           toast(enabling ? "Donations re-enabled" : `Donations disabled · ${data.orgName}`),
+      },
+    )
+  }
+
+  const onSetEin = async () => {
+    const raw = await promptDialog({
+      title: "Set the EIN",
+      body: `The nine-digit federal Employer Identification Number for ${data.orgName}, as printed on the IRS determination letter. Only the last four digits are stored in the clear; the full number seeds the IRS, FTB and AG eligibility checks.`,
+      label: "EIN · format XX-XXXXXXX",
+      placeholder: "95-1234567",
+      confirmLabel: "Save EIN",
+      required: true,
+    })
+    if (raw === null) return
+    const ein = raw.trim()
+    if (!/^\d{2}-?\d{7}$/.test(ein)) {
+      toast("That is not a nine-digit EIN (format XX-XXXXXXX).")
+      return
+    }
+    setEin.mutate(
+      { id: orgId, ein },
+      { onSuccess: (res) => toast(`EIN saved · ••–•••${res.einLast4}`) },
+    )
+  }
+
+  const onConfirmCentral = async (confirmed: boolean) => {
+    if (confirmed) {
+      const note = await promptDialog({
+        title: "Confirm central organization",
+        body: `Marks ${data.orgName} as the central organization of a group exemption (a subordinate listed under a parent's IRS ruling). Add a note describing how this was verified; it is written to the audit log.`,
+        label: "Verification note (optional)",
+        placeholder: "Parent's group ruling letter GEN 1234 lists this chapter…",
+        confirmLabel: "Confirm central org",
+      })
+      if (note === null) return
+      const trimmed = note.trim()
+      confirmCentral.mutate(
+        { id: orgId, confirmed: true, ...(trimmed === "" ? {} : { note: trimmed }) },
+        { onSuccess: () => toast(`Central organization confirmed · ${data.orgName}`) },
+      )
+      return
+    }
+    const ok = await confirmDialog({
+      title: "Clear the central-organization confirmation?",
+      body: "The eligibility engine stops treating this organization as a confirmed group-exemption central org on the next evaluation.",
+      confirmLabel: "Clear confirmation",
+      danger: true,
+    })
+    if (!ok) return
+    confirmCentral.mutate(
+      { id: orgId, confirmed: false },
+      { onSuccess: () => toast("Central organization confirmation cleared") },
+    )
+  }
+
+  const onEvaluate = () => {
+    evaluate.mutate(
+      { id: orgId },
+      {
+        onSuccess: (res) =>
+          toast(
+            res.queued
+              ? "Re-evaluation queued; the verdict refreshes when the imports finish."
+              : "Eligibility re-evaluated.",
+          ),
       },
     )
   }
@@ -216,6 +291,41 @@ export function PaymentsPanel({ orgId }: { orgId: string }) {
                 <span>{formatDateTime(status.eligibility.graceExpiresAt)}</span>
               </div>
             )}
+          </div>
+          <div className="pay-actions">
+            <button
+              type="button"
+              className="btn sm"
+              disabled={eligibilityBusy}
+              onClick={() => void onSetEin()}
+            >
+              <Icons.Hash size={12} /> {status.eligibility.einLast4 ? "Change EIN" : "Set EIN"}
+            </button>
+            <button
+              type="button"
+              className="btn sm"
+              disabled={eligibilityBusy}
+              onClick={() => void onConfirmCentral(true)}
+            >
+              <Icons.Check size={12} /> Confirm central org
+            </button>
+            <button
+              type="button"
+              className="btn sm ghost"
+              disabled={eligibilityBusy}
+              title="Clear a previous central-organization confirmation"
+              onClick={() => void onConfirmCentral(false)}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              className="btn sm"
+              disabled={eligibilityBusy}
+              onClick={onEvaluate}
+            >
+              <Icons.Activity size={12} /> {evaluate.isPending ? "Evaluating…" : "Re-evaluate"}
+            </button>
           </div>
           {status.eligibility.reasons.length > 0 && (
             <div className="pay-reqs">

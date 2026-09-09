@@ -1,8 +1,9 @@
 "use client"
 
 import { QueryClient } from "@tanstack/react-query"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { ErrorCode } from "@civfix/shared"
 import { useUiStore } from "@/store/ui-store"
+import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 
 export function makeQueryClient(): QueryClient {
@@ -13,15 +14,13 @@ export function makeQueryClient(): QueryClient {
         gcTime: 5 * 60_000,
         refetchOnWindowFocus: false,
         retry: (failureCount, error) => {
-          if (error instanceof AppError) {
-            const noRetry: ErrorCode[] = [
-              ErrorCode.UNAUTHORIZED,
-              ErrorCode.FORBIDDEN,
-              ErrorCode.NOT_FOUND,
-              ErrorCode.VALIDATION,
-            ]
-            if (noRetry.includes(error.code)) return false
-          }
+          const noRetry: ErrorCode[] = [
+            ErrorCode.UNAUTHORIZED,
+            ErrorCode.FORBIDDEN,
+            ErrorCode.NOT_FOUND,
+            ErrorCode.VALIDATION,
+          ]
+          if (noRetry.includes(toAppError(error).code)) return false
           return failureCount < 2
         },
       },
@@ -86,6 +85,8 @@ export const queryKeys = {
   users: {
     all: ["admin", "users"] as const,
     list: (params?: unknown) => ["admin", "users", "list", params ?? null] as const,
+    /** One flat page (home preview, user picker) — kept apart from the infinite `list` cache entries. */
+    page: (params?: unknown) => ["admin", "users", "page", params ?? null] as const,
     detail: (id: string) => ["admin", "users", "detail", id] as const,
     reports: (id: string, params?: unknown) => ["admin", "users", id, "reports", params ?? null] as const,
     events: (id: string, params?: unknown) => ["admin", "users", id, "events", params ?? null] as const,
@@ -129,10 +130,13 @@ export const queryKeys = {
 
   orgs: {
     all: ["admin", "orgs"] as const,
-    verifications: (params?: unknown) =>
-      ["admin", "orgs", "verifications", params ?? null] as const,
+    list: (params?: unknown) => ["admin", "orgs", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "orgs", "detail", id] as const,
     payments: (id: string) => ["admin", "orgs", "payments", id] as const,
+    members: (id: string, params?: unknown) =>
+      ["admin", "orgs", id, "members", params ?? null] as const,
+    events: (id: string, params?: unknown) =>
+      ["admin", "orgs", id, "events", params ?? null] as const,
   },
 
   media: {

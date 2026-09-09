@@ -372,22 +372,24 @@ export function AnalyticsPage(_props: SectionPageProps) {
           isEmpty={(d) => d.rows.length === 0}
         >
           {(d) => (
-            <div className="table">
-              <div className="trow thead jt">
-                <span>Jurisdiction</span>
-                <span>Pins</span>
-                <span>Resolved</span>
-              </div>
-              {d.rows.map((j, i) => (
-                <div key={`${j.org}-${i}`} className="trow jt">
-                  <span className="td-strong">{j.org}</span>
-                  <span className="mono">{j.pins}</span>
-                  <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
-                    { }
-                    {j.resolved}%
-                  </span>
+            <div className="table-scroll">
+              <div className="table">
+                <div className="trow thead jt">
+                  <span>Jurisdiction</span>
+                  <span>Pins</span>
+                  <span>Resolved</span>
                 </div>
-              ))}
+                {d.rows.map((j, i) => (
+                  <div key={`${j.org}-${i}`} className="trow jt">
+                    <span className="td-strong">{j.org}</span>
+                    <span className="mono">{j.pins}</span>
+                    <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
+                      { }
+                      {j.resolved}%
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </AnalyticsCard>
@@ -402,27 +404,29 @@ export function AnalyticsPage(_props: SectionPageProps) {
           isEmpty={(d) => d.rows.length === 0}
         >
           {(d) => (
-            <div className="table">
-              <div className="trow thead ct">
-                <span>Neighbor</span>
-                <span>Reports</span>
-                <span>Cleanups</span>
-              </div>
-              {d.rows.map((c, i) => (
-                <div key={`${c.name}-${c.city}-${i}`} className="trow ct">
-                  <span className="contrib-cell">
-                    <span className="contrib-av">{initials(c.name)}</span>
-                    <span className="contrib-text">
-                      <span className="td-strong">{c.name}</span>
-                      <span className="contrib-city">{c.city || "—"}</span>
-                    </span>
-                  </span>
-                  <span className="mono">{c.reports}</span>
-                  <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
-                    {c.cleanups}
-                  </span>
+            <div className="table-scroll">
+              <div className="table">
+                <div className="trow thead ct">
+                  <span>Neighbor</span>
+                  <span>Reports</span>
+                  <span>Cleanups</span>
                 </div>
-              ))}
+                {d.rows.map((c, i) => (
+                  <div key={`${c.name}-${c.city}-${i}`} className="trow ct">
+                    <span className="contrib-cell">
+                      <span className="contrib-av">{initials(c.name)}</span>
+                      <span className="contrib-text">
+                        <span className="td-strong">{c.name}</span>
+                        <span className="contrib-city">{c.city || "—"}</span>
+                      </span>
+                    </span>
+                    <span className="mono">{c.reports}</span>
+                    <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
+                      {c.cleanups}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </AnalyticsCard>

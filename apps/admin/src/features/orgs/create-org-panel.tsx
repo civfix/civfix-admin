@@ -1,0 +1,280 @@
+"use client"
+
+import * as React from "react"
+import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
+
+import { Icons } from "@/components/icons"
+import {
+  buildCreateRequest,
+  clearChangedFieldErrors,
+  emptyProfileDraft,
+  fieldErrorsFromError,
+  validateProfileDraft,
+  type OrgProfileDraft,
+  type OrgProfileErrors,
+} from "@/features/orgs/org-form"
+import { OrgProfileFields, ReasonField, FieldError } from "@/features/orgs/org-form-fields"
+import { toastUnlessShownInline, useCreateOrg } from "@/features/orgs/use-orgs"
+import { UserPicker, type PickedUser } from "@/features/orgs/user-picker"
+import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
+
+const VERIFICATION_OPTIONS: { value: "" | OrgVerificationKind; label: string }[] = [
+  { value: "", label: "Leave unverified" },
+  { value: "nonprofit", label: `Verified as ${ORG_KIND_LABEL.nonprofit.toLowerCase()}` },
+  { value: "government", label: `Verified as ${ORG_KIND_LABEL.government.toLowerCase()}` },
+  { value: "community", label: `Verified as ${ORG_KIND_LABEL.community.toLowerCase()}` },
+]
+
+/**
+ * The "New organization" slide-over (`.panel`). The form only exists while the panel is open, so
+ * closing it discards the draft, the submitted flag and every error: reopening always starts clean.
+ */
+export function CreateOrgPanel({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean
+  onClose: () => void
+  onCreated: (org: AdminOrgDTO) => void
+}) {
+  if (!open) return null
+  return <CreateOrgSlideOver onClose={onClose} onCreated={onCreated} />
+}
+
+/** The local checks the create form runs before a request: the profile, the owner and the reason. */
+function validateCreate(
+  draft: OrgProfileDraft,
+  owner: PickedUser | null,
+  reason: string,
+): OrgProfileErrors {
+  const errors = validateProfileDraft(draft)
+  if (!owner) errors.ownerUserId = "Pick the person who owns this organization."
+  if (reason.trim() === "") errors.reason = "A reason is required."
+  return errors
+}
+
+/**
+ * Everything the create request needs lives here: the profile fields, the owner picker (resolves a
+ * person to a userId), the verification shortcut for operator-onboarded partners (DECISIONS §32) and
+ * the audit reason. Local validation errors are recomputed live once the operator has tried to
+ * submit; server errors (slug conflict, VALIDATION.fields) are held apart and cleared per field as
+ * that field changes, so a message never outlives the value it was about.
+ */
+function CreateOrgSlideOver({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void
+  onCreated: (org: AdminOrgDTO) => void
+}) {
+  const create = useCreateOrg()
+  const [draft, setDraft] = React.useState<OrgProfileDraft>(emptyProfileDraft)
+  const [owner, setOwnerState] = React.useState<PickedUser | null>(null)
+  const [verifiedKind, setVerifiedKind] = React.useState<"" | OrgVerificationKind>("")
+  const [reason, setReasonState] = React.useState("")
+  const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
+  const [submitted, setSubmitted] = React.useState(false)
+  // Set synchronously on submit, before React has re-rendered with `create.isPending`, so a second
+  // Enter in the same frame cannot start a second POST.
+  const inFlight = React.useRef(false)
+
+  const pending = create.isPending
+  // Overlay click, Escape, the close button and Cancel all come through here: none of them may
+  // dismiss the form while the request is in flight.
+  const close = React.useCallback(() => {
+    if (inFlight.current || pending) return
+    onClose()
+  }, [onClose, pending])
+
+  // Escape dismisses an untouched panel; once there is a draft it is ignored (closing discards the
+  // draft, and Escape is too easy a reflex — dismissing the owner search, say — to make destructive).
+  // Cancel and the close button remain the deliberate way out.
+  const pristine =
+    owner === null &&
+    verifiedKind === "" &&
+    reason === "" &&
+    Object.values(draft.social).every((v) => v === "") &&
+    draft.name === "" &&
+    draft.slug === "" &&
+    draft.description === "" &&
+    draft.websiteUrl === ""
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && pristine) close()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [close, pristine])
+
+  const localErrors = React.useMemo(
+    () => (submitted ? validateCreate(draft, owner, reason) : {}),
+    [submitted, draft, owner, reason],
+  )
+  const errors = React.useMemo(
+    () => ({ ...localErrors, ...serverErrors }),
+    [localErrors, serverErrors],
+  )
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (inFlight.current || pending) return
+    setSubmitted(true)
+    if (Object.keys(validateCreate(draft, owner, reason)).length > 0 || !owner) return
+    const request = buildCreateRequest(draft, {
+      ownerUserId: owner.id,
+      verifiedKind: verifiedKind === "" ? null : verifiedKind,
+      reason,
+    })
+    inFlight.current = true
+    setServerErrors({})
+    create.mutate(request, {
+      onSuccess: (org) => onCreated(org),
+      onError: (err) => {
+        // Every key fieldErrorsFromError can produce has a field in this form, so whatever it maps is
+        // shown inline; anything else (unknown field, non-validation failure) goes to the toast.
+        const fields = fieldErrorsFromError(err, request)
+        setServerErrors(fields)
+        toastUnlessShownInline(err, fields)
+      },
+      onSettled: () => {
+        inFlight.current = false
+      },
+    })
+  }
+
+  const onDraftChange = (next: OrgProfileDraft) => {
+    setServerErrors((prev) => clearChangedFieldErrors(prev, draft, next))
+    setDraft(next)
+  }
+  const setOwner = (next: PickedUser | null) => {
+    setOwnerState(next)
+    setServerErrors(({ ownerUserId: _o, ...rest }) => rest)
+  }
+  const setReason = (next: string) => {
+    setReasonState(next)
+    setServerErrors(({ reason: _r, ...rest }) => rest)
+  }
+
+  return (
+    <>
+      <div className="panel-overlay open" onClick={close} />
+      <aside
+        className="panel org-create-panel open"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="org-create-title"
+        aria-busy={pending}
+      >
+        <form onSubmit={submit} className="org-create-form">
+          <div className="panel-head">
+            <div className="panel-head-titles">
+              <div className="crumb">Organizations</div>
+              <h2 id="org-create-title">New organization</h2>
+            </div>
+            <div className="spacer" />
+            <button
+              type="button"
+              className="closebtn"
+              onClick={close}
+              aria-label="Close"
+              disabled={pending}
+            >
+              <Icons.X size={16} />
+            </button>
+          </div>
+
+          <div className="panel-body">
+            <div className="panel-top">
+              <div className="col">
+                <div className="sub">
+                  <div className="sub-head">Profile</div>
+                  <div className="sub-body">
+                    <OrgProfileFields
+                      draft={draft}
+                      errors={errors}
+                      onChange={onDraftChange}
+                      mode="create"
+                      disabled={pending}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="col">
+                <div className="sub">
+                  <div className="sub-head">Owner</div>
+                  <div className="sub-body">
+                    <div className={`field ${errors.ownerUserId ? "has-error" : ""}`}>
+                      <span className="lbl">
+                        Owner
+                        <span className="opt">an existing civfix account</span>
+                      </span>
+                      <UserPicker value={owner} onChange={setOwner} />
+                      <FieldError text={errors.ownerUserId} />
+                      <span className="hint">
+                        The owner can edit the organization, manage its members and host under its
+                        name. Ownership can be transferred later from the Members tab.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sub">
+                  <div className="sub-head">Verification</div>
+                  <div className="sub-body">
+                    <div className="field">
+                      <label className="lbl" htmlFor="org-verified-kind">
+                        Status at creation
+                      </label>
+                      <select
+                        id="org-verified-kind"
+                        value={verifiedKind}
+                        disabled={pending}
+                        onChange={(e) => setVerifiedKind(e.target.value as "" | OrgVerificationKind)}
+                      >
+                        {VERIFICATION_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="hint">
+                        {verifiedKind === ""
+                          ? "The organization can apply for verification itself from its settings."
+                          : "Created already verified — no evidence round-trip. Use for partners you onboard directly (a city department, a known nonprofit)."}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sub">
+                  <div className="sub-head">Audit</div>
+                  <div className="sub-body">
+                    <ReasonField
+                      value={reason}
+                      onChange={setReason}
+                      error={errors.reason}
+                      placeholder="Onboarded at the Council District 4 partner meeting…"
+                      disabled={pending}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel-foot">
+            <span className="hint">Logo upload is not available in the console yet; the owner can add one from the app.</span>
+            <div className="spacer" />
+            <button type="button" className="btn ghost" onClick={close} disabled={pending}>
+              Cancel
+            </button>
+            <button type="submit" className="btn primary" disabled={pending}>
+              <Icons.Plus size={14} /> {pending ? "Creating…" : "Create organization"}
+            </button>
+          </div>
+        </form>
+      </aside>
+    </>
+  )
+}

@@ -17,6 +17,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
+import { EVENT_STATUS_VIEW } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { reportStatusView } from "@/lib/report-status"
 import {
@@ -40,12 +41,7 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-const STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
-  upcoming: { cls: "status-new", label: "Upcoming" },
-  in_progress: { cls: "status-progress", label: "In progress" },
-  completed: { cls: "status-ok", label: "Completed" },
-  cancelled: { cls: "status-flag", label: "Cancelled" },
-}
+const STATUS_VIEW = EVENT_STATUS_VIEW
 
 const STATUS_ACTIONS: { value: EventStatus; label: string }[] = [
   { value: "upcoming", label: "Upcoming" },

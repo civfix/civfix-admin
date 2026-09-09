@@ -26,6 +26,7 @@ import {
   useDonationTotalsByOrg,
   usePlatformDonationSettings,
 } from "@/features/donations/use-donations"
+import { orgFocus } from "@/features/orgs/org-focus"
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -259,9 +260,9 @@ function Pl4Report() {
                   className="don-trow"
                   role="button"
                   tabIndex={0}
-                  onClick={() => nav("orgs", row.organizationId)}
+                  onClick={() => nav("orgs", orgFocus(row.organizationId, "payments"))}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") nav("orgs", row.organizationId)
+                    if (e.key === "Enter") nav("orgs", orgFocus(row.organizationId, "payments"))
                   }}
                 >
                   <span className="don-org">{row.orgName}</span>

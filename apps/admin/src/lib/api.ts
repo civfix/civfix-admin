@@ -78,13 +78,36 @@ export const api: ApiClient = getApiClient()
  */
 export function toAppError(err: unknown): AppError {
   if (err instanceof AppError) return err
+  // The `@civfix/shared/client` bundle carries its own copy of the AppError class, so an error thrown
+  // by the API client is NOT `instanceof` the AppError exported from `@civfix/shared`. Recognize it by
+  // shape and re-wrap it in the local class so `code`/`fields` checks work everywhere.
+  if (isAppErrorLike(err)) {
+    return new AppError(err.code, err.message, {
+      httpStatus: err.httpStatus,
+      ...(err.fields ? { fields: err.fields } : {}),
+      ...(err.requestId ? { requestId: err.requestId } : {}),
+      cause: err,
+    })
+  }
   if (err instanceof Error) {
     return new AppError(ErrorCode.INTERNAL, err.message || "Network request failed", { cause: err })
   }
   return new AppError(ErrorCode.INTERNAL, "Unknown error")
 }
 
+function isAppErrorLike(err: unknown): err is {
+  code: ErrorCode
+  message: string
+  httpStatus?: number
+  fields?: Record<string, string>
+  requestId?: string
+} {
+  if (!(err instanceof Error) || err.name !== "AppError") return false
+  const code = (err as { code?: unknown }).code
+  return typeof code === "string" && (Object.values(ErrorCode) as string[]).includes(code)
+}
+
 /** True when the error is a not-found (used to render tidy empty states vs. hard errors). */
 export function isNotFound(err: unknown): boolean {
-  return err instanceof AppError && err.code === ErrorCode.NOT_FOUND
+  return toAppError(err).code === ErrorCode.NOT_FOUND
 }

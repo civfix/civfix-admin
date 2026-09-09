@@ -227,13 +227,10 @@
    ========================================================================= */
 
 /* -- Dashboard launcher --------------------------------------------------- */
+/* Full-width fourth bento row. Rows are content-sized (see the desktop note on .hub-bento in
+   admin.css), so this row is never cut off by a viewport-height lock. */
 .bt-host { grid-column: span 15; }
 @media (max-width: 1100px) { .bt-host { grid-column: span 6; } }
-@media (min-width: 1101px) {
-  .main-home .hub-bento {
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(0, auto) minmax(0, auto);
-  }
-}
 .host-launch {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -345,6 +342,7 @@
   color: var(--ink-3);
 }
 .pay-reqs-list { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--ink-2); }
+.pay-reqs-list li { overflow-wrap: anywhere; }
 .pay-evidence-list { display: flex; flex-direction: column; gap: 8px; }
 .pay-evidence {
   border: 1px solid var(--border-soft);
@@ -374,7 +372,11 @@
   font-size: 12px;
   color: var(--ink-2);
 }
+.pay-history-row > span { min-width: 0; overflow-wrap: anywhere; }
 .pay-history-row:last-child { border-bottom: none; }
+@media (max-width: 640px) {
+  .pay-history-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+}
 
 /* -- Host messaging ------------------------------------------------------- */
 .bcast-log { display: flex; flex-direction: column; gap: 9px; }
@@ -404,6 +406,8 @@
 .bcast-meta .tone-alert { color: var(--bloom-700); }
 .bcast-hash { margin-top: 4px; font-size: 11px; color: var(--ink-4); }
 .host-events { display: flex; flex-wrap: wrap; gap: 6px; }
+/* Event titles can be long: the chip caps at the row width and truncates, never runs off it. */
+.host-events .btn { max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: 32px; }
 
 /* -- Signup page preview -------------------------------------------------- */
 .pg-preview { display: flex; flex-direction: column; gap: 10px; }
@@ -446,8 +450,8 @@
 }
 
 /* -- Donations ------------------------------------------------------------ */
-.don-filings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-@media (max-width: 720px) { .don-filings { grid-template-columns: 1fr; } }
+.don-filings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.don-filings > * { min-width: 0; }
 .don-filing {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
@@ -502,7 +506,11 @@
   font-size: 12px;
   color: var(--ink-2);
 }
+.don-legal-row > span { min-width: 0; overflow-wrap: anywhere; }
 .don-legal-row:last-child { border-bottom: none; }
+@media (max-width: 640px) {
+  .don-legal-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+}
 .don-legal-row.tone-alert { color: var(--bloom-700); }
 .don-legal-type { font-weight: 700; text-transform: capitalize; }
 .don-table { display: flex; flex-direction: column; }
@@ -518,6 +526,12 @@
   cursor: pointer;
   text-align: right;
 }
+/* The organization name is the flexible column (wraps anywhere); money and counts never break
+   mid-number. Narrower viewports drop the derived columns (fee/refunded, then net) rather than
+   squeezing them; every hidden value is on the organization's own page. */
+.don-trow > span { min-width: 0; }
+.don-trow > span:first-child { overflow-wrap: anywhere; }
+.don-trow > span:not(:first-child) { white-space: nowrap; }
 .don-trow:last-child { border-bottom: none; }
 .don-trow:hover:not(.head) { background: var(--paper-2); }
 .don-trow:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
@@ -533,9 +547,13 @@
 .don-trow.head > span:first-child { text-align: left; }
 .don-org { font-weight: 700; color: var(--ink); }
 .don-mnos-org { display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px; }
-@media (max-width: 720px) {
-  .don-trow { grid-template-columns: 1.6fr 1fr 1fr; }
-  .don-trow > span:nth-child(n + 4) { display: none; }
+@media (max-width: 980px) {
+  .don-trow { grid-template-columns: minmax(0, 1.6fr) auto auto auto; }
+  .don-trow > span:nth-child(4), .don-trow > span:nth-child(5) { display: none; }
+}
+@media (max-width: 560px) {
+  .don-trow { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .don-trow > span:nth-child(6) { display: none; }
 }
 
 /* -- Shared list affordances --------------------------------------------- */
@@ -545,3 +563,205 @@
 }
 .qrow.static { cursor: default; }
 .qrow.static:hover { background: transparent; }
+
+/* -- Organization management ---------------------------------------------- */
+/* Row logo: a rounded square, either the uploaded logo or the org's monogram on the section hue. */
+.org-logo {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--hue-50, var(--sky-50));
+  color: var(--hue-700, var(--sky-700));
+  overflow: hidden;
+}
+img.org-logo { object-fit: cover; background: var(--paper-2); }
+
+.org-head { padding-bottom: 8px; flex-wrap: wrap; }
+.org-head-pills {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-left: auto;
+}
+.org-head-actions {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 0 16px 10px;
+}
+.org-head-actions .spacer { flex: 1; }
+.org-head-actions a.btn { text-decoration: none; }
+
+.org-banner {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin: 0 16px 6px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border-soft);
+  background: var(--paper-2);
+  font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
+}
+.org-banner svg { flex-shrink: 0; margin-top: 2px; }
+.org-banner.tone-alert {
+  background: var(--bloom-50);
+  border-color: color-mix(in oklab, var(--bloom) 24%, transparent);
+  color: var(--bloom-700);
+}
+.org-tab-body { padding: 14px 16px 16px; flex: 1; min-width: 0; }
+.org-tab-body .rep-actions { padding-left: 0; padding-right: 0; }
+.org-tab-body .rep-actions.top {
+  border-top: none; border-bottom: 1px solid var(--border-soft);
+  margin-top: 0; padding-top: 0; padding-bottom: 12px;
+}
+.org-tab-body .sub .queue-list .qrow { padding-left: 12px; padding-right: 12px; }
+/* Five tabs do not fit a 375px card side by side; on phones they wrap into two rows instead of
+   squeezing "Verification" into a sliver. */
+@media (max-width: 520px) {
+  .org-tabs { flex-wrap: wrap; }
+  .org-tabs .profile-tab { flex: 1 1 30%; flex-direction: row; padding: 7px 6px; font-size: 12px; }
+}
+
+/* Form fields: inline errors, counters, warning hints. */
+.field.has-error input, .field.has-error textarea, .field.has-error select,
+.field.has-error .slug-input, .social-cell.has-error .slug-input {
+  border-color: var(--bloom);
+}
+.field-error {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 600; color: var(--bloom-700);
+}
+.field .lbl { display: flex; align-items: center; gap: 4px; }
+.field .lbl .counter { margin-left: auto; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-4); font-size: 10.5px; }
+.field .hint { display: flex; align-items: flex-start; gap: 4px; line-height: 1.45; overflow-wrap: anywhere; }
+.field .hint svg { flex-shrink: 0; margin-top: 2px; }
+.field .hint.tone-warn { color: var(--sun-700); }
+.field input:disabled, .field textarea:disabled, .field select:disabled { background: var(--paper-2); color: var(--ink-3); }
+
+/* A prefixed input (civfix.org/orgs/ + slug, @ + handle). */
+.slug-input {
+  display: flex; align-items: center; gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+}
+.slug-input:focus-within { border-color: var(--bloom); box-shadow: var(--ring); }
+.slug-prefix {
+  padding: 0 0 0 11px;
+  font-size: 12px; color: var(--ink-3);
+  white-space: nowrap; flex-shrink: 0;
+  user-select: none;
+}
+.field .slug-input input {
+  border: none; box-shadow: none; border-radius: 0;
+  padding-left: 2px; min-width: 0; flex: 1;
+}
+.field .slug-input input:focus { box-shadow: none; }
+.slug-input .btn { margin-right: 4px; flex-shrink: 0; }
+
+.social-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 10px;
+}
+.social-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.social-lbl { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+@media (max-width: 520px) {
+  .social-grid { grid-template-columns: 1fr; }
+}
+/* Inside a slide-over column the grid follows the column's width, not the viewport's. */
+@container panel-col (max-width: 360px) {
+  .social-grid { grid-template-columns: 1fr; }
+}
+.social-links { display: inline-flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.social-links a.pill { text-decoration: none; }
+
+/* User picker (owner / add member). */
+.user-pick { display: flex; flex-direction: column; gap: 6px; }
+.user-pick.picked {
+  flex-direction: row; align-items: center; gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: var(--paper-2);
+}
+.user-pick-search { width: 100%; }
+.user-pick-results {
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  background: #fff;
+  max-height: 224px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.user-pick-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0; border-bottom: 1px solid var(--border-soft);
+  background: transparent;
+  font: inherit; color: inherit; text-align: left;
+  cursor: pointer;
+}
+.user-pick-results li:last-child .user-pick-row { border-bottom: none; }
+.user-pick-row:hover, .user-pick-row:focus-visible { background: var(--paper-2); outline: none; }
+.user-pick-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.user-pick-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-pick-handle { font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-pick-note { padding: 12px; font-size: 12px; color: var(--ink-3); }
+.user-pick-note.tone-alert { color: var(--bloom-700); }
+
+.form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+/* Create-org slide-over: the form is the panel's grid content. */
+.org-create-form { display: contents; }
+.org-create-panel .panel-foot .hint { font-size: 11.5px; color: var(--ink-3); min-width: 0; }
+@media (max-width: 720px) {
+  .org-create-panel .panel-foot { flex-wrap: wrap; }
+  .org-create-panel .panel-foot .hint { flex: 1 1 100%; }
+}
+
+/* Member row actions menu. */
+.member-row .title.lnk-inline { cursor: pointer; }
+.btn.icon { width: 28px; padding: 0; justify-content: center; }
+.row-menu { position: relative; }
+.row-menu-pop {
+  position: fixed;
+  z-index: 80;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(26, 23, 20, 0.16);
+  padding: 4px;
+  display: flex; flex-direction: column;
+}
+.row-menu-label {
+  padding: 6px 10px 3px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.row-menu-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 10px;
+  border: 0; background: transparent; border-radius: 7px;
+  font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ink);
+  text-align: left; cursor: pointer;
+}
+.row-menu-item:hover:not(:disabled) { background: var(--paper-2); }
+.row-menu-item:disabled { color: var(--ink-4); cursor: not-allowed; }
+.row-menu-item.danger:not(:disabled) { color: var(--bloom-700); }
+.row-menu-sep { height: 1px; background: var(--border-soft); margin: 4px 6px; }
+
+.pay-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+/* Org rows: the status pill sits above the date so the name keeps most of the 360px column. */
+.org-row .trailing { flex-direction: column; align-items: flex-end; gap: 3px; }
+.org-row .body .sub .mono { flex: 0 0 auto; max-width: 42%; }
+.org-row .body .sub .strong, .org-row .body .sub .count { flex-shrink: 0; }
+@media (max-width: 480px) {
+  .org-row .trailing { flex-direction: row; align-items: center; }
+}
