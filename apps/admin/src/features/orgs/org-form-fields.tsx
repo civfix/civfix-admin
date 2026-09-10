@@ -50,17 +50,19 @@ export function LogoField({
   const inputRef = React.useRef<HTMLInputElement>(null)
   const objectUrlRef = React.useRef<string | null>(null)
   const latest = React.useRef(draft)
+  const mounted = React.useRef(true)
   const [problem, setProblem] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     latest.current = draft
   })
-  React.useEffect(
-    () => () => {
+  React.useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
-    },
-    [],
-  )
+    }
+  }, [])
   const uploading = upload.isPending
   React.useEffect(() => {
     onUploadingChange?.(uploading)
@@ -80,6 +82,7 @@ export function LogoField({
     }
     upload.mutate(file, {
       onSuccess: (logoMediaId) => {
+        if (!mounted.current) return
         releasePreview()
         const preview = URL.createObjectURL(file)
         objectUrlRef.current = preview
