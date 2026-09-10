@@ -32,6 +32,13 @@ import {
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
+import { ORG_ROLE_LABEL, ORG_ROLE_PILL } from "@/features/orgs/org-members"
+import {
+  sortUserOrganizations,
+  userOrganizationFocus,
+  type UserOrganization,
+} from "@/features/users/user-organizations"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { getUserMessageDestination } from "./profile-activity-navigation"
 import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -306,6 +313,51 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   )
 }
 
+function UserOrganizations({ user, nav }: { user: AdminUserDTO; nav: NavFn }) {
+  const orgs = sortUserOrganizations(user.organizations)
+  return (
+    <div className="sub user-orgs">
+      <div className="sub-head">Organizations</div>
+      <div className="sub-body">
+        {orgs.length === 0 ? (
+          <span className="muted">No organizations</span>
+        ) : (
+          orgs.map((org) => <UserOrganizationRow key={org.id} org={org} nav={nav} />)
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UserOrganizationRow({ org, nav }: { org: UserOrganization; nav: NavFn }) {
+  const open = () => nav("orgs", userOrganizationFocus(org))
+  return (
+    <div className="qrow static user-org-row">
+      <span className="org-logo hue-sky">{monogram(org.name)}</span>
+      <div className="body">
+        <div className="top">
+          <span
+            className="title lnk-inline"
+            role="button"
+            tabIndex={0}
+            title="Open organization"
+            onClick={open}
+            onKeyDown={(e) => {
+              if (!isKeyboardActivationKey(e.key)) return
+              e.preventDefault()
+              open()
+            }}
+          >
+            {org.name}
+          </span>
+          <span className="ident mono">/{org.slug}</span>
+        </div>
+      </div>
+      <span className={`pill ${ORG_ROLE_PILL[org.role]} tight`}>{ORG_ROLE_LABEL[org.role]}</span>
+    </div>
+  )
+}
+
 function tabCount(user: AdminUserDTO, id: TabId): number {
   if (id === "reports") return user.reports
   if (id === "events") return user.cleanups
@@ -315,6 +367,7 @@ function tabCount(user: AdminUserDTO, id: TabId): number {
 function UserDetail({ userId }: { userId: string }) {
   const q = useUser(userId)
   const toast = useToast()
+  const nav = useNav()
 
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
@@ -491,6 +544,8 @@ function UserDetail({ userId }: { userId: string }) {
           <Icons.Copy size={12} />
         </button>
       </div>
+
+      <UserOrganizations user={user} nav={nav} />
 
       <div className="profile-tabs">
         {tabs.map((t) => {
