@@ -31,6 +31,7 @@ import {
   evidenceUrlLifetimeMs,
 } from "@/features/orgs/evidence-cache"
 import type { OrgProfileErrors } from "@/features/orgs/org-form"
+import { uploadOrgLogo, type LogoFileFacts } from "@/features/orgs/org-logo-upload"
 import { useUiStore } from "@/store/ui-store"
 
 /** Every organization (adminListOrgs), keyset-paged; page one carries the chip `counts`. */
@@ -164,6 +165,13 @@ export function useCreateOrg() {
       qc.setQueryData(queryKeys.orgs.detail(org.id), org)
       invalidateOrgLists(qc)
     },
+    onError: quietOnError,
+  })
+}
+
+export function useUploadOrgLogo() {
+  return useMutation({
+    mutationFn: (file: Blob & LogoFileFacts) => uploadOrgLogo({ api, file }),
     onError: quietOnError,
   })
 }

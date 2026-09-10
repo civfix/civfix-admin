@@ -580,6 +580,16 @@
   overflow: hidden;
 }
 img.org-logo { object-fit: cover; background: var(--paper-2); }
+.org-logo.lg { width: 56px; height: 56px; border-radius: 12px; font-size: 22px; }
+
+/* Logo picker: the preview tile beside the choose/replace + remove buttons. */
+.org-logo-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.org-logo-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.org-logo-file { display: none; }
 
 .org-head { padding-bottom: 8px; flex-wrap: wrap; }
 .org-head-pills {

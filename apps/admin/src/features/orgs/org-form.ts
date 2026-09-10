@@ -26,9 +26,17 @@ export interface OrgProfileDraft {
   description: string
   websiteUrl: string
   social: Record<SocialPlatform, string>
+  logoMediaId: string | null
+  logoPreviewUrl: string | null
 }
 
-export type OrgProfileField = "name" | "slug" | "description" | "websiteUrl" | SocialPlatform
+export type OrgProfileField =
+  | "name"
+  | "slug"
+  | "description"
+  | "websiteUrl"
+  | "logoMediaId"
+  | SocialPlatform
 export type OrgProfileErrors = Partial<Record<OrgProfileField | "ownerUserId" | "reason", string>>
 
 export const SOCIAL_PLACEHOLDER: Record<SocialPlatform, string> = {
@@ -44,7 +52,15 @@ export function emptySocial(): Record<SocialPlatform, string> {
 }
 
 export function emptyProfileDraft(): OrgProfileDraft {
-  return { name: "", slug: "", description: "", websiteUrl: "", social: emptySocial() }
+  return {
+    name: "",
+    slug: "",
+    description: "",
+    websiteUrl: "",
+    social: emptySocial(),
+    logoMediaId: null,
+    logoPreviewUrl: null,
+  }
 }
 
 export function draftFromOrg(org: AdminOrgDTO): OrgProfileDraft {
@@ -56,6 +72,8 @@ export function draftFromOrg(org: AdminOrgDTO): OrgProfileDraft {
     description: org.description ?? "",
     websiteUrl: org.websiteUrl ?? "",
     social,
+    logoMediaId: org.logoMediaId ?? null,
+    logoPreviewUrl: org.logoUrl ?? null,
   }
 }
 
@@ -122,6 +140,7 @@ export function buildCreateRequest(
     ...(description !== "" ? { description } : {}),
     ...(websiteUrl !== "" ? { websiteUrl } : {}),
     ...(socialLinks ? { socialLinks } : {}),
+    ...(draft.logoMediaId ? { logoMediaId: draft.logoMediaId } : {}),
     ownerUserId: opts.ownerUserId,
     ...(opts.verifiedKind ? { verifiedKind: opts.verifiedKind } : {}),
     reason: opts.reason.trim(),
@@ -172,6 +191,10 @@ export function buildUpdateRequest(
     body.socialLinks = socialLinks
     changed = true
   }
+  if (draft.logoMediaId !== (org.logoMediaId ?? null)) {
+    body.logoMediaId = draft.logoMediaId
+    changed = true
+  }
   return changed ? body : null
 }
 
@@ -198,6 +221,7 @@ export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }):
         field === "slug" ||
         field === "description" ||
         field === "websiteUrl" ||
+        field === "logoMediaId" ||
         field === "ownerUserId" ||
         field === "reason" ||
         (SOCIAL_PLATFORMS as readonly string[]).includes(field)
@@ -225,6 +249,7 @@ export function clearChangedFieldErrors(
   if (prev.slug !== next.slug) changed.push("slug")
   if (prev.description !== next.description) changed.push("description")
   if (prev.websiteUrl !== next.websiteUrl) changed.push("websiteUrl")
+  if (prev.logoMediaId !== next.logoMediaId) changed.push("logoMediaId")
   for (const p of SOCIAL_PLATFORMS) if (prev.social[p] !== next.social[p]) changed.push(p)
   const stale = changed.filter((key) => errors[key] !== undefined)
   if (stale.length === 0) return errors

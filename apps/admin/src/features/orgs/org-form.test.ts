@@ -27,7 +27,11 @@ const org: AdminOrgDTO = {
   eventCount: 2,
   donationsEnabled: false,
   socialLinks: { instagram: "riverfriends" },
+  logoMediaId: null,
 }
+
+const LOGO_A = "22222222-2222-4222-8222-222222222222"
+const LOGO_B = "33333333-3333-4333-8333-333333333333"
 
 describe("validateProfileDraft", () => {
   it("requires a name and a valid slug", () => {
@@ -80,6 +84,17 @@ describe("buildCreateRequest", () => {
       reason: "onboarded",
     })
   })
+
+  it("sends an uploaded logo and omits the key when none was chosen", () => {
+    const draft = emptyProfileDraft()
+    draft.name = "River Friends"
+    draft.slug = "river-friends"
+    const opts = { ownerUserId: "u1", verifiedKind: null, reason: "r" }
+    expect(buildCreateRequest(draft, opts).logoMediaId).toBeUndefined()
+    draft.logoMediaId = LOGO_A
+    draft.logoPreviewUrl = "blob:preview"
+    expect(buildCreateRequest(draft, opts).logoMediaId).toBe(LOGO_A)
+  })
 })
 
 describe("buildUpdateRequest", () => {
@@ -99,6 +114,43 @@ describe("buildUpdateRequest", () => {
       websiteUrl: null,
       socialLinks: null,
     })
+  })
+
+  it("sends the new logo id, null when cleared, and nothing when untouched", () => {
+    const withLogo: AdminOrgDTO = { ...org, logoMediaId: LOGO_A, logoUrl: "https://cdn/logo.png" }
+    expect(buildUpdateRequest(withLogo, draftFromOrg(withLogo), "r")).toBeNull()
+
+    const replaced = draftFromOrg(withLogo)
+    replaced.logoMediaId = LOGO_B
+    replaced.logoPreviewUrl = "blob:preview"
+    expect(buildUpdateRequest(withLogo, replaced, "r")).toEqual({
+      id: org.id,
+      reason: "r",
+      logoMediaId: LOGO_B,
+    })
+
+    const cleared = draftFromOrg(withLogo)
+    cleared.logoMediaId = null
+    cleared.logoPreviewUrl = null
+    expect(buildUpdateRequest(withLogo, cleared, "r")).toEqual({
+      id: org.id,
+      reason: "r",
+      logoMediaId: null,
+    })
+
+    const added = draftFromOrg(org)
+    added.logoMediaId = LOGO_A
+    expect(buildUpdateRequest(org, added, "r")).toEqual({
+      id: org.id,
+      reason: "r",
+      logoMediaId: LOGO_A,
+    })
+  })
+
+  it("does not treat a preview-only change as dirty", () => {
+    const draft = draftFromOrg(org)
+    draft.logoPreviewUrl = "blob:preview"
+    expect(buildUpdateRequest(org, draft, "r")).toBeNull()
   })
 
   it("treats a slug change as a change", () => {
@@ -152,12 +204,14 @@ describe("fieldErrorsFromError", () => {
     const err = AppError.validation({
       name: "too long",
       "socialLinks.x": "bad handle",
+      logoMediaId: "That image is unavailable.",
       ownerUserId: "unknown user",
       somethingElse: "ignored",
     })
     expect(fieldErrorsFromError(err)).toEqual({
       name: "too long",
       x: "bad handle",
+      logoMediaId: "That image is unavailable.",
       ownerUserId: "unknown user",
     })
   })
@@ -184,6 +238,14 @@ describe("clearChangedFieldErrors", () => {
     const prev = draftFromOrg(org)
     const next = { ...prev, description: "edited" }
     expect(clearChangedFieldErrors(errors, prev, next)).toBe(errors)
+  })
+
+  it("drops a logo error once a new image is picked", () => {
+    const prev = draftFromOrg(org)
+    const next = { ...prev, logoMediaId: LOGO_A }
+    expect(
+      clearChangedFieldErrors({ logoMediaId: "That image is unavailable." }, prev, next),
+    ).toEqual({})
   })
 })
 
