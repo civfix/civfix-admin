@@ -15,7 +15,6 @@ import type {
   RemoveUserMessageRequest,
   SetUserReportVerifiedRequest,
   SetUserStatusRequest,
-  SetUserVerifiedRequest,
   UserEventsResponse,
   UserMessagesResponse,
   UserReportsResponse,
@@ -101,14 +100,6 @@ export function useSetUserStatus() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetUserStatusRequest) => api.setUserStatus(input),
-    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
-  })
-}
-
-export function useSetUserVerified() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: SetUserVerifiedRequest) => api.setUserVerified(input),
     onSuccess: (_res, { id }) => invalidateUsers(qc, id),
   })
 }

@@ -26,7 +26,6 @@ import {
   useRemoveUserMessage,
   useSetUserReportVerified,
   useSetUserStatus,
-  useSetUserVerified,
   useUser,
   useUserEvents,
   useUserListInfinite,
@@ -319,7 +318,6 @@ function UserDetail({ userId }: { userId: string }) {
 
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
-  const setVerified = useSetUserVerified()
   const setReportVerified = useSetUserReportVerified()
 
   const [tab, setTab] = React.useState<TabId>("reports")
@@ -400,24 +398,11 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
-  const isVerified = user.verificationStatus === "verified"
-
   const onCopyId = () => {
     const id = user.id
     void Promise.resolve(navigator?.clipboard?.writeText(id))
       .then(() => toast("User ID copied"))
       .catch(() => toast("Couldn't copy — select the ID manually"))
-  }
-
-  const onToggleVerified = () => {
-    const next = !isVerified
-    setVerified.mutate(
-      { id: user.id, verified: next },
-      {
-        onSuccess: () =>
-          toast(next ? `${user.name} · verified` : `${user.name} · verification removed`),
-      },
-    )
   }
 
   const isReportVerified = !!user.reportVerified
@@ -462,11 +447,6 @@ function UserDetail({ userId }: { userId: string }) {
           {user.flagged && (
             <span className="pill status-flag">
               <Icons.Flag size={11} /> Flagged
-            </span>
-          )}
-          {isVerified && (
-            <span className="pill status-ok" title="Verified community organizer">
-              <Icons.Shield size={11} /> Verified community organizer
             </span>
           )}
           {isReportVerified && (
@@ -545,18 +525,6 @@ function UserDetail({ userId }: { userId: string }) {
           onClick={onFlag}
         >
           <Icons.Flag size={13} /> {user.flagged ? "Flagged" : "Flag account"}
-        </button>
-        <button
-          className={`btn ${isVerified ? "" : "success"}`}
-          disabled={setVerified.isPending || deleted}
-          onClick={onToggleVerified}
-          title={
-            isVerified
-              ? "Remove the verified-community-organizer mark"
-              : "Mark verified (after a verification call)"
-          }
-        >
-          <Icons.Shield size={13} /> {isVerified ? "Unverify" : "Verify"}
         </button>
         <button
           className="btn"
