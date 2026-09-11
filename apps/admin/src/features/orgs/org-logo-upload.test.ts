@@ -92,6 +92,13 @@ describe("putLogoBytes", () => {
       putLogoBytes("https://storage/put", {}, imageBlob("image/png"), 4, fetchImpl),
     ).rejects.toThrow(/403/)
   })
+
+  it("replaces a blocked or dropped request with connection copy", async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+    await expect(
+      putLogoBytes("https://storage/put", {}, imageBlob("image/png"), 4, fetchImpl),
+    ).rejects.toThrow("Upload failed. Please check your connection and try again.")
+  })
 })
 
 describe("uploadOrgLogo", () => {

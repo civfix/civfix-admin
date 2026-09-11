@@ -82,6 +82,8 @@ export async function putLogoBytes(
   let res: Response
   try {
     res = await fetchImpl(url, { method: "PUT", headers, body, signal: controller.signal })
+  } catch (err) {
+    throw new Error("Upload failed. Please check your connection and try again.", { cause: err })
   } finally {
     clearTimeout(timer)
   }
