@@ -32,13 +32,13 @@ import {
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { ORG_ROLE_LABEL, ORG_ROLE_PILL } from "@/features/orgs/org-members"
 import {
-  sortUserOrganizations,
   userOrganizationFocus,
+  userOrganizationsView,
   type UserOrganization,
 } from "@/features/users/user-organizations"
-import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { getUserMessageDestination } from "./profile-activity-navigation"
 import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -314,15 +314,16 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
 }
 
 function UserOrganizations({ user, nav }: { user: AdminUserDTO; nav: NavFn }) {
-  const orgs = sortUserOrganizations(user.organizations)
+  const { reported, items } = userOrganizationsView(user.organizations)
+  if (!reported) return null
   return (
     <div className="sub user-orgs">
       <div className="sub-head">Organizations</div>
       <div className="sub-body">
-        {orgs.length === 0 ? (
+        {items.length === 0 ? (
           <span className="muted">No organizations</span>
         ) : (
-          orgs.map((org) => <UserOrganizationRow key={org.id} org={org} nav={nav} />)
+          items.map((org) => <UserOrganizationRow key={org.id} org={org} nav={nav} />)
         )}
       </div>
     </div>
@@ -353,7 +354,9 @@ function UserOrganizationRow({ org, nav }: { org: UserOrganization; nav: NavFn }
           <span className="ident mono">/{org.slug}</span>
         </div>
       </div>
-      <span className={`pill ${ORG_ROLE_PILL[org.role]} tight`}>{ORG_ROLE_LABEL[org.role]}</span>
+      <div className="trailing">
+        <span className={`pill ${ORG_ROLE_PILL[org.role]} tight`}>{ORG_ROLE_LABEL[org.role]}</span>
+      </div>
     </div>
   )
 }

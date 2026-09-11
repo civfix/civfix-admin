@@ -88,7 +88,10 @@ export function LogoField({
         objectUrlRef.current = preview
         onChange({ ...latest.current, logoMediaId, logoPreviewUrl: preview })
       },
-      onError: (err) => setProblem(logoUploadErrorMessage(err)),
+      onError: (err) => {
+        if (!mounted.current) return
+        setProblem(logoUploadErrorMessage(err))
+      },
     })
   }
 

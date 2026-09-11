@@ -4,9 +4,11 @@ import { MAX_IMAGE_BYTES } from "@civfix/shared"
 import {
   MAX_ORG_LOGO_BYTES,
   ORG_LOGO_ACCEPT,
+  ORG_LOGO_PUT_BASE_TIMEOUT_MS,
   buildLogoUploadRequest,
   logoContentType,
   logoFileProblem,
+  logoPutTimeoutMs,
   prepareLogo,
   putLogoBytes,
   uploadOrgLogo,
@@ -64,11 +66,19 @@ describe("prepareLogo + buildLogoUploadRequest", () => {
   })
 })
 
+describe("logoPutTimeoutMs", () => {
+  it("never drops below the base timeout and scales with the byte size", () => {
+    expect(logoPutTimeoutMs(0)).toBe(ORG_LOGO_PUT_BASE_TIMEOUT_MS)
+    expect(logoPutTimeoutMs(1_000)).toBe(ORG_LOGO_PUT_BASE_TIMEOUT_MS)
+    expect(logoPutTimeoutMs(MAX_ORG_LOGO_BYTES)).toBeGreaterThan(ORG_LOGO_PUT_BASE_TIMEOUT_MS)
+  })
+})
+
 describe("putLogoBytes", () => {
   it("PUTs the bytes with the presigned headers", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response)
     const body = imageBlob("image/png")
-    await putLogoBytes("https://storage/put", { "content-type": "image/png" }, body, fetchImpl)
+    await putLogoBytes("https://storage/put", { "content-type": "image/png" }, body, 4, fetchImpl)
     const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit]
     expect(url).toBe("https://storage/put")
     expect(init.method).toBe("PUT")
@@ -79,7 +89,7 @@ describe("putLogoBytes", () => {
   it("throws on a non-2xx storage response", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 403 } as Response)
     await expect(
-      putLogoBytes("https://storage/put", {}, imageBlob("image/png"), fetchImpl),
+      putLogoBytes("https://storage/put", {}, imageBlob("image/png"), 4, fetchImpl),
     ).rejects.toThrow(/403/)
   })
 })

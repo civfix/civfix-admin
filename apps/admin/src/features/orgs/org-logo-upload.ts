@@ -3,11 +3,11 @@ import type { ApiClient } from "@civfix/shared/client"
 
 import { errorMessage } from "@/lib/error-messages"
 
-
 export const ORG_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const
 export const ORG_LOGO_ACCEPT = ORG_LOGO_MIME_TYPES.join(",")
 export const MAX_ORG_LOGO_BYTES = MAX_IMAGE_BYTES
-export const ORG_LOGO_PUT_TIMEOUT_MS = 60_000
+export const ORG_LOGO_PUT_BASE_TIMEOUT_MS = 120_000
+export const ORG_LOGO_MIN_BYTES_PER_SEC = 64_000
 
 export const MAX_ORG_LOGO_LABEL = `${Math.round(MAX_ORG_LOGO_BYTES / (1024 * 1024))} MB`
 
@@ -20,6 +20,10 @@ export interface PreparedLogo {
   contentType: string
   byteSize: number
   sha256: string
+}
+
+export function logoPutTimeoutMs(byteSize: number): number {
+  return Math.max(ORG_LOGO_PUT_BASE_TIMEOUT_MS, (byteSize / ORG_LOGO_MIN_BYTES_PER_SEC) * 1000)
 }
 
 export function logoContentType(type: string): string {
@@ -70,22 +74,16 @@ export async function putLogoBytes(
   url: string,
   headers: Record<string, string>,
   body: Blob,
+  byteSize: number,
   fetchImpl: typeof fetch = fetch,
-  signal?: AbortSignal,
 ): Promise<void> {
   const controller = new AbortController()
-  const abort = () => controller.abort()
-  if (signal) {
-    if (signal.aborted) abort()
-    else signal.addEventListener("abort", abort, { once: true })
-  }
-  const timer = setTimeout(abort, ORG_LOGO_PUT_TIMEOUT_MS)
+  const timer = setTimeout(() => controller.abort(), logoPutTimeoutMs(byteSize))
   let res: Response
   try {
     res = await fetchImpl(url, { method: "PUT", headers, body, signal: controller.signal })
   } finally {
     clearTimeout(timer)
-    signal?.removeEventListener("abort", abort)
   }
   if (!res.ok) throw new Error(`Upload failed (${res.status}). Please try again.`)
 }
@@ -94,7 +92,6 @@ export interface UploadOrgLogoInput {
   api: Pick<ApiClient, "createMediaUpload" | "finalizeMedia">
   file: Blob & LogoFileFacts
   fetchImpl?: typeof fetch
-  signal?: AbortSignal
 }
 
 export async function uploadOrgLogo(input: UploadOrgLogoInput): Promise<string> {
@@ -106,8 +103,8 @@ export async function uploadOrgLogo(input: UploadOrgLogoInput): Promise<string> 
     presign.putUrl,
     presign.headers,
     input.file,
+    prepared.byteSize,
     input.fetchImpl ?? fetch,
-    input.signal,
   )
   const finalized = await input.api.finalizeMedia({ uploadId: presign.uploadId })
   return finalized.mediaId

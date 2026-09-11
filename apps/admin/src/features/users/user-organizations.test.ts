@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  sortUserOrganizations,
   userOrganizationFocus,
+  userOrganizationsView,
   type UserOrganization,
 } from "./user-organizations"
 
@@ -13,10 +13,13 @@ const org = (name: string, role: UserOrganization["role"]): UserOrganization => 
   role,
 })
 
-describe("sortUserOrganizations", () => {
-  it("returns an empty list when the server sent no memberships", () => {
-    expect(sortUserOrganizations(undefined)).toEqual([])
-    expect(sortUserOrganizations([])).toEqual([])
+describe("userOrganizationsView", () => {
+  it("reports nothing when the server omitted the additive field", () => {
+    expect(userOrganizationsView(undefined)).toEqual({ reported: false, items: [] })
+  })
+
+  it("distinguishes an explicit empty list from an absent one", () => {
+    expect(userOrganizationsView([])).toEqual({ reported: true, items: [] })
   })
 
   it("orders owner, then admin, then member, and alphabetically within a role", () => {
@@ -26,7 +29,7 @@ describe("sortUserOrganizations", () => {
       org("Basin", "owner"),
       org("Creek", "admin"),
     ]
-    expect(sortUserOrganizations(input).map((o) => o.name)).toEqual([
+    expect(userOrganizationsView(input).items.map((o) => o.name)).toEqual([
       "Basin",
       "Creek",
       "Alder",
@@ -36,7 +39,7 @@ describe("sortUserOrganizations", () => {
 
   it("does not mutate the response array", () => {
     const input = [org("Zebra", "member"), org("Basin", "owner")]
-    sortUserOrganizations(input)
+    userOrganizationsView(input)
     expect(input.map((o) => o.name)).toEqual(["Zebra", "Basin"])
   })
 })

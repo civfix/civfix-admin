@@ -737,7 +737,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 
 /* Users page: the account's organization memberships, one qrow per org inside a plain .sub card. */
 .user-detail .user-orgs { margin: 0 16px 14px; }
-.user-orgs > .sub-body { padding: 0; }
+.user-orgs > .sub-body { padding: 0; max-height: 168px; overflow-y: auto; }
 .user-orgs > .sub-body > .muted {
   display: block;
   padding: var(--row-pad-y) var(--row-pad-x);
