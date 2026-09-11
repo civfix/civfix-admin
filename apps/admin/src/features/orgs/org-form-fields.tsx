@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { SOCIAL_PLATFORM_LABELS } from "@civfix/shared"
+import { SOCIAL_PLATFORM_LABELS, monogram } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import {
@@ -13,7 +13,14 @@ import {
   type OrgProfileErrors,
   type SocialPlatform,
 } from "@/features/orgs/org-form"
+import {
+  MAX_ORG_LOGO_LABEL,
+  ORG_LOGO_ACCEPT,
+  logoFileProblem,
+  logoUploadErrorMessage,
+} from "@/features/orgs/org-logo-upload"
 import { deriveSlug, publicOrgUrl } from "@/features/orgs/org-slug"
+import { useUploadOrgLogo } from "@/features/orgs/use-orgs"
 
 export function FieldError({ text }: { text: string | undefined }) {
   if (!text) return null
@@ -21,6 +28,135 @@ export function FieldError({ text }: { text: string | undefined }) {
     <span className="field-error" role="alert">
       <Icons.AlertTriangle size={11} /> {text}
     </span>
+  )
+}
+
+export function LogoField({
+  draft,
+  error,
+  onChange,
+  mode,
+  disabled,
+  onUploadingChange,
+}: {
+  draft: OrgProfileDraft
+  error: string | undefined
+  onChange: (next: OrgProfileDraft) => void
+  mode: "create" | "edit"
+  disabled?: boolean
+  onUploadingChange?: (uploading: boolean) => void
+}) {
+  const upload = useUploadOrgLogo()
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const objectUrlRef = React.useRef<string | null>(null)
+  const latest = React.useRef(draft)
+  const mounted = React.useRef(true)
+  const [problem, setProblem] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    latest.current = draft
+  })
+  React.useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    }
+  }, [])
+  const uploading = upload.isPending
+  React.useEffect(() => {
+    onUploadingChange?.(uploading)
+  }, [uploading, onUploadingChange])
+
+  const releasePreview = () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = null
+  }
+
+  const onPick = (file: File) => {
+    setProblem(null)
+    const bad = logoFileProblem(file)
+    if (bad) {
+      setProblem(bad)
+      return
+    }
+    upload.mutate(file, {
+      onSuccess: (logoMediaId) => {
+        if (!mounted.current) return
+        releasePreview()
+        const preview = URL.createObjectURL(file)
+        objectUrlRef.current = preview
+        onChange({ ...latest.current, logoMediaId, logoPreviewUrl: preview })
+      },
+      onError: (err) => {
+        if (!mounted.current) return
+        setProblem(logoUploadErrorMessage(err))
+      },
+    })
+  }
+
+  const onRemove = () => {
+    setProblem(null)
+    releasePreview()
+    onChange({ ...latest.current, logoMediaId: null, logoPreviewUrl: null })
+  }
+
+  const busy = !!disabled || uploading
+  const hasLogo = draft.logoPreviewUrl !== null || draft.logoMediaId !== null
+  const message = problem ?? error
+  const inputId = `org-${mode}-logo`
+
+  return (
+    <div className={`field ${message ? "has-error" : ""}`}>
+      <label className="lbl" htmlFor={inputId}>
+        Logo
+        <span className="opt">optional · PNG, JPEG or WebP · max {MAX_ORG_LOGO_LABEL}</span>
+      </label>
+      <div className="org-logo-field">
+        {draft.logoPreviewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="org-logo lg" src={draft.logoPreviewUrl} alt="" />
+        ) : (
+          <span className="org-logo lg hue-sky">{monogram(draft.name)}</span>
+        )}
+        <div className="org-logo-actions">
+          <input
+            id={inputId}
+            ref={inputRef}
+            className="org-logo-file"
+            type="file"
+            accept={ORG_LOGO_ACCEPT}
+            disabled={busy}
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null
+              e.target.value = ""
+              if (file) onPick(file)
+            }}
+          />
+          <button
+            type="button"
+            className="btn sm"
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+          >
+            <Icons.Plus size={13} />{" "}
+            {uploading ? "Uploading…" : hasLogo ? "Replace image" : "Upload logo"}
+          </button>
+          {hasLogo && (
+            <button type="button" className="btn sm ghost" disabled={busy} onClick={onRemove}>
+              <Icons.Trash size={13} /> Remove
+            </button>
+          )}
+        </div>
+      </div>
+      {message ? (
+        <FieldError text={message} />
+      ) : (
+        <span className="hint">
+          Shown on the public page and next to every event the organization hosts.
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -35,12 +171,14 @@ export function OrgProfileFields({
   onChange,
   mode,
   disabled,
+  onLogoUploadingChange,
 }: {
   draft: OrgProfileDraft
   errors: OrgProfileErrors
   onChange: (next: OrgProfileDraft) => void
   mode: "create" | "edit"
   disabled?: boolean
+  onLogoUploadingChange?: (uploading: boolean) => void
 }) {
   const [slugTouched, setSlugTouched] = React.useState(mode === "edit")
   const id = (name: string) => `org-${mode}-${name}`
@@ -146,6 +284,15 @@ export function OrgProfileFields({
         />
         <FieldError text={errors.description} />
       </div>
+
+      <LogoField
+        draft={draft}
+        error={errors.logoMediaId}
+        onChange={onChange}
+        mode={mode}
+        disabled={disabled}
+        {...(onLogoUploadingChange ? { onUploadingChange: onLogoUploadingChange } : {})}
+      />
 
       <div className={`field ${errors.websiteUrl ? "has-error" : ""}`}>
         <label className="lbl" htmlFor={id("website")}>

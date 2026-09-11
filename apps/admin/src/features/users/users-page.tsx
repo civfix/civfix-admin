@@ -26,13 +26,19 @@ import {
   useRemoveUserMessage,
   useSetUserReportVerified,
   useSetUserStatus,
-  useSetUserVerified,
   useUser,
   useUserEvents,
   useUserListInfinite,
   useUserMessages,
   useUserReports,
 } from "@/features/users/use-users"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
+import { ORG_ROLE_LABEL, ORG_ROLE_PILL } from "@/features/orgs/org-members"
+import {
+  userOrganizationFocus,
+  userOrganizationsView,
+  type UserOrganization,
+} from "@/features/users/user-organizations"
 import { getUserMessageDestination } from "./profile-activity-navigation"
 import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -307,6 +313,54 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   )
 }
 
+function UserOrganizations({ user, nav }: { user: AdminUserDTO; nav: NavFn }) {
+  const { reported, items } = userOrganizationsView(user.organizations)
+  if (!reported) return null
+  return (
+    <div className="sub user-orgs">
+      <div className="sub-head">Organizations</div>
+      <div className="sub-body">
+        {items.length === 0 ? (
+          <span className="muted">No organizations</span>
+        ) : (
+          items.map((org) => <UserOrganizationRow key={org.id} org={org} nav={nav} />)
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UserOrganizationRow({ org, nav }: { org: UserOrganization; nav: NavFn }) {
+  const open = () => nav("orgs", userOrganizationFocus(org))
+  return (
+    <div className="qrow static user-org-row">
+      <span className="org-logo hue-sky">{monogram(org.name)}</span>
+      <div className="body">
+        <div className="top">
+          <span
+            className="title lnk-inline"
+            role="button"
+            tabIndex={0}
+            title="Open organization"
+            onClick={open}
+            onKeyDown={(e) => {
+              if (!isKeyboardActivationKey(e.key)) return
+              e.preventDefault()
+              open()
+            }}
+          >
+            {org.name}
+          </span>
+          <span className="ident mono">/{org.slug}</span>
+        </div>
+      </div>
+      <div className="trailing">
+        <span className={`pill ${ORG_ROLE_PILL[org.role]} tight`}>{ORG_ROLE_LABEL[org.role]}</span>
+      </div>
+    </div>
+  )
+}
+
 function tabCount(user: AdminUserDTO, id: TabId): number {
   if (id === "reports") return user.reports
   if (id === "events") return user.cleanups
@@ -316,10 +370,10 @@ function tabCount(user: AdminUserDTO, id: TabId): number {
 function UserDetail({ userId }: { userId: string }) {
   const q = useUser(userId)
   const toast = useToast()
+  const nav = useNav()
 
   const flag = useFlagUser()
   const setStatus = useSetUserStatus()
-  const setVerified = useSetUserVerified()
   const setReportVerified = useSetUserReportVerified()
 
   const [tab, setTab] = React.useState<TabId>("reports")
@@ -400,24 +454,11 @@ function UserDetail({ userId }: { userId: string }) {
     )
   }
 
-  const isVerified = user.verificationStatus === "verified"
-
   const onCopyId = () => {
     const id = user.id
     void Promise.resolve(navigator?.clipboard?.writeText(id))
       .then(() => toast("User ID copied"))
       .catch(() => toast("Couldn't copy — select the ID manually"))
-  }
-
-  const onToggleVerified = () => {
-    const next = !isVerified
-    setVerified.mutate(
-      { id: user.id, verified: next },
-      {
-        onSuccess: () =>
-          toast(next ? `${user.name} · verified` : `${user.name} · verification removed`),
-      },
-    )
   }
 
   const isReportVerified = !!user.reportVerified
@@ -464,11 +505,6 @@ function UserDetail({ userId }: { userId: string }) {
               <Icons.Flag size={11} /> Flagged
             </span>
           )}
-          {isVerified && (
-            <span className="pill status-ok" title="Verified community organizer">
-              <Icons.Shield size={11} /> Verified community organizer
-            </span>
-          )}
           {isReportVerified && (
             <span
               className="pill status-new"
@@ -512,6 +548,8 @@ function UserDetail({ userId }: { userId: string }) {
         </button>
       </div>
 
+      <UserOrganizations user={user} nav={nav} />
+
       <div className="profile-tabs">
         {tabs.map((t) => {
           const n = tabCount(user, t.id)
@@ -545,18 +583,6 @@ function UserDetail({ userId }: { userId: string }) {
           onClick={onFlag}
         >
           <Icons.Flag size={13} /> {user.flagged ? "Flagged" : "Flag account"}
-        </button>
-        <button
-          className={`btn ${isVerified ? "" : "success"}`}
-          disabled={setVerified.isPending || deleted}
-          onClick={onToggleVerified}
-          title={
-            isVerified
-              ? "Remove the verified-community-organizer mark"
-              : "Mark verified (after a verification call)"
-          }
-        >
-          <Icons.Shield size={13} /> {isVerified ? "Unverify" : "Verify"}
         </button>
         <button
           className="btn"

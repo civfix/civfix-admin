@@ -75,6 +75,7 @@ function CreateOrgSlideOver({
   const [reason, setReasonState] = React.useState("")
   const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
   const [submitted, setSubmitted] = React.useState(false)
+  const [logoUploading, setLogoUploading] = React.useState(false)
   // Set synchronously on submit, before React has re-rendered with `create.isPending`, so a second
   // Enter in the same frame cannot start a second POST.
   const inFlight = React.useRef(false)
@@ -92,6 +93,7 @@ function CreateOrgSlideOver({
   // Cancel and the close button remain the deliberate way out.
   const pristine =
     owner === null &&
+    draft.logoMediaId === null &&
     verifiedKind === "" &&
     reason === "" &&
     Object.values(draft.social).every((v) => v === "") &&
@@ -118,7 +120,7 @@ function CreateOrgSlideOver({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (inFlight.current || pending) return
+    if (inFlight.current || pending || logoUploading) return
     setSubmitted(true)
     if (Object.keys(validateCreate(draft, owner, reason)).length > 0 || !owner) return
     const request = buildCreateRequest(draft, {
@@ -196,6 +198,7 @@ function CreateOrgSlideOver({
                       onChange={onDraftChange}
                       mode="create"
                       disabled={pending}
+                      onLogoUploadingChange={setLogoUploading}
                     />
                   </div>
                 </div>
@@ -264,12 +267,12 @@ function CreateOrgSlideOver({
           </div>
 
           <div className="panel-foot">
-            <span className="hint">Logo upload is not available in the console yet; the owner can add one from the app.</span>
+            {logoUploading && <span className="hint">Uploading the logo…</span>}
             <div className="spacer" />
             <button type="button" className="btn ghost" onClick={close} disabled={pending}>
               Cancel
             </button>
-            <button type="submit" className="btn primary" disabled={pending}>
+            <button type="submit" className="btn primary" disabled={pending || logoUploading}>
               <Icons.Plus size={14} /> {pending ? "Creating…" : "Create organization"}
             </button>
           </div>

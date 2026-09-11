@@ -163,6 +163,7 @@ const EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
   "slug",
   "description",
   "websiteUrl",
+  "logoMediaId",
   ...PROFILE_SOCIALS,
 ]
 
@@ -172,6 +173,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
   const [draft, setDraft] = React.useState<OrgProfileDraft>(() => draftFromOrg(org))
   const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
   const [attempted, setAttempted] = React.useState(false)
+  const [logoUploading, setLogoUploading] = React.useState(false)
   // True from the click until the reason prompt resolves: a second click while the prompt is open
   // must not queue a second prompt (and a second PATCH) behind it.
   const busy = React.useRef(false)
@@ -184,7 +186,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
   const slugChanged = draft.slug.trim().toLowerCase() !== org.slug
 
   const save = async () => {
-    if (busy.current || update.isPending) return
+    if (busy.current || update.isPending || logoUploading) return
     setAttempted(true)
     const local = validateProfileDraft(draft)
     if (Object.keys(local).length > 0) return
@@ -244,12 +246,17 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
             }}
             mode="edit"
             disabled={update.isPending}
+            onLogoUploadingChange={setLogoUploading}
           />
         </div>
       </div>
       <div className="rep-actions">
         <span className="rep-actions-label">Profile</span>
-        {!dirty && <span className="muted">No changes yet</span>}
+        {logoUploading ? (
+          <span className="muted">Uploading the logo…</span>
+        ) : (
+          !dirty && <span className="muted">No changes yet</span>
+        )}
         <div className="spacer" />
         <button type="button" className="btn ghost" onClick={onDone} disabled={update.isPending}>
           Cancel
@@ -257,7 +264,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
         <button
           type="button"
           className="btn primary"
-          disabled={update.isPending || !dirty}
+          disabled={update.isPending || logoUploading || !dirty}
           onClick={() => void save()}
         >
           <Icons.Check size={13} /> {update.isPending ? "Saving…" : "Save changes"}
