@@ -85,15 +85,18 @@ jobs:
 
       # Persist the build caches between runs. Side-effect-free: Turbo validates every task by an input
       # hash that already includes the NEXT_PUBLIC_* vars, so a changed API URL or source file rebuilds.
+      # The key is scoped by DEPLOY_ENV anyway: staging and production build the same commit, and
+      # `.next/cache` is restored underneath Turbo, so the two must never share one. (Admin happens to
+      # build identically in both environments today — this keeps that from becoming load-bearing.)
       - name: Restore Turbo + Next.js build cache
         uses: actions/cache@v4
         with:
           path: |
             .turbo
             apps/admin/.next/cache
-          key: ${{ runner.os }}-build-${{ github.sha }}
+          key: ${{ runner.os }}-build-${{ env.DEPLOY_ENV }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-build-
+            ${{ runner.os }}-build-${{ env.DEPLOY_ENV }}-
 
       - name: Build static export
         # NEXT_PUBLIC_* values are inlined into the export here at build time.
