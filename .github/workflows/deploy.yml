@@ -37,8 +37,13 @@ on:
   push:
     branches: [main]
   release:
-    types: [published]
+    # `released`, NOT `published`: `published` also fires for a PRERELEASE, and a prerelease must never
+    # reach admin.civfix.org — the operator plane. The regex gate below is the second guard.
+    types: [released]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 # One deploy per ref at a time; do not cancel an in-flight publish.
 concurrency:
@@ -68,6 +73,31 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history: the production gate below proves the tag is an ancestor of main.
+          fetch-depth: 0
+
+      - name: Prove the production ref (tag shape + merged into main)
+        # THIS IS A BRANCH-PROTECTION CONTROL. Without it, pushing a tag on any commit deploys the
+        # OPERATOR PLANE at admin.civfix.org, bypassing main's reviewed-PR requirement entirely. Keep
+        # the regex identical to civfix-backend's deploy.yml and CIVFIX_RELEASE_TAG_REGEX in civfix-infra.
+        if: env.DEPLOY_ENV == 'production'
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          RELEASE_RE='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          if ! printf '%s' "$tag" | grep -qE "$RELEASE_RE"; then
+            echo "::error::'$tag' is not a vMAJOR.MINOR.PATCH release tag; refusing to deploy production."
+            echo "::error::Prereleases are excluded by design."
+            exit 1
+          fi
+          git fetch --quiet --force origin '+refs/heads/main:refs/remotes/origin/main'
+          if ! git merge-base --is-ancestor "$tag" origin/main; then
+            echo "::error::tag '$tag' is not merged into main. Production only ships code that went"
+            echo "::error::through the staging lane and a reviewed PR. Refusing to deploy."
+            exit 1
+          fi
+          echo "$tag is a release tag merged into main"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
