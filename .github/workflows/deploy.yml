@@ -22,14 +22,22 @@ name: Deploy (Cloudflare Pages)
 # SPA deep links and security/cache headers are handled by the app's public/{_redirects,_headers}
 # (copied into out/).
 
-# Branch -> environment:
-#   main -> production deploy -> civfix-admin.pages.dev -> admin.civfix.org
-#   dev  -> preview deploy    -> dev.civfix-admin.pages.dev -> admin.civfix.dev (via the civfix-infra
-#           staging Caddy, which reverse-proxies the SPA to that alias). The admin app talks to its API
-#           same-origin (/v1/admin/* proxied by Caddy), so NEXT_PUBLIC_API_URL is unset for BOTH branches.
+# Ref -> environment (issue https://github.com/civfix/issue-tracker/issues/108):
+#   push to main       -> STAGING    --branch=staging -> staging.civfix-admin.pages.dev -> admin.civfix.dev
+#                         (via the civfix-infra staging Caddy, which reverse-proxies the SPA to that
+#                         alias — env/staging.sh ADMIN_SPA_UPSTREAM)
+#   published v* tag   -> PRODUCTION --branch=main    -> civfix-admin.pages.dev          -> admin.civfix.org
+#
+# There is no `dev` branch: feature branches PR into main, main IS the staging lane, and cutting a
+# release promotes to production. The admin app talks to its API same-origin (/v1/admin/* proxied by
+# Caddy), so NEXT_PUBLIC_API_URL is unset for BOTH environments and the two builds differ only in which
+# Pages alias they land on. Production is still rebuilt from the release tag rather than byte-promoted,
+# so it stays consistent with the web app, whose builds genuinely do differ per environment.
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 # One deploy per ref at a time; do not cancel an in-flight publish.
@@ -41,7 +49,23 @@ jobs:
   deploy:
     name: build + publish civfix-admin
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_ENV: ${{ startsWith(github.ref, 'refs/tags/v') && 'production' || 'staging' }}
     steps:
+      - name: Refuse a deploy from any ref but main or a v* release tag
+        # The Pages branch below decides production-vs-preview, so the set of refs that can reach it has
+        # to be closed explicitly rather than left to the trigger list.
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF" in
+            refs/heads/main | refs/tags/v*) ;;
+            *)
+              echo "::error::deploy.yml may only run on main or a v* tag; refusing '$GITHUB_REF'."
+              exit 1
+              ;;
+          esac
+          echo "ref $GITHUB_REF -> $DEPLOY_ENV"
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -85,7 +109,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           # Deterministic prod-vs-preview: --branch=main lands production (civfix-admin.pages.dev),
-          # --branch=dev lands the preview alias (dev.civfix-admin.pages.dev). Passed via env (not
-          # inlined into run) per Actions injection-safety; the trigger limits ref_name to main/dev.
-          DEPLOY_BRANCH: ${{ github.ref_name }}
-        run: pnpm dlx wrangler@3 pages deploy --branch="$DEPLOY_BRANCH"
+          # --branch=staging lands the preview alias (staging.civfix-admin.pages.dev). Derived from
+          # DEPLOY_ENV rather than from the ref name, so a tag can never be passed to Cloudflare as a
+          # branch label. Passed via env (not inlined into run) per Actions injection-safety.
+          DEPLOY_BRANCH: ${{ startsWith(github.ref, 'refs/tags/v') && 'main' || 'staging' }}
+        run: |
+          set -euo pipefail
+          case "$DEPLOY_ENV:$DEPLOY_BRANCH" in
+            production:main | staging:staging) ;;
+            *)
+              echo "::error::refusing to publish $DEPLOY_ENV to the '$DEPLOY_BRANCH' Pages branch."
+              exit 1
+              ;;
+          esac
+          pnpm dlx wrangler@3 pages deploy --branch="$DEPLOY_BRANCH"
