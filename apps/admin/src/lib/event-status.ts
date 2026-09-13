@@ -11,3 +11,9 @@ export const EVENT_STATUS_VIEW: Record<EventStatus, { cls: string; label: string
 export function eventStatusView(status: EventStatus): { cls: string; label: string } {
   return EVENT_STATUS_VIEW[status] ?? EVENT_STATUS_VIEW.upcoming
 }
+
+export function cancelBlockedFor(status: EventStatus): string | null {
+  if (status === "completed") return "This event has already ended and can't be cancelled."
+  if (status === "cancelled") return "This event is already cancelled."
+  return null
+}

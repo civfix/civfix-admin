@@ -15,7 +15,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
-import { EVENT_STATUS_VIEW } from "@/lib/event-status"
+import { cancelBlockedFor, EVENT_STATUS_VIEW } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { reportStatusView } from "@/lib/report-status"
 import {
@@ -378,6 +378,8 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     )
   }
 
+  const cancelBlockedReason = cancelBlockedFor(event.status)
+
   const onCancel = async () => {
     const ok = await confirmDialog({
       title: "Cancel this event?",
@@ -739,7 +741,12 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         >
           <Icons.Flag size={13} /> {event.flagged ? "Flagged" : "Flag"}
         </button>
-        <button className="btn danger" disabled={cancel.isPending} onClick={onCancel}>
+        <button
+          className="btn danger"
+          disabled={cancel.isPending || cancelBlockedReason !== null}
+          title={cancelBlockedReason ?? undefined}
+          onClick={onCancel}
+        >
           <Icons.Trash size={13} /> Cancel event
         </button>
       </div>
@@ -813,8 +820,12 @@ export function EventsPage({ focusId }: SectionPageProps) {
           options={[
             { value: "all", label: "All", count: counts.all },
             { value: "upcoming", label: "Upcoming", count: counts.upcoming },
-            { value: "in_progress", label: "In progress", count: counts.in_progress },
-            { value: "completed", label: "Completed", count: counts.completed },
+            {
+              value: "in_progress",
+              label: STATUS_VIEW.in_progress.label,
+              count: counts.in_progress,
+            },
+            { value: "completed", label: STATUS_VIEW.completed.label, count: counts.completed },
             { value: "flagged", label: "Flagged", count: counts.flagged },
           ]}
           value={filter}
