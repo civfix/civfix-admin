@@ -3,12 +3,10 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import {
-  EVENT_STATUS_LABELS,
   REPORT_CATEGORY_LABELS,
   type AdminEventDTO,
   type AdminEventListItemDTO,
   type AdminReportListItemDTO,
-  type EventStatus,
   type LinkedReportRef,
 } from "@civfix/shared"
 
@@ -28,7 +26,6 @@ import {
   useLinkReports,
   usePostEventMessage,
   useSetEventOutcome,
-  useSetEventStatus,
   useUnlinkReport,
 } from "@/features/events/use-events"
 import { useReportList } from "@/features/reports/use-reports"
@@ -42,12 +39,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
 })
 
 const STATUS_VIEW = EVENT_STATUS_VIEW
-
-const STATUS_ACTIONS: { value: EventStatus; label: string }[] = [
-  { value: "upcoming", label: "Upcoming" },
-  { value: "in_progress", label: "In progress" },
-  { value: "completed", label: "Completed" },
-]
 
 const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> = {
   create: Icons.Pin,
@@ -319,7 +310,6 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   const nav = useNav()
   const toast = useToast()
 
-  const setStatus = useSetEventStatus()
   const flag = useFlagEvent()
   const cancel = useCancelEvent()
   const postMessage = usePostEventMessage()
@@ -357,14 +347,6 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           toast("Update posted to attendees")
         },
       },
-    )
-  }
-
-  const onStatus = (status: EventStatus) => {
-    if (event.status === status) return
-    setStatus.mutate(
-      { id: event.id, status },
-      { onSuccess: () => toast(`${shortId(event.id)} · status → ${EVENT_STATUS_LABELS[status]}`) },
     )
   }
 
@@ -748,18 +730,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
 
       { }
       <div className="rep-actions">
-        <span className="rep-actions-label">Set status</span>
-        {STATUS_ACTIONS.map((s) => (
-          <button
-            key={s.value}
-            className={`btn sm ${event.status === s.value ? "primary" : ""}`}
-            disabled={setStatus.isPending}
-            onClick={() => onStatus(s.value)}
-          >
-            {event.status === s.value && <Icons.Check size={11} />}
-            {s.label}
-          </button>
-        ))}
+        <span className="rep-actions-label">Moderate</span>
         <div className="spacer" />
         <button
           className={`btn ${event.flagged ? "flag-on" : ""}`}
