@@ -3,12 +3,10 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import {
-  EVENT_STATUS_LABELS,
   REPORT_CATEGORY_LABELS,
   type AdminEventDTO,
   type AdminEventListItemDTO,
   type AdminReportListItemDTO,
-  type EventStatus,
   type LinkedReportRef,
 } from "@civfix/shared"
 
@@ -17,7 +15,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
-import { EVENT_STATUS_VIEW } from "@/lib/event-status"
+import { cancelBlockedFor, EVENT_STATUS_VIEW } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { reportStatusView } from "@/lib/report-status"
 import {
@@ -28,7 +26,6 @@ import {
   useLinkReports,
   usePostEventMessage,
   useSetEventOutcome,
-  useSetEventStatus,
   useUnlinkReport,
 } from "@/features/events/use-events"
 import { useReportList } from "@/features/reports/use-reports"
@@ -42,12 +39,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
 })
 
 const STATUS_VIEW = EVENT_STATUS_VIEW
-
-const STATUS_ACTIONS: { value: EventStatus; label: string }[] = [
-  { value: "upcoming", label: "Upcoming" },
-  { value: "in_progress", label: "In progress" },
-  { value: "completed", label: "Completed" },
-]
 
 const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> = {
   create: Icons.Pin,
@@ -319,7 +310,6 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   const nav = useNav()
   const toast = useToast()
 
-  const setStatus = useSetEventStatus()
   const flag = useFlagEvent()
   const cancel = useCancelEvent()
   const postMessage = usePostEventMessage()
@@ -360,14 +350,6 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     )
   }
 
-  const onStatus = (status: EventStatus) => {
-    if (event.status === status) return
-    setStatus.mutate(
-      { id: event.id, status },
-      { onSuccess: () => toast(`${shortId(event.id)} · status → ${EVENT_STATUS_LABELS[status]}`) },
-    )
-  }
-
   const logOutcome = () => {
     const bags = Number.parseInt(bagsInput, 10)
     if (!Number.isFinite(bags) || bags < 0) return
@@ -395,6 +377,8 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
       },
     )
   }
+
+  const cancelBlockedReason = cancelBlockedFor(event.status)
 
   const onCancel = async () => {
     const ok = await confirmDialog({
@@ -748,18 +732,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
 
       { }
       <div className="rep-actions">
-        <span className="rep-actions-label">Set status</span>
-        {STATUS_ACTIONS.map((s) => (
-          <button
-            key={s.value}
-            className={`btn sm ${event.status === s.value ? "primary" : ""}`}
-            disabled={setStatus.isPending}
-            onClick={() => onStatus(s.value)}
-          >
-            {event.status === s.value && <Icons.Check size={11} />}
-            {s.label}
-          </button>
-        ))}
+        <span className="rep-actions-label">Moderate</span>
         <div className="spacer" />
         <button
           className={`btn ${event.flagged ? "flag-on" : ""}`}
@@ -768,7 +741,12 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         >
           <Icons.Flag size={13} /> {event.flagged ? "Flagged" : "Flag"}
         </button>
-        <button className="btn danger" disabled={cancel.isPending} onClick={onCancel}>
+        <button
+          className="btn danger"
+          disabled={cancel.isPending || cancelBlockedReason !== null}
+          title={cancelBlockedReason ?? undefined}
+          onClick={onCancel}
+        >
           <Icons.Trash size={13} /> Cancel event
         </button>
       </div>
@@ -842,8 +820,12 @@ export function EventsPage({ focusId }: SectionPageProps) {
           options={[
             { value: "all", label: "All", count: counts.all },
             { value: "upcoming", label: "Upcoming", count: counts.upcoming },
-            { value: "in_progress", label: "In progress", count: counts.in_progress },
-            { value: "completed", label: "Completed", count: counts.completed },
+            {
+              value: "in_progress",
+              label: STATUS_VIEW.in_progress.label,
+              count: counts.in_progress,
+            },
+            { value: "completed", label: STATUS_VIEW.completed.label, count: counts.completed },
             { value: "flagged", label: "Flagged", count: counts.flagged },
           ]}
           value={filter}

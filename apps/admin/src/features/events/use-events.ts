@@ -10,7 +10,6 @@ import type {
   LinkEventReportsRequest,
   PostMessageRequest,
   SetEventOutcomeRequest,
-  SetEventStatusRequest,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
@@ -50,14 +49,6 @@ function invalidateEvents(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.events.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
   qc.invalidateQueries({ queryKey: queryKeys.activity.all })
-}
-
-export function useSetEventStatus() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: SetEventStatusRequest) => api.setEventStatus(input),
-    onSuccess: (_res, { id }) => invalidateEvents(qc, id),
-  })
 }
 
 export function useFlagEvent() {
