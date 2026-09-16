@@ -1066,10 +1066,18 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   object-fit: contain;
 }
 .qrow .leading.has-thumb {
+  position: relative;
   background: var(--paper-2);
-  border: 1px solid var(--border-soft);
+  border: 1px solid color-mix(in oklab, var(--cat, var(--border-soft)) 60%, var(--border-soft));
   border-radius: 8px;
   overflow: hidden;
+}
+.qrow .leading.has-thumb::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 3px;
+  background: var(--cat, transparent);
 }
 .qrow .leading.has-thumb img {
   width: 100%; height: 100%;
@@ -2937,9 +2945,31 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .lightbox {
   position: relative;
   width: fit-content; max-width: min(1100px, 100%);
+  min-width: min(320px, 100%); min-height: min(240px, 100%);
   display: flex; align-items: center; justify-content: center;
   animation: modal-pop 200ms cubic-bezier(0.25, 0.8, 0.3, 1);
 }
+.lightbox-face {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px;
+  width: min(320px, 100%);
+  padding: 24px;
+  text-align: center;
+  color: #fff;
+  font-size: 12.5px;
+  background: rgba(26, 23, 20, 0.55);
+  border-radius: 12px;
+}
+.lightbox-face-title { font-weight: 700; font-size: 14px; }
+.lightbox-face-sub { color: rgba(255, 255, 255, 0.72); line-height: 1.5; }
+.lightbox-face-btn {
+  margin-top: 4px;
+  padding: 7px 14px; border-radius: 10px;
+  font-size: 12px; font-weight: 700;
+  color: #fff; background: rgba(26, 23, 20, 0.72);
+  transition: background-color 120ms ease;
+}
+.lightbox-face-btn:hover { background: rgba(26, 23, 20, 0.9); }
 .lightbox-img {
   max-width: 100%; max-height: calc(100vh - 64px);
   width: auto; height: auto; display: block;
@@ -2947,6 +2977,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   background: var(--paper-2);
   box-shadow: 0 24px 64px rgba(26, 23, 20, 0.45);
 }
+.lightbox-img.pending { display: none; }
 .lightbox-bar {
   position: absolute; top: 10px; right: 10px; z-index: 1;
   display: flex; align-items: center; gap: 8px;

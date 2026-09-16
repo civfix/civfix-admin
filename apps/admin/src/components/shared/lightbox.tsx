@@ -4,6 +4,7 @@ import * as React from "react"
 import { create } from "zustand"
 
 import { Icons } from "@/components/icons"
+import { useModalFocus } from "@/components/shared/modal-focus"
 
 export interface LightboxImage {
   id: string
@@ -23,32 +24,59 @@ export function startIndex(index: number, count: number): number {
 interface LightboxState {
   images: LightboxImage[]
   index: number
-  open: (images: LightboxImage[], index: number) => void
+  refresh: (() => void) | null
+  open: (images: LightboxImage[], index: number, refresh: (() => void) | null) => void
   close: () => void
   step: (delta: number) => void
+  sync: (images: LightboxImage[]) => void
 }
 
 const useLightboxStore = create<LightboxState>((set) => ({
   images: [],
   index: 0,
-  open: (images, index) => set({ images, index }),
-  close: () => set({ images: [], index: 0 }),
+  refresh: null,
+  open: (images, index, refresh) => set({ images, index, refresh }),
+  close: () => set({ images: [], index: 0, refresh: null }),
   step: (delta) =>
     set((s) => (s.images.length === 0 ? s : { index: stepIndex(s.index, delta, s.images.length) })),
+  sync: (images) =>
+    set((s) => {
+      if (s.images.length === 0) return s
+      const next = s.images.map((shown) => images.find((i) => i.id === shown.id) ?? shown)
+      return next.every((img, i) => img.url === s.images[i]?.url) ? s : { images: next }
+    }),
 }))
 
-export function openLightbox(images: LightboxImage[], index = 0): void {
+export function openLightbox(images: LightboxImage[], index = 0, refresh?: () => void): void {
   if (images.length === 0) return
-  useLightboxStore.getState().open(images, startIndex(index, images.length))
+  useLightboxStore.getState().open(images, startIndex(index, images.length), refresh ?? null)
+}
+
+export function LightboxSync({ images }: { images: LightboxImage[] }) {
+  React.useEffect(() => {
+    useLightboxStore.getState().sync(images)
+  }, [images])
+  return null
 }
 
 export function LightboxHost() {
   const images = useLightboxStore((s) => s.images)
   const index = useLightboxStore((s) => s.index)
+  const refresh = useLightboxStore((s) => s.refresh)
   const close = useLightboxStore((s) => s.close)
   const step = useLightboxStore((s) => s.step)
-  const closeRef = React.useRef<HTMLButtonElement>(null)
   const count = images.length
+  const frameRef = useModalFocus<HTMLDivElement>(count > 0)
+  const current = count > 0 ? (images[index] ?? images[0]) : undefined
+  const url = current?.url ?? null
+  const [load, setLoad] = React.useState<{
+    url: string | null
+    status: "loading" | "ready" | "failed"
+    attempt: number
+  }>({ url: null, status: "loading", attempt: 0 })
+  const forCurrent = load.url === url
+  const status = forCurrent ? load.status : "loading"
+  const attempt = forCurrent ? load.attempt : 0
 
   React.useEffect(() => {
     if (count === 0) return
@@ -68,18 +96,18 @@ export function LightboxHost() {
     return () => window.removeEventListener("keydown", onKey)
   }, [count, close, step])
 
-  React.useEffect(() => {
-    if (count > 0) closeRef.current?.focus()
-  }, [count])
-
-  if (count === 0) return null
-  const current = images[index] ?? images[0]
   if (!current) return null
   const many = count > 1
+
+  const retry = () => {
+    setLoad({ url: current.url, status: "loading", attempt: attempt + 1 })
+    refresh?.()
+  }
 
   return (
     <div className="modal-overlay lightbox-overlay" onClick={close}>
       <div
+        ref={frameRef}
         className="lightbox"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -92,12 +120,39 @@ export function LightboxHost() {
               {index + 1} / {count}
             </span>
           )}
-          <button ref={closeRef} className="lightbox-btn" onClick={close} aria-label="Close">
+          <button className="lightbox-btn" onClick={close} aria-label="Close">
             <Icons.X size={16} />
           </button>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="lightbox-img" src={current.url} alt={current.alt} />
+        {status !== "failed" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={`${current.id}:${attempt}`}
+            className={`lightbox-img ${status === "ready" ? "" : "pending"}`}
+            src={current.url}
+            alt={current.alt}
+            decoding="async"
+            onLoad={() => setLoad({ url: current.url, status: "ready", attempt })}
+            onError={() => setLoad({ url: current.url, status: "failed", attempt })}
+          />
+        )}
+        {status === "loading" && (
+          <div className="lightbox-face" role="status" aria-live="polite">
+            <span className="op-spin" aria-hidden="true" />
+            <span>Loading photo...</span>
+          </div>
+        )}
+        {status === "failed" && (
+          <div className="lightbox-face" role="alert">
+            <span className="lightbox-face-title">This photo link expired</span>
+            <span className="lightbox-face-sub">
+              Photo links are short-lived. Refresh to fetch a new one.
+            </span>
+            <button type="button" className="lightbox-face-btn" onClick={retry}>
+              Refresh photo
+            </button>
+          </div>
+        )}
         {many && (
           <>
             <button
