@@ -429,7 +429,7 @@ const HOST_PLATFORM_SECTIONS: {
     page: "orgs",
     hue: "sky",
     icon: Icons.Building,
-    sub: "Create and manage orgs, verify members and events",
+    sub: "Create and manage orgs, verify, members, events",
   },
   { page: "hosts", hue: "bloom", icon: Icons.Send, sub: "Broadcast counters and the kill switch" },
   { page: "pages", hue: "lilac", icon: Icons.Globe, sub: "Public signup pages: flag or unpublish" },
