@@ -14,7 +14,7 @@
     "clean": "rimraf .next out *.tsbuildinfo"
   },
   "dependencies": {
-    "@civfix/shared": "^0.48.1",
+    "@civfix/shared": "^0.49.0",
     "@tanstack/react-query": "^5.62.7",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
