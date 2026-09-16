@@ -18,6 +18,7 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { openLightbox, type LightboxImage } from "@/components/shared/lightbox"
 import { BUCKET_VIEW, reportBucket, reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
@@ -193,6 +194,9 @@ function ChatMessageRow({
   const authorId = msg.from?.id
   const reactions = (msg.reactions ?? []).filter((r) => r.count > 0)
   const attachments = msg.attachments ?? []
+  const chatImages: LightboxImage[] = attachments
+    .filter((m) => m.kind === "image")
+    .map((m) => ({ id: m.id, url: m.url, alt: `Photo from ${authorName}` }))
 
   return (
     <div className={`dsc-msg ${removed ? "removed" : ""}`}>
@@ -243,19 +247,34 @@ function ChatMessageRow({
 
         {!removed && attachments.length > 0 && (
           <div className="dsc-msg-media">
-            {attachments.map((m) => {
-              const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
-              return (
+            {attachments.map((m) =>
+              m.kind === "image" ? (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="dsc-msg-thumb dsc-msg-thumb-open"
+                  title="Expand this photo"
+                  onClick={() =>
+                    openLightbox(
+                      chatImages,
+                      chatImages.findIndex((i) => i.id === m.id),
+                    )
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.thumbUrl ?? m.url} alt="" />
+                </button>
+              ) : (
                 <span key={m.id} className="dsc-msg-thumb">
-                  {thumb ? (
+                  {m.thumbUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb} alt="" />
+                    <img src={m.thumbUrl} alt="" />
                   ) : (
                     <Icons.FileText size={14} />
                   )}
                 </span>
-              )
-            })}
+              ),
+            )}
           </div>
         )}
 
@@ -380,10 +399,18 @@ const ReportRow = React.memo(function ReportRow({
   const pin = catPinSrc(item.category)
   const nav = useNav()
   const reporterId = getReporterProfileId(item.reporter.id)
+  const [brokenThumb, setBrokenThumb] = React.useState<string | null>(null)
+  const thumb = item.thumbnailUrl !== brokenThumb ? item.thumbnailUrl : null
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
-      <div className="leading has-pin" title={REPORT_CATEGORY_LABELS[item.category]}>
-        {pin ? (
+      <div
+        className={`leading ${thumb ? "has-thumb" : "has-pin"}`}
+        title={REPORT_CATEGORY_LABELS[item.category]}
+      >
+        {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumb} alt="" onError={() => setBrokenThumb(thumb)} />
+        ) : pin ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={pin} alt="" />
         ) : (
@@ -436,6 +463,39 @@ const ReportRow = React.memo(function ReportRow({
   )
 })
 
+function ReportPhotoFace({
+  photoUrl,
+  pin,
+  category,
+}: {
+  photoUrl: string | null
+  pin: string | null
+  category: ReportCategory
+}) {
+  return (
+    <>
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" />
+      ) : (
+        <span className="rep-photo-pin" style={{ background: catColor(category) }}>
+          {pin ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pin} alt="" />
+          ) : (
+            <Icons.Layers size={14} />
+          )}
+        </span>
+      )}
+      {photoUrl && (
+        <span className="rep-photo-tag">
+          <Icons.Eye size={12} /> Reporter photo
+        </span>
+      )}
+    </>
+  )
+}
+
 function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (id: string) => void }) {
   const q = useReport(reportId)
   const nav = useNav()
@@ -477,6 +537,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const galleryMedia = previewMedia
     ? report.media.filter((m) => m.id !== previewMedia?.id)
     : report.media
+  const lightboxImages: LightboxImage[] = report.media
+    .filter((m) => m.kind === "image")
+    .map((m) => ({ id: m.id, url: m.url, alt: `Photo on ${report.title}` }))
+  const lightboxIndex = (id: string) => lightboxImages.findIndex((i) => i.id === id)
+  const previewIndex = previewMedia ? lightboxIndex(previewMedia.id) : -1
 
   const send = () => {
     const body = text.trim()
@@ -679,28 +744,33 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
             <div className="sub-body" style={{ padding: 10 }}>
               <div className="rep-media">
-                {report.hasPhoto && (
-                  <div className="rep-photo" style={{ ["--cat" as string]: catColor(report.category) }}>
-                    {photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" />
-                    ) : (
-                      <span className="rep-photo-pin" style={{ background: catColor(report.category) }}>
-                        {pin ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={pin} alt="" />
-                        ) : (
-                          <Icons.Layers size={14} />
-                        )}
-                      </span>
-                    )}
-                    {photoUrl && (
-                      <span className="rep-photo-tag">
-                        <Icons.Eye size={12} /> Reporter photo
-                      </span>
-                    )}
-                  </div>
-                )}
+                {report.hasPhoto &&
+                  (previewIndex >= 0 ? (
+                    <button
+                      type="button"
+                      className="rep-photo rep-photo-open"
+                      style={{ ["--cat" as string]: catColor(report.category) }}
+                      title="Expand this photo"
+                      onClick={() => openLightbox(lightboxImages, previewIndex)}
+                    >
+                      <ReportPhotoFace
+                        photoUrl={photoUrl}
+                        pin={pin}
+                        category={report.category}
+                      />
+                    </button>
+                  ) : (
+                    <div
+                      className="rep-photo"
+                      style={{ ["--cat" as string]: catColor(report.category) }}
+                    >
+                      <ReportPhotoFace
+                        photoUrl={photoUrl}
+                        pin={pin}
+                        category={report.category}
+                      />
+                    </div>
+                  ))}
                 <div className="rep-minimap">
                   <LeafletMap
                     pins={[
@@ -732,9 +802,19 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               </div>
               <div className="sub-body" style={{ padding: 10 }}>
                 <div className="dsc-msg-media">
-                  {galleryMedia.map((m) => {
-                    const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
-                    return (
+                  {galleryMedia.map((m) =>
+                    m.kind === "image" ? (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="dsc-msg-thumb dsc-msg-thumb-open"
+                        title="Expand this photo"
+                        onClick={() => openLightbox(lightboxImages, lightboxIndex(m.id))}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={m.thumbUrl ?? m.url} alt="" />
+                      </button>
+                    ) : (
                       <a
                         key={m.id}
                         className="dsc-msg-thumb"
@@ -743,15 +823,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                         rel="noopener noreferrer"
                         title="Open full media in a new tab"
                       >
-                        {thumb ? (
+                        {m.thumbUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumb} alt="" />
+                          <img src={m.thumbUrl} alt="" />
                         ) : (
                           <Icons.FileText size={14} />
                         )}
                       </a>
-                    )
-                  })}
+                    ),
+                  )}
                 </div>
               </div>
             </div>

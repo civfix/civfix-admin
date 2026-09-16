@@ -6,6 +6,7 @@ import { BackBar } from "@/components/shell/back-bar"
 import { shellEscapeGoesHome } from "@/components/shell/escape-owner"
 import { Toast } from "@/components/shell/toast"
 import { DialogHost } from "@/components/shared/dialog"
+import { LightboxHost } from "@/components/shared/lightbox"
 import { PAGE_REGISTRY, type SectionPageProps } from "@/components/shell/page-registry"
 import { LoadingState } from "@/components/shared/data-states"
 import { useUiStore, type SectionId } from "@/store/ui-store"
@@ -52,6 +53,7 @@ export function AppShell() {
 
       <Toast />
       <DialogHost />
+      <LightboxHost />
     </div>
   )
 }
