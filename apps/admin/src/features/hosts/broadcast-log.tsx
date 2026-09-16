@@ -28,6 +28,7 @@ export const BROADCAST_KIND_LABEL: Record<BroadcastKind, string> = {
   event_updated: "Event updated",
   event_cancelled: "Event cancelled",
   thank_you: "Thank you",
+  announcement: "Announcement",
 }
 
 export function BroadcastLog({ items }: { items: AdminBroadcastListItemDTO[] }) {
