@@ -25,7 +25,6 @@ const org: AdminOrgDTO = {
   createdAt: "2026-01-01T00:00:00.000Z",
   memberCount: 3,
   eventCount: 2,
-  donationsEnabled: false,
   socialLinks: { instagram: "riverfriends" },
   logoMediaId: null,
 }

@@ -420,7 +420,7 @@ function previewState<T>(query: UseQueryResult<ListPage<T>>, shown: number): Pre
 }
 
 const HOST_PLATFORM_SECTIONS: {
-  page: Extract<PageId, "orgs" | "hosts" | "pages" | "donations">
+  page: Extract<PageId, "orgs" | "hosts" | "pages">
   hue: string
   icon: IconComponent
   sub: string
@@ -429,11 +429,10 @@ const HOST_PLATFORM_SECTIONS: {
     page: "orgs",
     hue: "sky",
     icon: Icons.Building,
-    sub: "Create and manage orgs, verify, members, payments",
+    sub: "Create and manage orgs, verify members and events",
   },
   { page: "hosts", hue: "bloom", icon: Icons.Send, sub: "Broadcast counters and the kill switch" },
   { page: "pages", hue: "lilac", icon: Icons.Globe, sub: "Public signup pages: flag or unpublish" },
-  { page: "donations", hue: "moss", icon: Icons.Star, sub: "AB 488, eligibility and PL-4 totals" },
 ]
 
 function HostPlatformLauncher() {

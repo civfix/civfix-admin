@@ -221,9 +221,9 @@
 }
 
 /* =========================================================================
-   Host platform sections (organizations, host messaging, signup pages,
-   donations). Built entirely on the ported design tokens and the existing
-   admin.css component classes; nothing here hardcodes a color or a font.
+   Host platform sections (organizations, host messaging, signup pages).
+   Built entirely on the ported design tokens and the existing admin.css
+   component classes; nothing here hardcodes a color or a font.
    ========================================================================= */
 
 /* -- Dashboard launcher --------------------------------------------------- */
@@ -233,7 +233,7 @@
 @media (max-width: 1100px) { .bt-host { grid-column: span 6; } }
 .host-launch {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .host-launch .launch-row { border-bottom: none; border-right: 1px solid var(--border-soft); }
 .host-launch .launch-row:last-child { border-right: none; }
@@ -249,9 +249,7 @@
 }
 
 /* -- Shared detail panels ------------------------------------------------- */
-.org-panel,
-.pay-panel,
-.don-compliance {
+.org-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -269,8 +267,6 @@
 .pay-note svg,
 .bcast-note svg { flex-shrink: 0; margin-top: 2px; }
 .pay-note.tone-alert { color: var(--bloom-700); }
-.pay-note.tone-warn { color: var(--sun-700); }
-.pay-note.tone-ok { color: var(--moss-700); }
 .statcell.tone-alert .statcell-num,
 .statcell.tone-alert .statcell-label { color: var(--bloom-700); }
 
@@ -309,8 +305,7 @@
   flex-shrink: 0;
 }
 .org-evidence-title { font-weight: 700; font-size: 13px; flex: 1; min-width: 0; }
-.org-evidence-head .ident,
-.don-mnos-org .ident {
+.org-evidence-head .ident {
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--ink-3);
@@ -330,53 +325,6 @@
   border: 1px solid var(--border-soft);
 }
 .org-evidence-note { font-size: 12px; color: var(--ink-3); line-height: var(--lh-base); }
-
-/* -- Payments panel ------------------------------------------------------- */
-.pay-caps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.pay-reqs { margin-top: 10px; }
-.pay-reqs-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.pay-reqs-list { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--ink-2); }
-.pay-reqs-list li { overflow-wrap: anywhere; }
-.pay-evidence-list { display: flex; flex-direction: column; gap: 8px; }
-.pay-evidence {
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 9px 11px;
-  background: var(--paper-2);
-}
-.pay-evidence-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-.pay-evidence-src { font-weight: 700; font-size: 12.5px; color: var(--ink); }
-.pay-evidence-meta {
-  margin-top: 4px;
-  font-size: 11.5px;
-  color: var(--ink-3);
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.pay-evidence-meta .sep { color: var(--ink-4); }
-.pay-evidence-detail { margin-top: 5px; font-size: 12px; color: var(--ink-2); }
-.pay-history { margin-top: 10px; display: flex; flex-direction: column; }
-.pay-history-row {
-  display: grid;
-  grid-template-columns: 1.2fr 1.4fr 1.2fr 1fr;
-  gap: 10px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border-soft);
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.pay-history-row > span { min-width: 0; overflow-wrap: anywhere; }
-.pay-history-row:last-child { border-bottom: none; }
-@media (max-width: 640px) {
-  .pay-history-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
-}
 
 /* -- Host messaging ------------------------------------------------------- */
 .bcast-log { display: flex; flex-direction: column; gap: 9px; }
@@ -449,113 +397,6 @@
   word-break: break-all;
 }
 
-/* -- Donations ------------------------------------------------------------ */
-.don-filings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; }
-.don-filings > * { min-width: 0; }
-.don-filing {
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.don-filing.tone-warn { border-color: color-mix(in oklab, var(--sun) 40%, var(--border-soft)); }
-.don-filing-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.don-filing-date {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: var(--fs-20);
-  color: var(--ink);
-}
-.don-filing-sub { font-size: 11.5px; color: var(--ink-3); }
-.don-checklist { display: flex; flex-direction: column; gap: 10px; }
-.don-check { display: flex; gap: 9px; align-items: flex-start; }
-.don-check-ico {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--paper-2);
-  color: var(--ink-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.don-check-text { flex: 1; min-width: 0; }
-.don-check-title { font-weight: 700; font-size: 12.5px; color: var(--ink); }
-.don-check-detail {
-  font-size: 12px;
-  color: var(--ink-3);
-  line-height: var(--lh-base);
-  margin-top: 2px;
-}
-.don-legal { display: flex; flex-direction: column; }
-.don-legal-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
-  gap: 10px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border-soft);
-  font-size: 12px;
-  color: var(--ink-2);
-}
-.don-legal-row > span { min-width: 0; overflow-wrap: anywhere; }
-.don-legal-row:last-child { border-bottom: none; }
-@media (max-width: 640px) {
-  .don-legal-row { grid-template-columns: 1fr 1fr; gap: 4px 10px; }
-}
-.don-legal-row.tone-alert { color: var(--bloom-700); }
-.don-legal-type { font-weight: 700; text-transform: capitalize; }
-.don-table { display: flex; flex-direction: column; }
-.don-trow {
-  display: grid;
-  grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1fr;
-  gap: 10px;
-  align-items: center;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border-soft);
-  font-size: 12.5px;
-  color: var(--ink-2);
-  cursor: pointer;
-  text-align: right;
-}
-/* The organization name is the flexible column (wraps anywhere); money and counts never break
-   mid-number. Narrower viewports drop the derived columns (fee/refunded, then net) rather than
-   squeezing them; every hidden value is on the organization's own page. */
-.don-trow > span { min-width: 0; }
-.don-trow > span:first-child { overflow-wrap: anywhere; }
-.don-trow > span:not(:first-child) { white-space: nowrap; }
-.don-trow:last-child { border-bottom: none; }
-.don-trow:hover:not(.head) { background: var(--paper-2); }
-.don-trow:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-.don-trow.head {
-  cursor: default;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-.don-trow > span:first-child,
-.don-trow.head > span:first-child { text-align: left; }
-.don-org { font-weight: 700; color: var(--ink); }
-.don-mnos-org { display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px; }
-@media (max-width: 980px) {
-  .don-trow { grid-template-columns: minmax(0, 1.6fr) auto auto auto; }
-  .don-trow > span:nth-child(4), .don-trow > span:nth-child(5) { display: none; }
-}
-@media (max-width: 560px) {
-  .don-trow { grid-template-columns: minmax(0, 1fr) auto auto; }
-  .don-trow > span:nth-child(6) { display: none; }
-}
-
 /* -- Shared list affordances --------------------------------------------- */
 .btn.load-more {
   width: calc(100% - 2 * var(--space-3));
@@ -625,11 +466,11 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   margin-top: 0; padding-top: 0; padding-bottom: 12px;
 }
 .org-tab-body .sub .queue-list .qrow { padding-left: 12px; padding-right: 12px; }
-/* Five tabs do not fit a 375px card side by side; on phones they wrap into two rows instead of
+/* Four tabs do not fit a 375px card side by side; on phones they wrap into two rows instead of
    squeezing "Verification" into a sliver. */
 @media (max-width: 520px) {
   .org-tabs { flex-wrap: wrap; }
-  .org-tabs .profile-tab { flex: 1 1 30%; flex-direction: row; padding: 7px 6px; font-size: 12px; }
+  .org-tabs .profile-tab { flex: 1 1 40%; flex-direction: row; padding: 7px 6px; font-size: 12px; }
 }
 
 /* Form fields: inline errors, counters, warning hints. */
@@ -777,7 +618,6 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .row-menu-item.danger:not(:disabled) { color: var(--bloom-700); }
 .row-menu-sep { height: 1px; background: var(--border-soft); margin: 4px 6px; }
 
-.pay-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
 /* Org rows: the status pill sits above the date so the name keeps most of the 360px column. */
 .org-row .trailing { flex-direction: column; align-items: flex-end; gap: 3px; }
 .org-row .body .sub .mono { flex: 0 0 auto; max-width: 42%; }

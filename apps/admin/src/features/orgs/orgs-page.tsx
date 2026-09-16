@@ -13,7 +13,6 @@ import { formatDate, formatDateTime } from "@/lib/dates"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 import { MembersPanel } from "@/features/orgs/members-panel"
 import { OrgEventsPanel } from "@/features/orgs/org-events-panel"
-import { PaymentsPanel } from "@/features/orgs/payments-panel"
 import { ProfilePanel } from "@/features/orgs/profile-panel"
 import {
   ORG_KIND_LABEL,
@@ -37,7 +36,6 @@ const DETAIL_TABS: { id: OrgDetailTab; label: string }[] = [
   { id: "verification", label: "Verification" },
   { id: "members", label: "Members" },
   { id: "events", label: "Events" },
-  { id: "payments", label: "Payments" },
 ]
 
 function OrgLogo({ org, size = 32 }: { org: Pick<AdminOrgDTO, "name" | "logoUrl">; size?: number }) {
@@ -152,8 +150,8 @@ function OrgDetail({
       reason = await promptDialog({
         title: suspended ? `Restore ${org.name}?` : `Suspend ${org.name}?`,
         body: suspended
-          ? "Lifting the suspension restores exactly what was there: verification, members and donations settings are untouched. The reason is written to the audit log."
-          : "A suspended organization keeps its data and members, but every write under its name — events, broadcasts, donations, invites — is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
+          ? "Lifting the suspension restores exactly what was there: verification, members and profile settings are untouched. The reason is written to the audit log."
+          : "A suspended organization keeps its data and members, but every write under its name — events, broadcasts, invites — is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
         label: "Reason (required)",
         placeholder: suspended
           ? "Resolved after the org replaced its contact…"
@@ -260,7 +258,6 @@ function OrgDetail({
         {tab === "verification" && <VerificationPanel key={`v-${org.id}`} orgId={org.id} />}
         {tab === "members" && <MembersPanel key={`m-${org.id}`} org={org} />}
         {tab === "events" && <OrgEventsPanel key={`e-${org.id}`} org={org} />}
-        {tab === "payments" && <PaymentsPanel key={`p-${org.id}`} orgId={org.id} />}
       </div>
     </div>
   )
@@ -310,7 +307,7 @@ export function OrgsPage({ focusId }: SectionPageProps) {
         subtitle={
           <span>
             Nonprofits, agencies and community groups that host on civfix. Create and manage them,
-            verify who they say they are, and hold the switch on their donations.
+            verify who they say they are, and keep their members and events in order.
           </span>
         }
         meta={pendingCount !== undefined ? <span>{pendingCount} awaiting review</span> : undefined}

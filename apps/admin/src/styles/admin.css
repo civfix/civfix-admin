@@ -2260,7 +2260,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   border-bottom: 1px solid var(--border-soft);
 }
 .umr > span:first-child { white-space: nowrap; }
-/* Values can be long unbroken strings (website URLs, IRS legal names, Stripe disabled reasons):
+/* Values can be long unbroken strings (website URLs, donation links, IRS legal names):
    break them anywhere rather than pushing the panel sideways. */
 .umr > span:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .umr > span:last-child a { overflow-wrap: anywhere; }
