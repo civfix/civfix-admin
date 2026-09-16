@@ -132,7 +132,6 @@ export const queryKeys = {
     all: ["admin", "orgs"] as const,
     list: (params?: unknown) => ["admin", "orgs", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "orgs", "detail", id] as const,
-    payments: (id: string) => ["admin", "orgs", "payments", id] as const,
     members: (id: string, params?: unknown) =>
       ["admin", "orgs", id, "members", params ?? null] as const,
     events: (id: string, params?: unknown) =>
@@ -154,17 +153,6 @@ export const queryKeys = {
     all: ["admin", "pages"] as const,
     list: (params?: unknown) => ["admin", "pages", "list", params ?? null] as const,
     preview: (cleanupId: string) => ["admin", "pages", "preview", cleanupId] as const,
-  },
-
-  donations: {
-    all: ["admin", "donations"] as const,
-    list: (params?: unknown) => ["admin", "donations", "list", params ?? null] as const,
-    eligibility: (params?: unknown) =>
-      ["admin", "donations", "eligibility", params ?? null] as const,
-    totalsByOrg: (params?: unknown) =>
-      ["admin", "donations", "totals-by-org", params ?? null] as const,
-    settings: ["admin", "donations", "settings"] as const,
-    legal: ["admin", "donations", "legal"] as const,
   },
 
   audit: {

@@ -8,7 +8,7 @@ describe("org focus", () => {
   })
 
   it("parses id + tab and round-trips through orgFocus", () => {
-    expect(parseOrgFocus(orgFocus("abc", "payments"))).toEqual({ id: "abc", tab: "payments" })
+    expect(parseOrgFocus(orgFocus("abc", "members"))).toEqual({ id: "abc", tab: "members" })
     expect(orgFocus("abc")).toBe("abc")
   })
 

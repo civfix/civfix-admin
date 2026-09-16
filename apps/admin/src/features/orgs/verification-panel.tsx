@@ -53,7 +53,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
   const onApprove = async (kind: OrgVerificationKind) => {
     const ok = await confirmDialog({
       title: `Verify ${org.name} as ${ORG_KIND_LABEL[kind].toLowerCase()}?`,
-      body: "A verified organization can host events under its own name and, once eligible, collect donations. The decision is written to the audit log.",
+      body: "A verified organization can host events under its own name and appear as a verified host across civfix. The decision is written to the audit log.",
       confirmLabel: "Verify organization",
     })
     if (!ok) return

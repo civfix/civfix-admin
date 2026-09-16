@@ -1,10 +1,10 @@
-export const ORG_DETAIL_TABS = ["profile", "verification", "members", "events", "payments"] as const
+export const ORG_DETAIL_TABS = ["profile", "verification", "members", "events"] as const
 export type OrgDetailTab = (typeof ORG_DETAIL_TABS)[number]
 
 /**
  * The orgs section focus is `<id>` or `<id>/<tab>` (the hash router joins everything after the section
- * into one focus string), so another section can deep-link straight to e.g. the Payments tab:
- * `nav("orgs", orgFocus(id, "payments"))`. An unknown tab falls back to null (caller keeps its default).
+ * into one focus string), so another section can deep-link straight to e.g. the Members tab:
+ * `nav("orgs", orgFocus(id, "members"))`. An unknown tab falls back to null (caller keeps its default).
  */
 export function parseOrgFocus(focusId: string | null): { id: string | null; tab: OrgDetailTab | null } {
   if (!focusId) return { id: null, tab: null }

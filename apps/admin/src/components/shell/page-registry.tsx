@@ -41,9 +41,6 @@ export const PAGE_REGISTRY: Record<PageId, LazyPage> = {
   pages: React.lazy(() =>
     import("@/features/pages/pages-page").then((m) => ({ default: m.PagesPage })),
   ),
-  donations: React.lazy(() =>
-    import("@/features/donations/donations-page").then((m) => ({ default: m.DonationsPage })),
-  ),
 }
 
 export const EXPECTED_EXPORTS: Record<PageId, string> = {
@@ -58,5 +55,4 @@ export const EXPECTED_EXPORTS: Record<PageId, string> = {
   orgs: "OrgsPage",
   hosts: "HostsPage",
   pages: "PagesPage",
-  donations: "DonationsPage",
 }

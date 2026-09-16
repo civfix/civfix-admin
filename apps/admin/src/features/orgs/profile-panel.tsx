@@ -84,6 +84,18 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
               </span>
             </div>
             <div className="umr">
+              <span>Donation link</span>
+              <span>
+                {isHttpsUrl(org.donationUrl) ? (
+                  <a href={org.donationUrl} target="_blank" rel="noreferrer noopener">
+                    {org.donationUrl}
+                  </a>
+                ) : (
+                  "None"
+                )}
+              </span>
+            </div>
+            <div className="umr">
               <span>Social</span>
               <span>
                 {socials.length === 0 ? (

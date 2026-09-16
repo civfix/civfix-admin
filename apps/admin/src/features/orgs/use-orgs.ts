@@ -14,13 +14,8 @@ import type {
   AdminSetOrgMemberRoleRequest,
   AdminSetOrgSuspendedRequest,
   AdminUpdateOrgRequest,
-  ConfirmOrgCentralOrgRequest,
   DecideOrgVerificationRequest,
-  EvaluateOrgEligibilityRequest,
-  GetAdminOrgPaymentsResponse,
   GetAdminOrgResponse,
-  SetOrgDonationsEnabledRequest,
-  SetOrgEligibilityEinRequest,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
@@ -52,14 +47,6 @@ export function useAdminOrg(id: string | null) {
   return useQuery<GetAdminOrgResponse>({
     queryKey: queryKeys.orgs.detail(id ?? ""),
     queryFn: () => api.adminGetOrg({ id: id as string }),
-    enabled: !!id,
-  })
-}
-
-export function useAdminOrgPayments(id: string | null) {
-  return useQuery<GetAdminOrgPaymentsResponse>({
-    queryKey: queryKeys.orgs.payments(id ?? ""),
-    queryFn: () => api.adminGetOrgPayments({ id: id as string }),
     enabled: !!id,
   })
 }
@@ -107,13 +94,11 @@ type Qc = ReturnType<typeof useQueryClient>
 
 function invalidateOrgLists(qc: Qc) {
   qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
-  qc.invalidateQueries({ queryKey: queryKeys.donations.all })
   qc.invalidateQueries({ queryKey: queryKeys.audit.all })
 }
 
 function invalidateOrg(qc: Qc, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.payments(id) })
   invalidateOrgLists(qc)
 }
 
@@ -129,14 +114,6 @@ export function useDecideOrgVerification() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: DecideOrgVerificationRequest) => api.adminDecideOrgVerification(input),
-    onSuccess: (_res, { id }) => invalidateOrg(qc, id),
-  })
-}
-
-export function useSetOrgDonationsEnabled() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: SetOrgDonationsEnabledRequest) => api.adminSetOrgDonationsEnabled(input),
     onSuccess: (_res, { id }) => invalidateOrg(qc, id),
   })
 }
@@ -220,29 +197,5 @@ export function useRemoveOrgMember() {
   return useMutation({
     mutationFn: (input: AdminRemoveOrgMemberRequest) => api.adminRemoveOrgMember(input),
     onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
-  })
-}
-
-export function useSetOrgEligibilityEin() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: SetOrgEligibilityEinRequest) => api.adminSetOrgEligibilityEin(input),
-    onSuccess: (_res, { id }) => invalidateOrg(qc, id),
-  })
-}
-
-export function useConfirmOrgCentralOrg() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: ConfirmOrgCentralOrgRequest) => api.adminConfirmOrgCentralOrg(input),
-    onSuccess: (_res, { id }) => invalidateOrg(qc, id),
-  })
-}
-
-export function useEvaluateOrgEligibility() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: EvaluateOrgEligibilityRequest) => api.adminEvaluateOrgEligibility(input),
-    onSuccess: (_res, { id }) => invalidateOrg(qc, id),
   })
 }

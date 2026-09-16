@@ -14,7 +14,6 @@ const LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
   orgs: () => import("@/features/orgs/orgs-page"),
   hosts: () => import("@/features/hosts/hosts-page"),
   pages: () => import("@/features/pages/pages-page"),
-  donations: () => import("@/features/donations/donations-page"),
 }
 
 describe("page registry", () => {
