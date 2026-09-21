@@ -20,6 +20,7 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { LiveMap } from "@/components/map/live-map"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { useHomeSummary } from "@/hooks/use-admin-home"
 import { useDiscoveryList } from "@/features/discovery/use-discovery"
@@ -179,11 +180,6 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
   ]
 }
 
-function catPinSrc(category: ReportCategory): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
-}
-
 function initials(name: string): string {
   return name
     .split(" ")
@@ -209,7 +205,7 @@ function discoveryRow(x: DiscoveryTaskDTO): PeekItem {
     title: x.place,
     meta: pop ? `${x.reports} reports · pop ${pop}` : `${x.reports} reports`,
     age: x.age,
-    focusId: x.id,
+    focusId: x.geoid,
   }
 }
 
@@ -288,7 +284,7 @@ function moderationRow(m: ModerationListItemDTO): PeekItem {
 
 function PeekGlyph({ item }: { item: PeekItem }) {
   if (item.kind === "pin") {
-    const src = item.cat ? catPinSrc(item.cat) : null
+    const src = item.cat ? categoryPinSrc(item.cat) : null
     return (
       <span className="peek-pin">
         {src ? (
