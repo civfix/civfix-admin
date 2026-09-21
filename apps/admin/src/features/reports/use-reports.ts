@@ -21,7 +21,7 @@ import { queryKeys } from "@/lib/query"
 
 export function useReportList(params: AdminReportListQuery) {
   return useQuery<AdminReportListResponse>({
-    queryKey: queryKeys.reports.list(params),
+    queryKey: queryKeys.reports.page(params),
     queryFn: () => api.listAdminReports(params),
   })
 }
@@ -90,7 +90,12 @@ export function useRouteReport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: RouteReportRequest) => api.routeReport(input),
-    onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    onSuccess: (_res, { id }) => {
+      invalidateReports(qc, id)
+      qc.invalidateQueries({ queryKey: queryKeys.mail.all })
+      qc.invalidateQueries({ queryKey: queryKeys.discovery.all })
+      qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all })
+    },
   })
 }
 

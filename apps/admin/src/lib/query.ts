@@ -69,6 +69,7 @@ export const queryKeys = {
   reports: {
     all: ["admin", "reports"] as const,
     list: (params?: unknown) => ["admin", "reports", "list", params ?? null] as const,
+    page: (params?: unknown) => ["admin", "reports", "page", params ?? null] as const,
     detail: (id: string) => ["admin", "reports", "detail", id] as const,
     discussion: (id: string, params?: unknown) =>
       ["admin", "reports", id, "discussion", params ?? null] as const,
