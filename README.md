@@ -59,5 +59,5 @@ license headers. The dashboard honors the AGPL's source offer with the
 "Source code" link on its home screen and sign-in screen, which points at the
 deployed commit. Contributions are accepted under the
 [Contributor License Agreement](CLA.md) — see
-[CONTRIBUTING.md](CONTRIBUTING.md). civfix is a project of Reach Out Los Angeles; the civfix name and
+[CONTRIBUTING.md](CONTRIBUTING.md). civfix is a project of Reach Out Los Angeles Inc.; the civfix name and
 logos are its trademarks and are not covered by the license.
