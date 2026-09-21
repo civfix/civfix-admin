@@ -49,3 +49,15 @@ and ships the prebuilt `apps/admin/out` via `wrangler pages deploy`. The Pages p
 dir come from the repo-root `wrangler.jsonc`
 (`civfix-admin` -> `apps/admin/out`). See `.github/workflows/deploy.yml` and
 `../documents/phase2/07-civfix-admin-repo.md`.
+
+## License
+
+civfix-admin is free software, licensed under the
+[GNU Affero General Public License, version 3 only](LICENSE). Every file is
+covered by the declaration in [REUSE.toml](REUSE.toml); there are no per-file
+license headers. The dashboard honors the AGPL's source offer with the
+"Source code" link on its home screen and sign-in screen, which points at the
+deployed commit. Contributions are accepted under the
+[Contributor License Agreement](CLA.md) — see
+[CONTRIBUTING.md](CONTRIBUTING.md). civfix is a project of Reach Out Los Angeles; the civfix name and
+logos are its trademarks and are not covered by the license.
