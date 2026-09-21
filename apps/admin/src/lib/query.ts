@@ -100,6 +100,7 @@ export const queryKeys = {
     list: (params?: unknown) => ["admin", "mail", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "mail", "detail", id] as const,
     stats: ["admin", "mail", "stats"] as const,
+    forwardTemplate: ["admin", "mail", "forward-template"] as const,
   },
 
   inbox: {
