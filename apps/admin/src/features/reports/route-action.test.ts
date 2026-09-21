@@ -61,6 +61,22 @@ describe("routeActionFor", () => {
     )
     expect(action.kind).toBe("resend")
   })
+
+  it("re-enables the send when the last attempt was rejected by the provider", () => {
+    const action = routeActionFor(
+      makeReport({
+        outreach: {
+          status: "sent",
+          threadId: "THREAD-1",
+          routedTo: "pw@lacity.org",
+          routedAt: "2026-09-01T10:00:00.000Z",
+          sendFailed: true,
+        },
+      }),
+    )
+    expect(action.kind).toBe("resend")
+    expect(action.routedAt).toBe("2026-09-01T10:00:00.000Z")
+  })
 })
 
 describe("report query keys", () => {

@@ -2839,7 +2839,9 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-msg-addr { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mail-msg-head .spacer { flex: 1; min-width: 8px; }
 .mail-msg-ts { font-size: 10px; color: var(--ink-4); white-space: nowrap; background: none; padding: 0; border-radius: 0; font-feature-settings: "tnum" 1; }
-.mail-msg-body { font-size: 13.5px; color: var(--ink); line-height: 1.55; margin: 0; text-wrap: pretty; }
+.mail-msg-body { font-size: 13.5px; color: var(--ink); line-height: 1.55; margin: 0; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
+.mail-msg-delivery { flex-shrink: 0; }
+.mail-msg .hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
 
 /* Mail reply composer */
 .mail-composer { border-top: 1px solid var(--border-soft); padding: 12px 16px 14px; }
