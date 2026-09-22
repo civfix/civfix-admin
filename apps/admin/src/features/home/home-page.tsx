@@ -75,7 +75,8 @@ interface SectionSummary {
   page: PageId
   label: string
   hue: string
-  lead: number
+  /** Null when no trustworthy server-side total exists for this section; the tile then leads with `unit`. */
+  lead: number | null
   unit: string
   blurb?: string
   stats: SectionStat[]
@@ -489,7 +490,13 @@ function SectionTile({
         <span className="stile-label">{s.label}</span>
         {!metric && (
           <span className="stile-headcount">
-            <b>{s.lead}</b> {s.unit}
+            {s.lead === null ? (
+              s.unit
+            ) : (
+              <>
+                <b>{s.lead}</b> {s.unit}
+              </>
+            )}
           </span>
         )}
       </button>
@@ -580,12 +587,12 @@ export function HomePage(_props: SectionPageProps) {
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
     [summaryQuery.data],
   )
-  const inboxUnread = (inboxQuery.data?.items ?? []).filter((i) => i.unread).length
   const mailSummary = React.useMemo<SectionSummary | undefined>(() => {
     const base = summaries.find((s) => s.id === "mail")
     if (!base) return undefined
     const needsAction = summaryQuery.data?.mail.needsAction ?? 0
-    const presentation = getMailPreviewPresentation(base.lead, inboxUnread)
+    const inboxUnread = summaryQuery.data?.inboxUnread
+    const presentation = getMailPreviewPresentation(base.lead ?? 0)
     return {
       ...base,
       lead: presentation.lead,
@@ -595,14 +602,14 @@ export function HomePage(_props: SectionPageProps) {
       cta: "Open mail",
       stats: [
         { k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null },
-        { k: presentation.loadedInboxLabel, v: presentation.loadedInboxUnread },
+        ...(inboxUnread === undefined
+          ? []
+          : [{ k: "Inbox unread", v: inboxUnread, tone: null } satisfies SectionStat]),
       ],
     }
-  }, [summaries, inboxUnread, summaryQuery.data])
+  }, [summaries, summaryQuery.data])
   const moderationItems = moderationQuery.data?.items ?? []
-  const moderationPresentation = getModerationPreviewPresentation(
-    moderationItems.slice(0, PREVIEW_ROWS).length,
-  )
+  const moderationPresentation = getModerationPreviewPresentation(summaryQuery.data?.moderationQueue)
   const moderationSummary = React.useMemo<SectionSummary>(
     () => ({
       id: "moderation",

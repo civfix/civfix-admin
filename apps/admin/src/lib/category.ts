@@ -1,4 +1,15 @@
-import { REPORT_CATEGORY_LABELS, type ReportCategory } from "@civfix/shared"
+import {
+  REPORT_CATEGORY_LABELS,
+  REPORT_TYPE_LABELS,
+  REPORT_TYPE_TO_CATEGORY,
+  REPORT_TYPE_VALUES,
+  ReportCategorySchema,
+  WEB_REPORT_TYPES,
+  type ReportCategory,
+} from "@civfix/shared"
+
+/** The canonical report categories, in the order the contract enum defines them. */
+export const REPORT_CATEGORIES: readonly ReportCategory[] = ReportCategorySchema.options
 
 export const CATEGORY_GLYPHS: Record<ReportCategory, string> = {
   trash:
@@ -22,4 +33,38 @@ export function categoryPinSrc(category: ReportCategory): string {
 
 export function categoryLabel(category: ReportCategory): string {
   return REPORT_CATEGORY_LABELS[category]
+}
+
+function buildCategoryReportTypeLabels(): Record<ReportCategory, string[]> {
+  const byType = new Map<string, { category: ReportCategory; label: string }>()
+  for (const type of REPORT_TYPE_VALUES) {
+    byType.set(type, { category: REPORT_TYPE_TO_CATEGORY[type], label: REPORT_TYPE_LABELS[type] })
+  }
+  for (const webType of WEB_REPORT_TYPES) {
+    byType.set(webType.id, { category: webType.category, label: webType.label })
+  }
+  const out = Object.fromEntries(REPORT_CATEGORIES.map((c) => [c, [] as string[]])) as Record<
+    ReportCategory,
+    string[]
+  >
+  for (const { category, label } of byType.values()) {
+    const bucket = out[category]
+    if (bucket && !bucket.includes(label)) bucket.push(label)
+  }
+  return out
+}
+
+/**
+ * The resident-facing report types that fold into each canonical category, derived from the contract's
+ * type -> category mapping plus the web picker's finer types. Lets the operator read a routing contact
+ * against what a neighbor actually picked. Keyed by report type, so the web picker's resident-facing
+ * label replaces the contract label for the same type instead of listing both.
+ */
+export const CATEGORY_REPORT_TYPE_LABELS: Record<ReportCategory, readonly string[]> =
+  buildCategoryReportTypeLabels()
+
+export function categoryReportTypes(category: ReportCategory): string {
+  const labels = CATEGORY_REPORT_TYPE_LABELS[category]
+  if (labels.length === 1 && labels[0] === REPORT_CATEGORY_LABELS[category]) return ""
+  return labels.join(", ")
 }

@@ -35,3 +35,6 @@ Thumbs.db
 
 # Test / coverage
 coverage/
+
+# Local Claude Code scratch (launch configs, session settings)
+.claude/

@@ -8,6 +8,12 @@ import { Icons } from "@/components/icons"
 import { useHomeMap } from "@/hooks/use-admin-home"
 import { useNav } from "@/store/ui-store"
 import { EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
+import {
+  BUCKET_VIEW,
+  reportBucketOf,
+  reportNeedsAttention,
+  type ReportBucket,
+} from "@/lib/report-status"
 import type { MapPin, MapTint } from "@/components/map/leaflet-map"
 
 
@@ -15,8 +21,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
-
-const WAITING_REPORT_STATUSES = new Set(["submitted", "held", "published"])
 
 function toMapPin(p: HomeMapPin): MapPin & {
   refType: HomeMapPin["refType"]
@@ -26,7 +30,7 @@ function toMapPin(p: HomeMapPin): MapPin & {
   title: string
 } {
   const isEvent = p.refType === "event"
-  const needs = !isEvent && (p.flagged || WAITING_REPORT_STATUSES.has(p.status))
+  const needs = !isEvent && reportNeedsAttention(p.status, p.flagged)
   return {
     id: `${p.refType}-${p.id}`,
     refType: p.refType,
@@ -46,13 +50,18 @@ function toMapPin(p: HomeMapPin): MapPin & {
 
 type ActivePin = ReturnType<typeof toMapPin>
 
+const BUCKET_TONE: Record<ReportBucket, string> = {
+  submitted: "var(--ink-2)",
+  in_progress: "var(--lilac-600)",
+  completed: "var(--moss-700)",
+  removed: "var(--bloom-700)",
+}
+
 function statusTone(m: ActivePin): { color: string; label: string } {
   if (m.refType === "event") return { color: "var(--sun-700)", label: "Cleanup event" }
   if (m.flagged) return { color: "var(--bloom-700)", label: "Flagged" }
-  if (WAITING_REPORT_STATUSES.has(m.status)) return { color: "var(--ink-2)", label: "Submitted" }
-  if (m.status === "in_progress" || m.status === "acknowledged")
-    return { color: "var(--lilac-600)", label: "In progress" }
-  return { color: "var(--moss-700)", label: "Completed" }
+  const bucket = reportBucketOf(m.status)
+  return { color: BUCKET_TONE[bucket], label: BUCKET_VIEW[bucket].label }
 }
 
 export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
@@ -65,7 +74,7 @@ export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
   const reportCount = pins.filter((p) => p.refType === "report").length
   const eventCount = pins.filter((p) => p.refType === "event").length
   const needsAttention = pins.filter(
-    (p) => p.refType === "report" && (p.flagged || WAITING_REPORT_STATUSES.has(p.status)),
+    (p) => p.refType === "report" && reportNeedsAttention(p.status, p.flagged),
   ).length
 
   const openActive = () => {

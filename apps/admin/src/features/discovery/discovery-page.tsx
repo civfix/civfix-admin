@@ -14,7 +14,12 @@ import {
 
 import { Icons } from "@/components/icons"
 import { toAppError } from "@/lib/api"
-import { categoryLabel, categoryPinSrc } from "@/lib/category"
+import {
+  REPORT_CATEGORIES,
+  categoryLabel,
+  categoryPinSrc,
+  categoryReportTypes,
+} from "@/lib/category"
 import { promptDialog } from "@/components/shared/dialog"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -89,19 +94,13 @@ function isOverdue(iso: string | null): boolean {
   return Date.now() - then > 24 * HOUR_MS
 }
 
-const CATEGORIES: readonly ReportCategory[] = [
-  "trash",
-  "recycling",
-  "graffiti",
-  "hazard",
-  "encampment",
-  "water",
-  "other",
-]
-
-const REPORT_TYPES: { id: ReportCategory; label: string; pin: string }[] = CATEGORIES.map(
-  (id) => ({ id, label: categoryLabel(id), pin: categoryPinSrc(id) }),
-)
+const REPORT_TYPES: { id: ReportCategory; label: string; pin: string; types: string }[] =
+  REPORT_CATEGORIES.map((id) => ({
+    id,
+    label: categoryLabel(id),
+    pin: categoryPinSrc(id),
+    types: categoryReportTypes(id),
+  }))
 
 function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
   return counts[id] ?? 0
@@ -110,7 +109,7 @@ function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
 function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
   let best: ReportCategory | null = null
   let bestN = 0
-  for (const c of CATEGORIES) {
+  for (const c of REPORT_CATEGORIES) {
     const n = counts[c] ?? 0
     if (n > bestN) {
       bestN = n
@@ -337,29 +336,31 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     )
   }
 
-  const onSaveDraft = () => {
+  const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
+  const handleChanged = normalizedHandle !== (dto.handle ?? "")
+
+  const noteAndHandleFields = () => {
     const note = opNote.trim()
+    return {
+      ...(note ? { notes: note } : {}),
+      ...(handleChanged ? { handle: normalizedHandle } : {}),
+    }
+  }
+
+  const onSaveDraft = () => {
     const contacts = contactsPayload()
     const jf = jurisdictionFields()
-    const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
-    const handleChanged = normalizedHandle !== (dto.handle ?? "")
+    const extras = noteAndHandleFields()
     if (
       Object.keys(contacts).length === 0 &&
       Object.keys(jf).length === 0 &&
-      note === "" &&
-      !handleChanged
+      Object.keys(extras).length === 0
     ) {
       toast("Nothing to save yet")
       return
     }
     patch.mutate(
-      {
-        geoid: dto.geoid,
-        contacts,
-        ...jf,
-        ...(note ? { notes: note } : {}),
-        ...(handleChanged ? { handle: normalizedHandle } : {}),
-      },
+      { geoid: dto.geoid, contacts, ...jf, ...extras },
       {
         onSuccess: () => toast(`Draft saved for ${dto.org}`),
         onError: (err) => toast(toAppError(err).message),
@@ -369,9 +370,25 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
   const onSaveContacts = () => {
     if (!canSave) return
-    saveContacts.mutate(
-      { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
-      { onSuccess: () => toast(`Contacts saved for ${dto.org}`) },
+    const saveAndRoute = () =>
+      saveContacts.mutate(
+        { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
+        {
+          onSuccess: () =>
+            toast(`Contacts saved for ${dto.org} · discovery task closed`),
+        },
+      )
+    const extras = noteAndHandleFields()
+    if (Object.keys(extras).length === 0) {
+      saveAndRoute()
+      return
+    }
+    patch.mutate(
+      { geoid: dto.geoid, ...extras },
+      {
+        onSuccess: saveAndRoute,
+        onError: (err) => toast(toAppError(err).message),
+      },
     )
   }
 
@@ -485,10 +502,9 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 />
               </div>
               <div className="hint" style={{ marginTop: 8 }}>
-                Residents can tag “@
-                {handle.trim().replace(/^@+/, "").toLowerCase() || "handle"}” in a report’s discussion to
-                forward it to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to
-                clear. Saved with “Save draft”.
+                Residents can tag “@{normalizedHandle || "handle"}” in a report’s discussion to forward it
+                to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to clear.
+                Saved by either “Save draft” or “Save &amp; route”.
               </div>
             </div>
           </div>
@@ -554,6 +570,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                           {n} {n === 1 ? "report" : "reports"}
                         </span>
                       </div>
+                      {c.types && <div className="sub-caption">{c.types}</div>}
                       <div className="ccat-email">
                         <Icons.Mail size={13} />
                         <input
@@ -577,7 +594,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 })}
               </div>
               <div className="hint" style={{ marginTop: 10 }}>
-                Counts are reports waiting per type · highlighted types have reports but no contact yet.
+                Counts are reports waiting per category · the grey line lists the report types neighbors
+                pick that fold into it · highlighted categories have reports but no contact yet.
               </div>
             </div>
           </div>
@@ -618,18 +636,37 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         <button className="btn danger" disabled={patch.isPending} onClick={onFlag}>
           <Icons.Flag size={13} /> {isFlagged ? "Clear flag" : "Flag for review"}
         </button>
-        <button className="btn" disabled={busy} onClick={onSaveDraft}>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={onSaveDraft}
+          title="Saves the contacts, the note and the @handle without closing the discovery task"
+        >
           Save draft
         </button>
         <button
           className={`btn ${canSave ? "success" : ""}`}
           disabled={!canSave || busy}
           onClick={onSaveContacts}
-          title={canSave ? undefined : "Add at least one contact first"}
+          title={
+            canSave
+              ? "Saves the contacts, the note and the @handle, closes the discovery task, and queues the outreach digest when outreach is enabled"
+              : "Add at least one contact first"
+          }
           style={!canSave ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
         >
-          <Icons.Check size={13} /> Save contacts
+          <Icons.Check size={13} /> Save &amp; route
         </button>
+      </div>
+
+      <div className="pay-note">
+        <Icons.Send size={13} />
+        <span>
+          <b>Save &amp; route</b> saves the contacts, the note and the @handle, closes the discovery
+          task, and queues an outreach digest to this jurisdiction when outreach digests are enabled. It
+          does not email the reports already waiting — send each of those from its report.{" "}
+          <b>Save draft</b> saves the same fields and leaves the discovery task open.
+        </span>
       </div>
 
       <ForwardTemplateModal
@@ -729,7 +766,7 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 }
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState<JurisdictionFilter>("all")
+  const [filter, setFilter] = React.useState<JurisdictionFilter>("attention")
   const [layer, setLayer] = React.useState<"all" | JurisdictionLayer>("all")
   const [sort, setSort] = React.useState<JurisdictionSort>("pop")
   const [query, setQuery] = React.useState(focusId ?? "")
@@ -785,14 +822,14 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const selected = focused ?? (holdingFocus ? null : (items[0] ?? null))
 
   const catFilters = [
-    { value: "all", label: "All", count: allTotal ?? 0 },
-    { value: "attention", label: "Need mapping", count: needsMappingCountDisplay },
+    { value: "attention", label: "Needs mapping", count: needsMappingCountDisplay },
     { value: "clear", label: "Routed", count: facets?.routed ?? 0 },
+    { value: "all", label: "All", count: allTotal ?? 0 },
   ]
 
   const onFilterChange = (v: JurisdictionFilter) => {
     setFilter(v)
-    // The "need mapping" view is about the most-overdue reports first, so default it to the
+    // The "needs mapping" view is about the most-overdue reports first, so default it to the
     // oldest-first sort; leaving the view falls back to population unless the operator picked reports.
     if (v === "attention") setSort("oldest")
     else if (sort === "oldest") setSort("pop")

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { queryKeys } from "@/lib/query"
-import { routeActionFor, type RoutableReport } from "./route-action"
+import { routeActionFor, routeSendLabel, type RoutableReport } from "./route-action"
 
 function makeReport(over: Partial<RoutableReport> = {}): RoutableReport {
   return {
@@ -76,6 +76,16 @@ describe("routeActionFor", () => {
     )
     expect(action.kind).toBe("resend")
     expect(action.routedAt).toBe("2026-09-01T10:00:00.000Z")
+  })
+})
+
+describe("routeSendLabel", () => {
+  it("folds verification into the send for an unreviewed report", () => {
+    expect(routeSendLabel(false)).toBe("Verify and send to city")
+  })
+
+  it("drops the verify half once the verdict is approved, so a retry never re-approves", () => {
+    expect(routeSendLabel(true)).toBe("Send to city")
   })
 })
 

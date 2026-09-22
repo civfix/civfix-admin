@@ -9,7 +9,10 @@ import { toAppError } from "@/lib/api"
  * the server message (when present) or a generic line. The error is normalized with toAppError first,
  * so callers can pass the raw caught value.
  *
- *  - `overrides[code]` wins when present.
+ *  - `opts.fields[field][value]` wins first: the API's validation errors carry a `fields` map (e.g.
+ *    `{ contactEmail: "unverified" }`), which is the only thing that tells two refusals with the same
+ *    error code apart.
+ *  - then `overrides[code]`.
  *  - otherwise, when `preferServerMessage` is true (default), the server-provided message is shown when
  *    non-empty, then `fallback`.
  *  - set `preferServerMessage: false` to always use `fallback` for unmapped codes.
@@ -17,10 +20,21 @@ import { toAppError } from "@/lib/api"
 export function errorMessage(
   err: unknown,
   overrides: Partial<Record<ErrorCode, string>> = {},
-  opts: { fallback?: string; preferServerMessage?: boolean } = {},
+  opts: {
+    fallback?: string
+    preferServerMessage?: boolean
+    fields?: Record<string, Record<string, string>>
+  } = {},
 ): string {
   const { fallback = "Something went wrong. Please try again.", preferServerMessage = true } = opts
   const e = toAppError(err)
+  if (opts.fields && e.fields) {
+    for (const [field, byValue] of Object.entries(opts.fields)) {
+      const value = e.fields[field]
+      const match = value === undefined ? undefined : byValue[value]
+      if (match !== undefined) return match
+    }
+  }
   const override = overrides[e.code]
   if (override !== undefined) return override
   if (preferServerMessage) return e.message || fallback

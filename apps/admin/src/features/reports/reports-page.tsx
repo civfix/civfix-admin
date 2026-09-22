@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import {
   ADMIN_REPORT_STATUS_LABELS,
   ADMIN_REPORT_STATUS_TRANSITIONS,
+  MESSAGE_BODY_MAX,
   REPORT_CATEGORY_LABELS,
   type AdminReportCounts,
   type AdminReportDTO,
@@ -23,17 +24,18 @@ import { categoryCssVar, categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
-import { routeActionFor, type RouteAction } from "@/features/reports/route-action"
+import { routeActionFor, routeSendLabel, type RouteAction } from "@/features/reports/route-action"
 import { useDebounced } from "@/hooks/use-debounced"
 import {
-  useDeleteReportMessage,
   useFlagReport,
   useRemoveReport,
+  useRemoveReportMessage,
   useReport,
   useReportChatHistory,
   useReportListInfinite,
   useRouteReport,
   useSendReportFollowup,
+  useSendReportMessage,
   useSetReportStatus,
   useSetReportVerdict,
 } from "@/features/reports/use-reports"
@@ -46,7 +48,15 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-type ReportFilter = keyof AdminReportCounts
+type ReportFilter = "needs_verification" | "in_progress" | "completed" | "flagged" | "all"
+
+const FILTER_COUNT_KEY: Record<ReportFilter, keyof AdminReportCounts> = {
+  needs_verification: "needsVerification",
+  in_progress: "in_progress",
+  completed: "completed",
+  flagged: "flagged",
+  all: "all",
+}
 
 const TL_ICON: Record<AdminReportDTO["timeline"][number]["kind"], IconComponent> = {
   submit: Icons.Pin,
@@ -135,12 +145,24 @@ function msgWhen(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
 }
 
-function routeButtonLabel(action: RouteAction): string {
+function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string {
   if (action.kind === "already_sent") {
     return action.routedAt ? `Already sent · ${msgWhen(action.routedAt)}` : "Already sent"
   }
   if (action.kind === "resend") return "Send again to jurisdiction"
-  return "Approve & send to jurisdiction"
+  return routeSendLabel(verdictApproved)
+}
+
+const VERDICT_PILL = {
+  approved: { cls: "status-ok", label: "Approved" },
+  rejected: { cls: "status-flag", label: "Rejected" },
+  unreviewed: { cls: "status-new", label: "Not yet reviewed" },
+} as const
+
+function verdictPill(verdict: AdminReportDTO["verificationVerdict"], approvedLocally: boolean) {
+  if (verdict === "approved" || approvedLocally) return VERDICT_PILL.approved
+  if (verdict === "rejected") return VERDICT_PILL.rejected
+  return VERDICT_PILL.unreviewed
 }
 
 function chatAuthorName(msg: ChatMessageDTO): string {
@@ -284,16 +306,26 @@ function ChatMessageRow({
 }
 
 /**
- * Read-only report chat, as neighbors see it: the same messages from the citizen chat history
- * endpoint, including sender-less SYSTEM status events. Operators can't post — they observe and
- * moderate. Delete goes through the report chat DELETE endpoint (soft-delete) and is gated to
- * non-system rows (a status event has no author and can't be removed).
+ * The report chat as neighbors see it, read through the ADMIN plane, including sender-less SYSTEM status
+ * events. Operators moderate here and can post into the same public thread. Remove goes through the
+ * admin remove endpoint (soft-delete) and is gated to non-system rows (a status event has no author and
+ * can't be removed).
  */
-function ReportDiscussion({ reportId }: { reportId: string }) {
+function ReportDiscussion({
+  reportId,
+  cityDept,
+  hasCityContact,
+}: {
+  reportId: string
+  cityDept: string
+  hasCityContact: boolean
+}) {
   const q = useReportChatHistory(reportId)
-  const removeMsg = useDeleteReportMessage()
+  const removeMsg = useRemoveReportMessage()
+  const sendMsg = useSendReportMessage()
   const toast = useToast()
   const nav = useNav()
+  const [draft, setDraft] = React.useState("")
 
   const onRemove = async (msg: ChatMessageDTO) => {
     const ok = await confirmDialog({
@@ -306,6 +338,20 @@ function ReportDiscussion({ reportId }: { reportId: string }) {
     removeMsg.mutate(
       { id: reportId, messageId: msg.id },
       { onSuccess: () => toast("Message removed") },
+    )
+  }
+
+  const onSend = () => {
+    const body = draft.trim()
+    if (!body || sendMsg.isPending) return
+    sendMsg.mutate(
+      { id: reportId, body },
+      {
+        onSuccess: () => {
+          setDraft("")
+          toast("Message posted to the report chat")
+        },
+      },
     )
   }
 
@@ -359,6 +405,36 @@ function ReportDiscussion({ reportId }: { reportId: string }) {
             )}
           </div>
         )}
+      </div>
+      <div className="dsc-composer">
+        <textarea
+          className="rep-followup"
+          rows={3}
+          maxLength={MESSAGE_BODY_MAX}
+          placeholder="Message the neighbors in this report's chat…"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend()
+          }}
+          aria-label="Message the report chat"
+        />
+        <div className="dsc-composer-foot">
+          {hasCityContact && (
+            <span className="hint">
+              Tagging the city&apos;s @handle forwards this message to {cityDept} by email.
+            </span>
+          )}
+          <div className="spacer" />
+          <button
+            className={`btn ${draft.trim() ? "primary" : ""}`}
+            disabled={!draft.trim() || sendMsg.isPending}
+            style={!draft.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+            onClick={onSend}
+          >
+            <Icons.Send size={13} /> Post <span className="kbdhint">⌘⏎</span>
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -440,11 +516,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const route = useRouteReport()
   const verdict = useSetReportVerdict()
 
-  const [to, setTo] = React.useState<"reporter" | "city">("reporter")
   const [text, setText] = React.useState("")
   const [routeOpen, setRouteOpen] = React.useState(false)
   const [routeNote, setRouteNote] = React.useState("")
-  const [lastThreadId, setLastThreadId] = React.useState<string | null>(null)
+  const [approvedLocally, setApprovedLocally] = React.useState(false)
 
   if (q.isLoading) return <LoadingState label="Loading report..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -458,9 +533,17 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const routeAction = routeActionFor(report)
   const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status]
   const reporterProfileId = getReporterProfileId(report.reporter.id)
-  const canReporter = reporterProfileId !== null
-  const target: "reporter" | "city" = to === "reporter" && !canReporter ? "city" : to
-  const canSend = target === "reporter" ? canReporter : canCity
+  const verdictApproved = report.verificationVerdict === "approved" || approvedLocally
+  const verdictView = verdictPill(report.verificationVerdict, approvedLocally)
+  const sendAttempted = report.outreach.routedAt !== null
+  const approvesOnSend = routeAction.kind === "send" && !verdictApproved
+  const canApproveHere = !verdictApproved && !approvesOnSend
+  const followupBlocked = !canCity
+    ? "No city contact on file"
+    : report.outreach.threadId === null
+      ? "Send the report to the city first — a follow-up goes on that conversation"
+      : null
+  const canSend = followupBlocked === null
   const pin = categoryPinSrc(report.category)
   const previewMedia = report.media.find((m) => m.kind === "image") ?? report.media[0]
   const photoUrl = previewMedia
@@ -476,11 +559,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     const body = text.trim()
     if (!body || !canSend) return
     followup.mutate(
-      { id: report.id, to: target, body },
+      { id: report.id, to: "city", body },
       {
         onSuccess: () => {
           setText("")
-          toast(`Follow-up sent to ${target === "reporter" ? "reporter" : "city"}`)
+          toast("Follow-up sent to city")
         },
       },
     )
@@ -491,16 +574,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     setRouteOpen(true)
   }
 
-  const sendToJurisdiction = async () => {
-    const contact = report.city.contact
-    if (!contact || route.isPending) return
-    const note = routeNote.trim()
-    const ok = await confirmDialog({
-      title: "Send to the city?",
-      body: `This emails the report to ${contact}. Attached photos are included.`,
-      confirmLabel: "Send",
-    })
-    if (!ok) return
+  const routeToJurisdiction = (note: string) => {
     route.mutate(
       {
         id: report.id,
@@ -510,8 +584,59 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         onSuccess: (res) => {
           setRouteOpen(false)
           setRouteNote("")
-          setLastThreadId(res.threadId)
           toast(`Sent to ${res.routedTo}`)
+        },
+      },
+    )
+  }
+
+  const sendToJurisdiction = async () => {
+    const contact = report.city.contact
+    if (!contact || route.isPending || verdict.isPending) return
+    const note = routeNote.trim()
+    const ok = await confirmDialog({
+      title: approvesOnSend ? "Verify and send to the city?" : "Send to the city?",
+      body: approvesOnSend
+        ? `This approves this report's verification. It emails the report and its attached photos to ${contact}. Once this reporter has two approved reports, their account is marked report-verified.`
+        : `This emails the report and its attached photos to ${contact}.`,
+      confirmLabel: approvesOnSend ? "Verify and send" : "Send",
+    })
+    if (!ok) return
+    if (!approvesOnSend) {
+      routeToJurisdiction(note)
+      return
+    }
+    verdict.mutate(
+      { id: report.id, verdict: "approved" },
+      {
+        onSuccess: () => {
+          setApprovedLocally(true)
+          routeToJurisdiction(note)
+        },
+      },
+    )
+  }
+
+  const onApprove = async () => {
+    if (verdict.isPending) return
+    const ok = await confirmDialog({
+      title: "Approve report",
+      body: [
+        "This approves this report's verification.",
+        sendAttempted ? null : "It is not sent to the city.",
+        "Once this reporter has two approved reports, their account is marked report-verified.",
+      ]
+        .filter((line): line is string => line !== null)
+        .join(" "),
+      confirmLabel: "Approve",
+    })
+    if (!ok) return
+    verdict.mutate(
+      { id: report.id, verdict: "approved" },
+      {
+        onSuccess: () => {
+          setApprovedLocally(true)
+          toast(`${shortId(report.id)} · approved`)
         },
       },
     )
@@ -566,21 +691,23 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     )
   }
 
-  const onVerdict = async (v: "approved" | "rejected") => {
-    if (v === "rejected") {
-      const ok = await confirmDialog({
-        title: "Reject report",
-        body: "This rejects the report's verification verdict.",
-        danger: true,
-        confirmLabel: "Reject",
-      })
-      if (!ok) return
-    }
+  const onReject = async () => {
+    const ok = await confirmDialog({
+      title: "Reject report",
+      body: sendAttempted
+        ? "This rejects the report's verification verdict. It was already emailed to the city — rejecting does not recall that email."
+        : "This rejects the report's verification verdict. It is not sent to the city.",
+      danger: true,
+      confirmLabel: "Reject",
+    })
+    if (!ok) return
     verdict.mutate(
-      { id: report.id, verdict: v },
+      { id: report.id, verdict: "rejected" },
       {
-        onSuccess: () =>
-          toast(`${shortId(report.id)} · ${v === "approved" ? "approved" : "rejected"}`),
+        onSuccess: () => {
+          setApprovedLocally(false)
+          toast(`${shortId(report.id)} · rejected`)
+        },
       },
     )
   }
@@ -802,7 +929,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           )}
 
           { }
-          <ReportDiscussion reportId={report.id} />
+          <ReportDiscussion
+            reportId={report.id}
+            cityDept={report.city.dept}
+            hasCityContact={canCity}
+          />
         </div>
 
         <div className="rep-col">
@@ -907,26 +1038,13 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           { }
           <div className="sub">
             <div className="sub-head">
-              Verification
-              <span
-                className={`pill tight ${
-                  report.verificationVerdict === "approved"
-                    ? "status-ok"
-                    : report.verificationVerdict === "rejected"
-                      ? "status-flag"
-                      : "status-new"
-                }`}
-                style={{ marginLeft: "auto" }}
-              >
-                {report.verificationVerdict === "approved"
-                  ? "Approved"
-                  : report.verificationVerdict === "rejected"
-                    ? "Rejected"
-                    : "Not yet reviewed"}
+              Send to jurisdiction
+              <span className={`pill tight ${verdictView.cls}`} style={{ marginLeft: "auto" }}>
+                {verdictView.label}
               </span>
             </div>
             <div className="sub-body">
-              <div className="rep-loc">
+              <div className="rep-loc" style={{ marginBottom: 8 }}>
                 <span className="rep-loc-item">
                   <Icons.Shield size={13} /> Reporter:{" "}
                   {report.reporterReportVerified ? "report-verified" : "not report-verified"}
@@ -940,29 +1058,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   </>
                 )}
               </div>
-              <div className="rep-to" style={{ marginTop: 8 }}>
-                <button
-                  className={`btn full ${report.verificationVerdict === "approved" ? "" : "success"}`}
-                  disabled={verdict.isPending}
-                  onClick={() => onVerdict("approved")}
-                >
-                  <Icons.Check size={13} /> Approve
-                </button>
-                <button
-                  className="btn danger"
-                  disabled={verdict.isPending}
-                  onClick={() => onVerdict("rejected")}
-                >
-                  <Icons.X size={13} /> Reject
-                </button>
-              </div>
-            </div>
-          </div>
-
-          { }
-          <div className="sub">
-            <div className="sub-head">Send to jurisdiction</div>
-            <div className="sub-body">
               {routeAction.kind === "no_contact" || routeAction.kind === "no_jurisdiction" ? (
                 <>
                   <div className="hint">
@@ -981,35 +1076,23 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   )}
                 </>
               ) : !routeOpen ? (
-                <>
-                  <button
-                    className="btn primary full"
-                    disabled={routeAction.kind === "already_sent"}
-                    style={
-                      routeAction.kind === "already_sent"
-                        ? { opacity: 0.45, cursor: "not-allowed" }
-                        : undefined
-                    }
-                    title={
-                      routeAction.kind === "already_sent"
-                        ? "This report was already sent. Resend it from the Mail thread."
-                        : undefined
-                    }
-                    onClick={openRoute}
-                  >
-                    <Icons.Send size={13} /> {routeButtonLabel(routeAction)}
-                  </button>
-                  {lastThreadId && (
-                    <button
-                      className="btn sm ghost full"
-                      style={{ marginTop: 8 }}
-                      onClick={() => nav("mail", lastThreadId)}
-                      title="Open the jurisdiction conversation in Mail"
-                    >
-                      <Icons.MessageSquare size={12} /> View conversation →
-                    </button>
-                  )}
-                </>
+                <button
+                  className="btn primary full"
+                  disabled={routeAction.kind === "already_sent"}
+                  style={
+                    routeAction.kind === "already_sent"
+                      ? { opacity: 0.45, cursor: "not-allowed" }
+                      : undefined
+                  }
+                  title={
+                    routeAction.kind === "already_sent"
+                      ? "This report was already sent. Resend it from the Mail thread."
+                      : undefined
+                  }
+                  onClick={openRoute}
+                >
+                  <Icons.Send size={13} /> {routeButtonLabel(routeAction, verdictApproved)}
+                </button>
               ) : (
                 <>
                   <div className="rep-city-contact">
@@ -1027,14 +1110,14 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   <div className="rep-to" style={{ marginTop: 8 }}>
                     <button
                       className="btn primary full"
-                      disabled={route.isPending}
+                      disabled={route.isPending || verdict.isPending}
                       onClick={sendToJurisdiction}
                     >
-                      <Icons.Send size={13} /> Send
+                      <Icons.Send size={13} /> {routeButtonLabel(routeAction, verdictApproved)}
                     </button>
                     <button
                       className="btn"
-                      disabled={route.isPending}
+                      disabled={route.isPending || verdict.isPending}
                       onClick={() => setRouteOpen(false)}
                     >
                       Cancel
@@ -1042,39 +1125,42 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   </div>
                 </>
               )}
+              <div className="rep-to" style={{ marginTop: 8 }}>
+                {canApproveHere && (
+                  <button
+                    className="btn success sm full"
+                    disabled={verdict.isPending}
+                    onClick={onApprove}
+                    title="Approve this report's verification without sending it to the city"
+                  >
+                    <Icons.Check size={12} /> Approve
+                  </button>
+                )}
+                <button
+                  className="btn danger sm full"
+                  disabled={verdict.isPending}
+                  onClick={onReject}
+                  title="Reject this report's verification instead of sending it"
+                >
+                  <Icons.X size={12} /> Reject
+                </button>
+              </div>
             </div>
           </div>
 
           { }
           <div className="sub">
-            <div className="sub-head">Send a follow-up</div>
+            <div className="sub-head">Message the city</div>
             <div className="sub-body">
-              <div className="rep-to">
-                <button
-                  className={`rep-to-btn ${target === "reporter" ? "on" : ""}`}
-                  onClick={() => canReporter && setTo("reporter")}
-                  disabled={!canReporter}
-                  title={canReporter ? "" : "Anonymous report — no reporter account to message"}
-                >
-                  <Icons.Users size={12} /> Reporter
-                </button>
-                <button
-                  className={`rep-to-btn ${target === "city" ? "on" : ""}`}
-                  onClick={() => canCity && setTo("city")}
-                  disabled={!canCity}
-                  title={canCity ? "" : "No city contact on file"}
-                >
-                  <Icons.Building size={12} /> City
-                </button>
+              <div className="rep-city-contact">
+                <Icons.Building size={12} />
+                <span>{report.city.dept}</span>
               </div>
               <textarea
                 className="rep-followup"
+                style={{ marginTop: 8 }}
                 rows={3}
-                placeholder={
-                  target === "reporter"
-                    ? `Message ${firstName(report.reporter.name)} — e.g. a status update or a question…`
-                    : `Message ${report.city.dept} — e.g. nudge for an update…`
-                }
+                placeholder={`Message ${report.city.dept} — e.g. nudge for an update…`}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
@@ -1083,8 +1169,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 disabled={!text.trim() || !canSend || followup.isPending}
                 onClick={send}
                 style={!text.trim() || !canSend ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+                title={followupBlocked ?? undefined}
               >
-                <Icons.Send size={13} /> Send to {target === "reporter" ? "reporter" : "city"}
+                <Icons.Send size={13} /> Send to city
               </button>
             </div>
           </div>
@@ -1125,7 +1212,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 }
 
 export function ReportsPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState<ReportFilter>("all")
+  const [filter, setFilter] = React.useState<ReportFilter>("needs_verification")
   const [query, setQuery] = React.useState("")
   const dq = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
@@ -1148,7 +1235,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
     completed: 0,
     flagged: 0,
   }
-  const listCount = serverCounts ? serverCounts[filter] : items.length
+  const listCount = serverCounts ? (serverCounts[FILTER_COUNT_KEY[filter]] ?? 0) : items.length
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
@@ -1171,8 +1258,8 @@ export function ReportsPage({ focusId }: SectionPageProps) {
         title="Reports"
         subtitle={
           <span>
-            Every report neighbors submit — routed to the right city department. Track status, follow up
-            with the reporter or the city, and close the loop.
+            Every report neighbors submit — verified, then routed to the right city department. Track
+            status, follow up with the city, and close the loop.
           </span>
         }
       />
@@ -1180,11 +1267,15 @@ export function ReportsPage({ focusId }: SectionPageProps) {
       <div className="toolbar">
         <FilterChips
           options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "submitted", label: "Submitted", count: counts.submitted },
+            {
+              value: "needs_verification",
+              label: "Needs verification",
+              count: counts.needsVerification ?? 0,
+            },
             { value: "in_progress", label: "In progress", count: counts.in_progress },
             { value: "completed", label: "Completed", count: counts.completed },
             { value: "flagged", label: "Flagged", count: counts.flagged },
+            { value: "all", label: "All", count: counts.all },
           ]}
           value={filter}
           onChange={(v) => setFilter(v as ReportFilter)}

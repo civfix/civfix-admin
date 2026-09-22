@@ -1,15 +1,18 @@
-export function getMailPreviewPresentation(outreachUnread: number, loadedInboxUnread: number) {
+export function getMailPreviewPresentation(outreachUnread: number) {
   return {
     lead: outreachUnread,
     unit: outreachUnread === 1 ? "unread outreach message" : "unread outreach messages",
-    loadedInboxLabel: "Loaded catch-all unread",
-    loadedInboxUnread,
   }
 }
 
-export function getModerationPreviewPresentation(shown: number) {
-  return {
-    lead: shown,
-    unit: shown === 1 ? "loaded queue item" : "loaded queue items",
-  }
+/**
+ * The moderation tile leads with the server-side queue total when the summary carries one. When the
+ * field is absent (an older API) it leads with a plain label instead of the length of the two-row
+ * preview, which is not a count of anything.
+ */
+const MODERATION_MIX = "user reports, held media, clusters and appeals"
+
+export function getModerationPreviewPresentation(queueTotal?: number) {
+  if (queueTotal === undefined) return { lead: null, unit: MODERATION_MIX }
+  return { lead: queueTotal, unit: `queued — ${MODERATION_MIX}` }
 }
