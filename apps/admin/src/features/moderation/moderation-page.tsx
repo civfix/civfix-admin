@@ -3,6 +3,7 @@
 import * as React from "react"
 import {
   MODERATION_KIND_LABELS,
+  type GovClaimListQuery,
   type ModerationItemDTO,
   type ModerationKind,
   type ModerationListItemDTO,
@@ -27,6 +28,8 @@ import {
   useModerationListInfinite,
   useRemoveModeration,
 } from "@/features/moderation/use-moderation"
+import { useGovClaimListInfinite } from "@/features/moderation/use-gov-claims"
+import { GovClaimDetail, GovClaimRow } from "@/features/moderation/gov-claims-views"
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -35,6 +38,9 @@ type ServerFilter = NonNullable<ModerationListQuery["filter"]>
 
 const USER_REPORTS_CHIP = "user_reports" as const
 type ChipValue = "all" | typeof USER_REPORTS_CHIP | ServerFilter
+
+type Section = "queue" | "gov_claims"
+type GovClaimFilter = NonNullable<GovClaimListQuery["filter"]>
 
 const PRIORITY_VIEW: Record<Priority, { cls: string; label: string }> = {
   low: { cls: "status-new", label: "Low" },
@@ -467,7 +473,117 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
   )
 }
 
-export function ModerationPage({ focusId }: SectionPageProps) {
+function GovClaimsSection() {
+  const [filter, setFilter] = React.useState<GovClaimFilter>("pending")
+  const [query, setQuery] = React.useState("")
+  const [selId, setSelId] = React.useState<string | null>(null)
+
+  const debouncedQuery = useDebounced(query, 250)
+  const listParams: GovClaimListQuery = {
+    ...(filter === "all" ? {} : { filter }),
+    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
+  }
+  const listQuery = useGovClaimListInfinite(listParams)
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [listQuery.data],
+  )
+
+  React.useEffect(() => {
+    if (!selId && items.length) setSelId(items[0]!.id)
+    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
+  }, [items, selId])
+
+  const onDecided = (id: string) => {
+    setSelId((cur) => (cur === id ? null : cur))
+  }
+
+  return (
+    <>
+      <div className="toolbar">
+        <FilterChips
+          options={[
+            { value: "pending", label: "Pending" },
+            { value: "approved", label: "Approved" },
+            { value: "rejected", label: "Rejected" },
+            { value: "all", label: "All" },
+          ]}
+          value={filter}
+          onChange={(v) => setFilter(v as GovClaimFilter)}
+        />
+        <div className="toolbar-spacer" />
+        <div className="searchbox">
+          <Icons.Search size={14} />
+          <input
+            type="text"
+            placeholder="Search name or organization…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="master-detail">
+        <section className="card md-list">
+          <div className="card-head">
+            <h3>Gov claims</h3>
+            <div className="spacer" />
+            <span className="meta">{items.length}</span>
+          </div>
+          <div className="queue-list">
+            {listQuery.isLoading ? (
+              <LoadingState label="Loading claims..." />
+            ) : listQuery.isError ? (
+              <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
+            ) : items.length === 0 ? (
+              <EmptyState
+                title="No claims here"
+                sub="Nobody is waiting on government access right now."
+                icon={<Icons.Building size={20} />}
+              />
+            ) : (
+              <>
+                {items.map((c) => (
+                  <GovClaimRow
+                    key={c.id}
+                    item={c}
+                    selected={selId === c.id}
+                    onSelect={setSelId}
+                  />
+                ))}
+                {listQuery.hasNextPage && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
+                    disabled={listQuery.isFetchingNextPage}
+                    onClick={() => listQuery.fetchNextPage()}
+                  >
+                    {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        <section className="card md-detail-card">
+          {selId ? (
+            <GovClaimDetail key={selId} claimId={selId} onDecided={onDecided} />
+          ) : (
+            <EmptyState
+              title="No claim selected"
+              sub="Pick a claim from the queue."
+              icon={<Icons.Building size={20} />}
+            />
+          )}
+        </section>
+      </div>
+    </>
+  )
+}
+
+function ModerationQueueSection({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<ChipValue>("all")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
@@ -501,17 +617,6 @@ export function ModerationPage({ focusId }: SectionPageProps) {
 
   return (
     <>
-      <PageHead
-        title="Moderation"
-        subtitle={
-          <span>
-            The moderation queue — citizen content reports (the in-app &ldquo;Report&rdquo; button) plus
-            held media, coordinated-report clusters, and appeals. Review the signals, then approve,
-            remove, hold, or decide the appeal.
-          </span>
-        }
-      />
-
       <div className="toolbar">
         <FilterChips
           options={[
@@ -595,6 +700,54 @@ export function ModerationPage({ focusId }: SectionPageProps) {
           )}
         </section>
       </div>
+    </>
+  )
+}
+
+export function ModerationPage({ focusId }: SectionPageProps) {
+  const [section, setSection] = React.useState<Section>("queue")
+  const queue = section === "queue"
+
+  return (
+    <>
+      <PageHead
+        title="Moderation"
+        subtitle={
+          queue ? (
+            <span>
+              The moderation queue — citizen content reports (the in-app &ldquo;Report&rdquo; button)
+              plus held media, coordinated-report clusters, and appeals. Review the signals, then
+              approve, remove, hold, or decide the appeal.
+            </span>
+          ) : (
+            <span>
+              Government staff asking for access to their jurisdiction. Verify who they are, then
+              approve — which provisions a government role on their account — or reject with a reason.
+            </span>
+          )
+        }
+      />
+
+      <div className="mailbox-switch" role="radiogroup" aria-label="Moderation section">
+        <button
+          className={`mbx ${queue ? "active" : ""}`}
+          role="radio"
+          aria-checked={queue}
+          onClick={() => setSection("queue")}
+        >
+          <Icons.Shield size={13} /> Queue
+        </button>
+        <button
+          className={`mbx ${!queue ? "active" : ""}`}
+          role="radio"
+          aria-checked={!queue}
+          onClick={() => setSection("gov_claims")}
+        >
+          <Icons.Building size={13} /> Gov claims
+        </button>
+      </div>
+
+      {queue ? <ModerationQueueSection focusId={focusId} /> : <GovClaimsSection />}
     </>
   )
 }
