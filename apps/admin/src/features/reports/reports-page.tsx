@@ -12,7 +12,6 @@ import {
   type AdminReportStatus,
   type ChatMessageDTO,
   type LinkedEventRef,
-  type ReportCategory,
   type ReportOutreachStatus,
 } from "@civfix/shared"
 
@@ -20,6 +19,7 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { categoryCssVar, categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
@@ -69,16 +69,6 @@ const OUTREACH_VIEW: Record<
   delivered: { cls: "status-progress", icon: Icons.Check, label: "Delivered" },
   replied: { cls: "status-ok", icon: Icons.MessageSquare, label: "Replied" },
   bounced: { cls: "status-flag", icon: Icons.AlertTriangle, label: "Bounced" },
-}
-
-function catPinSrc(category: ReportCategory): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
-}
-
-function catColor(category: ReportCategory): string {
-  if (category === "other") return "var(--ink-4)"
-  return `var(--cat-${category})`
 }
 
 function firstName(name: string): string {
@@ -384,18 +374,13 @@ const ReportRow = React.memo(function ReportRow({
   onSelect: (id: string) => void
 }) {
   const view = reportStatusView(item.status)
-  const pin = catPinSrc(item.category)
   const nav = useNav()
   const reporterId = getReporterProfileId(item.reporter.id)
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
       <div className="leading has-pin" title={REPORT_CATEGORY_LABELS[item.category]}>
-        {pin ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={pin} alt="" />
-        ) : (
-          <Icons.Layers size={16} />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={categoryPinSrc(item.category)} alt="" />
       </div>
       <div className="body">
         <div className="top">
@@ -476,7 +461,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const canReporter = reporterProfileId !== null
   const target: "reporter" | "city" = to === "reporter" && !canReporter ? "city" : to
   const canSend = target === "reporter" ? canReporter : canCity
-  const pin = catPinSrc(report.category)
+  const pin = categoryPinSrc(report.category)
   const previewMedia = report.media.find((m) => m.kind === "image") ?? report.media[0]
   const photoUrl = previewMedia
     ? previewMedia.kind === "image"
@@ -684,18 +669,17 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <div className="sub-body" style={{ padding: 10 }}>
               <div className="rep-media">
                 {report.hasPhoto && (
-                  <div className="rep-photo" style={{ ["--cat" as string]: catColor(report.category) }}>
+                  <div className="rep-photo" style={{ ["--cat" as string]: categoryCssVar(report.category) }}>
                     {photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" />
                     ) : (
-                      <span className="rep-photo-pin" style={{ background: catColor(report.category) }}>
-                        {pin ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={pin} alt="" />
-                        ) : (
-                          <Icons.Layers size={14} />
-                        )}
+                      <span
+                        className="rep-photo-pin"
+                        style={{ background: categoryCssVar(report.category) }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={pin} alt="" />
                       </span>
                     )}
                     {photoUrl && (
