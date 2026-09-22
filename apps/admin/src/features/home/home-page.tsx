@@ -17,6 +17,7 @@ import {
 import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
+import { SOURCE } from "@/lib/source"
 import { LiveMap } from "@/components/map/live-map"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -768,6 +769,12 @@ export function HomePage(_props: SectionPageProps) {
           <HostPlatformLauncher />
         </div>
       </div>
+      <footer className="hub-foot">
+        <a href={SOURCE.url} target="_blank" rel="noreferrer noopener">
+          <Icons.ExternalLink size={12} /> Source code (AGPL-3.0)
+        </a>
+        {SOURCE.commit ? <span className="hub-foot-commit">{SOURCE.commit.slice(0, 7)}</span> : null}
+      </footer>
     </div>
   )
 }
