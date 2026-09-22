@@ -6,6 +6,7 @@ import {
   DEFAULT_FORWARD_SUBJECT_TEMPLATE,
   MAIL_STATUS_LABELS,
   relativeAgo,
+  type MailMessageDTO,
   type MailStatus,
   type MailThreadDTO,
   type MailThreadListItemDTO,
@@ -56,6 +57,35 @@ const BOX_LABEL: Record<string, string> = {
   attn: "Needs attention",
   unread: "Unread",
   archived: "Archived",
+}
+
+const DELIVERY_BADGE = {
+  failed: {
+    cls: "status-flag",
+    label: "Not delivered",
+    title: "The mail provider rejected this message; use Resend",
+  },
+  pending: {
+    cls: "status-new",
+    label: "Sending…",
+    title: "Handed to the mail provider; no delivery confirmation yet",
+  },
+} as const
+
+const LOADED_TITLE = "Loaded so far"
+
+function loadedCount(n: number, hasMore: boolean): string {
+  return hasMore ? `${n}+` : String(n)
+}
+
+function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
+  if (delivery !== "failed" && delivery !== "pending") return null
+  const badge = DELIVERY_BADGE[delivery]
+  return (
+    <span className={`pill ${badge.cls} tight mail-msg-delivery`} title={badge.title}>
+      {badge.label}
+    </span>
+  )
 }
 
 function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
@@ -153,7 +183,7 @@ function ComposeModal({
         </div>
         <div className="modal-foot">
           <span className="compose-from">
-            From <span className="mono">outreach@civfix.org</span>
+            From civfix, via a per-conversation <span className="mono">reply-…</span> address
           </span>
           <div className="spacer" />
           <button className="btn" onClick={onClose}>
@@ -339,8 +369,12 @@ function MailReader({ threadId }: { threadId: string }) {
                   <span className="mail-msg-ts mono" title={tsTitle(msg.ts)}>
                     {ts(msg.ts)}
                   </span>
+                  {isOut && <DeliveryBadge delivery={msg.delivery} />}
                 </div>
                 <p className="mail-msg-body">{msg.body}</p>
+                {msg.truncated && (
+                  <div className="hint">This message was cut at 64 KB for display.</div>
+                )}
                 {msg.attachments.length > 0 && (
                   <div className="mail-attachments">
                     {msg.attachments.map((att) => (
@@ -476,6 +510,8 @@ export function MailPage({ focusId }: SectionPageProps) {
   const inboxAllQuery = useInboxListInfinite({ status: "all" })
   const mailAllItems = mailAllQuery.data?.pages.flatMap((p) => p.items) ?? []
   const inboxAllItems = inboxAllQuery.data?.pages.flatMap((p) => p.items) ?? []
+  const mailAllPartial = !!mailAllQuery.hasNextPage
+  const inboxAllPartial = !!inboxAllQuery.hasNextPage
   const mailCounts = {
     all: mailAllItems.length,
     in: mailAllItems.filter((t) => t.dir === "in").length,
@@ -556,15 +592,27 @@ export function MailPage({ focusId }: SectionPageProps) {
 
   const statusOptions = outreach
     ? [
-        { value: "all", label: "All", count: mailCounts.all },
-        { value: "in", label: "Inbound", count: mailCounts.in },
-        { value: "out", label: "Outbound", count: mailCounts.out },
-        { value: "attn", label: "Needs attention", count: mailCounts.attn },
+        { value: "all", label: "All", count: loadedCount(mailCounts.all, mailAllPartial) },
+        { value: "in", label: "Inbound", count: loadedCount(mailCounts.in, mailAllPartial) },
+        { value: "out", label: "Outbound", count: loadedCount(mailCounts.out, mailAllPartial) },
+        {
+          value: "attn",
+          label: "Needs attention",
+          count: loadedCount(mailCounts.attn, mailAllPartial),
+        },
       ]
     : [
-        { value: "all", label: "All", count: inboxCounts.all },
-        { value: "unread", label: "Unread", count: inboxCounts.unread },
-        { value: "archived", label: "Archived", count: inboxCounts.archived },
+        { value: "all", label: "All", count: loadedCount(inboxCounts.all, inboxAllPartial) },
+        {
+          value: "unread",
+          label: "Unread",
+          count: loadedCount(inboxCounts.unread, inboxAllPartial),
+        },
+        {
+          value: "archived",
+          label: "Archived",
+          count: loadedCount(inboxCounts.archived, inboxAllPartial),
+        },
       ]
 
   return (
@@ -605,7 +653,11 @@ export function MailPage({ focusId }: SectionPageProps) {
           onClick={() => switchFolder("outreach")}
         >
           <Icons.Mail size={13} /> Outreach
-          {mailCounts.all > 0 && <span className="mbx-c">{mailCounts.all}</span>}
+          {mailCounts.all > 0 && (
+            <span className="mbx-c" title={LOADED_TITLE}>
+              {loadedCount(mailCounts.all, mailAllPartial)}
+            </span>
+          )}
         </button>
         <button
           className={`mbx ${!outreach ? "active" : ""}`}
@@ -614,7 +666,11 @@ export function MailPage({ focusId }: SectionPageProps) {
           onClick={() => switchFolder("inbox")}
         >
           <Icons.Inbox size={13} /> Inbox
-          {inboxCounts.all > 0 && <span className="mbx-c">{inboxCounts.all}</span>}
+          {inboxCounts.all > 0 && (
+            <span className="mbx-c" title={LOADED_TITLE}>
+              {loadedCount(inboxCounts.all, inboxAllPartial)}
+            </span>
+          )}
         </button>
       </div>
 
@@ -686,7 +742,9 @@ export function MailPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>{BOX_LABEL[box] ?? "All"}</h3>
             <div className="spacer" />
-            <span className="meta">{activeCount}</span>
+            <span className="meta" title={LOADED_TITLE}>
+              {loadedCount(activeCount, !!activeListQuery.hasNextPage)}
+            </span>
           </div>
           <div className="queue-list">
             {activeListQuery.isLoading ? (

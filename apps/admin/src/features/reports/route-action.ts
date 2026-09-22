@@ -21,6 +21,7 @@ export function routeActionFor(report: RoutableReport): RouteAction {
   if (!report.city.contact) {
     return { kind: report.geoid === null ? "no_jurisdiction" : "no_contact", routedAt }
   }
+  if (report.outreach.sendFailed === true) return { kind: "resend", routedAt }
   if (SENT_OUTREACH_STATUSES.includes(report.outreach.status)) {
     return { kind: "already_sent", routedAt }
   }
