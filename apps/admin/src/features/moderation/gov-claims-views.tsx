@@ -83,7 +83,7 @@ function CheckRow({
         </span>
       </div>
       {evidence && (
-        <div className="ccat-types">
+        <div className="sub-caption">
           {isHttpsUrl(evidence) ? (
             <a href={evidence} target="_blank" rel="noreferrer noopener">
               {evidence}
@@ -93,7 +93,7 @@ function CheckRow({
           )}
         </div>
       )}
-      {state.note && <div className="ccat-types">{state.note}</div>}
+      {state.note && <div className="sub-caption">{state.note}</div>}
       <button
         className="btn sm"
         disabled={busy}

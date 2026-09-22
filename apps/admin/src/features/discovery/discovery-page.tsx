@@ -553,7 +553,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                           {n} {n === 1 ? "report" : "reports"}
                         </span>
                       </div>
-                      <div className="ccat-types">{c.types}</div>
+                      <div className="sub-caption">{c.types}</div>
                       <div className="ccat-email">
                         <Icons.Mail size={13} />
                         <input
