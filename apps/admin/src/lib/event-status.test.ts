@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest"
-import type { EventStatus } from "@civfix/shared"
+import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/shared"
 
 import { cancelBlockedFor, EVENT_STATUS_VIEW, eventStatusView } from "./event-status"
 
 describe("event status pills", () => {
-  it("reads the derived statuses as clock readings, not as operator decisions", () => {
-    expect(eventStatusView("upcoming").label).toBe("Upcoming")
-    expect(eventStatusView("in_progress").label).toBe("Happening now")
-    expect(eventStatusView("completed").label).toBe("Ended")
+  it("renders every label from the shared contract map rather than a local fork", () => {
+    const statuses: EventStatus[] = ["upcoming", "in_progress", "completed", "cancelled"]
+    for (const status of statuses) {
+      expect(eventStatusView(status).label).toBe(EVENT_STATUS_LABELS[status])
+    }
   })
 
   it("keeps cancelled as the one status an operator can produce", () => {
-    expect(eventStatusView("cancelled").label).toBe("Cancelled")
     expect(eventStatusView("cancelled").cls).toBe("status-flag")
   })
 

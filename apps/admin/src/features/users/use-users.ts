@@ -85,7 +85,6 @@ function invalidateUsers(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.users.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 export function useFlagUser() {

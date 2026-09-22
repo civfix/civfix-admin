@@ -48,7 +48,6 @@ function invalidateEvents(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.events.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 export function useFlagEvent() {

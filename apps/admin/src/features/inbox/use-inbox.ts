@@ -44,7 +44,6 @@ function invalidateInbox(qc: ReturnType<typeof useQueryClient>, id?: string) {
   if (id) qc.invalidateQueries({ queryKey: queryKeys.inbox.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 export function useSetInboxStatus() {

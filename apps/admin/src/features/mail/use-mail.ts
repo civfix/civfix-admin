@@ -61,7 +61,6 @@ function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
   qc.invalidateQueries({ queryKey: queryKeys.mail.all })
   qc.invalidateQueries({ queryKey: queryKeys.mail.stats })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 export function useComposeMail() {

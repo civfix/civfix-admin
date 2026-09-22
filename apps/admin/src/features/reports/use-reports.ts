@@ -51,7 +51,6 @@ function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.reports.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 export function useSetReportStatus() {
@@ -134,7 +133,6 @@ export function useDeleteReportMessage() {
     mutationFn: (input: DeleteReportMessageRequest) => api.deleteReportMessage(input),
     onSuccess: (_res, { id }) => {
       qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) })
-      qc.invalidateQueries({ queryKey: queryKeys.activity.all })
     },
   })
 }

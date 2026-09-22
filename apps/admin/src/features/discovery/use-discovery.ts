@@ -21,7 +21,7 @@ import { queryKeys } from "@/lib/query"
 /**
  * Data hooks for the Discovery / Jurisdictions section (enumeration 2.B). Reads use GET /admin/discovery
  * (list) and GET /admin/discovery/:id (detail); writes use the discovery + jurisdictions mutations. All
- * mutations invalidate the discovery + jurisdictions caches plus the cross-cutting home + activity feeds
+ * mutations invalidate the discovery + jurisdictions caches plus the cross-cutting home summary
  * (a saved contact / flag changes the dashboard aggregates), matching the scaffold's documented pattern.
  *
  * Query keys: reuses the existing registry in src/lib/query.ts (discovery.list/detail/all,
@@ -89,12 +89,11 @@ export function useJurisdictionGeometry(geoid: string | null) {
   })
 }
 
-/** Invalidate every discovery/jurisdiction view plus the home + activity aggregates after a write. */
+/** Invalidate every discovery/jurisdiction view plus the home aggregates after a write. */
 function invalidateDiscovery(qc: ReturnType<typeof useQueryClient>) {
   qc.invalidateQueries({ queryKey: queryKeys.discovery.all })
   qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 /** POST /admin/discovery/:id/notes - append an operator note to a discovery task. */

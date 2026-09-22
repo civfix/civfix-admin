@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
   RISK_LABELS,
+  USER_STATUS_LABELS,
   avatarColor,
   monogram,
   type AdminUserDTO,
@@ -47,10 +48,10 @@ type NavFn = ReturnType<typeof useNav>
 
 
 const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
-  active: { cls: "status-ok", label: "Active" },
-  suspended: { cls: "status-flag", label: "Suspended" },
-  review: { cls: "status-progress", label: "In review" },
-  banned: { cls: "status-flag", label: "Banned" },
+  active: { cls: "status-ok", label: USER_STATUS_LABELS.active },
+  suspended: { cls: "status-flag", label: USER_STATUS_LABELS.suspended },
+  review: { cls: "status-progress", label: USER_STATUS_LABELS.review },
+  banned: { cls: "status-flag", label: USER_STATUS_LABELS.banned },
 }
 
 const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]> | "group", string> = {

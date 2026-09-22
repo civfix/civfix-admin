@@ -1,11 +1,11 @@
-import type { EventStatus } from "@civfix/shared"
+import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/shared"
 
 /** Pill treatment per event lifecycle status, shared by the Events section and the org events tab. */
 export const EVENT_STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
-  upcoming: { cls: "status-new", label: "Upcoming" },
-  in_progress: { cls: "status-progress", label: "Happening now" },
-  completed: { cls: "status-ok", label: "Ended" },
-  cancelled: { cls: "status-flag", label: "Cancelled" },
+  upcoming: { cls: "status-new", label: EVENT_STATUS_LABELS.upcoming },
+  in_progress: { cls: "status-progress", label: EVENT_STATUS_LABELS.in_progress },
+  completed: { cls: "status-ok", label: EVENT_STATUS_LABELS.completed },
+  cancelled: { cls: "status-flag", label: EVENT_STATUS_LABELS.cancelled },
 }
 
 export function eventStatusView(status: EventStatus): { cls: string; label: string } {
