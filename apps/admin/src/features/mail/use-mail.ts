@@ -3,13 +3,17 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   ComposeRequest,
+  GetForwardTemplateDefaultResponse,
   GetMailThreadResponse,
   MailListQuery,
   MailListResponse,
   MailStatsResponse,
   MarkMailReadRequest,
+  PreviewForwardTemplateRequest,
+  PreviewForwardTemplateResponse,
   ReplyRequest,
   ResendRequest,
+  SetForwardTemplateDefaultRequest,
   SetMailStatusRequest,
 } from "@civfix/shared"
 
@@ -97,5 +101,28 @@ export function useResendMail() {
   return useMutation({
     mutationFn: (input: ResendRequest) => api.resendMail(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
+  })
+}
+
+export function useForwardTemplateDefault() {
+  return useQuery<GetForwardTemplateDefaultResponse>({
+    queryKey: queryKeys.mail.forwardTemplate,
+    queryFn: () => api.getForwardTemplateDefault(),
+  })
+}
+
+export function useSetForwardTemplateDefault() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetForwardTemplateDefaultRequest) => api.setForwardTemplateDefault(input),
+    onSuccess: (res) => {
+      qc.setQueryData(queryKeys.mail.forwardTemplate, res)
+    },
+  })
+}
+
+export function usePreviewForwardTemplate() {
+  return useMutation<PreviewForwardTemplateResponse, unknown, PreviewForwardTemplateRequest>({
+    mutationFn: (input) => api.previewForwardTemplate(input),
   })
 }
