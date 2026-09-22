@@ -2,12 +2,13 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
-import type { HomeMapPin } from "@civfix/shared"
+import type { AdminReportStatus, HomeMapPin } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { useHomeMap } from "@/hooks/use-admin-home"
 import { useNav } from "@/store/ui-store"
 import { EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
+import { BUCKET_VIEW, reportBucket, type ReportBucket } from "@/lib/report-status"
 import type { MapPin, MapTint } from "@/components/map/leaflet-map"
 
 
@@ -46,13 +47,18 @@ function toMapPin(p: HomeMapPin): MapPin & {
 
 type ActivePin = ReturnType<typeof toMapPin>
 
+const BUCKET_TONE: Record<ReportBucket, string> = {
+  submitted: "var(--ink-2)",
+  in_progress: "var(--lilac-600)",
+  completed: "var(--moss-700)",
+  removed: "var(--bloom-700)",
+}
+
 function statusTone(m: ActivePin): { color: string; label: string } {
   if (m.refType === "event") return { color: "var(--sun-700)", label: "Cleanup event" }
   if (m.flagged) return { color: "var(--bloom-700)", label: "Flagged" }
-  if (WAITING_REPORT_STATUSES.has(m.status)) return { color: "var(--ink-2)", label: "Submitted" }
-  if (m.status === "in_progress" || m.status === "acknowledged")
-    return { color: "var(--lilac-600)", label: "In progress" }
-  return { color: "var(--moss-700)", label: "Completed" }
+  const bucket = reportBucket(m.status as AdminReportStatus)
+  return { color: BUCKET_TONE[bucket], label: BUCKET_VIEW[bucket].label }
 }
 
 export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
