@@ -591,6 +591,7 @@ export function HomePage(_props: SectionPageProps) {
     const base = summaries.find((s) => s.id === "mail")
     if (!base) return undefined
     const needsAction = summaryQuery.data?.mail.needsAction ?? 0
+    const inboxUnread = summaryQuery.data?.inboxUnread
     const presentation = getMailPreviewPresentation(base.lead ?? 0)
     return {
       ...base,
@@ -599,11 +600,16 @@ export function HomePage(_props: SectionPageProps) {
       blurb:
         "Two-way outreach with municipal contacts plus catch-all inbound to *@civfix.org — replies, support requests, and cold mail in one place.",
       cta: "Open mail",
-      stats: [{ k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null }],
+      stats: [
+        { k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null },
+        ...(inboxUnread === undefined
+          ? []
+          : [{ k: "Inbox unread", v: inboxUnread, tone: null } satisfies SectionStat]),
+      ],
     }
   }, [summaries, summaryQuery.data])
   const moderationItems = moderationQuery.data?.items ?? []
-  const moderationPresentation = getModerationPreviewPresentation()
+  const moderationPresentation = getModerationPreviewPresentation(summaryQuery.data?.moderationQueue)
   const moderationSummary = React.useMemo<SectionSummary>(
     () => ({
       id: "moderation",

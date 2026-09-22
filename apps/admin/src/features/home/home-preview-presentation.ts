@@ -6,12 +6,13 @@ export function getMailPreviewPresentation(outreachUnread: number) {
 }
 
 /**
- * The moderation tile has no server-side queue total yet, so it leads with a plain label instead of the
- * length of the two-row preview, which is not a count of anything.
+ * The moderation tile leads with the server-side queue total when the summary carries one. When the
+ * field is absent (an older API) it leads with a plain label instead of the length of the two-row
+ * preview, which is not a count of anything.
  */
-export function getModerationPreviewPresentation() {
-  return {
-    lead: null,
-    unit: "held media, clusters and appeals",
-  }
+const MODERATION_MIX = "user reports, held media, clusters and appeals"
+
+export function getModerationPreviewPresentation(queueTotal?: number) {
+  if (queueTotal === undefined) return { lead: null, unit: MODERATION_MIX }
+  return { lead: queueTotal, unit: `queued — ${MODERATION_MIX}` }
 }

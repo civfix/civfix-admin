@@ -17,7 +17,15 @@ describe("home preview presentation", () => {
   it("leads the moderation tile with a label, never the preview length", () => {
     expect(getModerationPreviewPresentation()).toEqual({
       lead: null,
-      unit: "held media, clusters and appeals",
+      unit: "user reports, held media, clusters and appeals",
     })
+  })
+
+  it("leads the moderation tile with the server-side queue total when the summary carries one", () => {
+    expect(getModerationPreviewPresentation(4)).toEqual({
+      lead: 4,
+      unit: "queued — user reports, held media, clusters and appeals",
+    })
+    expect(getModerationPreviewPresentation(0).lead).toBe(0)
   })
 })
