@@ -13,6 +13,7 @@ import {
   type AdminReportStatus,
   type ChatMessageDTO,
   type LinkedEventRef,
+  type ReportCategory,
   type ReportOutreachStatus,
 } from "@civfix/shared"
 
@@ -22,7 +23,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { LightboxSync, openLightbox, type LightboxImage } from "@/components/shared/lightbox"
 import { categoryCssVar, categoryPinSrc } from "@/lib/category"
-import { BUCKET_VIEW, reportBucket, reportStatusView } from "@/lib/report-status"
+import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
 import { routeActionFor, routeSendLabel, type RouteAction } from "@/features/reports/route-action"
