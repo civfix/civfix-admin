@@ -48,6 +48,13 @@ export function useReport(id: string | null) {
   })
 }
 
+export function useRefreshReportMedia(id: string): () => void {
+  const qc = useQueryClient()
+  return () => {
+    qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
+  }
+}
+
 function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.reports.all })

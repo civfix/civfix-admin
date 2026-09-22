@@ -13,6 +13,7 @@ import {
   type AdminReportStatus,
   type ChatMessageDTO,
   type LinkedEventRef,
+  type ReportCategory,
   type ReportOutreachStatus,
 } from "@civfix/shared"
 
@@ -20,6 +21,7 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { LightboxSync, openLightbox, type LightboxImage } from "@/components/shared/lightbox"
 import { categoryCssVar, categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
@@ -31,6 +33,7 @@ import {
   useRemoveReport,
   useRemoveReportMessage,
   useReport,
+  useRefreshReportMedia,
   useReportChatHistory,
   useReportListInfinite,
   useRouteReport,
@@ -200,11 +203,13 @@ function ChatMessageRow({
   onRemove,
   removing,
   nav,
+  refreshPhotos,
 }: {
   msg: ChatMessageDTO
   onRemove: (msg: ChatMessageDTO) => void
   removing: boolean
   nav: ReturnType<typeof useNav>
+  refreshPhotos: () => void
 }) {
   const removed = !!msg.deletedAt || msg.from == null
   const authorName = chatAuthorName(msg)
@@ -212,6 +217,9 @@ function ChatMessageRow({
   const authorId = msg.from?.id
   const reactions = (msg.reactions ?? []).filter((r) => r.count > 0)
   const attachments = msg.attachments ?? []
+  const chatImages: LightboxImage[] = attachments
+    .filter((m) => m.kind === "image")
+    .map((m) => ({ id: m.id, url: m.url, alt: `Photo from ${authorName}` }))
 
   return (
     <div className={`dsc-msg ${removed ? "removed" : ""}`}>
@@ -262,19 +270,36 @@ function ChatMessageRow({
 
         {!removed && attachments.length > 0 && (
           <div className="dsc-msg-media">
-            {attachments.map((m) => {
-              const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
-              return (
+            <LightboxSync images={chatImages} />
+            {attachments.map((m) =>
+              m.kind === "image" ? (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="dsc-msg-thumb dsc-msg-thumb-open"
+                  title="Expand this photo"
+                  onClick={() =>
+                    openLightbox(
+                      chatImages,
+                      chatImages.findIndex((i) => i.id === m.id),
+                      refreshPhotos,
+                    )
+                  }
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.thumbUrl ?? m.url} alt="" loading="lazy" decoding="async" />
+                </button>
+              ) : (
                 <span key={m.id} className="dsc-msg-thumb">
-                  {thumb ? (
+                  {m.thumbUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb} alt="" />
+                    <img src={m.thumbUrl} alt="" loading="lazy" decoding="async" />
                   ) : (
                     <Icons.FileText size={14} />
                   )}
                 </span>
-              )
-            })}
+              ),
+            )}
           </div>
         )}
 
@@ -400,6 +425,7 @@ function ReportDiscussion({
                   onRemove={onRemove}
                   removing={removeMsg.isPending}
                   nav={nav}
+                  refreshPhotos={() => void q.refetch()}
                 />
               ),
             )}
@@ -452,11 +478,31 @@ const ReportRow = React.memo(function ReportRow({
   const view = reportStatusView(item.status)
   const nav = useNav()
   const reporterId = getReporterProfileId(item.reporter.id)
+  const [brokenThumb, setBrokenThumb] = React.useState<string | null>(null)
+  const thumb = item.thumbnailUrl !== brokenThumb ? item.thumbnailUrl : null
+  const categoryLabel = REPORT_CATEGORY_LABELS[item.category]
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
-      <div className="leading has-pin" title={REPORT_CATEGORY_LABELS[item.category]}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={categoryPinSrc(item.category)} alt="" />
+      <div
+        className={`leading ${thumb ? "has-thumb" : "has-pin"}`}
+        style={{ ["--cat" as string]: categoryCssVar(item.category) }}
+        role="img"
+        aria-label={categoryLabel}
+        title={categoryLabel}
+      >
+        {thumb ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumb}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setBrokenThumb(thumb)}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={categoryPinSrc(item.category)} alt="" loading="lazy" decoding="async" />
+        )}
       </div>
       <div className="body">
         <div className="top">
@@ -504,10 +550,40 @@ const ReportRow = React.memo(function ReportRow({
   )
 })
 
+function ReportPhotoFace({
+  photoUrl,
+  pin,
+  category,
+}: {
+  photoUrl: string | null
+  pin: string
+  category: ReportCategory
+}) {
+  return (
+    <>
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" decoding="async" />
+      ) : (
+        <span className="rep-photo-pin" style={{ background: categoryCssVar(category) }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={pin} alt="" />
+        </span>
+      )}
+      {photoUrl && (
+        <span className="rep-photo-tag">
+          <Icons.Eye size={12} /> Reporter photo
+        </span>
+      )}
+    </>
+  )
+}
+
 function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (id: string) => void }) {
   const q = useReport(reportId)
   const nav = useNav()
   const toast = useToast()
+  const refreshMedia = useRefreshReportMedia(reportId)
 
   const setStatus = useSetReportStatus()
   const flag = useFlagReport()
@@ -554,6 +630,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const galleryMedia = previewMedia
     ? report.media.filter((m) => m.id !== previewMedia?.id)
     : report.media
+  const lightboxImages: LightboxImage[] = report.media
+    .filter((m) => m.kind === "image")
+    .map((m) => ({ id: m.id, url: m.url, alt: `Photo on ${report.title}` }))
+  const lightboxIndex = (id: string) => lightboxImages.findIndex((i) => i.id === id)
+  const previewIndex = previewMedia ? lightboxIndex(previewMedia.id) : -1
 
   const send = () => {
     const body = text.trim()
@@ -795,27 +876,34 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
             <div className="sub-body" style={{ padding: 10 }}>
               <div className="rep-media">
-                {report.hasPhoto && (
-                  <div className="rep-photo" style={{ ["--cat" as string]: categoryCssVar(report.category) }}>
-                    {photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" />
-                    ) : (
-                      <span
-                        className="rep-photo-pin"
-                        style={{ background: categoryCssVar(report.category) }}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={pin} alt="" />
-                      </span>
-                    )}
-                    {photoUrl && (
-                      <span className="rep-photo-tag">
-                        <Icons.Eye size={12} /> Reporter photo
-                      </span>
-                    )}
-                  </div>
-                )}
+                <LightboxSync images={lightboxImages} />
+                {report.hasPhoto &&
+                  (previewIndex >= 0 ? (
+                    <button
+                      type="button"
+                      className="rep-photo rep-photo-open"
+                      style={{ ["--cat" as string]: categoryCssVar(report.category) }}
+                      title="Expand this photo"
+                      onClick={() => openLightbox(lightboxImages, previewIndex, refreshMedia)}
+                    >
+                      <ReportPhotoFace
+                        photoUrl={photoUrl}
+                        pin={pin}
+                        category={report.category}
+                      />
+                    </button>
+                  ) : (
+                    <div
+                      className="rep-photo"
+                      style={{ ["--cat" as string]: categoryCssVar(report.category) }}
+                    >
+                      <ReportPhotoFace
+                        photoUrl={photoUrl}
+                        pin={pin}
+                        category={report.category}
+                      />
+                    </div>
+                  ))}
                 <div className="rep-minimap">
                   <LeafletMap
                     pins={[
@@ -847,9 +935,21 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               </div>
               <div className="sub-body" style={{ padding: 10 }}>
                 <div className="dsc-msg-media">
-                  {galleryMedia.map((m) => {
-                    const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
-                    return (
+                  {galleryMedia.map((m) =>
+                    m.kind === "image" ? (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className="dsc-msg-thumb dsc-msg-thumb-open"
+                        title="Expand this photo"
+                        onClick={() =>
+                          openLightbox(lightboxImages, lightboxIndex(m.id), refreshMedia)
+                        }
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={m.thumbUrl ?? m.url} alt="" loading="lazy" decoding="async" />
+                      </button>
+                    ) : (
                       <a
                         key={m.id}
                         className="dsc-msg-thumb"
@@ -858,15 +958,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                         rel="noopener noreferrer"
                         title="Open full media in a new tab"
                       >
-                        {thumb ? (
+                        {m.thumbUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumb} alt="" />
+                          <img src={m.thumbUrl} alt="" loading="lazy" decoding="async" />
                         ) : (
                           <Icons.FileText size={14} />
                         )}
                       </a>
-                    )
-                  })}
+                    ),
+                  )}
                 </div>
               </div>
             </div>

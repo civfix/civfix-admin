@@ -4,6 +4,7 @@ import * as React from "react"
 import { create } from "zustand"
 
 import { Icons } from "@/components/icons"
+import { useModalFocus } from "@/components/shared/modal-focus"
 
 interface ConfirmRequest {
   kind: "confirm"
@@ -60,6 +61,7 @@ export function DialogHost() {
   const current = useDialogStore((s) => s.current)
   const close = useDialogStore((s) => s.close)
   const [value, setValue] = React.useState("")
+  const modalRef = useModalFocus<HTMLDivElement>(current !== null)
 
   React.useEffect(() => {
     if (current?.kind === "prompt") setValue(current.defaultValue ?? "")
@@ -105,6 +107,7 @@ export function DialogHost() {
   return (
     <div className="modal-overlay" onClick={cancel}>
       <div
+        ref={modalRef}
         className="modal dialog-modal"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
