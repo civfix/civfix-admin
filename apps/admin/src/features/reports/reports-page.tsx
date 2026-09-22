@@ -535,13 +535,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const reporterProfileId = getReporterProfileId(report.reporter.id)
   const verdictApproved = report.verificationVerdict === "approved" || approvedLocally
   const verdictView = verdictPill(report.verificationVerdict, approvedLocally)
-  const alreadySent = routeAction.kind === "already_sent"
+  const sendAttempted = report.outreach.routedAt !== null
   const approvesOnSend = routeAction.kind === "send" && !verdictApproved
-  const sendUnavailable =
-    routeAction.kind === "no_contact" ||
-    routeAction.kind === "no_jurisdiction" ||
-    routeAction.kind === "already_sent"
-  const canApproveHere = sendUnavailable && !verdictApproved
+  const canApproveHere = !verdictApproved && !approvesOnSend
   const followupBlocked = !canCity
     ? "No city contact on file"
     : report.outreach.threadId === null
@@ -627,10 +623,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       title: "Approve report",
       body: [
         "This approves this report's verification.",
-        alreadySent ? null : "It is not sent to the city.",
+        sendAttempted ? null : "It is not sent to the city.",
         "Once this reporter has two approved reports, their account is marked report-verified.",
       ]
-        .filter(Boolean)
+        .filter((line): line is string => line !== null)
         .join(" "),
       confirmLabel: "Approve",
     })
@@ -698,8 +694,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const onReject = async () => {
     const ok = await confirmDialog({
       title: "Reject report",
-      body: alreadySent
-        ? "This rejects the report's verification verdict. It was already sent to the city — rejecting does not recall that email."
+      body: sendAttempted
+        ? "This rejects the report's verification verdict. It was already emailed to the city — rejecting does not recall that email."
         : "This rejects the report's verification verdict. It is not sent to the city.",
       danger: true,
       confirmLabel: "Reject",
