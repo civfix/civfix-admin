@@ -336,29 +336,31 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     )
   }
 
-  const onSaveDraft = () => {
+  const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
+  const handleChanged = normalizedHandle !== (dto.handle ?? "")
+
+  const noteAndHandleFields = () => {
     const note = opNote.trim()
+    return {
+      ...(note ? { notes: note } : {}),
+      ...(handleChanged ? { handle: normalizedHandle } : {}),
+    }
+  }
+
+  const onSaveDraft = () => {
     const contacts = contactsPayload()
     const jf = jurisdictionFields()
-    const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
-    const handleChanged = normalizedHandle !== (dto.handle ?? "")
+    const extras = noteAndHandleFields()
     if (
       Object.keys(contacts).length === 0 &&
       Object.keys(jf).length === 0 &&
-      note === "" &&
-      !handleChanged
+      Object.keys(extras).length === 0
     ) {
       toast("Nothing to save yet")
       return
     }
     patch.mutate(
-      {
-        geoid: dto.geoid,
-        contacts,
-        ...jf,
-        ...(note ? { notes: note } : {}),
-        ...(handleChanged ? { handle: normalizedHandle } : {}),
-      },
+      { geoid: dto.geoid, contacts, ...jf, ...extras },
       {
         onSuccess: () => toast(`Draft saved for ${dto.org}`),
         onError: (err) => toast(toAppError(err).message),
@@ -368,9 +370,25 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
   const onSaveContacts = () => {
     if (!canSave) return
-    saveContacts.mutate(
-      { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
-      { onSuccess: () => toast(`Contacts saved and routed for ${dto.org}`) },
+    const saveAndRoute = () =>
+      saveContacts.mutate(
+        { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
+        {
+          onSuccess: () =>
+            toast(`Contacts saved for ${dto.org} · discovery task closed`),
+        },
+      )
+    const extras = noteAndHandleFields()
+    if (Object.keys(extras).length === 0) {
+      saveAndRoute()
+      return
+    }
+    patch.mutate(
+      { geoid: dto.geoid, ...extras },
+      {
+        onSuccess: saveAndRoute,
+        onError: (err) => toast(toAppError(err).message),
+      },
     )
   }
 
@@ -484,10 +502,9 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 />
               </div>
               <div className="hint" style={{ marginTop: 8 }}>
-                Residents can tag “@
-                {handle.trim().replace(/^@+/, "").toLowerCase() || "handle"}” in a report’s discussion to
-                forward it to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to
-                clear. Saved with “Save draft”.
+                Residents can tag “@{normalizedHandle || "handle"}” in a report’s discussion to forward it
+                to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to clear.
+                Saved by either “Save draft” or “Save &amp; route”.
               </div>
             </div>
           </div>
@@ -623,7 +640,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
           className="btn"
           disabled={busy}
           onClick={onSaveDraft}
-          title="Saves contacts without routing or closing the task"
+          title="Saves the contacts, the note and the @handle without closing the discovery task"
         >
           Save draft
         </button>
@@ -633,7 +650,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
           onClick={onSaveContacts}
           title={
             canSave
-              ? "Saves contacts, closes the discovery task, and queues outreach to this jurisdiction"
+              ? "Saves the contacts, the note and the @handle, closes the discovery task, and queues the outreach digest when outreach is enabled"
               : "Add at least one contact first"
           }
           style={!canSave ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
@@ -645,8 +662,10 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       <div className="pay-note">
         <Icons.Send size={13} />
         <span>
-          <b>Save &amp; route</b> saves the contacts, closes the discovery task, and queues outreach to
-          this jurisdiction. <b>Save draft</b> saves contacts without routing or closing the task.
+          <b>Save &amp; route</b> saves the contacts, the note and the @handle, closes the discovery
+          task, and queues an outreach digest to this jurisdiction when outreach digests are enabled. It
+          does not email the reports already waiting — send each of those from its report.{" "}
+          <b>Save draft</b> saves the same fields and leaves the discovery task open.
         </span>
       </div>
 
