@@ -4,7 +4,9 @@ import * as React from "react"
 import dynamic from "next/dynamic"
 import {
   ADMIN_REPORT_STATUS_LABELS,
+  ADMIN_REPORT_STATUS_TRANSITIONS,
   REPORT_CATEGORY_LABELS,
+  type AdminReportCounts,
   type AdminReportDTO,
   type AdminReportListItemDTO,
   type AdminReportStatus,
@@ -18,9 +20,10 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
-import { BUCKET_VIEW, reportBucket, reportStatusView } from "@/lib/report-status"
+import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
+import { routeActionFor, type RouteAction } from "@/features/reports/route-action"
 import { useDebounced } from "@/hooks/use-debounced"
 import {
   useDeleteReportMessage,
@@ -43,11 +46,7 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
 
-const STATUS_ACTIONS: { value: AdminReportStatus; label: string }[] = [
-  { value: "submitted", label: "Submitted" },
-  { value: "in_progress", label: "In progress" },
-  { value: "resolved", label: "Completed" },
-]
+type ReportFilter = keyof AdminReportCounts
 
 const TL_ICON: Record<AdminReportDTO["timeline"][number]["kind"], IconComponent> = {
   submit: Icons.Pin,
@@ -144,6 +143,14 @@ const REACTION_LABEL: Record<string, string> = {
 function msgWhen(iso: string): string {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
+}
+
+function routeButtonLabel(action: RouteAction): string {
+  if (action.kind === "already_sent") {
+    return action.routedAt ? `Already sent · ${msgWhen(action.routedAt)}` : "Already sent"
+  }
+  if (action.kind === "resend") return "Send again to jurisdiction"
+  return "Approve & send to jurisdiction"
 }
 
 function chatAuthorName(msg: ChatMessageDTO): string {
@@ -451,8 +458,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const [to, setTo] = React.useState<"reporter" | "city">("reporter")
   const [text, setText] = React.useState("")
   const [routeOpen, setRouteOpen] = React.useState(false)
-  const [routeTo, setRouteTo] = React.useState("")
   const [routeNote, setRouteNote] = React.useState("")
+  const [lastThreadId, setLastThreadId] = React.useState<string | null>(null)
 
   if (q.isLoading) return <LoadingState label="Loading report..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -463,6 +470,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const outreachView = OUTREACH_VIEW[report.outreach.status] ?? OUTREACH_VIEW.not_sent
   const OutreachIco = outreachView.icon
   const canCity = !!report.city.contact
+  const routeAction = routeActionFor(report)
+  const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status]
   const reporterProfileId = getReporterProfileId(report.reporter.id)
   const canReporter = reporterProfileId !== null
   const target: "reporter" | "city" = to === "reporter" && !canReporter ? "city" : to
@@ -493,47 +502,42 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   }
 
   const openRoute = () => {
-    setRouteTo(report.city.contact ?? "")
     setRouteNote("")
     setRouteOpen(true)
   }
 
   const sendToJurisdiction = async () => {
-    const toAddr = routeTo.trim()
-    if (!toAddr || route.isPending) return
+    const contact = report.city.contact
+    if (!contact || route.isPending) return
     const note = routeNote.trim()
     const ok = await confirmDialog({
       title: "Send to the city?",
-      body: `This emails the report to ${toAddr}. Attached photos are included.`,
+      body: `This emails the report to ${contact}. Attached photos are included.`,
       confirmLabel: "Send",
     })
     if (!ok) return
     route.mutate(
       {
         id: report.id,
-        ...(toAddr !== (report.city.contact ?? "") ? { contactEmailOverride: toAddr } : {}),
         ...(note ? { note } : {}),
       },
       {
-        onSuccess: () => {
+        onSuccess: (res) => {
           setRouteOpen(false)
           setRouteNote("")
-          toast("Sent to jurisdiction")
+          setLastThreadId(res.threadId)
+          toast(`Sent to ${res.routedTo}`)
         },
       },
     )
   }
 
   const onStatus = async (status: AdminReportStatus) => {
-    const curBucket = reportBucket(report.status)
-    if (curBucket === reportBucket(status)) {
-      toast(`Already ${BUCKET_VIEW[curBucket].label}`)
-      return
-    }
-    if (status === "submitted" && curBucket !== "submitted") {
+    if (status === report.status) return
+    if (status === "held") {
       const ok = await confirmDialog({
         title: "Move report back?",
-        body: "This moves a live report back to a pre-publish state.",
+        body: "Moving a live report to Under review hides it from the public map.",
         danger: true,
       })
       if (!ok) return
@@ -975,35 +979,59 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           <div className="sub">
             <div className="sub-head">Send to jurisdiction</div>
             <div className="sub-body">
-              {!routeOpen ? (
+              {routeAction.kind === "no_contact" || routeAction.kind === "no_jurisdiction" ? (
                 <>
-                  <button className="btn primary full" onClick={openRoute}>
-                    <Icons.Send size={13} /> Approve &amp; send to jurisdiction
+                  <div className="hint">
+                    {routeAction.kind === "no_jurisdiction"
+                      ? "This report's location did not resolve to a jurisdiction. Reports are only forwarded to a contact on file."
+                      : "This jurisdiction has no routing contact on file. Reports are only forwarded to a contact on file."}
+                  </div>
+                  {report.geoid !== null && (
+                    <button
+                      className="btn full"
+                      style={{ marginTop: 8 }}
+                      onClick={() => nav("discovery", report.geoid)}
+                    >
+                      <Icons.Building size={13} /> Set the routing contact in Jurisdictions
+                    </button>
+                  )}
+                </>
+              ) : !routeOpen ? (
+                <>
+                  <button
+                    className="btn primary full"
+                    disabled={routeAction.kind === "already_sent"}
+                    style={
+                      routeAction.kind === "already_sent"
+                        ? { opacity: 0.45, cursor: "not-allowed" }
+                        : undefined
+                    }
+                    title={
+                      routeAction.kind === "already_sent"
+                        ? "This report was already sent. Resend it from the Mail thread."
+                        : undefined
+                    }
+                    onClick={openRoute}
+                  >
+                    <Icons.Send size={13} /> {routeButtonLabel(routeAction)}
                   </button>
-                  {report.geoid === null && (
-                    <div className="hint" style={{ marginTop: 8 }}>
-                      No jurisdiction resolved for this report — set a contact in Jurisdictions, or type a
-                      one-off address below.
-                    </div>
+                  {lastThreadId && (
+                    <button
+                      className="btn sm ghost full"
+                      style={{ marginTop: 8 }}
+                      onClick={() => nav("mail", lastThreadId)}
+                      title="Open the jurisdiction conversation in Mail"
+                    >
+                      <Icons.MessageSquare size={12} /> View conversation →
+                    </button>
                   )}
                 </>
               ) : (
                 <>
-                  <div className="field" style={{ marginTop: 0 }}>
-                    <label className="eyebrow">Send to</label>
-                    <input
-                      type="email"
-                      placeholder="contact@city.gov"
-                      value={routeTo}
-                      onChange={(e) => setRouteTo(e.target.value)}
-                    />
+                  <div className="rep-city-contact">
+                    <Icons.Mail size={12} />
+                    <span className="mono">{report.city.contact}</span>
                   </div>
-                  {report.geoid === null && (
-                    <div className="hint" style={{ marginTop: 4 }}>
-                      No jurisdiction on file — this is a one-off address for THIS report. Add a permanent
-                      contact in Jurisdictions to route future reports automatically.
-                    </div>
-                  )}
                   <textarea
                     className="rep-followup"
                     style={{ marginTop: 8 }}
@@ -1015,11 +1043,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   <div className="rep-to" style={{ marginTop: 8 }}>
                     <button
                       className="btn primary full"
-                      disabled={!routeTo.trim() || route.isPending}
+                      disabled={route.isPending}
                       onClick={sendToJurisdiction}
-                      style={
-                        !routeTo.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined
-                      }
                     >
                       <Icons.Send size={13} /> Send
                     </button>
@@ -1085,20 +1110,20 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       { }
       <div className="rep-actions">
         <span className="rep-actions-label">Quick status</span>
-        {STATUS_ACTIONS.map((s) => {
-          const active = reportBucket(report.status) === reportBucket(s.value)
-          return (
+        {statusActions.length === 0 ? (
+          <span className="hint">No status changes from {ADMIN_REPORT_STATUS_LABELS[report.status]}</span>
+        ) : (
+          statusActions.map((s) => (
             <button
-              key={s.value}
-              className={`btn sm ${active ? "primary" : ""}`}
+              key={s}
+              className="btn sm"
               disabled={setStatus.isPending}
-              onClick={() => onStatus(s.value)}
+              onClick={() => onStatus(s)}
             >
-              {active && <Icons.Check size={11} />}
-              {s.label}
+              {ADMIN_REPORT_STATUS_LABELS[s]}
             </button>
-          )
-        })}
+          ))
+        )}
         <div className="spacer" />
         <button
           className={`btn ${report.flagged ? "flag-on" : ""}`}
@@ -1116,16 +1141,13 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 }
 
 export function ReportsPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState("all")
+  const [filter, setFilter] = React.useState<ReportFilter>("all")
   const [query, setQuery] = React.useState("")
   const dq = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
   const listParams = {
-    filter:
-      filter === "all"
-        ? undefined
-        : (filter as "submitted" | "in_progress" | "completed" | "flagged"),
+    filter: filter === "all" ? undefined : filter,
     q: dq.trim() || undefined,
   }
   const listQuery = useReportListInfinite(listParams)
@@ -1134,21 +1156,26 @@ export function ReportsPage({ focusId }: SectionPageProps) {
     [listQuery.data],
   )
 
-  const counts = listQuery.data?.pages[0]?.counts ?? {
+  const serverCounts: AdminReportCounts | null = listQuery.data?.pages[0]?.counts ?? null
+  const counts = serverCounts ?? {
     all: 0,
     submitted: 0,
     in_progress: 0,
     completed: 0,
     flagged: 0,
   }
+  const listCount = serverCounts ? serverCounts[filter] : items.length
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
   React.useEffect(() => {
     if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
   }, [items, selId])
+
+  const selInList = selId !== null && items.some((x) => x.id === selId)
+  const pinnedQuery = useReport(selInList ? null : selId)
+  const pinned = selInList ? null : (pinnedQuery.data ?? null)
 
   const onRemoved = (id: string) => {
     setSelId((cur) => (cur === id ? null : cur))
@@ -1176,7 +1203,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
             { value: "flagged", label: "Flagged", count: counts.flagged },
           ]}
           value={filter}
-          onChange={setFilter}
+          onChange={(v) => setFilter(v as ReportFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">
@@ -1195,9 +1222,17 @@ export function ReportsPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>Reports</h3>
             <div className="spacer" />
-            <span className="meta">{items.length}</span>
+            <span className="meta">{listCount}</span>
           </div>
           <div className="queue-list">
+            {pinned && (
+              <>
+                <div className="eyebrow" style={{ padding: "10px 10px 0" }}>
+                  Linked report
+                </div>
+                <ReportRow item={pinned} selected onSelect={setSelId} />
+              </>
+            )}
             {listQuery.isLoading ? (
               <LoadingState label="Loading reports..." />
             ) : listQuery.isError ? (
