@@ -677,10 +677,6 @@ export function UsersPage({ focusId }: SectionPageProps) {
   }, [listQuery.data, filter])
 
   const counts = listQuery.data?.pages[0]?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
-  const deletedCount = React.useMemo(
-    () => (listQuery.data?.pages.flatMap((p) => p.items) ?? []).filter((u) => u.deletedAt).length,
-    [listQuery.data],
-  )
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
@@ -709,7 +705,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
             { value: "active", label: "Active", count: counts.active },
             { value: "suspended", label: "Suspended", count: counts.suspended },
             { value: "flagged", label: "Flagged", count: counts.flagged },
-            { value: "deleted", label: "Deleted", count: deletedCount },
+            { value: "deleted", label: "Deleted" },
           ]}
           value={filter}
           onChange={setFilter}

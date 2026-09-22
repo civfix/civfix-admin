@@ -410,10 +410,14 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     )
   }
 
-  const onUnlink = (report: LinkedReportRef) => {
-    if (typeof window !== "undefined" && !window.confirm(`Unlink "${report.title}" from this cleanup?`)) {
-      return
-    }
+  const onUnlink = async (report: LinkedReportRef) => {
+    const ok = await confirmDialog({
+      title: "Unlink report",
+      body: `This unlinks "${report.title}" from this event. The report itself is untouched.`,
+      danger: true,
+      confirmLabel: "Unlink",
+    })
+    if (!ok) return
     unlinkReport.mutate(
       { id: event.id, reportId: report.id },
       { onSuccess: () => toast(`${shortId(event.id)} · report unlinked`) },
@@ -561,7 +565,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                         key={r.id}
                         report={r}
                         onOpen={() => nav("reports", r.id)}
-                        onUnlink={() => onUnlink(r)}
+                        onUnlink={() => void onUnlink(r)}
                         unlinking={unlinkReport.isPending}
                       />
                     ))}
@@ -803,8 +807,8 @@ export function EventsPage({ focusId }: SectionPageProps) {
         title="Events"
         subtitle={
           <span>
-            Community cleanup events neighbors organize on civfix — track turnout, keep them on the
-            level, and message attendees.
+            Events neighbors organize on civfix — cleanups and other volunteer events alike. Track
+            turnout, keep them on the level, and message attendees.
           </span>
         }
       />

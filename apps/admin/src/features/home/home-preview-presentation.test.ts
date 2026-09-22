@@ -6,20 +6,18 @@ import {
 } from "./home-preview-presentation"
 
 describe("home preview presentation", () => {
-  it("keeps the reliable outreach unread total separate from loaded catch-all mail", () => {
-    expect(getMailPreviewPresentation(7, 2)).toEqual({
+  it("leads the mail tile with the server-side outreach unread total", () => {
+    expect(getMailPreviewPresentation(7)).toEqual({
       lead: 7,
       unit: "unread outreach messages",
-      loadedInboxLabel: "Loaded catch-all unread",
-      loadedInboxUnread: 2,
     })
+    expect(getMailPreviewPresentation(1).unit).toBe("unread outreach message")
   })
 
-  it("labels moderation preview length as loaded rather than a queue total", () => {
-    expect(getModerationPreviewPresentation(2)).toEqual({
-      lead: 2,
-      unit: "loaded queue items",
+  it("leads the moderation tile with a label, never the preview length", () => {
+    expect(getModerationPreviewPresentation()).toEqual({
+      lead: null,
+      unit: "held media, clusters and appeals",
     })
-    expect(getModerationPreviewPresentation(1).unit).toBe("loaded queue item")
   })
 })

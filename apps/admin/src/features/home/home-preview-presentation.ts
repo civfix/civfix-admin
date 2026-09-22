@@ -1,15 +1,17 @@
-export function getMailPreviewPresentation(outreachUnread: number, loadedInboxUnread: number) {
+export function getMailPreviewPresentation(outreachUnread: number) {
   return {
     lead: outreachUnread,
     unit: outreachUnread === 1 ? "unread outreach message" : "unread outreach messages",
-    loadedInboxLabel: "Loaded catch-all unread",
-    loadedInboxUnread,
   }
 }
 
-export function getModerationPreviewPresentation(shown: number) {
+/**
+ * The moderation tile has no server-side queue total yet, so it leads with a plain label instead of the
+ * length of the two-row preview, which is not a count of anything.
+ */
+export function getModerationPreviewPresentation() {
   return {
-    lead: shown,
-    unit: shown === 1 ? "loaded queue item" : "loaded queue items",
+    lead: null,
+    unit: "held media, clusters and appeals",
   }
 }

@@ -487,16 +487,6 @@ export function ModerationPage({ focusId }: SectionPageProps) {
     return filter === USER_REPORTS_CHIP ? all.filter((x) => x.kind === "user_report") : all
   }, [listQuery.data, filter])
 
-  const allParams: ModerationListQuery = debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}
-  const allForCount = useModerationListInfinite(allParams)
-  const userReportCount = React.useMemo(
-    () =>
-      (allForCount.data?.pages.flatMap((p) => p.items) ?? []).filter(
-        (x) => x.kind === "user_report",
-      ).length,
-    [allForCount.data],
-  )
-
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
@@ -526,7 +516,7 @@ export function ModerationPage({ focusId }: SectionPageProps) {
         <FilterChips
           options={[
             { value: "all", label: "All" },
-            { value: USER_REPORTS_CHIP, label: "User reports", count: userReportCount },
+            { value: USER_REPORTS_CHIP, label: "User reports" },
             { value: "image", label: "Image" },
             { value: "pattern", label: "Pattern" },
             { value: "appeal", label: "Appeal" },

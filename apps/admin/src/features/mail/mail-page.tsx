@@ -13,7 +13,12 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
+import {
+  PageHead,
+  FilterChips,
+  EmptyState,
+  type FilterOption,
+} from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
   useComposeMail,
@@ -37,8 +42,6 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
 type Folder = "outreach" | "inbox"
-
-const ATTENTION: MailStatus[] = ["needs_action", "bounced"]
 
 const STATUS_CLS: Record<MailStatus, string> = {
   replied: "status-ok",
@@ -71,12 +74,6 @@ const DELIVERY_BADGE = {
     title: "Handed to the mail provider; no delivery confirmation yet",
   },
 } as const
-
-const LOADED_TITLE = "Loaded so far"
-
-function loadedCount(n: number, hasMore: boolean): string {
-  return hasMore ? `${n}+` : String(n)
-}
 
 function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
   if (delivery !== "failed" && delivery !== "pending") return null
@@ -285,11 +282,11 @@ function MailReader({ threadId }: { threadId: string }) {
     )
   }
 
-  const markDone = () => {
+  const markReplied = () => {
     setStatus.mutate(
       { id: sel.id, status: "replied" },
       {
-        onSuccess: () => toast("Marked done"),
+        onSuccess: () => toast("Marked replied"),
         onError: (err) => toast(errorMessage(err, {}, { fallback: "Couldn't update the thread." })),
       },
     )
@@ -441,8 +438,13 @@ function MailReader({ threadId }: { threadId: string }) {
               To <span className="mono">{who}</span>
             </span>
             <div className="spacer" />
-            <button className="btn" disabled={setStatus.isPending} onClick={markDone}>
-              <Icons.Check size={13} /> Mark done
+            <button
+              className="btn"
+              disabled={setStatus.isPending}
+              onClick={markReplied}
+              title="Marks this thread replied without sending a message"
+            >
+              <Icons.Check size={13} /> Mark replied
             </button>
             <button
               className={`btn ${text.trim() ? "primary" : ""}`}
@@ -505,24 +507,6 @@ export function MailPage({ focusId }: SectionPageProps) {
         }
       : { status: "all" as const },
   )
-
-  const mailAllQuery = useMailListInfinite({})
-  const inboxAllQuery = useInboxListInfinite({ status: "all" })
-  const mailAllItems = mailAllQuery.data?.pages.flatMap((p) => p.items) ?? []
-  const inboxAllItems = inboxAllQuery.data?.pages.flatMap((p) => p.items) ?? []
-  const mailAllPartial = !!mailAllQuery.hasNextPage
-  const inboxAllPartial = !!inboxAllQuery.hasNextPage
-  const mailCounts = {
-    all: mailAllItems.length,
-    in: mailAllItems.filter((t) => t.dir === "in").length,
-    out: mailAllItems.filter((t) => t.dir === "out").length,
-    attn: mailAllItems.filter((t) => t.unread || ATTENTION.includes(t.status)).length,
-  }
-  const inboxCounts = {
-    all: inboxAllItems.length,
-    unread: inboxAllItems.filter((i) => i.unread).length,
-    archived: inboxAllItems.filter((i) => i.status === "archived").length,
-  }
 
   const mailItems = React.useMemo(
     () => mailListQuery.data?.pages.flatMap((p) => p.items) ?? [],
@@ -590,29 +574,17 @@ export function MailPage({ focusId }: SectionPageProps) {
     })
   }
 
-  const statusOptions = outreach
+  const statusOptions: FilterOption[] = outreach
     ? [
-        { value: "all", label: "All", count: loadedCount(mailCounts.all, mailAllPartial) },
-        { value: "in", label: "Inbound", count: loadedCount(mailCounts.in, mailAllPartial) },
-        { value: "out", label: "Outbound", count: loadedCount(mailCounts.out, mailAllPartial) },
-        {
-          value: "attn",
-          label: "Needs attention",
-          count: loadedCount(mailCounts.attn, mailAllPartial),
-        },
+        { value: "all", label: "All", ...(stats ? { count: stats.threads } : {}) },
+        { value: "in", label: "Inbound" },
+        { value: "out", label: "Outbound" },
+        { value: "attn", label: "Needs attention" },
       ]
     : [
-        { value: "all", label: "All", count: loadedCount(inboxCounts.all, inboxAllPartial) },
-        {
-          value: "unread",
-          label: "Unread",
-          count: loadedCount(inboxCounts.unread, inboxAllPartial),
-        },
-        {
-          value: "archived",
-          label: "Archived",
-          count: loadedCount(inboxCounts.archived, inboxAllPartial),
-        },
+        { value: "all", label: "All" },
+        { value: "unread", label: "Unread" },
+        { value: "archived", label: "Archived" },
       ]
 
   return (
@@ -653,11 +625,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           onClick={() => switchFolder("outreach")}
         >
           <Icons.Mail size={13} /> Outreach
-          {mailCounts.all > 0 && (
-            <span className="mbx-c" title={LOADED_TITLE}>
-              {loadedCount(mailCounts.all, mailAllPartial)}
-            </span>
-          )}
+          {stats && stats.threads > 0 && <span className="mbx-c">{stats.threads}</span>}
         </button>
         <button
           className={`mbx ${!outreach ? "active" : ""}`}
@@ -666,11 +634,6 @@ export function MailPage({ focusId }: SectionPageProps) {
           onClick={() => switchFolder("inbox")}
         >
           <Icons.Inbox size={13} /> Inbox
-          {inboxCounts.all > 0 && (
-            <span className="mbx-c" title={LOADED_TITLE}>
-              {loadedCount(inboxCounts.all, inboxAllPartial)}
-            </span>
-          )}
         </button>
       </div>
 
@@ -742,9 +705,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>{BOX_LABEL[box] ?? "All"}</h3>
             <div className="spacer" />
-            <span className="meta" title={LOADED_TITLE}>
-              {loadedCount(activeCount, !!activeListQuery.hasNextPage)}
-            </span>
+            <span className="meta">{activeCount}</span>
           </div>
           <div className="queue-list">
             {activeListQuery.isLoading ? (
