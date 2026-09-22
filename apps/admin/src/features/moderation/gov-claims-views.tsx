@@ -13,6 +13,8 @@ import {
   GOV_CLAIM_STATUS_VIEW,
   GOV_METHOD_LABEL,
   govCheckLabel,
+  govClaimApproveBlockedFor,
+  govClaimApproveConfirmBody,
   govClaimDecisionBlockedFor,
 } from "@/features/moderation/gov-claim-presentation"
 import {
@@ -143,11 +145,20 @@ export function GovClaimDetail({
 
   const status = GOV_CLAIM_STATUS_VIEW[claim.status] ?? GOV_CLAIM_STATUS_VIEW.pending
   const decisionBlocked = govClaimDecisionBlockedFor(claim.status)
+  const approveBlocked = govClaimApproveBlockedFor(claim)
 
   const onToggleCheck = async (check: GovVerificationCheck, next: "verified" | "pending") => {
+    const stored = claim.checks[check]
+    const keepNote = stored.note ? { note: stored.note } : {}
     if (next === "pending") {
       verifyCheck.mutate(
-        { id: claim.id, check, status: "pending" },
+        {
+          id: claim.id,
+          check,
+          status: "pending",
+          ...(stored.evidence ? { evidence: stored.evidence } : {}),
+          ...keepNote,
+        },
         { onSuccess: () => toast(`${govCheckLabel(check)} · back to pending`) },
       )
       return
@@ -156,6 +167,7 @@ export function GovClaimDetail({
       title: `Verify ${govCheckLabel(check)}`,
       body: "Record what you checked. The evidence is stored on the claim and written to the audit log.",
       label: "Evidence link or note (optional)",
+      defaultValue: stored.evidence ?? "",
       confirmLabel: "Mark verified",
     })
     if (evidence === null) return
@@ -165,15 +177,17 @@ export function GovClaimDetail({
         check,
         status: "verified",
         ...(evidence.trim() ? { evidence: evidence.trim() } : {}),
+        ...keepNote,
       },
       { onSuccess: () => toast(`${govCheckLabel(check)} · verified`) },
     )
   }
 
   const onApprove = async () => {
+    if (approveBlocked !== null) return
     const ok = await confirmDialog({
       title: `Approve ${claim.name}?`,
-      body: `This provisions a government role on the account for ${claim.contactEmail}, links it to this jurisdiction, and signs out that account's existing sessions. It is written to the audit log.`,
+      body: govClaimApproveConfirmBody(claim, GOV_CHECKS.length),
       confirmLabel: "Approve and provision",
     })
     if (!ok) return
@@ -310,8 +324,8 @@ export function GovClaimDetail({
         <span className="rep-actions-label">Decision</span>
         <button
           className="btn sm primary"
-          disabled={busy || decisionBlocked !== null}
-          title={decisionBlocked ?? "Provisions a government role for the contact email"}
+          disabled={busy || approveBlocked !== null}
+          title={approveBlocked ?? "Provisions a government role for the contact email"}
           onClick={() => void onApprove()}
         >
           <Icons.Check size={11} /> Approve
@@ -326,12 +340,16 @@ export function GovClaimDetail({
           <Icons.X size={13} /> Reject
         </button>
       </div>
-      {decisionBlocked && (
+      {decisionBlocked ? (
         <div className="pay-note">
           <Icons.Clock size={13} /> {decisionBlocked} Decisions are final; the applicant applies again
           if something changed.
         </div>
-      )}
+      ) : approveBlocked ? (
+        <div className="pay-note">
+          <Icons.AlertTriangle size={13} /> {approveBlocked}
+        </div>
+      ) : null}
     </div>
   )
 }
