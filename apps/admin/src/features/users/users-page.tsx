@@ -9,6 +9,7 @@ import {
   monogram,
   type AdminUserDTO,
   type AdminUserListItemDTO,
+  type AdminUserListQuery,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -657,26 +658,25 @@ function UserRow({
   )
 }
 
+type UserFilter = "all" | NonNullable<AdminUserListQuery["filter"]>
+
 export function UsersPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState("all")
+  const [filter, setFilter] = React.useState<UserFilter>("all")
   const [query, setQuery] = React.useState("")
   const debouncedQuery = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  const listParams = {
-    filter:
-      filter === "all" || filter === "deleted"
-        ? undefined
-        : (filter as "active" | "suspended" | "flagged"),
-    q: debouncedQuery.trim() || undefined,
+  const listParams: AdminUserListQuery = {
+    ...(filter === "all" ? {} : { filter }),
+    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
   const listQuery = useUserListInfinite(listParams)
-  const items = React.useMemo(() => {
-    const all = listQuery.data?.pages.flatMap((p) => p.items) ?? []
-    return filter === "deleted" ? all.filter((u) => u.deletedAt) : all
-  }, [listQuery.data, filter])
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [listQuery.data],
+  )
 
-  const counts = listQuery.data?.pages[0]?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
+  const counts = listQuery.data?.pages[0]?.counts
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
@@ -701,14 +701,15 @@ export function UsersPage({ focusId }: SectionPageProps) {
       <div className="toolbar">
         <FilterChips
           options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "active", label: "Active", count: counts.active },
-            { value: "suspended", label: "Suspended", count: counts.suspended },
-            { value: "flagged", label: "Flagged", count: counts.flagged },
-            { value: "deleted", label: "Deleted" },
+            { value: "all", label: "All", count: counts?.all },
+            { value: "active", label: "Active", count: counts?.active },
+            { value: "suspended", label: "Suspended", count: counts?.suspended },
+            { value: "flagged", label: "Flagged", count: counts?.flagged },
+            { value: "banned", label: "Banned", count: counts?.banned },
+            { value: "deleted", label: "Deleted", count: counts?.deleted },
           ]}
           value={filter}
-          onChange={setFilter}
+          onChange={(v) => setFilter(v as UserFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">

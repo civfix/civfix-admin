@@ -36,9 +36,6 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
 
 type ServerFilter = NonNullable<ModerationListQuery["filter"]>
 
-const USER_REPORTS_CHIP = "user_reports" as const
-type ChipValue = "all" | typeof USER_REPORTS_CHIP | ServerFilter
-
 type Section = "queue" | "gov_claims"
 type GovClaimFilter = NonNullable<GovClaimListQuery["filter"]>
 
@@ -584,24 +581,21 @@ function GovClaimsSection() {
 }
 
 function ModerationQueueSection({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState<ChipValue>("all")
+  const [filter, setFilter] = React.useState<"all" | ServerFilter>("all")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
   const debouncedQuery = useDebounced(query, 250)
 
-  const serverFilter: ServerFilter | undefined =
-    filter === "all" || filter === USER_REPORTS_CHIP ? undefined : filter
-
   const listParams: ModerationListQuery = {
-    ...(serverFilter ? { filter: serverFilter } : {}),
+    ...(filter === "all" ? {} : { filter }),
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
   const listQuery = useModerationListInfinite(listParams)
-  const items = React.useMemo(() => {
-    const all = listQuery.data?.pages.flatMap((p) => p.items) ?? []
-    return filter === USER_REPORTS_CHIP ? all.filter((x) => x.kind === "user_report") : all
-  }, [listQuery.data, filter])
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [listQuery.data],
+  )
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
@@ -621,7 +615,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
         <FilterChips
           options={[
             { value: "all", label: "All" },
-            { value: USER_REPORTS_CHIP, label: "User reports" },
+            { value: "user_report", label: "User reports" },
             { value: "image", label: "Image" },
             { value: "pattern", label: "Pattern" },
             { value: "appeal", label: "Appeal" },
@@ -630,7 +624,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
             { value: "high", label: "High" },
           ]}
           value={filter}
-          onChange={(v) => setFilter(v as ChipValue)}
+          onChange={(v) => setFilter(v as "all" | ServerFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">
