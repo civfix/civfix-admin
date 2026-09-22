@@ -17,9 +17,11 @@ import {
 import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
+import { SOURCE } from "@/lib/source"
 import { LiveMap } from "@/components/map/live-map"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { useHomeSummary } from "@/hooks/use-admin-home"
 import { useDiscoveryList } from "@/features/discovery/use-discovery"
@@ -73,7 +75,8 @@ interface SectionSummary {
   page: PageId
   label: string
   hue: string
-  lead: number
+  /** Null when no trustworthy server-side total exists for this section; the tile then leads with `unit`. */
+  lead: number | null
   unit: string
   blurb?: string
   stats: SectionStat[]
@@ -179,11 +182,6 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
   ]
 }
 
-function catPinSrc(category: ReportCategory): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
-}
-
 function initials(name: string): string {
   return name
     .split(" ")
@@ -209,7 +207,7 @@ function discoveryRow(x: DiscoveryTaskDTO): PeekItem {
     title: x.place,
     meta: pop ? `${x.reports} reports · pop ${pop}` : `${x.reports} reports`,
     age: x.age,
-    focusId: x.id,
+    focusId: x.geoid,
   }
 }
 
@@ -288,7 +286,7 @@ function moderationRow(m: ModerationListItemDTO): PeekItem {
 
 function PeekGlyph({ item }: { item: PeekItem }) {
   if (item.kind === "pin") {
-    const src = item.cat ? catPinSrc(item.cat) : null
+    const src = item.cat ? categoryPinSrc(item.cat) : null
     return (
       <span className="peek-pin">
         {src ? (
@@ -492,7 +490,13 @@ function SectionTile({
         <span className="stile-label">{s.label}</span>
         {!metric && (
           <span className="stile-headcount">
-            <b>{s.lead}</b> {s.unit}
+            {s.lead === null ? (
+              s.unit
+            ) : (
+              <>
+                <b>{s.lead}</b> {s.unit}
+              </>
+            )}
           </span>
         )}
       </button>
@@ -583,12 +587,12 @@ export function HomePage(_props: SectionPageProps) {
     () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
     [summaryQuery.data],
   )
-  const inboxUnread = (inboxQuery.data?.items ?? []).filter((i) => i.unread).length
   const mailSummary = React.useMemo<SectionSummary | undefined>(() => {
     const base = summaries.find((s) => s.id === "mail")
     if (!base) return undefined
     const needsAction = summaryQuery.data?.mail.needsAction ?? 0
-    const presentation = getMailPreviewPresentation(base.lead, inboxUnread)
+    const inboxUnread = summaryQuery.data?.inboxUnread
+    const presentation = getMailPreviewPresentation(base.lead ?? 0)
     return {
       ...base,
       lead: presentation.lead,
@@ -598,14 +602,14 @@ export function HomePage(_props: SectionPageProps) {
       cta: "Open mail",
       stats: [
         { k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null },
-        { k: presentation.loadedInboxLabel, v: presentation.loadedInboxUnread },
+        ...(inboxUnread === undefined
+          ? []
+          : [{ k: "Inbox unread", v: inboxUnread, tone: null } satisfies SectionStat]),
       ],
     }
-  }, [summaries, inboxUnread, summaryQuery.data])
+  }, [summaries, summaryQuery.data])
   const moderationItems = moderationQuery.data?.items ?? []
-  const moderationPresentation = getModerationPreviewPresentation(
-    moderationItems.slice(0, PREVIEW_ROWS).length,
-  )
+  const moderationPresentation = getModerationPreviewPresentation(summaryQuery.data?.moderationQueue)
   const moderationSummary = React.useMemo<SectionSummary>(
     () => ({
       id: "moderation",
@@ -772,6 +776,12 @@ export function HomePage(_props: SectionPageProps) {
           <HostPlatformLauncher />
         </div>
       </div>
+      <footer className="hub-foot">
+        <a href={SOURCE.url} target="_blank" rel="noreferrer noopener">
+          <Icons.ExternalLink size={12} /> Source code (AGPL-3.0)
+        </a>
+        {SOURCE.commit ? <span className="hub-foot-commit">{SOURCE.commit.slice(0, 7)}</span> : null}
+      </footer>
     </div>
   )
 }

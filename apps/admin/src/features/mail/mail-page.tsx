@@ -2,36 +2,46 @@
 
 import * as React from "react"
 import {
+  DEFAULT_FORWARD_BODY_TEMPLATE,
+  DEFAULT_FORWARD_SUBJECT_TEMPLATE,
   MAIL_STATUS_LABELS,
   relativeAgo,
+  type MailMessageDTO,
   type MailStatus,
   type MailThreadDTO,
   type MailThreadListItemDTO,
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
+import {
+  PageHead,
+  FilterChips,
+  EmptyState,
+  type FilterOption,
+} from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
   useComposeMail,
+  useForwardTemplateDefault,
   useMailListInfinite,
   useMailStats,
   useMailThread,
   useMarkMailRead,
   useReplyMail,
   useResendMail,
+  useSetForwardTemplateDefault,
   useSetMailStatus,
 } from "@/features/mail/use-mail"
+import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useInboxListInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import { useNav, useToast } from "@/store/ui-store"
+import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
 type Folder = "outreach" | "inbox"
-
-const ATTENTION: MailStatus[] = ["needs_action", "bounced"]
 
 const STATUS_CLS: Record<MailStatus, string> = {
   replied: "status-ok",
@@ -50,6 +60,29 @@ const BOX_LABEL: Record<string, string> = {
   attn: "Needs attention",
   unread: "Unread",
   archived: "Archived",
+}
+
+const DELIVERY_BADGE = {
+  failed: {
+    cls: "status-flag",
+    label: "Not delivered",
+    title: "The mail provider rejected this message; use Resend",
+  },
+  pending: {
+    cls: "status-new",
+    label: "Sending…",
+    title: "Handed to the mail provider; no delivery confirmation yet",
+  },
+} as const
+
+function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
+  if (delivery !== "failed" && delivery !== "pending") return null
+  const badge = DELIVERY_BADGE[delivery]
+  return (
+    <span className={`pill ${badge.cls} tight mail-msg-delivery`} title={badge.title}>
+      {badge.label}
+    </span>
+  )
 }
 
 function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
@@ -147,7 +180,7 @@ function ComposeModal({
         </div>
         <div className="modal-foot">
           <span className="compose-from">
-            From <span className="mono">outreach@civfix.org</span>
+            From civfix, via a per-conversation <span className="mono">reply-…</span> address
           </span>
           <div className="spacer" />
           <button className="btn" onClick={onClose}>
@@ -249,11 +282,11 @@ function MailReader({ threadId }: { threadId: string }) {
     )
   }
 
-  const markDone = () => {
+  const markReplied = () => {
     setStatus.mutate(
       { id: sel.id, status: "replied" },
       {
-        onSuccess: () => toast("Marked done"),
+        onSuccess: () => toast("Marked replied"),
         onError: (err) => toast(errorMessage(err, {}, { fallback: "Couldn't update the thread." })),
       },
     )
@@ -333,8 +366,12 @@ function MailReader({ threadId }: { threadId: string }) {
                   <span className="mail-msg-ts mono" title={tsTitle(msg.ts)}>
                     {ts(msg.ts)}
                   </span>
+                  {isOut && <DeliveryBadge delivery={msg.delivery} />}
                 </div>
                 <p className="mail-msg-body">{msg.body}</p>
+                {msg.truncated && (
+                  <div className="hint">This message was cut at 64 KB for display.</div>
+                )}
                 {msg.attachments.length > 0 && (
                   <div className="mail-attachments">
                     {msg.attachments.map((att) => (
@@ -401,8 +438,13 @@ function MailReader({ threadId }: { threadId: string }) {
               To <span className="mono">{who}</span>
             </span>
             <div className="spacer" />
-            <button className="btn" disabled={setStatus.isPending} onClick={markDone}>
-              <Icons.Check size={13} /> Mark done
+            <button
+              className="btn"
+              disabled={setStatus.isPending}
+              onClick={markReplied}
+              title="Marks this thread replied without sending a message"
+            >
+              <Icons.Check size={13} /> Mark replied
             </button>
             <button
               className={`btn ${text.trim() ? "primary" : ""}`}
@@ -425,6 +467,7 @@ export function MailPage({ focusId }: SectionPageProps) {
   const [box, setBox] = React.useState("all")
   const [selId, setSelId] = React.useState<string | null>(initial.id)
   const [composeOpen, setComposeOpen] = React.useState(false)
+  const [templateOpen, setTemplateOpen] = React.useState(false)
   const outreach = folder === "outreach"
 
   const [query, setQuery] = React.useState("")
@@ -437,6 +480,8 @@ export function MailPage({ focusId }: SectionPageProps) {
 
   const toast = useToast()
   const compose = useComposeMail()
+  const forwardTemplate = useForwardTemplateDefault()
+  const setForwardTemplate = useSetForwardTemplateDefault()
   const markRead = useMarkMailRead()
   const setInboxStatus = useSetInboxStatus()
 
@@ -462,22 +507,6 @@ export function MailPage({ focusId }: SectionPageProps) {
         }
       : { status: "all" as const },
   )
-
-  const mailAllQuery = useMailListInfinite({})
-  const inboxAllQuery = useInboxListInfinite({ status: "all" })
-  const mailAllItems = mailAllQuery.data?.pages.flatMap((p) => p.items) ?? []
-  const inboxAllItems = inboxAllQuery.data?.pages.flatMap((p) => p.items) ?? []
-  const mailCounts = {
-    all: mailAllItems.length,
-    in: mailAllItems.filter((t) => t.dir === "in").length,
-    out: mailAllItems.filter((t) => t.dir === "out").length,
-    attn: mailAllItems.filter((t) => t.unread || ATTENTION.includes(t.status)).length,
-  }
-  const inboxCounts = {
-    all: inboxAllItems.length,
-    unread: inboxAllItems.filter((i) => i.unread).length,
-    archived: inboxAllItems.filter((i) => i.status === "archived").length,
-  }
 
   const mailItems = React.useMemo(
     () => mailListQuery.data?.pages.flatMap((p) => p.items) ?? [],
@@ -545,17 +574,17 @@ export function MailPage({ focusId }: SectionPageProps) {
     })
   }
 
-  const statusOptions = outreach
+  const statusOptions: FilterOption[] = outreach
     ? [
-        { value: "all", label: "All", count: mailCounts.all },
-        { value: "in", label: "Inbound", count: mailCounts.in },
-        { value: "out", label: "Outbound", count: mailCounts.out },
-        { value: "attn", label: "Needs attention", count: mailCounts.attn },
+        { value: "all", label: "All", ...(stats ? { count: stats.threads } : {}) },
+        { value: "in", label: "Inbound" },
+        { value: "out", label: "Outbound" },
+        { value: "attn", label: "Needs attention" },
       ]
     : [
-        { value: "all", label: "All", count: inboxCounts.all },
-        { value: "unread", label: "Unread", count: inboxCounts.unread },
-        { value: "archived", label: "Archived", count: inboxCounts.archived },
+        { value: "all", label: "All" },
+        { value: "unread", label: "Unread" },
+        { value: "archived", label: "Archived" },
       ]
 
   return (
@@ -569,6 +598,19 @@ export function MailPage({ focusId }: SectionPageProps) {
           </span>
         }
       >
+        <button
+          className="btn"
+          disabled={forwardTemplate.isLoading}
+          onClick={() => {
+            if (forwardTemplate.isError) {
+              toast(toAppError(forwardTemplate.error).message)
+              return
+            }
+            setTemplateOpen(true)
+          }}
+        >
+          <Icons.FileText size={13} /> Default template
+        </button>
         <button className="btn primary" onClick={() => setComposeOpen(true)}>
           <Icons.Send size={13} /> Compose
         </button>
@@ -583,7 +625,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           onClick={() => switchFolder("outreach")}
         >
           <Icons.Mail size={13} /> Outreach
-          {mailCounts.all > 0 && <span className="mbx-c">{mailCounts.all}</span>}
+          {stats && stats.threads > 0 && <span className="mbx-c">{stats.threads}</span>}
         </button>
         <button
           className={`mbx ${!outreach ? "active" : ""}`}
@@ -592,7 +634,6 @@ export function MailPage({ focusId }: SectionPageProps) {
           onClick={() => switchFolder("inbox")}
         >
           <Icons.Inbox size={13} /> Inbox
-          {inboxCounts.all > 0 && <span className="mbx-c">{inboxCounts.all}</span>}
         </button>
       </div>
 
@@ -741,6 +782,35 @@ export function MailPage({ focusId }: SectionPageProps) {
         pending={compose.isPending}
         onClose={() => setComposeOpen(false)}
         onSend={onSend}
+      />
+
+      <ForwardTemplateModal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        title="Default forwarding email"
+        subtitle="Sent for every jurisdiction that has no template of its own. Clear both fields to fall back to the built-in template."
+        initial={{
+          subject: forwardTemplate.data?.subjectTemplate ?? null,
+          body: forwardTemplate.data?.bodyTemplate ?? null,
+        }}
+        fallback={{
+          subject: DEFAULT_FORWARD_SUBJECT_TEMPLATE,
+          body: DEFAULT_FORWARD_BODY_TEMPLATE,
+        }}
+        fallbackLabel="built-in template"
+        pending={setForwardTemplate.isPending}
+        onSave={({ subject, body }) =>
+          setForwardTemplate.mutate(
+            { subjectTemplate: subject, bodyTemplate: body },
+            {
+              onSuccess: () => {
+                toast("Default template saved")
+                setTemplateOpen(false)
+              },
+              onError: (err) => toast(toAppError(err).message),
+            },
+          )
+        }
       />
     </>
   )

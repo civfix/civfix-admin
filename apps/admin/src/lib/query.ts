@@ -50,11 +50,6 @@ export const queryKeys = {
     summary: ["admin", "home", "summary"] as const,
     map: ["admin", "home", "map"] as const,
   },
-  activity: {
-    all: ["admin", "activity"] as const,
-    list: (params?: unknown) => ["admin", "activity", params ?? null] as const,
-  },
-
   discovery: {
     all: ["admin", "discovery"] as const,
     list: (params?: unknown) => ["admin", "discovery", "list", params ?? null] as const,
@@ -69,9 +64,8 @@ export const queryKeys = {
   reports: {
     all: ["admin", "reports"] as const,
     list: (params?: unknown) => ["admin", "reports", "list", params ?? null] as const,
+    page: (params?: unknown) => ["admin", "reports", "page", params ?? null] as const,
     detail: (id: string) => ["admin", "reports", "detail", id] as const,
-    discussion: (id: string, params?: unknown) =>
-      ["admin", "reports", id, "discussion", params ?? null] as const,
     chat: (id: string, params?: unknown) =>
       ["admin", "reports", id, "chat", params ?? null] as const,
   },
@@ -99,6 +93,7 @@ export const queryKeys = {
     list: (params?: unknown) => ["admin", "mail", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "mail", "detail", id] as const,
     stats: ["admin", "mail", "stats"] as const,
+    forwardTemplate: ["admin", "mail", "forward-template"] as const,
   },
 
   inbox: {
@@ -111,6 +106,12 @@ export const queryKeys = {
     all: ["admin", "moderation"] as const,
     list: (params?: unknown) => ["admin", "moderation", "list", params ?? null] as const,
     detail: (id: string) => ["admin", "moderation", "detail", id] as const,
+  },
+
+  govClaims: {
+    all: ["admin", "gov-claims"] as const,
+    list: (params?: unknown) => ["admin", "gov-claims", "list", params ?? null] as const,
+    detail: (id: string) => ["admin", "gov-claims", "detail", id] as const,
   },
 
   analytics: {

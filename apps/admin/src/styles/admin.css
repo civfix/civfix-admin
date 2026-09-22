@@ -1714,12 +1714,8 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .ccat-cell-head { display: flex; align-items: center; gap: 8px; }
 .ccat-pin { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .ccat-pin img { width: 100%; height: 100%; object-fit: contain; }
-.ccat-other {
-  width: 22px; height: 22px; flex-shrink: 0; border-radius: 6px;
-  display: flex; align-items: center; justify-content: center;
-  background: #fff; border: 1px solid var(--border-soft); color: var(--ink-3);
-}
 .ccat-label { font-weight: 700; font-size: 12.5px; color: var(--ink); letter-spacing: -0.005em; }
+.sub-caption { font-size: 11px; color: var(--ink-3); line-height: 1.4; margin-top: -2px; overflow-wrap: anywhere; }
 .ccat-count {
   margin-left: auto;
   flex-shrink: 0;
@@ -2556,6 +2552,12 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .dsc-msg-replies { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-3); font-weight: 600; }
 .dsc-msg-replies svg { color: var(--ink-4); }
 
+/* Operator composer under the report chat (same treatment as the Mail reply composer). */
+.dsc-composer { border-top: 1px solid var(--border-soft); padding: 12px 14px 14px; }
+.dsc-composer-foot { display: flex; align-items: center; gap: 8px; }
+.dsc-composer-foot .hint { font-size: 11px; color: var(--ink-3); min-width: 0; }
+.dsc-composer-foot .spacer { flex: 1; min-width: 4px; }
+
 /* Linked reports/events galleries (event<->report linking). A vertical list of clickable cards: a
    thumb/glyph, a title, a status/kind sub-row, and an address/organizer line. Used on both the event
    detail ("Linked reports") and the report detail ("Linked events"). */
@@ -2858,7 +2860,9 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-msg-addr { font-size: 10.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mail-msg-head .spacer { flex: 1; min-width: 8px; }
 .mail-msg-ts { font-size: 10px; color: var(--ink-4); white-space: nowrap; background: none; padding: 0; border-radius: 0; font-feature-settings: "tnum" 1; }
-.mail-msg-body { font-size: 13.5px; color: var(--ink); line-height: 1.55; margin: 0; text-wrap: pretty; }
+.mail-msg-body { font-size: 13.5px; color: var(--ink); line-height: 1.55; margin: 0; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
+.mail-msg-delivery { flex-shrink: 0; }
+.mail-msg .hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
 
 /* Mail reply composer */
 .mail-composer { border-top: 1px solid var(--border-soft); padding: 12px 16px 14px; }
@@ -3908,22 +3912,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   font-weight: 700;
 }
 
-/* Email-template sub-card: variable palette, fields, and live preview. */
-.tpl-reset {
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-3);
-  background: none;
-  border: none;
-  padding: 2px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-.tpl-reset:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
-.tpl-reset:disabled { opacity: 0.4; cursor: default; }
-
+/* Forward-template editor modal: variable palette, fields, issues, and the rendered preview. */
 .tpl-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3947,54 +3936,13 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .tpl-chip:active { transform: translateY(1px); }
 
-.tpl-field { margin-top: 0; margin-bottom: 10px; }
-.tpl-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink-3);
-  margin-bottom: 4px;
-  letter-spacing: 0.01em;
-}
-.tpl-subject,
-.tpl-body {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 8px;
-  padding: 8px 10px;
-  color: var(--ink);
-  font: inherit;
-  transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
-}
 .tpl-body {
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.5;
   resize: vertical;
 }
-.tpl-subject:focus,
-.tpl-body:focus {
-  outline: none;
-  border-color: var(--bloom);
-  box-shadow: var(--ring);
-}
 
-.tpl-preview {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 10px;
-  background: var(--paper-2);
-  border: 1px solid var(--border-soft);
-}
-.tpl-preview-tag {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin-bottom: 8px;
-}
 .tpl-email {
   background: #fff;
   border: 1px solid var(--border-soft);
@@ -4010,12 +3958,22 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-soft);
 }
-.tpl-email-body {
-  padding: 12px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--ink-2);
-  white-space: pre-wrap;
-  word-break: break-word;
-  min-height: 40px;
+.tpl-modal { max-width: 760px; }
+.tpl-preview-frame {
+  display: block;
+  width: 100%;
+  height: 46vh;
+  min-height: 260px;
+  border: 0;
+  background: var(--paper);
 }
+.tpl-issues { display: flex; flex-direction: column; gap: 2px; }
+.tpl-issue { font-size: 11.5px; line-height: 1.45; color: var(--danger); }
+.tpl-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tpl-state .spacer { flex: 1; min-width: 4px; }
+

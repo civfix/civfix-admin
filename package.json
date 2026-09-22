@@ -2,6 +2,7 @@
   "name": "civfix-admin",
   "version": "1.2.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "description": "civfix admin / operator dashboard workspace (admin.civfix.org). Consumes the @civfix/shared contract from the private npm registry.",
   "packageManager": "pnpm@9.12.0",
   "engines": {

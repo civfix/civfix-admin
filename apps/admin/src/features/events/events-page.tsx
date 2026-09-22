@@ -17,6 +17,7 @@ import { confirmDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
 import { cancelBlockedFor, EVENT_STATUS_VIEW } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
+import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import {
   useCancelEvent,
@@ -69,11 +70,6 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-function catPinSrc(category: LinkedReportRef["category"]): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
-}
-
 function LinkedReportCard({
   report,
   onOpen,
@@ -86,18 +82,16 @@ function LinkedReportCard({
   unlinking?: boolean
 }) {
   const view = reportStatusView(report.status)
-  const pin = catPinSrc(report.category)
+  const pin = categoryPinSrc(report.category)
   const card = (
     <button className="evt-linked-card" onClick={onOpen} title={report.title}>
       <span className="evt-linked-thumb" aria-hidden="true">
         {report.thumbUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={report.thumbUrl} alt="" />
-        ) : pin ? (
+        ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={pin} alt="" />
-        ) : (
-          <Icons.Layers size={16} />
         )}
       </span>
       <span className="evt-linked-body">
@@ -416,10 +410,14 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     )
   }
 
-  const onUnlink = (report: LinkedReportRef) => {
-    if (typeof window !== "undefined" && !window.confirm(`Unlink "${report.title}" from this cleanup?`)) {
-      return
-    }
+  const onUnlink = async (report: LinkedReportRef) => {
+    const ok = await confirmDialog({
+      title: "Unlink report",
+      body: `This unlinks "${report.title}" from this event. The report itself is untouched.`,
+      danger: true,
+      confirmLabel: "Unlink",
+    })
+    if (!ok) return
     unlinkReport.mutate(
       { id: event.id, reportId: report.id },
       { onSuccess: () => toast(`${shortId(event.id)} · report unlinked`) },
@@ -567,7 +565,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                         key={r.id}
                         report={r}
                         onOpen={() => nav("reports", r.id)}
-                        onUnlink={() => onUnlink(r)}
+                        onUnlink={() => void onUnlink(r)}
                         unlinking={unlinkReport.isPending}
                       />
                     ))}
@@ -809,8 +807,8 @@ export function EventsPage({ focusId }: SectionPageProps) {
         title="Events"
         subtitle={
           <span>
-            Community cleanup events neighbors organize on civfix — track turnout, keep them on the
-            level, and message attendees.
+            Events neighbors organize on civfix — cleanups and other volunteer events alike. Track
+            turnout, keep them on the level, and message attendees.
           </span>
         }
       />

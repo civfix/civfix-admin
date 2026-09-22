@@ -4,11 +4,12 @@ import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
   RISK_LABELS,
+  USER_STATUS_LABELS,
   avatarColor,
   monogram,
   type AdminUserDTO,
   type AdminUserListItemDTO,
-  type ReportCategory,
+  type AdminUserListQuery,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -18,6 +19,7 @@ import {
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
@@ -47,10 +49,10 @@ type NavFn = ReturnType<typeof useNav>
 
 
 const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
-  active: { cls: "status-ok", label: "Active" },
-  suspended: { cls: "status-flag", label: "Suspended" },
-  review: { cls: "status-progress", label: "In review" },
-  banned: { cls: "status-flag", label: "Banned" },
+  active: { cls: "status-ok", label: USER_STATUS_LABELS.active },
+  suspended: { cls: "status-flag", label: USER_STATUS_LABELS.suspended },
+  review: { cls: "status-progress", label: USER_STATUS_LABELS.review },
+  banned: { cls: "status-flag", label: USER_STATUS_LABELS.banned },
 }
 
 const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]> | "group", string> = {
@@ -58,11 +60,6 @@ const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]> | "group", 
   group: "Group chat",
   dm: "Direct message",
   report: "Report comment",
-}
-
-function catPinSrc(category: ReportCategory): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
 }
 
 function UserAvatar({
@@ -102,7 +99,6 @@ function joinDate(v: string): string {
 }
 
 function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
-  const pin = catPinSrc(r.category)
   const open = () => nav("reports", r.id)
   return (
     <div
@@ -115,12 +111,8 @@ function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
       }}
     >
       <span className="prow-pin" title={REPORT_CATEGORY_LABELS[r.category]}>
-        {pin ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={pin} alt="" />
-        ) : (
-          <Icons.Layers size={16} />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={categoryPinSrc(r.category)} alt="" />
       </span>
       <div className="prow-body">
         <div className="prow-title">{r.title}</div>
@@ -666,30 +658,25 @@ function UserRow({
   )
 }
 
+type UserFilter = "all" | NonNullable<AdminUserListQuery["filter"]>
+
 export function UsersPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState("all")
+  const [filter, setFilter] = React.useState<UserFilter>("all")
   const [query, setQuery] = React.useState("")
   const debouncedQuery = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  const listParams = {
-    filter:
-      filter === "all" || filter === "deleted"
-        ? undefined
-        : (filter as "active" | "suspended" | "flagged"),
-    q: debouncedQuery.trim() || undefined,
+  const listParams: AdminUserListQuery = {
+    ...(filter === "all" ? {} : { filter }),
+    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
   const listQuery = useUserListInfinite(listParams)
-  const items = React.useMemo(() => {
-    const all = listQuery.data?.pages.flatMap((p) => p.items) ?? []
-    return filter === "deleted" ? all.filter((u) => u.deletedAt) : all
-  }, [listQuery.data, filter])
-
-  const counts = listQuery.data?.pages[0]?.counts ?? { all: 0, active: 0, suspended: 0, flagged: 0 }
-  const deletedCount = React.useMemo(
-    () => (listQuery.data?.pages.flatMap((p) => p.items) ?? []).filter((u) => u.deletedAt).length,
+  const items = React.useMemo(
+    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
     [listQuery.data],
   )
+
+  const counts = listQuery.data?.pages[0]?.counts
 
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
@@ -714,14 +701,15 @@ export function UsersPage({ focusId }: SectionPageProps) {
       <div className="toolbar">
         <FilterChips
           options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "active", label: "Active", count: counts.active },
-            { value: "suspended", label: "Suspended", count: counts.suspended },
-            { value: "flagged", label: "Flagged", count: counts.flagged },
-            { value: "deleted", label: "Deleted", count: deletedCount },
+            { value: "all", label: "All", count: counts?.all },
+            { value: "active", label: "Active", count: counts?.active },
+            { value: "suspended", label: "Suspended", count: counts?.suspended },
+            { value: "flagged", label: "Flagged", count: counts?.flagged },
+            { value: "banned", label: "Banned", count: counts?.banned },
+            { value: "deleted", label: "Deleted", count: counts?.deleted },
           ]}
           value={filter}
-          onChange={setFilter}
+          onChange={(v) => setFilter(v as UserFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">

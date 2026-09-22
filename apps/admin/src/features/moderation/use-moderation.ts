@@ -47,7 +47,6 @@ function invalidateModeration(qc: ReturnType<typeof useQueryClient>, id?: string
   if (id) qc.invalidateQueries({ queryKey: queryKeys.moderation.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.moderation.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.activity.all })
 }
 
 export function useApproveModeration() {

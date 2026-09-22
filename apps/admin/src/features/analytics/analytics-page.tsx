@@ -4,10 +4,10 @@ import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
   type AnalyticsKpisResponse,
-  type ReportCategory,
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { categoryCssVar } from "@/lib/category"
 import { downloadCsv } from "@/lib/csv"
 import { PageHead, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -26,16 +26,6 @@ import {
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
-const CAT_COLOR: Record<ReportCategory, string> = {
-  trash: "var(--cat-trash)",
-  recycling: "var(--cat-recycling)",
-  graffiti: "var(--cat-graffiti)",
-  hazard: "var(--cat-hazard)",
-  encampment: "var(--cat-encampment)",
-  water: "var(--cat-water)",
-  other: "var(--ink-3)",
-}
 
 function initials(name: string): string {
   const out = name
@@ -228,10 +218,10 @@ export function AnalyticsPage(_props: SectionPageProps) {
             <div className="cat-breakdown">
               {d.rows.map((c) => (
                 <div key={c.cat} className="cat-bd-row">
-                  <span className="cat-bd-dot" style={{ background: CAT_COLOR[c.cat] }} />
+                  <span className="cat-bd-dot" style={{ background: categoryCssVar(c.cat) }} />
                   <span className="cat-bd-name">{REPORT_CATEGORY_LABELS[c.cat]}</span>
                   <span className="cat-bd-track">
-                    <span style={{ width: `${c.pct}%`, background: CAT_COLOR[c.cat] }} />
+                    <span style={{ width: `${c.pct}%`, background: categoryCssVar(c.cat) }} />
                   </span>
                   <span className="cat-bd-n mono">{c.count}</span>
                 </div>
@@ -317,10 +307,10 @@ export function AnalyticsPage(_props: SectionPageProps) {
               <div className="cat-breakdown">
                 {d.rows.map((r) => (
                   <div key={r.cat} className="cat-bd-row res-row">
-                    <span className="cat-bd-dot" style={{ background: CAT_COLOR[r.cat] }} />
+                    <span className="cat-bd-dot" style={{ background: categoryCssVar(r.cat) }} />
                     <span className="cat-bd-name">{REPORT_CATEGORY_LABELS[r.cat]}</span>
                     <span className="cat-bd-track">
-                      <span style={{ width: `${(r.hours / max) * 100}%`, background: CAT_COLOR[r.cat] }} />
+                      <span style={{ width: `${(r.hours / max) * 100}%`, background: categoryCssVar(r.cat) }} />
                     </span>
                     <span className="cat-bd-n mono">{humanizeHours(r.hours)}</span>
                   </div>
