@@ -95,6 +95,7 @@
   --cat-encampment: #2FA39A;  /* teal - its own category, split out of hazard */
   --cat-cleanup:    var(--sun-600);
   --cat-water:      var(--sky);
+  --cat-other:      #8D8577;
 
   /* ====================================================================
      TYPOGRAPHY - Families

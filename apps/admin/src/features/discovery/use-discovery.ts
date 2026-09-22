@@ -133,7 +133,7 @@ export function useSaveDiscoveryDraft() {
   })
 }
 
-/** POST /admin/jurisdictions/:geoid/contacts - the core "Save & route" action. */
+/** POST /admin/jurisdictions/:geoid/contacts - the core "Save contacts" action. */
 export function useSaveJurisdictionContacts() {
   const qc = useQueryClient()
   return useMutation({

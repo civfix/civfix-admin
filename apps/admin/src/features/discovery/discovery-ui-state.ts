@@ -21,18 +21,3 @@ export function getNeedsMappingCountDisplay({
   if (isError || count === null) return "—"
   return count
 }
-
-export function getForwardTemplateFields(
-  changed: boolean,
-  subject: string,
-  body: string,
-): {
-  forwardSubjectTemplate?: string | null
-  forwardBodyTemplate?: string | null
-} {
-  if (!changed) return {}
-  return {
-    forwardSubjectTemplate: subject.trim() === "" ? null : subject,
-    forwardBodyTemplate: body.trim() === "" ? null : body,
-  }
-}

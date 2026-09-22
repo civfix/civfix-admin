@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import {
+  DEFAULT_FORWARD_BODY_TEMPLATE,
+  DEFAULT_FORWARD_SUBJECT_TEMPLATE,
   MAIL_STATUS_LABELS,
   relativeAgo,
   type MailMessageDTO,
@@ -15,17 +17,21 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import {
   useComposeMail,
+  useForwardTemplateDefault,
   useMailListInfinite,
   useMailStats,
   useMailThread,
   useMarkMailRead,
   useReplyMail,
   useResendMail,
+  useSetForwardTemplateDefault,
   useSetMailStatus,
 } from "@/features/mail/use-mail"
+import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useInboxListInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import { useNav, useToast } from "@/store/ui-store"
+import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -459,6 +465,7 @@ export function MailPage({ focusId }: SectionPageProps) {
   const [box, setBox] = React.useState("all")
   const [selId, setSelId] = React.useState<string | null>(initial.id)
   const [composeOpen, setComposeOpen] = React.useState(false)
+  const [templateOpen, setTemplateOpen] = React.useState(false)
   const outreach = folder === "outreach"
 
   const [query, setQuery] = React.useState("")
@@ -471,6 +478,8 @@ export function MailPage({ focusId }: SectionPageProps) {
 
   const toast = useToast()
   const compose = useComposeMail()
+  const forwardTemplate = useForwardTemplateDefault()
+  const setForwardTemplate = useSetForwardTemplateDefault()
   const markRead = useMarkMailRead()
   const setInboxStatus = useSetInboxStatus()
 
@@ -617,6 +626,19 @@ export function MailPage({ focusId }: SectionPageProps) {
           </span>
         }
       >
+        <button
+          className="btn"
+          disabled={forwardTemplate.isLoading}
+          onClick={() => {
+            if (forwardTemplate.isError) {
+              toast(toAppError(forwardTemplate.error).message)
+              return
+            }
+            setTemplateOpen(true)
+          }}
+        >
+          <Icons.FileText size={13} /> Default template
+        </button>
         <button className="btn primary" onClick={() => setComposeOpen(true)}>
           <Icons.Send size={13} /> Compose
         </button>
@@ -799,6 +821,35 @@ export function MailPage({ focusId }: SectionPageProps) {
         pending={compose.isPending}
         onClose={() => setComposeOpen(false)}
         onSend={onSend}
+      />
+
+      <ForwardTemplateModal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        title="Default forwarding email"
+        subtitle="Sent for every jurisdiction that has no template of its own. Clear both fields to fall back to the built-in template."
+        initial={{
+          subject: forwardTemplate.data?.subjectTemplate ?? null,
+          body: forwardTemplate.data?.bodyTemplate ?? null,
+        }}
+        fallback={{
+          subject: DEFAULT_FORWARD_SUBJECT_TEMPLATE,
+          body: DEFAULT_FORWARD_BODY_TEMPLATE,
+        }}
+        fallbackLabel="built-in template"
+        pending={setForwardTemplate.isPending}
+        onSave={({ subject, body }) =>
+          setForwardTemplate.mutate(
+            { subjectTemplate: subject, bodyTemplate: body },
+            {
+              onSuccess: () => {
+                toast("Default template saved")
+                setTemplateOpen(false)
+              },
+              onError: (err) => toast(toAppError(err).message),
+            },
+          )
+        }
       />
     </>
   )

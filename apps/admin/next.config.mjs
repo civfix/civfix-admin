@@ -1,3 +1,22 @@
+import { execSync } from "node:child_process"
+import { dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+function resolveCommitSha() {
+  const fromCi = process.env.GITHUB_SHA
+  if (fromCi) return fromCi
+  try {
+    return execSync("git rev-parse HEAD", {
+      cwd: dirname(fileURLToPath(import.meta.url)),
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim()
+  } catch {
+    return ""
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Static SPA export: emits the shell + JS into ./out with no server runtime. The admin dashboard
@@ -12,6 +31,9 @@ const nextConfig = {
   // Trailing slashes make the static export host cleanly on static file servers
   // (each route becomes a directory with an index.html).
   trailingSlash: true,
+  env: {
+    NEXT_PUBLIC_COMMIT_SHA: resolveCommitSha(),
+  },
   // The @civfix/shared package ships ESM + CJS from the workspace; let Next transpile it.
   transpilePackages: ["@civfix/shared"],
 }

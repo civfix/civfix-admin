@@ -3,8 +3,8 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import {
-  FORWARD_TEMPLATE_VARIABLES,
-  interpolateForwardTemplate,
+  DEFAULT_FORWARD_BODY_TEMPLATE,
+  DEFAULT_FORWARD_SUBJECT_TEMPLATE,
   type DiscoveryContact,
   type JurisdictionDirectoryDTO,
   type JurisdictionLayer,
@@ -14,6 +14,7 @@ import {
 
 import { Icons } from "@/components/icons"
 import { toAppError } from "@/lib/api"
+import { categoryLabel, categoryPinSrc } from "@/lib/category"
 import { promptDialog } from "@/components/shared/dialog"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -27,10 +28,11 @@ import {
 import {
   getJurisdictionSort,
   getNeedsMappingCountDisplay,
-  getForwardTemplateFields,
   type JurisdictionFilter,
   type JurisdictionSort,
 } from "@/features/discovery/discovery-ui-state"
+import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
+import { useForwardTemplateDefault } from "@/features/mail/use-mail"
 
 const BoundaryMap = dynamic(
   () => import("@/components/map/boundary-map").then((m) => m.BoundaryMap),
@@ -87,44 +89,6 @@ function isOverdue(iso: string | null): boolean {
   return Date.now() - then > 24 * HOUR_MS
 }
 
-/** Fallback subject shown in the live preview when the operator hasn't authored one (mirrors the built-in default shape). */
-const DEFAULT_SUBJECT_HINT = "New {category} report in {place} — {referenceCode}"
-
-/** Realistic example values for every bare token, driving the template editor's live preview. */
-const SAMPLE_VALUES: Record<string, string> = {
-  referenceCode: "CVX-4821",
-  reportId: "rpt_9f3a2c",
-  shortId: "9f3a2c",
-  title: "Pothole on Broadway",
-  category: "pothole",
-  status: "Submitted",
-  place: "Oakland, CA",
-  address: "1200 Broadway",
-  coordinates: "37.80, -122.27",
-  lat: "37.80",
-  lng: "-122.27",
-  mapLink: "https://www.openstreetmap.org/?mlat=37.80&mlon=-122.27#map=18/37.80/-122.27",
-  description: "Deep pothole in the right lane, roughly 2 ft across, near the crosswalk.",
-  reporterName: "Jordan M.",
-  confirmations: "3",
-  submittedDate: "Jul 18, 2026",
-  jurisdictionName: "City of Oakland",
-  dept: "Public Works",
-  operatorNote: "Second report at this spot this month.",
-  photoLinks: "https://civfix.org/p/abc123\nhttps://civfix.org/p/def456",
-  photoCount: "2",
-}
-
-const REPORT_TYPES: { id: ReportCategory; label: string; pin: string | null }[] = [
-  { id: "trash", label: "Trash", pin: "/ds/pin-trash.svg" },
-  { id: "recycling", label: "Recycling", pin: "/ds/pin-recycling.svg" },
-  { id: "graffiti", label: "Graffiti", pin: "/ds/pin-graffiti.svg" },
-  { id: "hazard", label: "Hazard", pin: "/ds/pin-hazard.svg" },
-  { id: "encampment", label: "Encampment", pin: null },
-  { id: "water", label: "Water", pin: "/ds/pin-water.svg" },
-  { id: "other", label: "Other", pin: null },
-]
-
 const CATEGORIES: readonly ReportCategory[] = [
   "trash",
   "recycling",
@@ -135,16 +99,12 @@ const CATEGORIES: readonly ReportCategory[] = [
   "other",
 ]
 
-const PIN_SRC = new Map<ReportCategory, string>(
-  REPORT_TYPES.flatMap((c) => (c.pin ? [[c.id, c.pin] as const] : [])),
+const REPORT_TYPES: { id: ReportCategory; label: string; pin: string }[] = CATEGORIES.map(
+  (id) => ({ id, label: categoryLabel(id), pin: categoryPinSrc(id) }),
 )
 
 function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
   return counts[id] ?? 0
-}
-
-function catPinSrc(category: ReportCategory): string | null {
-  return PIN_SRC.get(category) ?? null
 }
 
 function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
@@ -184,7 +144,7 @@ function JurisdictionRow({
   const overdue = showOldest && isOverdue(item.oldestReportAt)
   const needs = needsAttention(item)
   const dom = dominantCategory(item.perCategoryCounts)
-  const pin = dom ? catPinSrc(dom) : null
+  const pin = dom ? categoryPinSrc(dom) : null
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isKeyboardActivationKey(event.key)) return
     event.preventDefault()
@@ -319,39 +279,15 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
   const [handle, setHandle] = React.useState(dto.handle ?? "")
 
-  // Forward-email template override (subject/body). Empty string means "use the built-in default"
-  // (saved as null). Chips insert a `{token}` at the last-focused field's cursor.
-  const [subjectTpl, setSubjectTpl] = React.useState(dto.forwardSubjectTemplate ?? "")
-  const [bodyTpl, setBodyTpl] = React.useState(dto.forwardBodyTemplate ?? "")
-  const subjectRef = React.useRef<HTMLInputElement | null>(null)
-  const bodyRef = React.useRef<HTMLTextAreaElement | null>(null)
-  const focusedTplField = React.useRef<"subject" | "body">("body")
-  const subjectTemplateId = React.useId()
-  const bodyTemplateId = React.useId()
-
-  const insertToken = (token: string) => {
-    const field = focusedTplField.current
-    const el = field === "subject" ? subjectRef.current : bodyRef.current
-    const value = field === "subject" ? subjectTpl : bodyTpl
-    const setValue = field === "subject" ? setSubjectTpl : setBodyTpl
-    const start = el?.selectionStart ?? value.length
-    const end = el?.selectionEnd ?? value.length
-    const next = value.slice(0, start) + token + value.slice(end)
-    setValue(next)
-    // Restore focus + place the caret just after the inserted token.
-    requestAnimationFrame(() => {
-      if (!el) return
-      el.focus()
-      const caret = start + token.length
-      el.setSelectionRange(caret, caret)
-    })
-  }
-
-  const templateChanged =
-    subjectTpl !== (dto.forwardSubjectTemplate ?? "") || bodyTpl !== (dto.forwardBodyTemplate ?? "")
-  const templateEmpty = subjectTpl.trim() === "" && bodyTpl.trim() === ""
-  const previewSubject = interpolateForwardTemplate(subjectTpl || DEFAULT_SUBJECT_HINT, SAMPLE_VALUES)
-  const previewBody = interpolateForwardTemplate(bodyTpl, SAMPLE_VALUES)
+  const defaultTemplate = useForwardTemplateDefault()
+  const [templateOpen, setTemplateOpen] = React.useState(false)
+  const hasCustomTemplate =
+    dto.forwardSubjectTemplate !== null || dto.forwardBodyTemplate !== null
+  const storedDefault = defaultTemplate.data
+  const templateFallback =
+    storedDefault && (storedDefault.subjectTemplate !== null || storedDefault.bodyTemplate !== null)
+      ? { subject: storedDefault.subjectTemplate ?? "", body: storedDefault.bodyTemplate ?? "" }
+      : { subject: DEFAULT_FORWARD_SUBJECT_TEMPLATE, body: DEFAULT_FORWARD_BODY_TEMPLATE }
 
   const counts = dto.perCategoryCounts
   const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
@@ -363,7 +299,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const canSave = filledCount > 0 || hasDefault
   const needs = needsAttention(dto)
   const dom = dominantCategory(counts)
-  const headPin = dom ? catPinSrc(dom) : null
+  const headPin = dom ? categoryPinSrc(dom) : null
   const isFlagged = dto.flaggedAt !== null
   const busy = saveContacts.isPending || patch.isPending
 
@@ -411,14 +347,11 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       Object.keys(contacts).length === 0 &&
       Object.keys(jf).length === 0 &&
       note === "" &&
-      !handleChanged &&
-      !templateChanged
+      !handleChanged
     ) {
       toast("Nothing to save yet")
       return
     }
-    // Send "" as null so an emptied template clears the override back to the built-in default.
-    const templateFields = getForwardTemplateFields(templateChanged, subjectTpl, bodyTpl)
     patch.mutate(
       {
         geoid: dto.geoid,
@@ -426,7 +359,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         ...jf,
         ...(note ? { notes: note } : {}),
         ...(handleChanged ? { handle: normalizedHandle } : {}),
-        ...templateFields,
       },
       {
         onSuccess: () => toast(`Draft saved for ${dto.org}`),
@@ -435,16 +367,11 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     )
   }
 
-  const onSaveAndRoute = () => {
+  const onSaveContacts = () => {
     if (!canSave) return
     saveContacts.mutate(
-      {
-        geoid: dto.geoid,
-        contacts: contactsPayload(),
-        ...jurisdictionFields(),
-        ...getForwardTemplateFields(templateChanged, subjectTpl, bodyTpl),
-      },
-      { onSuccess: () => toast(`Contacts saved for ${dto.org}. Outreach queued.`) },
+      { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
+      { onSuccess: () => toast(`Contacts saved for ${dto.org}`) },
     )
   }
 
@@ -610,23 +537,16 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 {REPORT_TYPES.map((c) => {
                   const n = routingCount(counts, c.id)
                   const attention = n > 0 && !contacts[c.id] && !hasDefault
-                  const pin = c.pin
                   return (
                     <div
                       key={c.id}
                       className={`ccat-cell ${attention ? "attention" : ""} ${n === 0 ? "quiet" : ""}`}
                     >
                       <div className="ccat-cell-head">
-                        {pin ? (
-                          <span className="ccat-pin">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={pin} alt="" />
-                          </span>
-                        ) : (
-                          <span className="ccat-other">
-                            <Icons.Layers size={13} />
-                          </span>
-                        )}
+                        <span className="ccat-pin">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={c.pin} alt="" />
+                        </span>
                         <span className="ccat-label">{c.label}</span>
                         <span
                           className={`ccat-count ${n > 0 ? "" : "zero"} ${attention ? "warn" : ""}`}
@@ -662,83 +582,27 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
-            <div className="sub-head">
-              Email template
-              <button
-                type="button"
-                className="tpl-reset"
-                style={{ marginLeft: "auto" }}
-                disabled={templateEmpty}
-                onClick={() => {
-                  setSubjectTpl("")
-                  setBodyTpl("")
-                }}
-                title="Clear both fields — the built-in default template will be used"
-              >
-                Reset to default
-              </button>
-            </div>
+            <div className="sub-head">Email template</div>
             <div className="sub-body">
-              <div className="tpl-legend" aria-label="Insert a variable">
-                {FORWARD_TEMPLATE_VARIABLES.map((v) => (
-                  <button
-                    key={v.token}
-                    type="button"
-                    className="tpl-chip"
-                    title={`${v.label} — ${v.description}`}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertToken(v.token)}
-                  >
-                    {v.token}
-                  </button>
-                ))}
-              </div>
-              <div className="hint" style={{ marginTop: 8, marginBottom: 10 }}>
-                Click a variable to insert it at your cursor. Unknown {"{tokens}"} are left as-is so typos
-                show up in the preview.
-              </div>
-
-              <div className="field tpl-field">
-                <label className="tpl-label" htmlFor={subjectTemplateId}>Subject</label>
-                <input
-                  id={subjectTemplateId}
-                  ref={subjectRef}
-                  type="text"
-                  className="tpl-subject"
-                  value={subjectTpl}
-                  placeholder={DEFAULT_SUBJECT_HINT}
-                  onFocus={() => (focusedTplField.current = "subject")}
-                  onChange={(e) => setSubjectTpl(e.target.value)}
-                />
-              </div>
-              <div className="field tpl-field">
-                <label className="tpl-label" htmlFor={bodyTemplateId}>Body</label>
-                <textarea
-                  id={bodyTemplateId}
-                  ref={bodyRef}
-                  className="tpl-body"
-                  rows={7}
-                  value={bodyTpl}
-                  placeholder="Leave blank to use the built-in default forwarding email…"
-                  onFocus={() => (focusedTplField.current = "body")}
-                  onChange={(e) => setBodyTpl(e.target.value)}
-                />
-              </div>
-
-              <div className="tpl-preview" aria-label="Live preview">
-                <div className="tpl-preview-tag">Preview · sample report</div>
-                <div className="tpl-email">
-                  <div className="tpl-email-subject">{previewSubject}</div>
-                  <div className="tpl-email-body">{previewBody}</div>
-                </div>
-                {templateEmpty && (
-                  <div className="hint" style={{ marginTop: 8 }}>
-                    Both fields are empty — civfix will send its built-in default forwarding email. The
-                    subject above shows the default shape.
-                  </div>
-                )}
+              <div className="tpl-state">
+                <span className="hint">
+                  {hasCustomTemplate ? "Custom template" : "Using the default template"}
+                </span>
+                <div className="spacer" />
+                <button
+                  className="btn"
+                  disabled={defaultTemplate.isLoading}
+                  onClick={() => {
+                    if (defaultTemplate.isError) {
+                      toast(toAppError(defaultTemplate.error).message)
+                      return
+                    }
+                    setTemplateOpen(true)
+                  }}
+                >
+                  Edit template
+                </button>
               </div>
             </div>
           </div>
@@ -760,12 +624,40 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         <button
           className={`btn ${canSave ? "success" : ""}`}
           disabled={!canSave || busy}
-          onClick={onSaveAndRoute}
+          onClick={onSaveContacts}
+          title={canSave ? undefined : "Add at least one contact first"}
           style={!canSave ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
         >
-          <Icons.Check size={13} /> Save &amp; route
+          <Icons.Check size={13} /> Save contacts
         </button>
       </div>
+
+      <ForwardTemplateModal
+        open={templateOpen}
+        onClose={() => setTemplateOpen(false)}
+        title={`Forwarding email for ${dto.org}`}
+        subtitle="Overrides the default forwarding email for this jurisdiction. Clear both fields to go back to the default."
+        initial={{ subject: dto.forwardSubjectTemplate, body: dto.forwardBodyTemplate }}
+        fallback={templateFallback}
+        fallbackLabel="default template"
+        pending={patch.isPending}
+        onSave={({ subject, body }) =>
+          patch.mutate(
+            {
+              geoid: dto.geoid,
+              forwardSubjectTemplate: subject,
+              forwardBodyTemplate: body,
+            },
+            {
+              onSuccess: () => {
+                toast(`Email template saved for ${dto.org}`)
+                setTemplateOpen(false)
+              },
+              onError: (err) => toast(toAppError(err).message),
+            },
+          )
+        }
+      />
     </div>
   )
 }
@@ -812,16 +704,10 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 return (
                   <div key={c.id} className="ccat-cell">
                     <div className="ccat-cell-head">
-                      {c.pin ? (
-                        <span className="ccat-pin">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={c.pin} alt="" />
-                        </span>
-                      ) : (
-                        <span className="ccat-other">
-                          <Icons.Layers size={13} />
-                        </span>
-                      )}
+                      <span className="ccat-pin">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={c.pin} alt="" />
+                      </span>
                       <span className="ccat-label">{c.label}</span>
                       <span className="ccat-count">
                         {n} {n === 1 ? "report" : "reports"}
@@ -894,8 +780,9 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     }
   }, [focusId])
 
-  const selected =
-    (selId ? (items.find((x) => x.geoid === selId) ?? null) : null) ?? items[0] ?? null
+  const focused = selId ? (items.find((x) => x.geoid === selId) ?? null) : null
+  const holdingFocus = selId !== null && selId === focusId
+  const selected = focused ?? (holdingFocus ? null : (items[0] ?? null))
 
   const catFilters = [
     { value: "all", label: "All", count: allTotal ?? 0 },
