@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { useOperatorBootstrap, useOperatorSession } from "@/hooks/use-admin-auth"
+import { SOURCE } from "@/lib/source"
 
 /**
  * Full-page operator gate (Cloudflare Access SSO, doc 16; same-origin deployment), styled with the admin
@@ -64,6 +65,11 @@ export function OperatorLogin() {
             </button>
           </>
         )}
+        <p className="op-login-source">
+          <a href={SOURCE.url} target="_blank" rel="noreferrer noopener">
+            Source code (AGPL-3.0)
+          </a>
+        </p>
       </div>
     </div>
   )
