@@ -28,3 +28,12 @@ export function routeActionFor(report: RoutableReport): RouteAction {
   if (report.outreach.status === "bounced") return { kind: "resend", routedAt }
   return { kind: "send", routedAt }
 }
+
+/**
+ * The one-step send label. An unreviewed report gets its verification verdict set to approved as the first
+ * half of the same click, so the button says so; once the verdict is approved (including a routing retry
+ * after the verdict already landed) it is a plain send and must not re-approve.
+ */
+export function routeSendLabel(verdictApproved: boolean): string {
+  return verdictApproved ? "Send to city" : "Verify and send to city"
+}
