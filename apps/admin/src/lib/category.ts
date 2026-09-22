@@ -1,0 +1,25 @@
+import { REPORT_CATEGORY_LABELS, type ReportCategory } from "@civfix/shared"
+
+export const CATEGORY_GLYPHS: Record<ReportCategory, string> = {
+  trash:
+    "M9 6 L9 5 a1.5 1.5 0 0 1 1.5 -1.5 h3 a1.5 1.5 0 0 1 1.5 1.5 v1 M5 6 h14 M6 6 l1 12 a2 2 0 0 0 2 2 h6 a2 2 0 0 0 2 -2 l1 -12 M10 11 v5 M14 11 v5",
+  recycling: "M12 4 L8 11 H16 L12 4 Z M5 13 L3 17 L7 19 M19 13 L21 17 L17 19 M8 20 H16",
+  graffiti: "M4 14 v3 a2 2 0 0 0 2 2 h2 v-3 M4 14 l9 -9 a2.83 2.83 0 0 1 4 4 l-9 9 H4 v-4 Z",
+  hazard: "M12 4 L2 20 H22 L12 4 Z M12 10 v4 M12 17 v0.5",
+  encampment: "M3.5 21 L14 3 M20.5 21 L10 3 M15.5 21 L12 15 L8.5 21 M3.5 21 H20.5",
+  water: "M12 3 C7 8 4 12 4 15 a8 8 0 0 0 16 0 c0 -3 -3 -7 -8 -12 Z",
+  other:
+    "M5 11 a1 1 0 1 0 0 2 a1 1 0 1 0 0 -2 M12 11 a1 1 0 1 0 0 2 a1 1 0 1 0 0 -2 M19 11 a1 1 0 1 0 0 2 a1 1 0 1 0 0 -2",
+}
+
+export function categoryCssVar(category: ReportCategory): string {
+  return `var(--cat-${category})`
+}
+
+export function categoryPinSrc(category: ReportCategory): string {
+  return `/ds/pin-${category}.svg`
+}
+
+export function categoryLabel(category: ReportCategory): string {
+  return REPORT_CATEGORY_LABELS[category]
+}
