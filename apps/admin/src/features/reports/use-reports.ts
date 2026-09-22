@@ -2,10 +2,11 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
+  AdminRemoveReportMessageRequest,
   AdminReportListQuery,
   AdminReportListResponse,
+  AdminSendReportMessageRequest,
   ChatHistoryResponse,
-  DeleteReportMessageRequest,
   FlagReportRequest,
   GetAdminReportResponse,
   RemoveReportRequest,
@@ -110,9 +111,9 @@ export function useSetReportVerdict() {
 }
 
 /**
- * Read-only report CHAT history for the admin report detail. This hits the SAME endpoint the citizen
- * client uses (`reportMessages` → GET /reports/:id/messages), so operators see exactly what neighbors
- * see, including sender-less SYSTEM status events. Admins observe + moderate here — there is no composer.
+ * The report CHAT history on the ADMIN plane (GET /admin/reports/:id/messages), so it resolves against
+ * admin.civfix.org like every other operator read. Operators see exactly what neighbors see, including
+ * sender-less SYSTEM status events, and can post into the same thread.
  *
  * Pagination is intentionally minimal: we fetch the first page (newest window, up to `limit`) which is
  * plenty for an admin glance. `nextCursor` (older messages via `before`) is ignored on purpose.
@@ -122,15 +123,26 @@ const REPORT_CHAT_LIMIT = 50
 export function useReportChatHistory(id: string | null) {
   return useQuery<ChatHistoryResponse>({
     queryKey: queryKeys.reports.chat(id ?? ""),
-    queryFn: () => api.reportMessages({ id: id as string, limit: REPORT_CHAT_LIMIT }),
+    queryFn: () => api.adminReportMessages({ id: id as string, limit: REPORT_CHAT_LIMIT }),
     enabled: !!id,
   })
 }
 
-export function useDeleteReportMessage() {
+export function useSendReportMessage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: DeleteReportMessageRequest) => api.deleteReportMessage(input),
+    mutationFn: (input: AdminSendReportMessageRequest) => api.adminSendReportMessage(input),
+    onSuccess: (_res, { id }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) })
+      qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
+    },
+  })
+}
+
+export function useRemoveReportMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: AdminRemoveReportMessageRequest) => api.adminRemoveReportMessage(input),
     onSuccess: (_res, { id }) => {
       qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) })
     },

@@ -2533,6 +2533,12 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .dsc-msg-replies { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink-3); font-weight: 600; }
 .dsc-msg-replies svg { color: var(--ink-4); }
 
+/* Operator composer under the report chat (same treatment as the Mail reply composer). */
+.dsc-composer { border-top: 1px solid var(--border-soft); padding: 12px 14px 14px; }
+.dsc-composer-foot { display: flex; align-items: center; gap: 8px; }
+.dsc-composer-foot .hint { font-size: 11px; color: var(--ink-3); min-width: 0; }
+.dsc-composer-foot .spacer { flex: 1; min-width: 4px; }
+
 /* Linked reports/events galleries (event<->report linking). A vertical list of clickable cards: a
    thumb/glyph, a title, a status/kind sub-row, and an address/organizer line. Used on both the event
    detail ("Linked reports") and the report detail ("Linked events"). */
