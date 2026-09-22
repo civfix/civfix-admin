@@ -46,6 +46,18 @@ export function reportBucket(status: AdminReportStatus): ReportBucket {
   return REPORT_STATUS_BUCKET[status] ?? "submitted"
 }
 
+export function isReportStatus(status: string): status is AdminReportStatus {
+  return Object.hasOwn(REPORT_STATUS_BUCKET, status)
+}
+
+export function reportBucketOf(status: string): ReportBucket {
+  return isReportStatus(status) ? reportBucket(status) : "submitted"
+}
+
+export function reportNeedsAttention(status: string, flagged: boolean): boolean {
+  return flagged || (isReportStatus(status) && reportBucket(status) === "submitted")
+}
+
 /** The pill treatment (class + icon + label) for any civfix status, via its design bucket. */
 export function reportStatusView(status: AdminReportStatus): {
   cls: string

@@ -2,13 +2,18 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
-import type { AdminReportStatus, HomeMapPin } from "@civfix/shared"
+import type { HomeMapPin } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { useHomeMap } from "@/hooks/use-admin-home"
 import { useNav } from "@/store/ui-store"
 import { EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
-import { BUCKET_VIEW, reportBucket, type ReportBucket } from "@/lib/report-status"
+import {
+  BUCKET_VIEW,
+  reportBucketOf,
+  reportNeedsAttention,
+  type ReportBucket,
+} from "@/lib/report-status"
 import type { MapPin, MapTint } from "@/components/map/leaflet-map"
 
 
@@ -16,8 +21,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
-
-const WAITING_REPORT_STATUSES = new Set(["submitted", "held", "published"])
 
 function toMapPin(p: HomeMapPin): MapPin & {
   refType: HomeMapPin["refType"]
@@ -27,7 +30,7 @@ function toMapPin(p: HomeMapPin): MapPin & {
   title: string
 } {
   const isEvent = p.refType === "event"
-  const needs = !isEvent && (p.flagged || WAITING_REPORT_STATUSES.has(p.status))
+  const needs = !isEvent && reportNeedsAttention(p.status, p.flagged)
   return {
     id: `${p.refType}-${p.id}`,
     refType: p.refType,
@@ -57,7 +60,7 @@ const BUCKET_TONE: Record<ReportBucket, string> = {
 function statusTone(m: ActivePin): { color: string; label: string } {
   if (m.refType === "event") return { color: "var(--sun-700)", label: "Cleanup event" }
   if (m.flagged) return { color: "var(--bloom-700)", label: "Flagged" }
-  const bucket = reportBucket(m.status as AdminReportStatus)
+  const bucket = reportBucketOf(m.status)
   return { color: BUCKET_TONE[bucket], label: BUCKET_VIEW[bucket].label }
 }
 
@@ -71,7 +74,7 @@ export function LiveMap({ tint = "voyager" }: { tint?: MapTint }) {
   const reportCount = pins.filter((p) => p.refType === "report").length
   const eventCount = pins.filter((p) => p.refType === "event").length
   const needsAttention = pins.filter(
-    (p) => p.refType === "report" && (p.flagged || WAITING_REPORT_STATUSES.has(p.status)),
+    (p) => p.refType === "report" && reportNeedsAttention(p.status, p.flagged),
   ).length
 
   const openActive = () => {

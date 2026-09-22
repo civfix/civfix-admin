@@ -36,19 +36,20 @@ export function categoryLabel(category: ReportCategory): string {
 }
 
 function buildCategoryReportTypeLabels(): Record<ReportCategory, string[]> {
+  const byType = new Map<string, { category: ReportCategory; label: string }>()
+  for (const type of REPORT_TYPE_VALUES) {
+    byType.set(type, { category: REPORT_TYPE_TO_CATEGORY[type], label: REPORT_TYPE_LABELS[type] })
+  }
+  for (const webType of WEB_REPORT_TYPES) {
+    byType.set(webType.id, { category: webType.category, label: webType.label })
+  }
   const out = Object.fromEntries(REPORT_CATEGORIES.map((c) => [c, [] as string[]])) as Record<
     ReportCategory,
     string[]
   >
-  const add = (category: ReportCategory, label: string) => {
+  for (const { category, label } of byType.values()) {
     const bucket = out[category]
     if (bucket && !bucket.includes(label)) bucket.push(label)
-  }
-  for (const type of REPORT_TYPE_VALUES) {
-    add(REPORT_TYPE_TO_CATEGORY[type], REPORT_TYPE_LABELS[type])
-  }
-  for (const webType of WEB_REPORT_TYPES) {
-    add(webType.category, webType.label)
   }
   return out
 }
@@ -56,11 +57,14 @@ function buildCategoryReportTypeLabels(): Record<ReportCategory, string[]> {
 /**
  * The resident-facing report types that fold into each canonical category, derived from the contract's
  * type -> category mapping plus the web picker's finer types. Lets the operator read a routing contact
- * against what a neighbor actually picked.
+ * against what a neighbor actually picked. Keyed by report type, so the web picker's resident-facing
+ * label replaces the contract label for the same type instead of listing both.
  */
 export const CATEGORY_REPORT_TYPE_LABELS: Record<ReportCategory, readonly string[]> =
   buildCategoryReportTypeLabels()
 
 export function categoryReportTypes(category: ReportCategory): string {
-  return CATEGORY_REPORT_TYPE_LABELS[category].join(", ")
+  const labels = CATEGORY_REPORT_TYPE_LABELS[category]
+  if (labels.length === 1 && labels[0] === REPORT_CATEGORY_LABELS[category]) return ""
+  return labels.join(", ")
 }
