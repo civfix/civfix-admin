@@ -17,6 +17,7 @@ import { confirmDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
 import { cancelBlockedFor, EVENT_STATUS_VIEW } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
+import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import {
   useCancelEvent,
@@ -69,11 +70,6 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
-function catPinSrc(category: LinkedReportRef["category"]): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
-}
-
 function LinkedReportCard({
   report,
   onOpen,
@@ -86,18 +82,16 @@ function LinkedReportCard({
   unlinking?: boolean
 }) {
   const view = reportStatusView(report.status)
-  const pin = catPinSrc(report.category)
+  const pin = categoryPinSrc(report.category)
   const card = (
     <button className="evt-linked-card" onClick={onOpen} title={report.title}>
       <span className="evt-linked-thumb" aria-hidden="true">
         {report.thumbUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={report.thumbUrl} alt="" />
-        ) : pin ? (
+        ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={pin} alt="" />
-        ) : (
-          <Icons.Layers size={16} />
         )}
       </span>
       <span className="evt-linked-body">

@@ -8,7 +8,6 @@ import {
   monogram,
   type AdminUserDTO,
   type AdminUserListItemDTO,
-  type ReportCategory,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -18,6 +17,7 @@ import {
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
@@ -60,11 +60,6 @@ const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]> | "group", 
   report: "Report comment",
 }
 
-function catPinSrc(category: ReportCategory): string | null {
-  if (category === "other") return null
-  return `/ds/pin-${category}.svg`
-}
-
 function UserAvatar({
   user,
   large = false,
@@ -102,7 +97,6 @@ function joinDate(v: string): string {
 }
 
 function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
-  const pin = catPinSrc(r.category)
   const open = () => nav("reports", r.id)
   return (
     <div
@@ -115,12 +109,8 @@ function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
       }}
     >
       <span className="prow-pin" title={REPORT_CATEGORY_LABELS[r.category]}>
-        {pin ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={pin} alt="" />
-        ) : (
-          <Icons.Layers size={16} />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={categoryPinSrc(r.category)} alt="" />
       </span>
       <div className="prow-body">
         <div className="prow-title">{r.title}</div>

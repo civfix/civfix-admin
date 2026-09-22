@@ -14,6 +14,7 @@ import {
 
 import { Icons } from "@/components/icons"
 import { toAppError } from "@/lib/api"
+import { categoryLabel, categoryPinSrc } from "@/lib/category"
 import { promptDialog } from "@/components/shared/dialog"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -115,16 +116,6 @@ const SAMPLE_VALUES: Record<string, string> = {
   photoCount: "2",
 }
 
-const REPORT_TYPES: { id: ReportCategory; label: string; pin: string | null }[] = [
-  { id: "trash", label: "Trash", pin: "/ds/pin-trash.svg" },
-  { id: "recycling", label: "Recycling", pin: "/ds/pin-recycling.svg" },
-  { id: "graffiti", label: "Graffiti", pin: "/ds/pin-graffiti.svg" },
-  { id: "hazard", label: "Hazard", pin: "/ds/pin-hazard.svg" },
-  { id: "encampment", label: "Encampment", pin: null },
-  { id: "water", label: "Water", pin: "/ds/pin-water.svg" },
-  { id: "other", label: "Other", pin: null },
-]
-
 const CATEGORIES: readonly ReportCategory[] = [
   "trash",
   "recycling",
@@ -135,16 +126,12 @@ const CATEGORIES: readonly ReportCategory[] = [
   "other",
 ]
 
-const PIN_SRC = new Map<ReportCategory, string>(
-  REPORT_TYPES.flatMap((c) => (c.pin ? [[c.id, c.pin] as const] : [])),
+const REPORT_TYPES: { id: ReportCategory; label: string; pin: string }[] = CATEGORIES.map(
+  (id) => ({ id, label: categoryLabel(id), pin: categoryPinSrc(id) }),
 )
 
 function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
   return counts[id] ?? 0
-}
-
-function catPinSrc(category: ReportCategory): string | null {
-  return PIN_SRC.get(category) ?? null
 }
 
 function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
@@ -184,7 +171,7 @@ function JurisdictionRow({
   const overdue = showOldest && isOverdue(item.oldestReportAt)
   const needs = needsAttention(item)
   const dom = dominantCategory(item.perCategoryCounts)
-  const pin = dom ? catPinSrc(dom) : null
+  const pin = dom ? categoryPinSrc(dom) : null
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isKeyboardActivationKey(event.key)) return
     event.preventDefault()
@@ -363,7 +350,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const canSave = filledCount > 0 || hasDefault
   const needs = needsAttention(dto)
   const dom = dominantCategory(counts)
-  const headPin = dom ? catPinSrc(dom) : null
+  const headPin = dom ? categoryPinSrc(dom) : null
   const isFlagged = dto.flaggedAt !== null
   const busy = saveContacts.isPending || patch.isPending
 
@@ -610,23 +597,16 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 {REPORT_TYPES.map((c) => {
                   const n = routingCount(counts, c.id)
                   const attention = n > 0 && !contacts[c.id] && !hasDefault
-                  const pin = c.pin
                   return (
                     <div
                       key={c.id}
                       className={`ccat-cell ${attention ? "attention" : ""} ${n === 0 ? "quiet" : ""}`}
                     >
                       <div className="ccat-cell-head">
-                        {pin ? (
-                          <span className="ccat-pin">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={pin} alt="" />
-                          </span>
-                        ) : (
-                          <span className="ccat-other">
-                            <Icons.Layers size={13} />
-                          </span>
-                        )}
+                        <span className="ccat-pin">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={c.pin} alt="" />
+                        </span>
                         <span className="ccat-label">{c.label}</span>
                         <span
                           className={`ccat-count ${n > 0 ? "" : "zero"} ${attention ? "warn" : ""}`}
@@ -812,16 +792,10 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 return (
                   <div key={c.id} className="ccat-cell">
                     <div className="ccat-cell-head">
-                      {c.pin ? (
-                        <span className="ccat-pin">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={c.pin} alt="" />
-                        </span>
-                      ) : (
-                        <span className="ccat-other">
-                          <Icons.Layers size={13} />
-                        </span>
-                      )}
+                      <span className="ccat-pin">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={c.pin} alt="" />
+                      </span>
                       <span className="ccat-label">{c.label}</span>
                       <span className="ccat-count">
                         {n} {n === 1 ? "report" : "reports"}
@@ -894,8 +868,9 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     }
   }, [focusId])
 
-  const selected =
-    (selId ? (items.find((x) => x.geoid === selId) ?? null) : null) ?? items[0] ?? null
+  const focused = selId ? (items.find((x) => x.geoid === selId) ?? null) : null
+  const holdingFocus = selId !== null && selId === focusId
+  const selected = focused ?? (holdingFocus ? null : (items[0] ?? null))
 
   const catFilters = [
     { value: "all", label: "All", count: allTotal ?? 0 },

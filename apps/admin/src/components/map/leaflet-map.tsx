@@ -4,6 +4,7 @@ import * as React from "react"
 import L from "leaflet"
 
 import { withCartoKey } from "@/lib/carto"
+import { CATEGORY_GLYPHS } from "@/lib/category"
 
 /**
  * The civfix universal map (ported from the design's map.jsx PinItMap). Real OpenStreetMap data via
@@ -56,14 +57,9 @@ export const MAP_HOME = { center: [39.5, -98.35] as [number, number], zoom: 4 }
 const TEARDROP =
   "M32 4 C46 4 58 16 58 30 C58 46 40 60 34 68 C33 69 31 69 30 68 C24 60 6 46 6 30 C6 16 18 4 32 4 Z"
 const GLYPHS: Record<string, string> = {
-  trash:
-    "M9 6 L9 5 a1.5 1.5 0 0 1 1.5 -1.5 h3 a1.5 1.5 0 0 1 1.5 1.5 v1 M5 6 h14 M6 6 l1 12 a2 2 0 0 0 2 2 h6 a2 2 0 0 0 2 -2 l1 -12 M10 11 v5 M14 11 v5",
-  hazard: "M12 4 L2 20 H22 L12 4 Z M12 10 v4 M12 17 v0.5",
-  graffiti: "M4 14 v3 a2 2 0 0 0 2 2 h2 v-3 M4 14 l9 -9 a2.83 2.83 0 0 1 4 4 l-9 9 H4 v-4 Z",
+  ...CATEGORY_GLYPHS,
   cleanup:
     "M3 6 L21 6 M19 6 V20 a2 2 0 0 1 -2 2 H7 a2 2 0 0 1 -2 -2 V6 M9 6 V4 a1 1 0 0 1 1 -1 h4 a1 1 0 0 1 1 1 V6 M9 11 V17 M12 11 V17 M15 11 V17",
-  recycling: "M12 4 L8 11 H16 L12 4 Z M5 13 L3 17 L7 19 M19 13 L21 17 L17 19 M8 20 H16",
-  water: "M12 3 C7 8 4 12 4 15 a8 8 0 0 0 16 0 c0 -3 -3 -7 -8 -12 Z",
   event: "M4 7 a1 1 0 0 1 1 -1 h14 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z M16 4 v4 M8 4 v4 M4 11 h16",
   // "Other Volunteer" events: a cupped-hands-with-heart glyph, distinct from the cleanup calendar.
   "event-volunteer":
@@ -86,7 +82,7 @@ function pinIcon(
   // report pin (red when it needs attention, gray when handled).
   const isEvent = kind != null && EVENT_KINDS.has(kind)
   const state = isEvent ? kind : draft ? "needs" : "routed"
-  const glyph = GLYPHS[isEvent ? kind : category || "trash"] || GLYPHS.trash
+  const glyph = GLYPHS[isEvent ? kind : category || "other"] ?? CATEGORY_GLYPHS.other
   const fill = PIN_FILL[state] ?? PIN_FILL.routed
   const w = active ? 40 : 31
   const h = w * (76 / 64)
