@@ -88,14 +88,15 @@
   --danger:   var(--bloom-600);
 
   /* Map / category colors - used for pin types */
-  --cat-trash:      #8A8378;  /* warm gray */
-  --cat-recycling:  var(--moss);
-  --cat-graffiti:   var(--lilac);
-  --cat-hazard:     var(--bloom);
-  --cat-encampment: #2FA39A;  /* teal - its own category, split out of hazard */
-  --cat-cleanup:    var(--sun-600);
-  --cat-water:      var(--sky);
+  /* These mirror tokens.color.category (light scheme) in @civfix/shared - keep the two identical. */
+  --cat-trash:      #776C60;
+  --cat-recycling:  #63A45A;
+  --cat-graffiti:   #9B7ED9;
+  --cat-hazard:     #E4574A;
+  --cat-encampment: #3E9E8E;
+  --cat-water:      #74A9D8;
   --cat-other:      #8D8577;
+  --cat-cleanup:    var(--sun-600);
 
   /* ====================================================================
      TYPOGRAPHY - Families

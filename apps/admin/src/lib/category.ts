@@ -1,4 +1,15 @@
-import { REPORT_CATEGORY_LABELS, type ReportCategory } from "@civfix/shared"
+import {
+  REPORT_CATEGORY_LABELS,
+  REPORT_TYPE_LABELS,
+  REPORT_TYPE_TO_CATEGORY,
+  REPORT_TYPE_VALUES,
+  ReportCategorySchema,
+  WEB_REPORT_TYPES,
+  type ReportCategory,
+} from "@civfix/shared"
+
+/** The canonical report categories, in the order the contract enum defines them. */
+export const REPORT_CATEGORIES: readonly ReportCategory[] = ReportCategorySchema.options
 
 export const CATEGORY_GLYPHS: Record<ReportCategory, string> = {
   trash:
@@ -22,4 +33,34 @@ export function categoryPinSrc(category: ReportCategory): string {
 
 export function categoryLabel(category: ReportCategory): string {
   return REPORT_CATEGORY_LABELS[category]
+}
+
+function buildCategoryReportTypeLabels(): Record<ReportCategory, string[]> {
+  const out = Object.fromEntries(REPORT_CATEGORIES.map((c) => [c, [] as string[]])) as Record<
+    ReportCategory,
+    string[]
+  >
+  const add = (category: ReportCategory, label: string) => {
+    const bucket = out[category]
+    if (bucket && !bucket.includes(label)) bucket.push(label)
+  }
+  for (const type of REPORT_TYPE_VALUES) {
+    add(REPORT_TYPE_TO_CATEGORY[type], REPORT_TYPE_LABELS[type])
+  }
+  for (const webType of WEB_REPORT_TYPES) {
+    add(webType.category, webType.label)
+  }
+  return out
+}
+
+/**
+ * The resident-facing report types that fold into each canonical category, derived from the contract's
+ * type -> category mapping plus the web picker's finer types. Lets the operator read a routing contact
+ * against what a neighbor actually picked.
+ */
+export const CATEGORY_REPORT_TYPE_LABELS: Record<ReportCategory, readonly string[]> =
+  buildCategoryReportTypeLabels()
+
+export function categoryReportTypes(category: ReportCategory): string {
+  return CATEGORY_REPORT_TYPE_LABELS[category].join(", ")
 }

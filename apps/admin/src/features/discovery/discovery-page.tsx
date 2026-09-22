@@ -14,7 +14,12 @@ import {
 
 import { Icons } from "@/components/icons"
 import { toAppError } from "@/lib/api"
-import { categoryLabel, categoryPinSrc } from "@/lib/category"
+import {
+  REPORT_CATEGORIES,
+  categoryLabel,
+  categoryPinSrc,
+  categoryReportTypes,
+} from "@/lib/category"
 import { promptDialog } from "@/components/shared/dialog"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -89,19 +94,13 @@ function isOverdue(iso: string | null): boolean {
   return Date.now() - then > 24 * HOUR_MS
 }
 
-const CATEGORIES: readonly ReportCategory[] = [
-  "trash",
-  "recycling",
-  "graffiti",
-  "hazard",
-  "encampment",
-  "water",
-  "other",
-]
-
-const REPORT_TYPES: { id: ReportCategory; label: string; pin: string }[] = CATEGORIES.map(
-  (id) => ({ id, label: categoryLabel(id), pin: categoryPinSrc(id) }),
-)
+const REPORT_TYPES: { id: ReportCategory; label: string; pin: string; types: string }[] =
+  REPORT_CATEGORIES.map((id) => ({
+    id,
+    label: categoryLabel(id),
+    pin: categoryPinSrc(id),
+    types: categoryReportTypes(id),
+  }))
 
 function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
   return counts[id] ?? 0
@@ -110,7 +109,7 @@ function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
 function dominantCategory(counts: PerCategoryCounts): ReportCategory | null {
   let best: ReportCategory | null = null
   let bestN = 0
-  for (const c of CATEGORIES) {
+  for (const c of REPORT_CATEGORIES) {
     const n = counts[c] ?? 0
     if (n > bestN) {
       bestN = n
@@ -371,7 +370,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     if (!canSave) return
     saveContacts.mutate(
       { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
-      { onSuccess: () => toast(`Contacts saved for ${dto.org}`) },
+      { onSuccess: () => toast(`Contacts saved and routed for ${dto.org}`) },
     )
   }
 
@@ -554,6 +553,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                           {n} {n === 1 ? "report" : "reports"}
                         </span>
                       </div>
+                      <div className="ccat-types">{c.types}</div>
                       <div className="ccat-email">
                         <Icons.Mail size={13} />
                         <input
@@ -577,7 +577,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 })}
               </div>
               <div className="hint" style={{ marginTop: 10 }}>
-                Counts are reports waiting per type · highlighted types have reports but no contact yet.
+                Counts are reports waiting per category · the grey line lists the report types neighbors
+                pick that fold into it · highlighted categories have reports but no contact yet.
               </div>
             </div>
           </div>
@@ -618,18 +619,35 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         <button className="btn danger" disabled={patch.isPending} onClick={onFlag}>
           <Icons.Flag size={13} /> {isFlagged ? "Clear flag" : "Flag for review"}
         </button>
-        <button className="btn" disabled={busy} onClick={onSaveDraft}>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={onSaveDraft}
+          title="Saves contacts without routing or closing the task"
+        >
           Save draft
         </button>
         <button
           className={`btn ${canSave ? "success" : ""}`}
           disabled={!canSave || busy}
           onClick={onSaveContacts}
-          title={canSave ? undefined : "Add at least one contact first"}
+          title={
+            canSave
+              ? "Saves contacts, closes the discovery task, and queues outreach to this jurisdiction"
+              : "Add at least one contact first"
+          }
           style={!canSave ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
         >
-          <Icons.Check size={13} /> Save contacts
+          <Icons.Check size={13} /> Save &amp; route
         </button>
+      </div>
+
+      <div className="pay-note">
+        <Icons.Send size={13} />
+        <span>
+          <b>Save &amp; route</b> saves the contacts, closes the discovery task, and queues outreach to
+          this jurisdiction. <b>Save draft</b> saves contacts without routing or closing the task.
+        </span>
       </div>
 
       <ForwardTemplateModal
@@ -729,7 +747,7 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 }
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState<JurisdictionFilter>("all")
+  const [filter, setFilter] = React.useState<JurisdictionFilter>("attention")
   const [layer, setLayer] = React.useState<"all" | JurisdictionLayer>("all")
   const [sort, setSort] = React.useState<JurisdictionSort>("pop")
   const [query, setQuery] = React.useState(focusId ?? "")
@@ -785,14 +803,14 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const selected = focused ?? (holdingFocus ? null : (items[0] ?? null))
 
   const catFilters = [
-    { value: "all", label: "All", count: allTotal ?? 0 },
-    { value: "attention", label: "Need mapping", count: needsMappingCountDisplay },
+    { value: "attention", label: "Needs mapping", count: needsMappingCountDisplay },
     { value: "clear", label: "Routed", count: facets?.routed ?? 0 },
+    { value: "all", label: "All", count: allTotal ?? 0 },
   ]
 
   const onFilterChange = (v: JurisdictionFilter) => {
     setFilter(v)
-    // The "need mapping" view is about the most-overdue reports first, so default it to the
+    // The "needs mapping" view is about the most-overdue reports first, so default it to the
     // oldest-first sort; leaving the view falls back to population unless the operator picked reports.
     if (v === "attention") setSort("oldest")
     else if (sort === "oldest") setSort("pop")

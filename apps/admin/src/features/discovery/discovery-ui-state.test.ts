@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import { getJurisdictionSort, getNeedsMappingCountDisplay } from "./discovery-ui-state"
 
 describe("Jurisdictions UI state", () => {
-  it("always uses oldest sort for the Need mapping filter", () => {
+  it("always uses oldest sort for the Needs mapping filter", () => {
     expect(getJurisdictionSort("attention", "pop")).toBe("oldest")
     expect(getJurisdictionSort("attention", "reports")).toBe("oldest")
     expect(getJurisdictionSort("attention", "oldest")).toBe("oldest")
