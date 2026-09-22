@@ -3824,22 +3824,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   font-weight: 700;
 }
 
-/* Email-template sub-card: variable palette, fields, and live preview. */
-.tpl-reset {
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-3);
-  background: none;
-  border: none;
-  padding: 2px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
-}
-.tpl-reset:hover:not(:disabled) { background: var(--paper-2); color: var(--ink); }
-.tpl-reset:disabled { opacity: 0.4; cursor: default; }
-
+/* Forward-template editor modal: variable palette, fields, issues, and the rendered preview. */
 .tpl-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3863,54 +3848,13 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .tpl-chip:active { transform: translateY(1px); }
 
-.tpl-field { margin-top: 0; margin-bottom: 10px; }
-.tpl-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink-3);
-  margin-bottom: 4px;
-  letter-spacing: 0.01em;
-}
-.tpl-subject,
-.tpl-body {
-  width: 100%;
-  border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 8px;
-  padding: 8px 10px;
-  color: var(--ink);
-  font: inherit;
-  transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
-}
 .tpl-body {
   font-family: var(--font-mono);
   font-size: 12.5px;
   line-height: 1.5;
   resize: vertical;
 }
-.tpl-subject:focus,
-.tpl-body:focus {
-  outline: none;
-  border-color: var(--bloom);
-  box-shadow: var(--ring);
-}
 
-.tpl-preview {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 10px;
-  background: var(--paper-2);
-  border: 1px solid var(--border-soft);
-}
-.tpl-preview-tag {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-  margin-bottom: 8px;
-}
 .tpl-email {
   background: #fff;
   border: 1px solid var(--border-soft);
@@ -3926,12 +3870,22 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-soft);
 }
-.tpl-email-body {
-  padding: 12px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--ink-2);
-  white-space: pre-wrap;
-  word-break: break-word;
-  min-height: 40px;
+.tpl-modal { max-width: 760px; }
+.tpl-preview-frame {
+  display: block;
+  width: 100%;
+  height: 46vh;
+  min-height: 260px;
+  border: 0;
+  background: var(--paper);
 }
+.tpl-issues { display: flex; flex-direction: column; gap: 2px; }
+.tpl-issue { font-size: 11.5px; line-height: 1.45; color: var(--danger); }
+.tpl-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tpl-state .spacer { flex: 1; min-width: 4px; }
+
