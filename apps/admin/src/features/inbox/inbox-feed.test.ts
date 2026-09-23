@@ -11,24 +11,33 @@ import {
   isInboxFeedFilter,
   parseFeedKey,
   replyOriginLabel,
+  resolveFeedSelection,
 } from "./inbox-feed"
 
 describe("inbox feed keys", () => {
   it("keys an item by source and id and parses it back", () => {
     expect(feedKey({ source: "reply", id: "m1" })).toBe("reply:m1")
     expect(parseFeedKey("reply:m1")).toEqual({ source: "reply", id: "m1" })
-    expect(parseFeedKey(feedKey({ source: "email", id: "e1" }))).toEqual({ source: "email", id: "e1" })
-  })
-
-  it("maps the Home tile's inbox deep link onto an email key", () => {
-    expect(emailFocusKey("e1")).toBe("email:e1")
+    expect(parseFeedKey(emailFocusKey("e1"))).toEqual({ source: "email", id: "e1" })
   })
 
   it("rejects keys that name no feed source or no id", () => {
-    expect(parseFeedKey("e1")).toBeNull()
-    expect(parseFeedKey("thread:t1")).toBeNull()
-    expect(parseFeedKey("email:")).toBeNull()
-    expect(parseFeedKey(":e1")).toBeNull()
+    for (const key of ["e1", "thread:t1", "email:", ":e1"]) expect(parseFeedKey(key)).toBeNull()
+  })
+})
+
+describe("selected feed item", () => {
+  const picked = { source: "reply" as const, id: "m1", unread: true }
+  const listed = { ...picked, unread: false }
+
+  it("reads the listed row, and keeps the picked row once marking it read drops it", () => {
+    expect(resolveFeedSelection(new Map([["reply:m1", listed]]), picked, "reply:m1")).toBe(listed)
+    expect(resolveFeedSelection(new Map(), picked, "reply:m1")).toBe(picked)
+  })
+
+  it("resolves nothing for a key that is neither listed nor picked", () => {
+    expect(resolveFeedSelection(new Map(), picked, "reply:m2")).toBeUndefined()
+    expect(resolveFeedSelection(new Map(), null, "email:e1")).toBeUndefined()
   })
 })
 
@@ -44,9 +53,7 @@ describe("inbox feed filters", () => {
 
   it("does not treat an Outreach chip as an inbox filter", () => {
     expect(isInboxFeedFilter("review")).toBe(true)
-    expect(isInboxFeedFilter("in")).toBe(false)
-    expect(isInboxFeedFilter("out")).toBe(false)
-    expect(isInboxFeedFilter("attn")).toBe(false)
+    for (const chip of ["in", "out", "attn"]) expect(isInboxFeedFilter(chip)).toBe(false)
   })
 })
 

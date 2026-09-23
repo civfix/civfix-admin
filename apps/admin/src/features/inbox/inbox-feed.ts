@@ -34,6 +34,15 @@ export function parseFeedKey(key: string): { source: FeedSource; id: string } | 
   return { source, id }
 }
 
+export function resolveFeedSelection<T extends { source: FeedSource; id: string }>(
+  feedByKey: ReadonlyMap<string, T>,
+  picked: T | null,
+  selKey: string | null,
+): T | undefined {
+  const listed = selKey ? feedByKey.get(selKey) : undefined
+  return listed ?? (picked && feedKey(picked) === selKey ? picked : undefined)
+}
+
 export function isInboxFeedFilter(value: string): value is InboxFeedFilter {
   return InboxFeedFilterSchema.safeParse(value).success
 }

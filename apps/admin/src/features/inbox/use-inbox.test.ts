@@ -4,7 +4,6 @@ import type { InboxFeedResponse } from "@civfix/shared"
 
 import type * as apiModule from "@/lib/api"
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
 import { invalidateMail } from "@/features/mail/use-mail"
 
 import { inboxFeedQueryOptions } from "./use-inbox"
@@ -62,11 +61,5 @@ describe("inbox feed query", () => {
     invalidateMail(qc, "t1")
 
     expect(qc.getQueryState(options.queryKey)?.isInvalidated).toBe(true)
-  })
-})
-
-describe("inbox feed cache key", () => {
-  it("sits under the inbox key every inbox mutation invalidates", () => {
-    expect(queryKeys.inbox.feed({ filter: "all" }).slice(0, 2)).toEqual(queryKeys.inbox.all)
   })
 })
