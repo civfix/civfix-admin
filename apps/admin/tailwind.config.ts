@@ -2,16 +2,10 @@ import type { Config } from "tailwindcss"
 import { tokens } from "@civfix/shared/tokens"
 
 /**
- * Tailwind theme derived entirely from the shared design tokens.
- *
- * The admin dashboard's *visual* source of truth is the ported design stylesheet
- * (src/styles/admin.css + src/styles/colors-and-type.css), which owns the warm-paper CSS custom
- * properties (--bloom, --ink, --paper, --cat-*, ...) and every component class (.card, .stile,
- * .qrow, .btn, ...). Tailwind here is available for incidental LAYOUT utilities only; it never needs
- * to redefine those component classes. To keep the civfix rule "never hardcode a hex the design
- * system covers", this config maps every shared token scale into Tailwind exactly like community-web,
- * so any utility we do reach for (bg-paper, text-ink3, rounded-lg, shadow-s2, font-display, ...) draws
- * from the same single source of truth the design CSS does.
+ * Tailwind supplies only its base reset (preflight) here: the markup uses no Tailwind utilities, because
+ * the ported design stylesheet (src/styles/admin.css + colors-and-type.css) owns every component class
+ * and CSS variable. The theme still maps the shared design tokens so any utility added later (bg-paper,
+ * text-ink-3, rounded-lg, shadow-s2, font-display, ...) draws from the same source as community-web.
  */
 
 const { color, font, fontSize, radius, shadow, space } = tokens
@@ -22,7 +16,7 @@ const px = (n: number): string => `${n}px`
 const config: Config = {
   // Class-based dark mode is left available but the warm palette is light-first.
   darkMode: ["class"],
-  content: ["./src/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  content: ["./src/**/*.{ts,tsx}"],
   theme: {
     container: {
       center: true,
@@ -126,7 +120,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 }
 
 export default config
