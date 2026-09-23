@@ -49,11 +49,12 @@ describe("mail badges", () => {
 })
 
 describe("withheld reply review", () => {
-  it("treats a failed or missing sender check as a possible forgery", () => {
+  it("treats a failed, missing or unrecorded sender check as a possible forgery", () => {
     expect(withheldReason("fail")).toBe("auth")
     expect(withheldReason("unknown")).toBe("auth")
     expect(withheldReason("pass")).toBe("domain")
-    expect(withheldReason(null)).toBe("domain")
+    expect(withheldReason(null)).toBe("auth")
+    expect(withheldReason(undefined)).toBe("auth")
   })
 
   it("explains why the reply was held back and where publishing sends it", () => {
@@ -66,7 +67,10 @@ describe("withheld reply review", () => {
     expect(withheldNote({ authVerdict: "pass", from: "clerk@vendor.example" }, true)).toMatch(
       /^This reply came from vendor\.example, which isn't a domain this thread was sent to, so it wasn't posted to the report chat\./,
     )
-    expect(withheldNote({ authVerdict: null, from: "" }, false)).toMatch(/^This reply came from an unknown sender,/)
+    expect(withheldNote({ authVerdict: null, from: "" }, false)).toMatch(
+      /^This reply couldn't be authenticated, so it wasn't posted to the event timeline\./,
+    )
+    expect(withheldNote({ authVerdict: "pass", from: "" }, false)).toMatch(/^This reply came from an unknown sender,/)
   })
 
   it("shows the sender's domain, never the whole address", () => {

@@ -35,7 +35,7 @@ export function publicationTitle(publication: MailReplyPublication, isReport: bo
 }
 
 export function withheldReason(verdict: MailAuthVerdict | null | undefined): "auth" | "domain" {
-  return verdict === "fail" || verdict === "unknown" ? "auth" : "domain"
+  return verdict === "pass" ? "domain" : "auth"
 }
 
 export function domainOfAddress(address: string): string {
