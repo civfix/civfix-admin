@@ -3,16 +3,19 @@
 import * as React from "react"
 import {
   INBOUND_EMAIL_STATUS_LABELS,
+  MAIL_STATUS_LABELS,
   relativeAgo,
-  type InboundEmailListItemDTO,
   type InboundEmailStatus,
+  type InboxFeedItemDTO,
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
-import { AuthVerdictBadge } from "@/features/mail/mail-badges"
+import { replyOriginLabel } from "@/features/inbox/inbox-feed"
+import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
+import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 import { useToast } from "@/store/ui-store"
 
 
@@ -27,10 +30,11 @@ export function InboxRow({
   selected,
   onClick,
 }: {
-  item: InboundEmailListItemDTO
+  item: InboxFeedItemDTO
   selected: boolean
   onClick: () => void
 }) {
+  const isEmail = item.source === "email"
   return (
     <div
       className={`mail-row ${selected ? "selected" : ""} ${item.unread ? "unread" : ""}`}
@@ -41,7 +45,9 @@ export function InboxRow({
       </span>
       <div className="mail-row-body">
         <div className="mail-row-top">
-          <span className="mail-from">{item.from || "(unknown sender)"}</span>
+          <span className="mail-from">
+            {(isEmail ? item.from : item.org || item.from) || "(unknown sender)"}
+          </span>
           <span className="mail-ts mono" title={new Date(item.ts).toLocaleString()}>
             {relativeAgo(item.ts)}
           </span>
@@ -56,14 +62,26 @@ export function InboxRow({
         </div>
         <div className="mail-preview">
           <span className="mono" style={{ opacity: 0.6 }}>
-            {item.localPart || item.recipient}
+            {isEmail ? item.localPart || item.recipient : replyOriginLabel(item)}
           </span>{" "}
           {item.preview}
         </div>
       </div>
-      <span className={`pill ${STATUS_CLS[item.status]} tight mail-status-pill`}>
-        {INBOUND_EMAIL_STATUS_LABELS[item.status]}
-      </span>
+      {isEmail ? (
+        <span className={`pill ${STATUS_CLS[item.status]} tight mail-status-pill`}>
+          {INBOUND_EMAIL_STATUS_LABELS[item.status]}
+        </span>
+      ) : item.publication ? (
+        <PublicationBadge
+          publication={item.publication}
+          isReport={item.reportId !== null}
+          className="mail-status-pill"
+        />
+      ) : (
+        <span className={`pill ${MAIL_STATUS_CLS[item.threadStatus]} tight mail-status-pill`}>
+          {MAIL_STATUS_LABELS[item.threadStatus]}
+        </span>
+      )}
     </div>
   )
 }

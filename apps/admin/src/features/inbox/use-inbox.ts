@@ -1,8 +1,15 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import type {
   GetInboxMessageResponse,
+  InboxFeedQuery,
   InboxListQuery,
   InboxListResponse,
   SetInboxStatusRequest,
@@ -30,6 +37,23 @@ export function useInboxListInfinite(params: InboxListQuery) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   })
+}
+
+export function inboxFeedQueryOptions(params: InboxFeedQuery) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.inbox.feed(params),
+    queryFn: ({ pageParam }) =>
+      api.listInboxFeed({
+        ...params,
+        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  })
+}
+
+export function useInboxFeedInfinite(params: InboxFeedQuery) {
+  return useInfiniteQuery(inboxFeedQueryOptions(params))
 }
 
 export function useInboxMessage(id: string | null) {

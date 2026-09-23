@@ -99,6 +99,7 @@ export const queryKeys = {
   inbox: {
     all: ["admin", "inbox"] as const,
     list: (params?: unknown) => ["admin", "inbox", "list", params ?? null] as const,
+    feed: (params?: unknown) => ["admin", "inbox", "feed", params ?? null] as const,
     detail: (id: string) => ["admin", "inbox", "detail", id] as const,
   },
 
