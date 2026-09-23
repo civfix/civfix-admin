@@ -497,7 +497,7 @@ export function MailPage({ focusId }: SectionPageProps) {
   const [folder, setFolder] = React.useState<Folder>(initial.folder)
   const [box, setBox] = React.useState("all")
   const [selId, setSelId] = React.useState<string | null>(initial.id)
-  const [selItem, setSelItem] = React.useState<InboxFeedItemDTO | null>(null)
+  const [selItem, setSelItem] = React.useState<{ item: InboxFeedItemDTO; view: string } | null>(null)
   const [composeOpen, setComposeOpen] = React.useState(false)
   const [templateOpen, setTemplateOpen] = React.useState(false)
   const outreach = folder === "outreach"
@@ -527,6 +527,7 @@ export function MailPage({ focusId }: SectionPageProps) {
       : {},
   )
   const feedFilter = isInboxFeedFilter(box) ? box : "all"
+  const feedView = `${feedFilter}:${q ?? ""}`
   const inboxFeedQuery = useInboxFeedInfinite(
     !outreach ? { filter: feedFilter, q } : { filter: "all" },
   )
@@ -549,7 +550,7 @@ export function MailPage({ focusId }: SectionPageProps) {
     () => (outreach ? mailItems.map((t) => t.id) : [...feedByKey.keys()]),
     [outreach, mailItems, feedByKey],
   )
-  const selFeedItem = outreach ? undefined : resolveFeedSelection(feedByKey, selItem, selId)
+  const selFeedItem = outreach ? undefined : resolveFeedSelection(feedByKey, selItem, selId, feedView)
 
   const statsQuery = useMailStats()
   const stats = statsQuery.data
@@ -563,10 +564,11 @@ export function MailPage({ focusId }: SectionPageProps) {
     }
   }, [focusId])
   React.useEffect(() => {
+    const listed = selId ? feedByKey.get(selId) : undefined
+    if (listed) setSelItem({ item: listed, view: feedView })
     if (!activeIds.length || (selId && (activeIds.includes(selId) || selFeedItem))) return
     setSelId(activeIds[0]!)
-    setSelItem(feedByKey.get(activeIds[0]!) ?? null)
-  }, [activeIds, selId, selFeedItem, feedByKey])
+  }, [activeIds, selId, selFeedItem, feedByKey, feedView])
 
   const switchFolder = (next: Folder) => {
     if (next === folder) return
@@ -584,7 +586,6 @@ export function MailPage({ focusId }: SectionPageProps) {
       if (row?.unread) markRead.mutate({ id })
     } else {
       const item = feedByKey.get(id)
-      setSelItem(item ?? null)
       if (!item?.unread) return
       if (item.source === "email") setInboxStatus.mutate({ id: item.id, status: "read" })
       else markRead.mutate({ id: item.threadId })
