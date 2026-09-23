@@ -12,6 +12,7 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
+import { AuthVerdictBadge } from "@/features/mail/mail-badges"
 import { useToast } from "@/store/ui-store"
 
 
@@ -93,6 +94,7 @@ export function InboxReader({ id }: { id: string }) {
           <span className="mono">{sel.from}</span>
           <span className="sep">·</span>
           <span>to {sel.recipient}</span>
+          <AuthVerdictBadge verdict={sel.authVerdict} />
           <span className="spacer" />
           <span className={`pill ${STATUS_CLS[sel.status]} tight`}>
             {INBOUND_EMAIL_STATUS_LABELS[sel.status]}

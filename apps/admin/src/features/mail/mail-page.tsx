@@ -7,7 +7,6 @@ import {
   MAIL_STATUS_LABELS,
   relativeAgo,
   type MailMessageDTO,
-  type MailStatus,
   type MailThreadDTO,
   type MailThreadListItemDTO,
 } from "@civfix/shared"
@@ -35,6 +34,8 @@ import {
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useInboxListInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
+import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
+import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 import { useNav, useToast } from "@/store/ui-store"
 import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
@@ -42,16 +43,6 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
 type Folder = "outreach" | "inbox"
-
-const STATUS_CLS: Record<MailStatus, string> = {
-  replied: "status-ok",
-  delivered: "status-ok",
-  auto: "status-progress",
-  opened: "status-progress",
-  sent: "status-progress",
-  needs_action: "status-flag",
-  bounced: "status-flag",
-}
 
 const BOX_LABEL: Record<string, string> = {
   all: "All",
@@ -232,7 +223,7 @@ function MailRow({
         <div className="mail-subject">{item.subject || "(no subject)"}</div>
         <div className="mail-preview">{item.preview}</div>
       </div>
-      <span className={`pill ${STATUS_CLS[item.status]} tight mail-status-pill`}>
+      <span className={`pill ${MAIL_STATUS_CLS[item.status]} tight mail-status-pill`}>
         {MAIL_STATUS_LABELS[item.status]}
       </span>
     </div>
@@ -322,7 +313,7 @@ function MailReader({ threadId }: { threadId: string }) {
             </>
           )}
           <span className="spacer" />
-          <span className={`pill ${STATUS_CLS[sel.status]} tight`}>
+          <span className={`pill ${MAIL_STATUS_CLS[sel.status]} tight`}>
             {MAIL_STATUS_LABELS[sel.status]}
           </span>
         </div>
@@ -366,7 +357,17 @@ function MailReader({ threadId }: { threadId: string }) {
                   <span className="mail-msg-ts mono" title={tsTitle(msg.ts)}>
                     {ts(msg.ts)}
                   </span>
-                  {isOut && <DeliveryBadge delivery={msg.delivery} />}
+                  {isOut ? (
+                    <DeliveryBadge delivery={msg.delivery} />
+                  ) : (
+                    <>
+                      <AuthVerdictBadge verdict={msg.authVerdict} />
+                      <PublicationBadge
+                        publication={msg.publication}
+                        isReport={sel.reportId !== null}
+                      />
+                    </>
+                  )}
                 </div>
                 <p className="mail-msg-body">{msg.body}</p>
                 {msg.truncated && (
