@@ -27,7 +27,7 @@ pnpm-debug.log*
 !.env.example
 
 # Editor / OS
-**/.DS_Store
+.DS_Store
 Thumbs.db
 .idea/
 .vscode/

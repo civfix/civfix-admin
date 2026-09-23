@@ -43,8 +43,8 @@ unset. A development build defaults to `http://localhost:8080`; see `apps/admin/
 Operator sign-in is the Cloudflare Access exchange: the dashboard first reuses an existing operator
 session, and otherwise posts to the admin Access-exchange route, which trades the Access identity the
 edge attached for an `operator` session. An Access identity whose email is not on the operator
-allowlist gets the "forbidden" screen. The shell renders only after an operator session exists. Cookies, CSRF and `x-client: web`
-are sent exactly as the public web app sends them.
+allowlist gets the "forbidden" screen. The shell renders only after an operator session exists.
+Cookies, CSRF and `x-client: web` are sent exactly as the public web app sends them.
 
 ## Deploy
 
