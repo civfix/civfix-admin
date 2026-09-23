@@ -5,14 +5,13 @@
  *   1. Leaflet's stylesheet (the dashboard maps use Leaflet + CARTO raster tiles, matching the
  *      design prototype exactly - a deliberate design-fidelity choice for this internal tool; it does
  *      NOT use MapLibre like community-web).
- *   2. Tailwind's base/components/utilities. Tailwind here provides only incidental LAYOUT utilities;
- *      the dashboard's full visual system is the ported design CSS imported in the root layout AFTER
- *      this file (src/styles/admin.css, which @imports src/styles/colors-and-type.css). Because the
- *      design CSS is imported after globals.css, its component classes win over Tailwind's base reset
- *      wherever they overlap on the shell.
+ *   2. Tailwind, which contributes only its base reset; the markup uses no intended Tailwind
+ *      utilities. The dashboard's visual system is the ported design CSS imported in the root layout
+ *      AFTER this file (src/styles/admin.css, which @imports src/styles/colors-and-type.css), so its
+ *      component classes win over the reset wherever they overlap.
  *
  * Fonts: next/font assigns --font-display-next / --font-body-next / --font-mono-next on <html>
- * (layout.tsx) — exactly the names the ported design stylesheet (colors-and-type.css) aliases into the
+ * (layout.tsx), exactly the names the ported design stylesheet (colors-and-type.css) aliases into the
  * final --font-display / --font-body / --font-mono stacks. No bridge is needed (and a
  * `--font-*-next: var(--font-*)` bridge would be CIRCULAR, invalidating font-family -> serif fallback).
  */
@@ -39,27 +38,6 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
-    }
-  }
-}
-
-@layer utilities {
-  /* Hide scrollbars on scroll areas while keeping them scrollable. */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Small inline spinner for loading buttons / hooks (lucide Loader2 + this class). */
-  .cf-spin {
-    animation: cf-spin 0.8s linear infinite;
-  }
-  @keyframes cf-spin {
-    to {
-      transform: rotate(360deg);
     }
   }
 }

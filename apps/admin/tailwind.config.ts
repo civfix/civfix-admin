@@ -2,8 +2,8 @@ import type { Config } from "tailwindcss"
 import { tokens } from "@civfix/shared/tokens"
 
 /**
- * Tailwind supplies only its base reset (preflight) here: the markup uses no Tailwind utilities, because
- * the ported design stylesheet (src/styles/admin.css + colors-and-type.css) owns every component class
+ * Tailwind supplies only its base reset (preflight) here: the markup uses no intended Tailwind utilities,
+ * because the ported design stylesheet (src/styles/admin.css + colors-and-type.css) owns every component class
  * and CSS variable. The theme still maps the shared design tokens so any utility added later (bg-paper,
  * text-ink-3, rounded-lg, shadow-s2, font-display, ...) draws from the same source as community-web.
  */
