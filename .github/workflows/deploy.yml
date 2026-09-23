@@ -11,21 +11,21 @@ name: Deploy (Cloudflare Pages)
 #     CLOUDFLARE_ACCOUNT_ID   The Cloudflare account id that owns the Pages project.
 #
 #   Variables (vars.*), inlined into the static export at BUILD time (NEXT_PUBLIC_*):
-#     NEXT_PUBLIC_API_URL     Base URL of the civfix API (e.g. https://api.civfix.example). The admin
-#                             dashboard is served at admin.civfix.org and talks to this API. The API's
-#                             WEB_ORIGINS must include https://admin.civfix.org for CORS + cookies.
+#     NEXT_PUBLIC_API_URL        Leave unset: both environments call the API same-origin (see below).
+#                                Setting it points the build at a cross-origin API instead.
+#     NEXT_PUBLIC_CARTO_API_KEY  Optional publishable CARTO key for the basemap tiles.
 #
 # The project name + prebuilt output directory come from wrangler.jsonc, so the deploy step is just
 # `pages deploy` (no args). The project is created automatically by the first run. We use Direct Upload
 # (build here, ship the prebuilt out/) rather than Cloudflare's native Git build; @civfix/shared installs
-# from the public-read private registry via the committed .npmrc, so no submodule checkout is needed.
+# from the public-read private registry via the committed .npmrc.
 # SPA deep links and security/cache headers are handled by the app's public/{_redirects,_headers}
 # (copied into out/).
 
 # Ref -> environment (issue https://github.com/civfix/issue-tracker/issues/108):
 #   push to main       -> STAGING    --branch=staging -> staging.civfix-admin.pages.dev -> admin.civfix.dev
 #                         (via the civfix-infra staging Caddy, which reverse-proxies the SPA to that
-#                         alias — env/staging.sh ADMIN_SPA_UPSTREAM)
+#                         alias: env/staging.sh ADMIN_SPA_UPSTREAM)
 #   published v* tag   -> PRODUCTION --branch=main    -> civfix-admin.pages.dev          -> admin.civfix.org
 #
 # There is no `dev` branch: feature branches PR into main, main IS the staging lane, and cutting a
@@ -38,7 +38,7 @@ on:
     branches: [main]
   release:
     # `released`, NOT `published`: `published` also fires for a PRERELEASE, and a prerelease must never
-    # reach admin.civfix.org — the operator plane. The regex gate below is the second guard.
+    # reach admin.civfix.org, the operator plane. The regex gate below is the second guard.
     types: [released]
   workflow_dispatch:
 
@@ -117,7 +117,7 @@ jobs:
       # hash that already includes the NEXT_PUBLIC_* vars, so a changed API URL or source file rebuilds.
       # The key is scoped by DEPLOY_ENV anyway: staging and production build the same commit, and
       # `.next/cache` is restored underneath Turbo, so the two must never share one. (Admin happens to
-      # build identically in both environments today — this keeps that from becoming load-bearing.)
+      # build identically in both environments today; this keeps that from becoming load-bearing.)
       - name: Restore Turbo + Next.js build cache
         uses: actions/cache@v4
         with:
