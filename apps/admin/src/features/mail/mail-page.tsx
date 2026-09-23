@@ -4,8 +4,10 @@ import * as React from "react"
 import {
   DEFAULT_FORWARD_BODY_TEMPLATE,
   DEFAULT_FORWARD_SUBJECT_TEMPLATE,
+  INBOX_FEED_FILTER_LABELS,
   MAIL_STATUS_LABELS,
   relativeAgo,
+  type InboxFeedItemDTO,
   type MailMessageDTO,
   type MailThreadDTO,
   type MailThreadListItemDTO,
@@ -32,8 +34,17 @@ import {
   useSetMailStatus,
 } from "@/features/mail/use-mail"
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
-import { useInboxListInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
+import { useInboxFeedInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
+import {
+  INBOX_EMPTY_COPY,
+  INBOX_FEED_FILTER_ORDER,
+  emailFocusKey,
+  feedKey,
+  isInboxFeedFilter,
+  parseFeedKey,
+  resolveFeedSelection,
+} from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
@@ -50,8 +61,6 @@ const BOX_LABEL: Record<string, string> = {
   in: "Inbound",
   out: "Outbound",
   attn: "Needs attention",
-  unread: "Unread",
-  archived: "Archived",
 }
 
 const DELIVERY_BADGE = {
@@ -79,7 +88,9 @@ function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
 
 function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
   if (!focusId) return { folder: "outreach", id: null }
-  if (focusId.startsWith("inbox:")) return { folder: "inbox", id: focusId.slice("inbox:".length) }
+  if (focusId.startsWith("inbox:")) {
+    return { folder: "inbox", id: emailFocusKey(focusId.slice("inbox:".length)) }
+  }
   return { folder: "outreach", id: focusId }
 }
 
@@ -231,7 +242,7 @@ function MailRow({
   )
 }
 
-function MailReader({ threadId }: { threadId: string }) {
+function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: string | null }) {
   const q = useMailThread(threadId)
   const nav = useNav()
   const toast = useToast()
@@ -319,7 +330,7 @@ function MailReader({ threadId }: { threadId: string }) {
             {MAIL_STATUS_LABELS[sel.status]}
           </span>
         </div>
-        {(sel.jurisdictionGeoid || sel.reportId) && (
+        {(sel.jurisdictionGeoid || sel.reportId || eventId) && (
           <div className="mail-reader-links">
             {sel.jurisdictionGeoid && (
               <button
@@ -339,6 +350,16 @@ function MailReader({ threadId }: { threadId: string }) {
                 onClick={() => nav("reports", sel.reportId!)}
               >
                 <Icons.FileText size={12} /> View report
+              </button>
+            )}
+            {eventId && (
+              <button
+                type="button"
+                className="lnk-inline"
+                title="Open the event this thread is about"
+                onClick={() => nav("events", eventId)}
+              >
+                <Icons.Calendar size={12} /> View event
               </button>
             )}
           </div>
@@ -467,11 +488,21 @@ function MailReader({ threadId }: { threadId: string }) {
   )
 }
 
+function InboxFeedReader({ selKey, item }: { selKey: string; item: InboxFeedItemDTO | undefined }) {
+  if (item?.source === "reply") {
+    return <MailReader threadId={item.threadId} eventId={item.cleanupId} />
+  }
+  const parsed = parseFeedKey(selKey)
+  if (parsed?.source === "email") return <InboxReader id={parsed.id} />
+  return <EmptyState title="No message selected" icon={<Icons.Inbox size={20} />} />
+}
+
 export function MailPage({ focusId }: SectionPageProps) {
   const initial = parseFocus(focusId)
   const [folder, setFolder] = React.useState<Folder>(initial.folder)
   const [box, setBox] = React.useState("all")
   const [selId, setSelId] = React.useState<string | null>(initial.id)
+  const [selItem, setSelItem] = React.useState<{ item: InboxFeedItemDTO; view: string } | null>(null)
   const [composeOpen, setComposeOpen] = React.useState(false)
   const [templateOpen, setTemplateOpen] = React.useState(false)
   const outreach = folder === "outreach"
@@ -500,34 +531,31 @@ export function MailPage({ focusId }: SectionPageProps) {
         }
       : {},
   )
-  const inboxListQuery = useInboxListInfinite(
-    !outreach
-      ? {
-          status:
-            box === "unread"
-              ? ("unread" as const)
-              : box === "archived"
-                ? ("archived" as const)
-                : ("all" as const),
-          q,
-        }
-      : { status: "all" as const },
+  const feedFilter = isInboxFeedFilter(box) ? box : "all"
+  const feedView = `${feedFilter}:${q ?? ""}`
+  const inboxFeedQuery = useInboxFeedInfinite(
+    !outreach ? { filter: feedFilter, q } : { filter: "all" },
   )
 
   const mailItems = React.useMemo(
     () => mailListQuery.data?.pages.flatMap((p) => p.items) ?? [],
     [mailListQuery.data],
   )
-  const inboxItems = React.useMemo(
-    () => inboxListQuery.data?.pages.flatMap((p) => p.items) ?? [],
-    [inboxListQuery.data],
+  const feedItems = React.useMemo(
+    () => inboxFeedQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [inboxFeedQuery.data],
   )
-  const activeListQuery = outreach ? mailListQuery : inboxListQuery
-  const activeCount = outreach ? mailItems.length : inboxItems.length
+  const feedByKey = React.useMemo(
+    () => new Map<string, InboxFeedItemDTO>(feedItems.map((item) => [feedKey(item), item])),
+    [feedItems],
+  )
+  const activeListQuery = outreach ? mailListQuery : inboxFeedQuery
+  const activeCount = outreach ? mailItems.length : feedItems.length
   const activeIds = React.useMemo(
-    () => (outreach ? mailItems.map((t) => t.id) : inboxItems.map((i) => i.id)),
-    [outreach, mailItems, inboxItems],
+    () => (outreach ? mailItems.map((t) => t.id) : [...feedByKey.keys()]),
+    [outreach, mailItems, feedByKey],
   )
+  const selFeedItem = outreach ? undefined : resolveFeedSelection(feedByKey, selItem, selId, feedView)
 
   const statsQuery = useMailStats()
   const stats = statsQuery.data
@@ -541,9 +569,11 @@ export function MailPage({ focusId }: SectionPageProps) {
     }
   }, [focusId])
   React.useEffect(() => {
-    if (!selId && activeIds.length) setSelId(activeIds[0]!)
-    if (selId && activeIds.length && !activeIds.includes(selId)) setSelId(activeIds[0]!)
-  }, [activeIds, selId])
+    const listed = selId ? feedByKey.get(selId) : undefined
+    if (listed) setSelItem({ item: listed, view: feedView })
+    if (!activeIds.length || (selId && (activeIds.includes(selId) || selFeedItem))) return
+    setSelId(activeIds[0]!)
+  }, [activeIds, selId, selFeedItem, feedByKey, feedView])
 
   const switchFolder = (next: Folder) => {
     if (next === folder) return
@@ -560,8 +590,10 @@ export function MailPage({ focusId }: SectionPageProps) {
       const row = mailItems.find((t) => t.id === id)
       if (row?.unread) markRead.mutate({ id })
     } else {
-      const row = inboxItems.find((i) => i.id === id)
-      if (row?.unread) setInboxStatus.mutate({ id, status: "read" })
+      const item = feedByKey.get(id)
+      if (!item?.unread) return
+      if (item.source === "email") setInboxStatus.mutate({ id: item.id, status: "read" })
+      else markRead.mutate({ id: item.threadId })
     }
   }
 
@@ -587,11 +619,7 @@ export function MailPage({ focusId }: SectionPageProps) {
         { value: "out", label: "Outbound" },
         { value: "attn", label: "Needs attention" },
       ]
-    : [
-        { value: "all", label: "All" },
-        { value: "unread", label: "Unread" },
-        { value: "archived", label: "Archived" },
-      ]
+    : INBOX_FEED_FILTER_ORDER.map((f) => ({ value: f, label: INBOX_FEED_FILTER_LABELS[f] }))
 
   return (
     <>
@@ -599,8 +627,8 @@ export function MailPage({ focusId }: SectionPageProps) {
         title="Mail"
         subtitle={
           <span>
-            Two-way outreach with municipal contacts, plus catch-all inbound to{" "}
-            <span className="mono">*@civfix.org</span>.
+            Two-way outreach with municipal contacts. The Inbox collects city replies and all other
+            mail sent to civfix.
           </span>
         }
       >
@@ -699,7 +727,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
-            placeholder={outreach ? "Search org, subject, sender…" : "Search sender, subject…"}
+            placeholder={outreach ? "Search org, subject, sender…" : "Search sender, subject, org…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -709,7 +737,7 @@ export function MailPage({ focusId }: SectionPageProps) {
       <div className="master-detail">
         <section className="card md-list">
           <div className="card-head">
-            <h3>{BOX_LABEL[box] ?? "All"}</h3>
+            <h3>{outreach ? (BOX_LABEL[box] ?? "All") : INBOX_FEED_FILTER_LABELS[feedFilter]}</h3>
             <div className="spacer" />
             <span className="meta">{activeCount}</span>
           </div>
@@ -725,11 +753,13 @@ export function MailPage({ focusId }: SectionPageProps) {
                   sub="Try a different search."
                   icon={<Icons.Search size={20} />}
                 />
+              ) : outreach ? (
+                <EmptyState title="Empty" sub="No messages here." icon={<Icons.Mail size={20} />} />
               ) : (
                 <EmptyState
-                  title="Empty"
-                  sub="No messages here."
-                  icon={outreach ? <Icons.Mail size={20} /> : <Icons.Inbox size={20} />}
+                  title={INBOX_EMPTY_COPY[feedFilter].title}
+                  sub={INBOX_EMPTY_COPY[feedFilter].sub}
+                  icon={<Icons.Inbox size={20} />}
                 />
               )
             ) : (
@@ -743,14 +773,17 @@ export function MailPage({ focusId }: SectionPageProps) {
                         onClick={() => select(t.id)}
                       />
                     ))
-                  : inboxItems.map((i) => (
-                      <InboxRow
-                        key={i.id}
-                        item={i}
-                        selected={selId === i.id}
-                        onClick={() => select(i.id)}
-                      />
-                    ))}
+                  : feedItems.map((item) => {
+                      const key = feedKey(item)
+                      return (
+                        <InboxRow
+                          key={key}
+                          item={item}
+                          selected={selId === key}
+                          onClick={() => select(key)}
+                        />
+                      )
+                    })}
                 {activeListQuery.hasNextPage && (
                   <button
                     type="button"
@@ -772,7 +805,7 @@ export function MailPage({ focusId }: SectionPageProps) {
             outreach ? (
               <MailReader key={selId} threadId={selId} />
             ) : (
-              <InboxReader key={selId} id={selId} />
+              <InboxFeedReader key={selId} selKey={selId} item={selFeedItem} />
             )
           ) : (
             <EmptyState

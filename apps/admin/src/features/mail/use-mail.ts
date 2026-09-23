@@ -63,10 +63,11 @@ export function useMailStats() {
   })
 }
 
-function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
+export function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
   if (id) qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.mail.all })
   qc.invalidateQueries({ queryKey: queryKeys.mail.stats })
+  qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
 }
 
