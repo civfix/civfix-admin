@@ -2508,6 +2508,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .evt-msg-who { font-weight: 700; font-size: 12px; color: var(--sun-700); }
 .evt-msg-when { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
 .evt-msg-text { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink); line-height: 1.4; }
+.evt-post-hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
 
 /* -- Report discussion (public comment thread; distinct from the Activity timeline) -- */
 .dsc-list { display: flex; flex-direction: column; gap: 10px; }
