@@ -2844,6 +2844,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .mail-bounce-note { background: var(--bloom-50); color: var(--bloom-700); border: 1px solid color-mix(in oklab, var(--bloom) 18%, transparent); }
 .mail-action-note { background: var(--sky-50); color: var(--sky-700); border: 1px solid color-mix(in oklab, var(--sky) 20%, transparent); }
+.mail-withheld-note { margin-top: 8px; }
+.mail-withheld-note .btn { flex-shrink: 0; margin-left: auto; }
 .mail-reader-foot { padding: 14px 18px; border-top: 1px solid var(--border-soft); display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Mail thread bubbles */

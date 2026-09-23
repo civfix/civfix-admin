@@ -47,6 +47,7 @@ import {
 } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
+import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav, useToast } from "@/store/ui-store"
 import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
@@ -264,6 +265,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
 
   const who = correspondent(sel)
   const whoLabel = sel.org || who
+  const hasWithheld = sel.messages.some((m) => m.publication === "withheld")
 
   const sendReply = () => {
     const body = text.trim()
@@ -391,6 +393,9 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
                   )}
                 </div>
                 <p className="mail-msg-body">{msg.body}</p>
+                {msg.publication === "withheld" && (
+                  <WithheldReplyNote threadId={sel.id} msg={msg} isReport={sel.reportId !== null} />
+                )}
                 {msg.truncated && (
                   <div className="hint">This message was cut at 64 KB for display.</div>
                 )}
@@ -424,7 +429,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
             reporting form.
           </div>
         )}
-        {sel.dir === "in" && sel.status === "needs_action" && (
+        {sel.dir === "in" && sel.status === "needs_action" && !hasWithheld && (
           <div className="mail-action-note">
             <Icons.CornerArr size={14} />
             Suggested: re-route this jurisdiction&apos;s contact in Jurisdictions.
