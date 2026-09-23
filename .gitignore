@@ -21,13 +21,13 @@ dist/
 npm-debug.log*
 pnpm-debug.log*
 
-# Env files (never commit secrets)
+# Env files (never commit secrets); only the documented example is tracked
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Editor / OS
-.DS_Store
+**/.DS_Store
 Thumbs.db
 .idea/
 .vscode/
