@@ -1,4 +1,5 @@
-const SHORT_ID_LENGTH = 8
+import { SHORT_ID_LENGTH } from "@/lib/display"
+
 const ID_DASHES = /-/g
 
 export function shortId(id: string): string {

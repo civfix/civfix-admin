@@ -11,8 +11,6 @@ import { useDebounced } from "@/hooks/use-debounced"
 import { useReport, useReportListInfinite } from "@/features/reports/use-reports"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-const SEARCH_DEBOUNCE_MS = 250
-
 type ReportFilter = "needs_verification" | "in_progress" | "completed" | "flagged" | "all"
 
 const FILTER_COUNT_KEY: Record<ReportFilter, keyof AdminReportCounts> = {
@@ -48,7 +46,7 @@ function filterOptions(counts: AdminReportCounts) {
 export function ReportsPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<ReportFilter>("needs_verification")
   const [query, setQuery] = React.useState("")
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
   const listParams = {

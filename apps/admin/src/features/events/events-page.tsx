@@ -12,8 +12,6 @@ import { EventListPane } from "@/features/events/event-list-pane"
 import { useEventListInfinite } from "@/features/events/use-events"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-const SEARCH_DEBOUNCE_MS = 250
-
 type EventFilter = keyof AdminEventCounts
 
 const EMPTY_COUNTS: AdminEventCounts = {
@@ -43,7 +41,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
   const listParams = {
     filter: filter === "all" ? undefined : filter,
     q: debouncedQuery.trim() || undefined,

@@ -15,7 +15,7 @@ import { confirmDialog } from "@/components/shared/dialog"
 import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { ReportActivity } from "@/features/reports/report-activity"
-import { CityMessageCard, RoutedToCard } from "@/features/reports/report-city-cards"
+import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
 import { ReportDiscussion } from "@/features/reports/report-discussion"
 import { shortId } from "@/features/reports/report-id"
 import { ReportLinkedEvents } from "@/features/reports/report-linked-events"
@@ -25,6 +25,7 @@ import { outreachView, type OutreachView } from "@/features/reports/report-outre
 import { ReporterCard } from "@/features/reports/report-reporter-card"
 import { SendToJurisdictionCard } from "@/features/reports/report-send-card"
 import { sendPanelView } from "@/features/reports/send-panel"
+import { useReportVerdictControls } from "@/features/reports/use-report-verdict-actions"
 import {
   useFlagReport,
   useRemoveReport,
@@ -95,8 +96,22 @@ function ReportSummary({ report }: { report: AdminReportDTO }) {
   )
 }
 
-function StatusButtons({ report }: { report: AdminReportDTO }) {
+function useReportQuickActions() {
   const statusMutation = useSetReportStatus()
+  const flagMutation = useFlagReport()
+  const removeMutation = useRemoveReport()
+  return { statusMutation, flagMutation, removeMutation }
+}
+
+type ReportQuickActionMutations = ReturnType<typeof useReportQuickActions>
+
+function StatusButtons({
+  report,
+  statusMutation,
+}: {
+  report: AdminReportDTO
+  statusMutation: ReportQuickActionMutations["statusMutation"]
+}) {
   // A status newer than this build arrives unvalidated; offer no transition rather than guess one.
   const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status] ?? []
 
@@ -138,13 +153,14 @@ function StatusButtons({ report }: { report: AdminReportDTO }) {
 
 function ReportQuickActions({
   report,
+  mutations,
   onRemoved,
 }: {
   report: AdminReportDTO
+  mutations: ReportQuickActionMutations
   onRemoved: (id: string) => void
 }) {
-  const flagMutation = useFlagReport()
-  const removeMutation = useRemoveReport()
+  const { statusMutation, flagMutation, removeMutation } = mutations
 
   const onRemove = async () => {
     const ok = await confirmDialog({
@@ -160,7 +176,7 @@ function ReportQuickActions({
   return (
     <div className="rep-actions">
       <span className="rep-actions-label">Quick status</span>
-      <StatusButtons report={report} />
+      <StatusButtons report={report} statusMutation={statusMutation} />
       <div className="spacer" />
       <button
         className={`btn ${report.flagged ? "flag-on" : ""}`}
@@ -184,6 +200,11 @@ export function ReportDetail({
   onRemoved: (id: string) => void
 }) {
   const reportQuery = useReport(reportId)
+  // Drafts and mutations live above the loading and error returns: a failed detail refetch must not
+  // clear a typed message or re-enable a Send whose request is still in flight.
+  const quickActions = useReportQuickActions()
+  const followup = useCityFollowup()
+  const verdictControls = useReportVerdictControls()
   const [approvedLocally, setApprovedLocally] = React.useState(false)
 
   if (reportQuery.isLoading) return <LoadingState label="Loading report..." />
@@ -221,13 +242,18 @@ export function ReportDetail({
           <SendToJurisdictionCard
             report={report}
             panel={panel}
+            controls={verdictControls}
             onApprovedChange={setApprovedLocally}
           />
-          <CityMessageCard report={report} followupBlocked={panel.followupBlocked} />
+          <CityMessageCard
+            report={report}
+            followupBlocked={panel.followupBlocked}
+            followup={followup}
+          />
         </div>
       </div>
 
-      <ReportQuickActions report={report} onRemoved={onRemoved} />
+      <ReportQuickActions report={report} mutations={quickActions} onRemoved={onRemoved} />
     </div>
   )
 }

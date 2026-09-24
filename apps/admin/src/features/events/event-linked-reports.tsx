@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/shared/page-primitives"
 import { confirmDialog } from "@/components/shared/dialog"
 import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
-import { useUnlinkReport } from "@/features/events/use-events"
+import type { useUnlinkReport } from "@/features/events/use-events"
 import { useNav } from "@/store/ui-store"
 
 function LinkedReportCard({
@@ -57,14 +57,15 @@ function LinkedReportCard({
 export function EventLinkedReports({
   event,
   linking,
+  unlinkMutation,
   onOpenPicker,
 }: {
   event: AdminEventDTO
   linking: boolean
+  unlinkMutation: ReturnType<typeof useUnlinkReport>
   onOpenPicker: () => void
 }) {
   const nav = useNav()
-  const unlinkMutation = useUnlinkReport()
 
   const onUnlink = async (report: LinkedReportRef) => {
     const ok = await confirmDialog({

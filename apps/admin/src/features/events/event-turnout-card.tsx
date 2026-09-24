@@ -80,9 +80,20 @@ function OutcomeForm({
   )
 }
 
-export function EventTurnoutCard({ event }: { event: AdminEventDTO }) {
+export function useOutcomeDraft() {
   const outcomeMutation = useSetEventOutcome()
   const [bagsInput, setBagsInput] = React.useState("")
+  return { outcomeMutation, bagsInput, setBagsInput }
+}
+
+export function EventTurnoutCard({
+  event,
+  outcome,
+}: {
+  event: AdminEventDTO
+  outcome: ReturnType<typeof useOutcomeDraft>
+}) {
+  const { outcomeMutation, bagsInput, setBagsInput } = outcome
   const bags = parseBags(bagsInput)
   const canLogOutcome = event.status === "in_progress" || event.status === "completed"
 

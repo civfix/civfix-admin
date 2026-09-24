@@ -6,13 +6,16 @@ import { RouteReportRequestSchema, type AdminReportDTO } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { msgWhen } from "@/features/reports/report-chat"
 import type { SendPanelView } from "@/features/reports/send-panel"
-import { useReportVerdictActions } from "@/features/reports/use-report-verdict-actions"
+import {
+  reportVerdictActions,
+  type ReportVerdictControls,
+} from "@/features/reports/use-report-verdict-actions"
 import { useNav } from "@/store/ui-store"
 
 const ROUTE_NOTE_MAX = RouteReportRequestSchema.shape.note.unwrap().maxLength ?? undefined
 const ROUTE_NOTE_ROWS = 3
 
-type VerdictActions = ReturnType<typeof useReportVerdictActions>
+type VerdictActions = ReturnType<typeof reportVerdictActions>
 
 const NO_ROUTE_HINT = {
   no_jurisdiction:
@@ -177,13 +180,15 @@ function VerdictButtons({ panel, actions }: { panel: SendPanelView; actions: Ver
 export function SendToJurisdictionCard({
   report,
   panel,
+  controls,
   onApprovedChange,
 }: {
   report: AdminReportDTO
   panel: SendPanelView
+  controls: ReportVerdictControls
   onApprovedChange: (approved: boolean) => void
 }) {
-  const actions = useReportVerdictActions(report, panel.approvesOnSend, onApprovedChange)
+  const actions = reportVerdictActions(controls, report, panel.approvesOnSend, onApprovedChange)
   return (
     <div className="sub">
       <div className="sub-head">
