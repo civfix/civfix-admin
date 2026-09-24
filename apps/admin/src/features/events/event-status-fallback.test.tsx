@@ -3,6 +3,8 @@ import type {
   AdminEventDTO,
   AdminEventListItemDTO,
   AdminEventListResponse,
+  AdminOrgDTO,
+  AdminOrgEventListResponse,
   EventStatus,
 } from "@civfix/shared"
 import { describe, expect, it, vi } from "vitest"
@@ -10,8 +12,9 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
-import { detailCard, listCard } from "@/test/panes"
+import { detailCard, listCard, queueRowOf } from "@/test/panes"
 import { EventsPage } from "@/features/events/events-page"
+import { OrgEventsPanel } from "@/features/orgs/org-events-panel"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -65,5 +68,21 @@ describe("EventsPage with an event status this build does not know", () => {
     expect(await within(card).findByRole("heading", { name: "Beach sweep" })).toBeInTheDocument()
     expect(within(card).getByText("postponed")).toHaveClass("pill", "priority-low")
     expect(screen.queryByText("Upcoming", { selector: ".pill" })).toBeNull()
+  })
+})
+
+describe("the org events tab with an event status this build does not know", () => {
+  it("renders the raw status in a neutral pill, not as Upcoming", async () => {
+    apiMock.adminListOrgEvents.mockResolvedValue({
+      items: [POSTPONED],
+      nextCursor: null,
+    } satisfies AdminOrgEventListResponse)
+    const org = { id: "org-1", eventCount: 1 } as AdminOrgDTO
+
+    renderWithQuery(<OrgEventsPanel org={org} />)
+
+    const row = queueRowOf(await screen.findByText("Beach sweep"))
+    expect(within(row).getByText("postponed")).toHaveClass("pill", "priority-low")
+    expect(within(row).queryByText("Upcoming")).toBeNull()
   })
 })
