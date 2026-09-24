@@ -32,6 +32,7 @@ export function getApiClient(): ApiClient {
     baseURL: API_BASE_URL,
     fetchImpl: resolveFetch(),
     defaultHeaders: {
+      // The backend picks the cookie + CSRF transport (not bearer) from this header.
       "x-client": "web",
     },
     getCsrfToken: () => getCsrfToken(),
