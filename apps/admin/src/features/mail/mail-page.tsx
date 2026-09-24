@@ -21,6 +21,8 @@ import {
   type FilterOption,
 } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { useModalFocus } from "@/components/shared/modal-focus"
 import {
   useComposeMail,
   useForwardTemplateDefault,
@@ -35,6 +37,7 @@ import {
 } from "@/features/mail/use-mail"
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useInboxFeedInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
+import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import {
   INBOX_EMPTY_COPY,
@@ -116,55 +119,70 @@ function correspondent(sel: MailThreadDTO): string {
   return sel.to || "—"
 }
 
-function ComposeModal({
-  open,
-  onClose,
-  onSend,
-  pending,
-}: {
+interface ComposeModalProps {
   open: boolean
   onClose: () => void
   onSend: (input: { to: string; subject: string; body: string }) => void
   pending: boolean
-}) {
+}
+
+function ComposeModal(props: ComposeModalProps) {
+  if (!props.open) return null
+  return <ComposeEditor {...props} />
+}
+
+function ComposeEditor({ onClose, onSend, pending }: ComposeModalProps) {
   const [to, setTo] = React.useState("")
   const [subject, setSubject] = React.useState("")
   const [body, setBody] = React.useState("")
+  const modalRef = useModalFocus<HTMLDivElement>(true)
+  const toRef = React.useRef<HTMLInputElement>(null)
+  const titleId = React.useId()
+  const toId = React.useId()
+  const subjectId = React.useId()
+  const bodyId = React.useId()
 
+  // Focused here rather than with autoFocus: autoFocus lands before useModalFocus records the element
+  // to restore, so closing would return focus to the dead field instead of the Compose button.
   React.useEffect(() => {
-    if (open) {
-      setTo("")
-      setSubject("")
-      setBody("")
-    }
-  }, [open])
+    toRef.current?.focus()
+  }, [])
 
-  if (!open) return null
+  const backdrop = usePristineDismiss(onClose, to === "" && subject === "" && body === "")
+
   const canSend = !!to.trim() && !!subject.trim() && !!body.trim() && !pending
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal compose-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" {...backdrop}>
+      <div
+        ref={modalRef}
+        className="modal compose-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="modal-head">
-          <h3>New message</h3>
-          <button className="closebtn" onClick={onClose}>
+          <h3 id={titleId}>New message</h3>
+          <button className="closebtn" onClick={onClose} aria-label="Close">
             <Icons.X size={16} />
           </button>
         </div>
         <div className="modal-body">
           <div className="compose-field">
-            <label>To</label>
+            <label htmlFor={toId}>To</label>
             <input
+              id={toId}
+              ref={toRef}
               type="email"
               placeholder="contact@city.gov"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              autoFocus
             />
           </div>
           <div className="compose-field">
-            <label>Subject</label>
+            <label htmlFor={subjectId}>Subject</label>
             <input
+              id={subjectId}
               type="text"
               placeholder="Subject line"
               value={subject}
@@ -172,8 +190,9 @@ function ComposeModal({
             />
           </div>
           <div className="compose-field">
-            <label>Message</label>
+            <label htmlFor={bodyId}>Message</label>
             <textarea
+              id={bodyId}
               rows={7}
               placeholder="Write your message…"
               value={body}
@@ -399,24 +418,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
                 {msg.truncated && (
                   <div className="hint">This message was cut at 64 KB for display.</div>
                 )}
-                {msg.attachments.length > 0 && (
-                  <div className="mail-attachments">
-                    {msg.attachments.map((att) => (
-                      <a
-                        key={att.key}
-                        className="btn sm"
-                        href={att.key}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Icons.ExternalLink size={13} /> {att.filename}
-                        <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                          {(att.size / 1024).toFixed(0)}k
-                        </span>
-                      </a>
-                    ))}
-                  </div>
-                )}
+                <AttachmentList attachments={msg.attachments} />
               </div>
             )
           })}

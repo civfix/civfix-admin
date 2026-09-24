@@ -12,6 +12,7 @@ import { Icons } from "@/components/icons"
 import { promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
+import { orgStatusView } from "@/lib/org-status"
 import {
   SOCIAL_PLATFORMS as PROFILE_SOCIALS,
   buildUpdateRequest,
@@ -26,7 +27,7 @@ import {
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { toastUnlessShownInline, useUpdateOrg } from "@/features/orgs/use-orgs"
-import { ORG_KIND_LABEL, ORG_STATUS_VIEW } from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
 import { useNav, useToast } from "@/store/ui-store"
 
 /** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
@@ -41,7 +42,7 @@ export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
 
 function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) {
   const nav = useNav()
-  const statusView = ORG_STATUS_VIEW[org.verifiedStatus]
+  const statusView = orgStatusView(org.verifiedStatus)
   const socials = SOCIAL_PLATFORMS.filter((p) => !!org.socialLinks?.[p])
   return (
     <div className="org-panel">
@@ -182,7 +183,10 @@ const EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
 function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }) {
   const update = useUpdateOrg()
   const toast = useToast()
-  const [draft, setDraft] = React.useState<OrgProfileDraft>(() => draftFromOrg(org))
+  // The draft and the diff share one snapshot taken when editing starts: diffing against the live
+  // prop would PATCH an untouched field back to its old value after a mid-edit refetch.
+  const [baseline] = React.useState(org)
+  const [draft, setDraft] = React.useState<OrgProfileDraft>(() => draftFromOrg(baseline))
   const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
   const [attempted, setAttempted] = React.useState(false)
   const [logoUploading, setLogoUploading] = React.useState(false)
@@ -194,8 +198,8 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
     () => (attempted ? { ...validateProfileDraft(draft), ...serverErrors } : serverErrors),
     [attempted, draft, serverErrors],
   )
-  const dirty = buildUpdateRequest(org, draft, "x") !== null
-  const slugChanged = draft.slug.trim().toLowerCase() !== org.slug
+  const dirty = buildUpdateRequest(baseline, draft, "x") !== null
+  const slugChanged = draft.slug.trim().toLowerCase() !== baseline.slug
 
   const save = async () => {
     if (busy.current || update.isPending || logoUploading) return
@@ -208,7 +212,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
       reason = await promptDialog({
         title: `Save changes to ${org.name}?`,
         body: slugChanged
-          ? `The slug changes from /${org.slug} to /${draft.slug.trim().toLowerCase()}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
+          ? `The slug changes from /${baseline.slug} to /${draft.slug.trim().toLowerCase()}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
           : "The change is visible on the public page immediately. The reason is written to the audit log.",
         label: "Reason (required)",
         placeholder: "Corrected the website at the org's request…",
@@ -220,7 +224,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
       busy.current = false
     }
     if (reason === null || reason.trim() === "") return
-    const body = buildUpdateRequest(org, draft, reason)
+    const body = buildUpdateRequest(baseline, draft, reason)
     if (!body) {
       onDone()
       return

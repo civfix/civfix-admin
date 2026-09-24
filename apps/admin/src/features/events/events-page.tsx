@@ -14,8 +14,10 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { useModalFocus } from "@/components/shared/modal-focus"
 import { useDebounced } from "@/hooks/use-debounced"
-import { cancelBlockedFor, EVENT_STATUS_VIEW } from "@/lib/event-status"
+import { cancelBlockedFor, EVENT_STATUS_VIEW, eventStatusView } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
@@ -38,8 +40,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
-
-const STATUS_VIEW = EVENT_STATUS_VIEW
 
 const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> = {
   create: Icons.Pin,
@@ -133,6 +133,18 @@ function LinkReportsPicker({
 }) {
   const [query, setQuery] = React.useState("")
   const [picked, setPicked] = React.useState<Set<string>>(() => new Set())
+  const modalRef = useModalFocus<HTMLDivElement>(true)
+  const searchRef = React.useRef<HTMLInputElement>(null)
+  const titleId = React.useId()
+
+  // Focused here rather than with autoFocus: autoFocus lands before useModalFocus records the element
+  // to restore, so closing would return focus to the dead field instead of the opener.
+  React.useEffect(() => {
+    searchRef.current?.focus()
+  }, [])
+
+  // The search text is cheap to retype, so only a selection makes the picker a draft worth keeping.
+  const backdrop = usePristineDismiss(onClose, picked.size === 0)
 
   const listQuery = useReportList({ q: query.trim() || undefined })
   const candidates = React.useMemo<AdminReportListItemDTO[]>(
@@ -152,11 +164,17 @@ function LinkReportsPicker({
   const canLink = picked.size > 0 && !pending
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" {...backdrop}>
+      <div
+        ref={modalRef}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="modal-head">
-          <h3>Link reports</h3>
-          <button className="closebtn" onClick={onClose}>
+          <h3 id={titleId}>Link reports</h3>
+          <button className="closebtn" onClick={onClose} aria-label="Close">
             <Icons.X size={16} />
           </button>
         </div>
@@ -164,11 +182,11 @@ function LinkReportsPicker({
           <div className="evt-pick-search">
             <Icons.Search size={14} />
             <input
+              ref={searchRef}
               type="text"
               placeholder="Search title, place, reporter…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
             />
           </div>
           {listQuery.isLoading ? (
@@ -244,6 +262,7 @@ function EventRow({
 }) {
   const kindView = eventKindView(item.eventKind)
   const KindIco = kindView.icon
+  const statusPill = eventStatusView(item.status)
   const nav = useNav()
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
@@ -290,9 +309,7 @@ function EventRow({
         </div>
       </div>
       <div className="trailing">
-        <span className={`pill ${STATUS_VIEW[item.status].cls} tight`}>
-          {STATUS_VIEW[item.status].label}
-        </span>
+        <span className={`pill ${statusPill.cls} tight`}>{statusPill.label}</span>
         <span className="age">{item.date.abs}</span>
       </div>
     </div>
@@ -373,6 +390,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   }
 
   const cancelBlockedReason = cancelBlockedFor(event.status)
+  const statusPill = eventStatusView(event.status)
 
   const onCancel = async () => {
     const ok = await confirmDialog({
@@ -444,10 +462,10 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
           </span>
         )}
         <span
-          className={`pill ${STATUS_VIEW[event.status].cls}`}
+          className={`pill ${statusPill.cls}`}
           style={event.flagged ? undefined : { marginLeft: "auto" }}
         >
-          {STATUS_VIEW[event.status].label}
+          {statusPill.label}
         </span>
       </div>
 
@@ -821,10 +839,10 @@ export function EventsPage({ focusId }: SectionPageProps) {
             { value: "upcoming", label: "Upcoming", count: counts.upcoming },
             {
               value: "in_progress",
-              label: STATUS_VIEW.in_progress.label,
+              label: EVENT_STATUS_VIEW.in_progress.label,
               count: counts.in_progress,
             },
-            { value: "completed", label: STATUS_VIEW.completed.label, count: counts.completed },
+            { value: "completed", label: EVENT_STATUS_VIEW.completed.label, count: counts.completed },
             { value: "flagged", label: "Flagged", count: counts.flagged },
           ]}
           value={filter}

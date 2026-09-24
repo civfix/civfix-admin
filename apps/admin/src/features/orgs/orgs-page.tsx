@@ -10,15 +10,12 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
 import { useDebounced } from "@/hooks/use-debounced"
 import { formatDate, formatDateTime } from "@/lib/dates"
+import { orgStatusView } from "@/lib/org-status"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 import { MembersPanel } from "@/features/orgs/members-panel"
 import { OrgEventsPanel } from "@/features/orgs/org-events-panel"
 import { ProfilePanel } from "@/features/orgs/profile-panel"
-import {
-  ORG_KIND_LABEL,
-  ORG_STATUS_VIEW,
-  VerificationPanel,
-} from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL, VerificationPanel } from "@/features/orgs/verification-panel"
 import {
   ORG_FILTERS,
   ORG_FILTER_LABEL,
@@ -60,7 +57,7 @@ function OrgRow({
   selected: boolean
   onClick: () => void
 }) {
-  const view = ORG_STATUS_VIEW[org.verifiedStatus]
+  const view = orgStatusView(org.verifiedStatus)
   const suspended = !!org.suspendedAt
   return (
     <div
@@ -139,7 +136,7 @@ function OrgDetail({
   }
   const org = q.data
   if (!org) return null
-  const statusView = ORG_STATUS_VIEW[org.verifiedStatus]
+  const statusView = orgStatusView(org.verifiedStatus)
   const suspended = !!org.suspendedAt
 
   const onSuspend = async () => {

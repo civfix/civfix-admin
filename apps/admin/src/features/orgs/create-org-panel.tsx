@@ -4,6 +4,7 @@ import * as React from "react"
 import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
 import {
   buildCreateRequest,
   clearChangedFieldErrors,
@@ -88,9 +89,6 @@ function CreateOrgSlideOver({
     onClose()
   }, [onClose, pending])
 
-  // Escape dismisses an untouched panel; once there is a draft it is ignored (closing discards the
-  // draft, and Escape is too easy a reflex — dismissing the owner search, say — to make destructive).
-  // Cancel and the close button remain the deliberate way out.
   const pristine =
     owner === null &&
     draft.logoMediaId === null &&
@@ -101,13 +99,7 @@ function CreateOrgSlideOver({
     draft.slug === "" &&
     draft.description === "" &&
     draft.websiteUrl === ""
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && pristine) close()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [close, pristine])
+  const backdrop = usePristineDismiss(close, pristine)
 
   const localErrors = React.useMemo(
     () => (submitted ? validateCreate(draft, owner, reason) : {}),
@@ -160,7 +152,7 @@ function CreateOrgSlideOver({
 
   return (
     <>
-      <div className="panel-overlay open" onClick={close} />
+      <div className="panel-overlay open" {...backdrop} />
       <aside
         className="panel org-create-panel open"
         role="dialog"

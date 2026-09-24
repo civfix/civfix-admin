@@ -55,6 +55,11 @@ const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   banned: { cls: "status-flag", label: USER_STATUS_LABELS.banned },
 }
 
+// The client passes a status newer than this build through unvalidated; show it raw rather than crash.
+function userStatusView(status: UserStatus): { cls: string; label: string } {
+  return STATUS_VIEW[status] ?? { cls: "priority-low", label: status }
+}
+
 const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]> | "group", string> = {
   chat: "Cleanup chat",
   group: "Group chat",
@@ -347,7 +352,9 @@ function UserOrganizationRow({ org, nav }: { org: UserOrganization; nav: NavFn }
         </div>
       </div>
       <div className="trailing">
-        <span className={`pill ${ORG_ROLE_PILL[org.role]} tight`}>{ORG_ROLE_LABEL[org.role]}</span>
+        <span className={`pill ${ORG_ROLE_PILL[org.role] ?? "priority-low"} tight`}>
+          {ORG_ROLE_LABEL[org.role] ?? org.role}
+        </span>
       </div>
     </div>
   )
@@ -384,6 +391,7 @@ function UserDetail({ userId }: { userId: string }) {
   }
 
   const deleted = !!user.deletedAt
+  const statusView = userStatusView(user.status)
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "reports", label: "Reports" },
@@ -505,9 +513,7 @@ function UserDetail({ userId }: { userId: string }) {
               <Icons.Check size={11} /> Report-verified
             </span>
           )}
-          <span className={`pill ${STATUS_VIEW[user.status].cls}`}>
-            {STATUS_VIEW[user.status].label}
-          </span>
+          <span className={`pill ${statusView.cls}`}>{statusView.label}</span>
         </div>
       </div>
 
@@ -619,6 +625,7 @@ function UserRow({
   selected: boolean
   onClick: () => void
 }) {
+  const statusView = userStatusView(user.status)
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
       <UserAvatar user={user} />
@@ -650,9 +657,7 @@ function UserRow({
             Deleted
           </span>
         )}
-        <span className={`pill ${STATUS_VIEW[user.status].cls} tight`}>
-          {STATUS_VIEW[user.status].label}
-        </span>
+        <span className={`pill ${statusView.cls} tight`}>{statusView.label}</span>
       </div>
     </div>
   )

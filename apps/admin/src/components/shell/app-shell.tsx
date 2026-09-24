@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { BackBar } from "@/components/shell/back-bar"
+import { ErrorBoundary } from "@/components/shell/error-boundary"
 import { shellEscapeGoesHome } from "@/components/shell/escape-owner"
 import { Toast } from "@/components/shell/toast"
 import { DialogHost } from "@/components/shared/dialog"
@@ -46,9 +47,11 @@ export function AppShell() {
     <div className="shell-flat">
       <main className={`main ${isHome ? "main-home" : ""}`} key={page}>
         {!isHome && <BackBar page={page as SectionId} />}
-        <React.Suspense fallback={<LoadingState label="Loading..." />}>
-          <PageComponent {...pageProps} />
-        </React.Suspense>
+        <ErrorBoundary>
+          <React.Suspense fallback={<LoadingState label="Loading..." />}>
+            <PageComponent {...pageProps} />
+          </React.Suspense>
+        </ErrorBoundary>
       </main>
 
       <Toast />

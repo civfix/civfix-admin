@@ -4,6 +4,7 @@ import * as React from "react"
 import { create } from "zustand"
 
 import { Icons } from "@/components/icons"
+import { useBackdropDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 
 interface ConfirmRequest {
@@ -57,14 +58,41 @@ export function promptDialog(
   })
 }
 
+const NATIVE_ENTER_TAGS = new Set(["BUTTON", "A", "SELECT"])
+
+// The window listener sees Enter from every focused control. A focused button, link or select keeps
+// its own activation (Enter on Close or Cancel must not confirm). A confirm is accepted only by
+// activating its own button: many confirms grant access or email a city irreversibly, so a stray or
+// doubled Enter must never commit one.
+function enterAccepts({
+  request,
+  targetTag,
+  modified,
+}: {
+  request: DialogRequest
+  targetTag: string | undefined
+  modified: boolean
+}): boolean {
+  if (targetTag && NATIVE_ENTER_TAGS.has(targetTag)) return false
+  if (targetTag === "TEXTAREA" && !modified) return false
+  if (request.kind === "confirm") return false
+  return modified
+}
+
 export function DialogHost() {
   const current = useDialogStore((s) => s.current)
   const close = useDialogStore((s) => s.close)
   const [value, setValue] = React.useState("")
   const modalRef = useModalFocus<HTMLDivElement>(current !== null)
+  const cancelRef = React.useRef<HTMLButtonElement>(null)
 
   React.useEffect(() => {
     if (current?.kind === "prompt") setValue(current.defaultValue ?? "")
+  }, [current])
+
+  // Runs after useModalFocus's effect, so that hook has already recorded the opener to restore.
+  React.useEffect(() => {
+    if (current?.kind === "confirm") cancelRef.current?.focus()
   }, [current])
 
   const cancel = React.useCallback(() => {
@@ -91,7 +119,15 @@ export function DialogHost() {
       if (e.key === "Escape") {
         e.preventDefault()
         cancel()
-      } else if (e.key === "Enter" && (current.kind === "confirm" || e.metaKey || e.ctrlKey)) {
+        return
+      }
+      if (e.key !== "Enter") return
+      const targetTag = (e.target as HTMLElement | null)?.tagName
+      if (e.repeat) {
+        // A held key's repeats must not answer the dialog its first press opened, neither here nor by
+        // natively clicking whichever button now has focus. A textarea keeps them as newlines.
+        if (targetTag !== "TEXTAREA") e.preventDefault()
+      } else if (enterAccepts({ request: current, targetTag, modified: e.metaKey || e.ctrlKey })) {
         e.preventDefault()
         accept()
       }
@@ -100,16 +136,17 @@ export function DialogHost() {
     return () => window.removeEventListener("keydown", onKey)
   }, [current, cancel, accept])
 
+  const backdrop = useBackdropDismiss(cancel)
+
   if (!current) return null
   const confirmDisabled =
     current.kind === "prompt" && current.required === true && value.trim() === ""
 
   return (
-    <div className="modal-overlay" onClick={cancel}>
+    <div className="modal-overlay" {...backdrop}>
       <div
         ref={modalRef}
         className="modal dialog-modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
@@ -136,7 +173,7 @@ export function DialogHost() {
           )}
         </div>
         <div className="modal-foot dialog-foot">
-          <button className="btn ghost" onClick={cancel}>
+          <button ref={cancelRef} className="btn ghost" onClick={cancel}>
             {current.kind === "confirm" ? (current.cancelLabel ?? "Cancel") : "Cancel"}
           </button>
           <button

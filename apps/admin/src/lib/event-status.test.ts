@@ -23,8 +23,11 @@ describe("event status pills", () => {
     }
   })
 
-  it("falls back to Upcoming for a status this build does not know", () => {
-    expect(eventStatusView("archived" as EventStatus)).toEqual(EVENT_STATUS_VIEW.upcoming)
+  it("shows a status this build does not know raw in a neutral pill", () => {
+    expect(eventStatusView("archived" as EventStatus)).toEqual({
+      cls: "priority-low",
+      label: "archived",
+    })
   })
 })
 

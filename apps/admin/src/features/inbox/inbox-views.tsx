@@ -12,6 +12,7 @@ import {
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { replyOriginLabel } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
@@ -129,24 +130,7 @@ export function InboxReader({ id }: { id: string }) {
           </div>
         </div>
 
-        {sel.attachments.length > 0 && (
-          <div className="mail-attachments">
-            {sel.attachments.map((att) => (
-              <a
-                key={att.key}
-                className="btn sm"
-                href={att.key}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Icons.ExternalLink size={13} /> {att.filename}
-                <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                  {(att.size / 1024).toFixed(0)}k
-                </span>
-              </a>
-            ))}
-          </div>
-        )}
+        <AttachmentList attachments={sel.attachments} />
       </div>
 
       <div className="mail-reader-foot">

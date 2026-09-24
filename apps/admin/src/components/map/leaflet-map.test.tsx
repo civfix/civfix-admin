@@ -3,7 +3,7 @@ import L from "leaflet"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BoundaryMap } from "@/components/map/boundary-map"
-import { LeafletMap, type MapPin } from "@/components/map/leaflet-map"
+import { LeafletMap, tooltipText, type MapPin } from "@/components/map/leaflet-map"
 
 // jsdom has no layout engine: Leaflet sizes the map from clientWidth/clientHeight (0 in jsdom, which
 // makes fitBounds produce NaN coordinates) and the wrappers observe their container for resizes.
@@ -93,16 +93,50 @@ describe("LeafletMap", () => {
     expect(tip).toBeNull()
   })
 
-  it("parses a pin title in the tooltip as HTML markup (current behavior)", () => {
+  it("renders a pin title and place in the tooltip as literal text, never as markup", () => {
     const pin: MapPin = { id: "h", lat: 34, lng: -118, tip: "<b>x</b>", place: "<i>y</i>" }
     const { container } = render(<LeafletMap pins={[pin]} />)
 
     const tip = hoverAndReadTooltip(container, markerIcons(container)[0]!)
-    expect(tip?.querySelector("b")?.textContent).toBe("x")
-    expect(tip?.querySelector("i")?.textContent).toBe("y")
-    expect(tip?.textContent).toBe("x · y")
-    expect(tip?.textContent).not.toContain("<b>")
+    expect(tip?.querySelector("b")).toBeNull()
+    expect(tip?.querySelector("i")).toBeNull()
+    expect(tip?.textContent).toBe("<b>x</b> · <i>y</i>")
   })
+
+  it("never runs markup from a citizen-authored title in the tooltip", () => {
+    const payload = '<img src=x onerror="window.__pwned=1">'
+    const pin: MapPin = { id: "x", lat: 34, lng: -118, tip: payload, place: "<svg onload=alert(1)>" }
+    const { container } = render(<LeafletMap pins={[pin]} />)
+
+    const tip = hoverAndReadTooltip(container, markerIcons(container)[0]!)
+    expect(tip?.querySelector("img, svg")).toBeNull()
+    expect(tip?.textContent).toBe(`${payload} · <svg onload=alert(1)>`)
+  })
+
+  it("keeps a label with entity-like text literal in the tooltip", () => {
+    const pin: MapPin = { id: "a", lat: 34, lng: -118, label: "Fish &amp; Chips" }
+    const { container } = render(<LeafletMap pins={[pin]} />)
+
+    const tip = hoverAndReadTooltip(container, markerIcons(container)[0]!)
+    expect(tip?.textContent).toBe("Fish &amp; Chips")
+  })
+
+  it.each(["constructor", "toString", "__proto__"])(
+    "draws the generic glyph for the inherited object key %j as a category",
+    (category) => {
+      const { container } = render(
+        <LeafletMap
+          pins={[
+            { id: "g", lat: 34, lng: -118, category },
+            { id: "o", lat: 34.1, lng: -118.1, category: "other" },
+          ]}
+        />,
+      )
+
+      const glyphs = markerIcons(container).map((el) => el.querySelector("g path")?.getAttribute("d"))
+      expect(glyphs[0]).toBe(glyphs[1])
+    },
+  )
 
   it("calls onPinTap with the tapped pin", () => {
     const onPinTap = vi.fn()
@@ -153,5 +187,21 @@ describe("BoundaryMap", () => {
 
     unmount()
     expect(remove).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("tooltipText", () => {
+  it("joins the title and place with a middle dot", () => {
+    expect(tooltipText({ id: "1", lat: 0, lng: 0, tip: "Pothole", place: "Oakland" })).toBe(
+      "Pothole · Oakland",
+    )
+  })
+
+  it("falls back to the label and omits a missing place", () => {
+    expect(tooltipText({ id: "1", lat: 0, lng: 0, label: "Wall" })).toBe("Wall")
+  })
+
+  it("returns null when there is no title to show", () => {
+    expect(tooltipText({ id: "1", lat: 0, lng: 0, place: "Oakland" })).toBeNull()
   })
 })

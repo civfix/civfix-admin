@@ -29,27 +29,42 @@ export function LoadingState({ label = "Loading..." }: { label?: string }) {
 }
 
 /**
- * Error panel with an optional retry. Surfaces the normalized AppError message; when the backend is
+ * Error panel with an optional retry and an optional primary action beside it (the error boundary's
+ * Reload). Surfaces the normalized AppError message unless `message` replaces it; when the backend is
  * down this renders the friendly INTERNAL message rather than crashing.
  */
 export function ErrorState({
   error,
   onRetry,
   title = "Could not load this",
+  message,
+  action,
 }: {
   error: unknown
   onRetry?: () => void
   title?: string
+  message?: string
+  action?: { label: string; onClick: () => void }
 }) {
-  const message = React.useMemo(() => toAppError(error).message, [error])
+  const errorText = React.useMemo(() => toAppError(error).message, [error])
+  const retry = onRetry && (
+    <button type="button" className="btn sm" onClick={onRetry}>
+      Try again
+    </button>
+  )
   return (
     <div className="state-error" role="alert">
       <div className="state-error-title">{title}</div>
-      <div className="state-error-sub">{message}</div>
-      {onRetry && (
-        <button type="button" className="btn sm" onClick={onRetry}>
-          Try again
-        </button>
+      <div className="state-error-sub">{message ?? errorText}</div>
+      {action ? (
+        <div className="row-flex">
+          {retry}
+          <button type="button" className="btn sm primary" onClick={action.onClick}>
+            {action.label}
+          </button>
+        </div>
+      ) : (
+        retry
       )}
     </div>
   )

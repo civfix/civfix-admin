@@ -50,13 +50,31 @@ interface UiState {
 
 let toastSeq = 0
 
-function parseHash(): { page: PageId; focusId: string | null } {
-  if (typeof window === "undefined") return { page: "home", focusId: null }
+interface Route {
+  page: PageId
+  focusId: string | null
+}
+
+const HOME_ROUTE: Route = { page: "home", focusId: null }
+
+// The hash comes from whatever link the operator opened, and this runs at import and on popstate, so a
+// malformed escape must degrade to home rather than throw and leave the app unrendered.
+function decodeFocus(encoded: string): string | null {
+  try {
+    return decodeURIComponent(encoded)
+  } catch {
+    return null
+  }
+}
+
+function parseHash(): Route {
+  if (typeof window === "undefined") return HOME_ROUTE
   const raw = window.location.hash.replace(/^#\/?/, "")
   const [seg = "", ...rest] = raw.split("/")
   const page: PageId = (SECTIONS as readonly string[]).includes(seg) ? (seg as PageId) : "home"
-  const focusId = page !== "home" && rest.length > 0 ? decodeURIComponent(rest.join("/")) : null
-  return { page, focusId }
+  if (page === "home" || rest.length === 0) return { page, focusId: null }
+  const focusId = decodeFocus(rest.join("/"))
+  return focusId === null ? HOME_ROUTE : { page, focusId }
 }
 
 function hashFor(page: PageId, focusId: string | null): string {

@@ -12,6 +12,8 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { useModalFocus } from "@/components/shared/modal-focus"
 import { toAppError } from "@/lib/api"
 import { usePreviewForwardTemplate } from "@/features/mail/use-mail"
 import {
@@ -68,9 +70,12 @@ function ForwardTemplateEditor({
   pending,
 }: ForwardTemplateModalProps) {
   const preview = usePreviewForwardTemplate()
-  const [subject, setSubject] = React.useState(() => resolveTemplateSeed(initial, fallback).subject)
-  const [body, setBody] = React.useState(() => resolveTemplateSeed(initial, fallback).body)
+  const [seed] = React.useState(() => resolveTemplateSeed(initial, fallback))
+  const [subject, setSubject] = React.useState(seed.subject)
+  const [body, setBody] = React.useState(seed.body)
   const [rendered, setRendered] = React.useState<PreviewForwardTemplateResponse | null>(null)
+  const modalRef = useModalFocus<HTMLDivElement>(true)
+  const titleId = React.useId()
 
   const subjectRef = React.useRef<HTMLInputElement | null>(null)
   const bodyRef = React.useRef<HTMLTextAreaElement | null>(null)
@@ -98,6 +103,8 @@ function ForwardTemplateEditor({
   const bodyIssues = forwardTemplateIssues(body)
   const hasIssues = subjectIssues.length > 0 || bodyIssues.length > 0
 
+  const backdrop = usePristineDismiss(onClose, subject === seed.subject && body === seed.body)
+
   const onPreview = () => {
     const input: PreviewForwardTemplateRequest = {}
     if (subject.trim() !== "") input.subjectTemplate = subject
@@ -106,10 +113,16 @@ function ForwardTemplateEditor({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal tpl-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" {...backdrop}>
+      <div
+        ref={modalRef}
+        className="modal tpl-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="modal-head">
-          <h3>{title}</h3>
+          <h3 id={titleId}>{title}</h3>
           <button className="closebtn" aria-label="Close" onClick={onClose}>
             <Icons.X size={16} />
           </button>

@@ -660,3 +660,22 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   color: var(--ink-3);
   text-decoration: underline;
 }
+
+/* -- Mail attachments ------------------------------------------------------ */
+/* Size and state read as secondary text beside the file name. */
+.attachment-meta {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+/* An attachment without a safe link: shaped like its linked siblings but visibly inert. */
+.attachment-chip.unlinked,
+.attachment-chip.unlinked:hover {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--border);
+  color: var(--ink-2);
+  cursor: default;
+}
+.attachment-chip.unlinked:active { transform: none; }

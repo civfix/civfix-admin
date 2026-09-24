@@ -4,6 +4,7 @@ import * as React from "react"
 import { create } from "zustand"
 
 import { Icons } from "@/components/icons"
+import { useBackdropDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 
 export interface LightboxImage {
@@ -96,6 +97,8 @@ export function LightboxHost() {
     return () => window.removeEventListener("keydown", onKey)
   }, [count, close, step])
 
+  const backdrop = useBackdropDismiss(close)
+
   if (!current) return null
   const many = count > 1
 
@@ -105,11 +108,10 @@ export function LightboxHost() {
   }
 
   return (
-    <div className="modal-overlay lightbox-overlay" onClick={close}>
+    <div className="modal-overlay lightbox-overlay" {...backdrop}>
       <div
         ref={frameRef}
         className="lightbox"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={current.alt}
