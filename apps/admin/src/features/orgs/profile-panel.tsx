@@ -182,7 +182,10 @@ const EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
 function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }) {
   const update = useUpdateOrg()
   const toast = useToast()
-  const [draft, setDraft] = React.useState<OrgProfileDraft>(() => draftFromOrg(org))
+  // The draft and the diff share one snapshot taken when editing starts: diffing against the live
+  // prop would PATCH an untouched field back to its old value after a mid-edit refetch.
+  const [baseline] = React.useState(org)
+  const [draft, setDraft] = React.useState<OrgProfileDraft>(() => draftFromOrg(baseline))
   const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
   const [attempted, setAttempted] = React.useState(false)
   const [logoUploading, setLogoUploading] = React.useState(false)
@@ -194,8 +197,8 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
     () => (attempted ? { ...validateProfileDraft(draft), ...serverErrors } : serverErrors),
     [attempted, draft, serverErrors],
   )
-  const dirty = buildUpdateRequest(org, draft, "x") !== null
-  const slugChanged = draft.slug.trim().toLowerCase() !== org.slug
+  const dirty = buildUpdateRequest(baseline, draft, "x") !== null
+  const slugChanged = draft.slug.trim().toLowerCase() !== baseline.slug
 
   const save = async () => {
     if (busy.current || update.isPending || logoUploading) return
@@ -208,7 +211,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
       reason = await promptDialog({
         title: `Save changes to ${org.name}?`,
         body: slugChanged
-          ? `The slug changes from /${org.slug} to /${draft.slug.trim().toLowerCase()}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
+          ? `The slug changes from /${baseline.slug} to /${draft.slug.trim().toLowerCase()}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
           : "The change is visible on the public page immediately. The reason is written to the audit log.",
         label: "Reason (required)",
         placeholder: "Corrected the website at the org's request…",
@@ -220,7 +223,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
       busy.current = false
     }
     if (reason === null || reason.trim() === "") return
-    const body = buildUpdateRequest(org, draft, reason)
+    const body = buildUpdateRequest(baseline, draft, reason)
     if (!body) {
       onDone()
       return
