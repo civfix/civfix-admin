@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react"
+import { waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type {
   AdminEventListItemDTO,
@@ -228,13 +228,12 @@ function tilesOf(container: HTMLElement): HTMLElement[] {
   return [...container.querySelectorAll<HTMLElement>(".stile")]
 }
 
-/**
- * React keeps each host element's current props on an expando property. Reading it is the only way a
- * rendered DOM can show that no custom key handler was attached to a control.
- */
-function reactPropsOf(el: Element): Record<string, unknown> {
-  const key = Object.keys(el).find((k) => k.startsWith("__reactProps$"))
-  return key ? ((el as unknown as Record<string, Record<string, unknown>>)[key] ?? {}) : {}
+const FOCUSABLE = "a[href], button, input, select, textarea, [tabindex]"
+const HEAD_AND_FOOT = 2
+const TILE_CONTROLS = (PREVIEW_TILES + 1) * HEAD_AND_FOOT + PREVIEW_TILES * ROWS_PER_TILE
+
+function controlsOf(tile: HTMLElement): HTMLElement[] {
+  return [...tile.querySelectorAll<HTMLElement>(FOCUSABLE)]
 }
 
 beforeEach(() => {
@@ -246,102 +245,92 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe("home tile accessibility structure", () => {
-  it("renders every section tile with a native head and foot button as sibling controls", async () => {
+describe("home tile accessibility", () => {
+  it("makes every focusable element in a tile a named native type=button with no focusable or div inside", async () => {
+    const container = await renderLoadedHome()
+
+    const tiles = tilesOf(container)
+    expect(tiles).toHaveLength(PREVIEW_TILES + 1)
+    const controls = tiles.flatMap(controlsOf)
+    expect(controls).toHaveLength(TILE_CONTROLS)
+    for (const control of controls) {
+      expect(control.tagName).toBe("BUTTON")
+      expect(control).toHaveAttribute("type", "button")
+      expect(control).toHaveAccessibleName()
+      expect(control.querySelector(FOCUSABLE)).toBeNull()
+      expect(control.querySelector("div")).toBeNull()
+    }
+  })
+
+  it("sets no role=button and no tabindex on a tile or anything inside it", async () => {
     const container = await renderLoadedHome()
 
     const tiles = tilesOf(container)
     expect(tiles).toHaveLength(PREVIEW_TILES + 1)
     for (const tile of tiles) {
-      const children = [...tile.children]
-      const head = children[0]
-      const foot = children[children.length - 1]
-
-      expect(head?.tagName).toBe("BUTTON")
-      expect(head).toHaveAttribute("type", "button")
-      expect(head).toHaveClass("stile-head")
-
-      expect(foot?.tagName).toBe("BUTTON")
-      expect(foot).toHaveAttribute("type", "button")
-      expect(foot).toHaveClass("stile-foot", "opens")
-
-      expect(tile.tagName).not.toBe("BUTTON")
-      expect(tile).not.toHaveAttribute("role")
-      expect(tile.querySelectorAll(".stile-head")).toHaveLength(1)
-      expect(tile.querySelectorAll(".stile-foot")).toHaveLength(1)
-    }
-  })
-
-  it("renders every preview row as a native type=button with the slr class", async () => {
-    const container = await renderLoadedHome()
-
-    const rows = [...container.querySelectorAll(".slr")]
-    expect(rows).toHaveLength(PREVIEW_TILES * ROWS_PER_TILE)
-    for (const row of rows) {
-      expect(row.tagName).toBe("BUTTON")
-      expect(row).toHaveAttribute("type", "button")
-      expect(row).toHaveClass("slr")
-      expect(row.closest(".stile-list")).not.toBeNull()
-      expect(row.parentElement?.closest("button")).toBeNull()
-    }
-  })
-
-  it("uses only native buttons as the tile controls", async () => {
-    const container = await renderLoadedHome()
-
-    for (const tile of tilesOf(container)) {
-      for (const button of tile.querySelectorAll("button")) {
-        expect(
-          ["stile-head", "stile-foot", "slr"].some((cls) => button.classList.contains(cls)),
-        ).toBe(true)
-      }
-    }
-  })
-
-  it("sets no role=button, tabindex or custom key handler anywhere inside a tile", async () => {
-    const container = await renderLoadedHome()
-
-    for (const tile of tilesOf(container)) {
-      // Guards against a vacuous pass if React ever stops exposing props on the element.
-      expect(reactPropsOf(tile.querySelector(".stile-head")!)).toHaveProperty("onClick")
-      expect(tile.querySelectorAll('[role="button"]')).toHaveLength(0)
-      expect(tile.querySelectorAll("[tabindex]")).toHaveLength(0)
       for (const el of [tile, ...tile.querySelectorAll("*")]) {
-        const props = reactPropsOf(el)
-        expect(props).not.toHaveProperty("onKeyDown")
-        expect(props).not.toHaveProperty("onKeyUp")
-        expect(props).not.toHaveProperty("onKeyPress")
-        expect(props).not.toHaveProperty("tabIndex")
-        expect(props).not.toHaveProperty("role")
+        expect(el).not.toHaveAttribute("role", "button")
+        expect(el).not.toHaveAttribute("tabindex")
       }
     }
   })
 
-  it("puts no div and no nested interactive element inside any tile button", async () => {
-    const container = await renderLoadedHome()
-
-    const buttons = tilesOf(container).flatMap((tile) => [...tile.querySelectorAll("button")])
-    expect(buttons).toHaveLength((PREVIEW_TILES + 1) * 2 + PREVIEW_TILES * ROWS_PER_TILE)
-    for (const button of buttons) {
-      expect(button.querySelector("div")).toBeNull()
-      expect(button.querySelector("button, a, input, select, textarea, [tabindex], [role]")).toBeNull()
-    }
-  })
-
-  it("activates tile controls from the keyboard through native button behavior", async () => {
+  it("visits each tile control exactly once, in DOM order, when tabbing through the page", async () => {
     const container = await renderLoadedHome()
     const kb = userEvent.setup()
 
-    const row = screen.getByRole("button", { name: /Place 1/ })
-    row.focus()
-    await kb.keyboard("{Enter}")
-    expect(window.location.hash).toBe("#/discovery/060001")
+    const visited: Element[] = []
+    for (let i = 0; i < 500; i++) {
+      await kb.tab()
+      const active = document.activeElement
+      if (!active || active === document.body || visited.includes(active)) break
+      visited.push(active)
+    }
 
-    const reportsHead = tilesOf(container)
-      .map((tile) => tile.querySelector<HTMLButtonElement>(".stile-head"))
-      .find((head) => head?.textContent?.startsWith("Reports"))
-    reportsHead?.focus()
-    await kb.keyboard(" ")
-    expect(window.location.hash).toBe("#/reports")
+    const tiles = tilesOf(container)
+    expect(tiles).toHaveLength(PREVIEW_TILES + 1)
+    for (const tile of tiles) {
+      const expected = controlsOf(tile)
+      expect(expected.length).toBeGreaterThanOrEqual(HEAD_AND_FOOT)
+      expect(visited.filter((el) => tile.contains(el))).toEqual(expected)
+    }
+  })
+
+  it("activates every head, foot and row control exactly once on Enter and on Space", async () => {
+    const container = await renderLoadedHome()
+    const kb = userEvent.setup()
+    const scrollTo = vi.mocked(window.scrollTo)
+    const pushState = vi.spyOn(window.history, "pushState")
+
+    async function press(control: HTMLElement, key: string): Promise<string> {
+      window.history.replaceState(null, "", "/")
+      scrollTo.mockClear()
+      pushState.mockClear()
+      control.focus()
+      expect(control).toHaveFocus()
+      await kb.keyboard(key)
+      expect(scrollTo).toHaveBeenCalledTimes(1)
+      expect(pushState).toHaveBeenCalledTimes(1)
+      return window.location.hash
+    }
+
+    let activated = 0
+    for (const tile of tilesOf(container)) {
+      const controls = controlsOf(tile)
+      const head = controls[0]!
+      const foot = controls[controls.length - 1]!
+      const tileHash = await press(head, "{Enter}")
+      expect(tileHash).toMatch(/^#\/[a-z]+$/)
+
+      for (const control of controls) {
+        const onEnter = await press(control, "{Enter}")
+        const onSpace = await press(control, " ")
+        expect(onSpace).toBe(onEnter)
+        if (control === head || control === foot) expect(onEnter).toBe(tileHash)
+        else expect(onEnter.startsWith(`${tileHash}/`)).toBe(true)
+        activated++
+      }
+    }
+    expect(activated).toBe(TILE_CONTROLS)
   })
 })
