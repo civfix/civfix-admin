@@ -15,7 +15,6 @@ import type {
   GetDiscoveryTaskResponse,
   JurisdictionDirectoryResponse,
   JurisdictionGeometryResponse,
-  JurisdictionListQuery,
   PatchJurisdictionRequest,
   SaveContactsRequest,
   SaveDraftRequest,
@@ -24,7 +23,9 @@ import type {
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import { queryKeys } from "@/lib/query"
+import { MINUTE_MS } from "@/lib/timing"
 import { partialSaveMessage, type SavedExtras } from "@/features/discovery/discovery-payloads"
+import type { DirectoryQuery } from "@/features/discovery/discovery-ui-state"
 
 export function useDiscoveryList(params: DiscoveryListQuery) {
   return useQuery<DiscoveryListResponse>({
@@ -41,16 +42,16 @@ export function useDiscoveryTask(id: string | null) {
   })
 }
 
-export type JurisdictionDirectoryParams = Pick<JurisdictionListQuery, "q" | "filter" | "layer" | "sort">
-
 /** The wire caps a page at 100; 50 keeps each scroll step quick. */
 const DIRECTORY_PAGE_SIZE = 50
+
+const GEOMETRY_STALE_MS = 5 * MINUTE_MS
 
 /**
  * Search, filter and sort run in Postgres and the list pages by cursor, so the operator can reach all
  * ~28k jurisdictions, federal land included. `total` and `facets` ride on the first page only.
  */
-export function useJurisdictionDirectory(params: JurisdictionDirectoryParams) {
+export function useJurisdictionDirectory(params: DirectoryQuery) {
   return useInfiniteQuery<JurisdictionDirectoryResponse>({
     queryKey: queryKeys.jurisdictions.list(params),
     queryFn: ({ pageParam }) =>
@@ -73,7 +74,7 @@ export function useJurisdictionGeometry(geoid: string | null) {
     queryKey: queryKeys.jurisdictions.geometry(geoid ?? ""),
     queryFn: () => api.getJurisdictionGeometry({ geoid: geoid as string }),
     enabled: !!geoid,
-    staleTime: 5 * 60 * 1000,
+    staleTime: GEOMETRY_STALE_MS,
     retry: false,
   })
 }

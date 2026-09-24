@@ -19,7 +19,7 @@ import { replyOriginLabel } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
 
-const STATUS_CLS: Record<InboundEmailStatus, string> = {
+const INBOUND_STATUS_CLS: Record<InboundEmailStatus, string> = {
   unread: "status-flag",
   read: "status-ok",
   archived: "status-progress",
@@ -82,7 +82,7 @@ export function InboxRow({
         </div>
       </div>
       {isEmail ? (
-        <span className={`pill ${STATUS_CLS[item.status]} tight mail-status-pill`}>
+        <span className={`pill ${INBOUND_STATUS_CLS[item.status]} tight mail-status-pill`}>
           {INBOUND_EMAIL_STATUS_LABELS[item.status]}
         </span>
       ) : item.publication ? (
@@ -101,32 +101,34 @@ export function InboxRow({
 }
 
 export function InboxReader({ id }: { id: string }) {
-  const q = useInboxMessage(id)
+  const messageQuery = useInboxMessage(id)
   const setStatus = useSetInboxStatus()
 
-  if (q.isLoading) return <LoadingState label="Loading message..." />
-  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
-  const sel = q.data
-  if (!sel) return <EmptyState title="No message selected" icon={<Icons.Inbox size={20} />} />
+  if (messageQuery.isLoading) return <LoadingState label="Loading message..." />
+  if (messageQuery.isError) {
+    return <ErrorState error={messageQuery.error} onRetry={() => messageQuery.refetch()} />
+  }
+  const message = messageQuery.data
+  if (!message) return <EmptyState title="No message selected" icon={<Icons.Inbox size={20} />} />
 
-  const markRead = () => setStatus.mutate({ id: sel.id, status: "read" })
-  const archive = () => setStatus.mutate({ id: sel.id, status: "archived" })
+  const markRead = () => setStatus.mutate({ id: message.id, status: "read" })
+  const archive = () => setStatus.mutate({ id: message.id, status: "archived" })
 
   return (
     <div className="mail-reader">
       <div className="mail-reader-head">
-        <div className="mail-reader-subj">{sel.subject || "(no subject)"}</div>
+        <div className="mail-reader-subj">{message.subject || "(no subject)"}</div>
         <div className="mail-reader-meta">
           <span className="mail-dir in">
             <Icons.ArrowDown size={12} />
           </span>
-          <span className="mono">{sel.from}</span>
+          <span className="mono">{message.from}</span>
           <span className="sep">·</span>
-          <span>to {sel.recipient}</span>
-          <AuthVerdictBadge verdict={sel.authVerdict} />
+          <span>to {message.recipient}</span>
+          <AuthVerdictBadge verdict={message.authVerdict} />
           <span className="spacer" />
-          <span className={`pill ${STATUS_CLS[sel.status]} tight`}>
-            {INBOUND_EMAIL_STATUS_LABELS[sel.status]}
+          <span className={`pill ${INBOUND_STATUS_CLS[message.status]} tight`}>
+            {INBOUND_EMAIL_STATUS_LABELS[message.status]}
           </span>
         </div>
       </div>
@@ -135,25 +137,25 @@ export function InboxReader({ id }: { id: string }) {
         <div className="mail-thread">
           <div className="mail-msg in">
             <p className="mail-msg-body" style={{ whiteSpace: "pre-wrap" }}>
-              {sel.bodyText || "(no plain-text body)"}
+              {message.bodyText || "(no plain-text body)"}
             </p>
           </div>
         </div>
 
-        <AttachmentList attachments={sel.attachments} />
+        <AttachmentList attachments={message.attachments} />
       </div>
 
       <div className="mail-reader-foot">
         <button
           className="btn"
-          disabled={setStatus.isPending || sel.status === "read"}
+          disabled={setStatus.isPending || message.status === "read"}
           onClick={markRead}
         >
           <Icons.Eye size={13} /> Mark read
         </button>
         <button
           className="btn"
-          disabled={setStatus.isPending || sel.status === "archived"}
+          disabled={setStatus.isPending || message.status === "archived"}
           onClick={archive}
         >
           <Icons.Inbox size={13} /> Archive

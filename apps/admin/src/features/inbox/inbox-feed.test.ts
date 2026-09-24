@@ -70,6 +70,8 @@ describe("inbound mail rendering", () => {
     const sources = [
       "./inbox-views.tsx",
       "../mail/mail-page.tsx",
+      "../mail/mail-reader.tsx",
+      "../mail/mail-row.tsx",
       "../mail/mail-badges.tsx",
     ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
     for (const source of sources) {

@@ -17,6 +17,7 @@ import { useModalFocus } from "@/components/shared/modal-focus"
 import { errorMessage } from "@/lib/error-messages"
 import { usePreviewForwardTemplate } from "@/features/mail/use-mail"
 import {
+  insertAt,
   resolveTemplateSeed,
   toStoredTemplate,
   type ForwardTemplateInitial,
@@ -29,7 +30,7 @@ const SOURCE_LABEL: Record<ForwardTemplateSource, string> = {
   builtin: "the built-in template",
 }
 
-export interface ForwardTemplateModalProps {
+interface ForwardTemplateModalProps {
   open: boolean
   onClose: () => void
   title: string
@@ -59,6 +60,224 @@ function IssueList({ issues }: { issues: ForwardTemplateIssue[] }) {
   )
 }
 
+function TemplatePreview({ rendered }: { rendered: PreviewForwardTemplateResponse }) {
+  return (
+    <div className="modal-body">
+      <div className="tpl-email">
+        <div className="tpl-email-subject">{rendered.subject}</div>
+        <iframe
+          className="tpl-preview-frame"
+          sandbox=""
+          srcDoc={rendered.html}
+          title="Email preview"
+        />
+      </div>
+      <div className="hint">
+        Rendered with sample data · subject from {SOURCE_LABEL[rendered.subjectSource]} · body
+        from {SOURCE_LABEL[rendered.bodySource]}
+      </div>
+    </div>
+  )
+}
+
+type TemplateField = "subject" | "body"
+
+interface TemplateFieldsProps {
+  subtitle: string
+  fallback: ForwardTemplatePair
+  fallbackLabel: string
+  subject: string
+  body: string
+  subjectId: string
+  bodyId: string
+  subjectIssues: ForwardTemplateIssue[]
+  bodyIssues: ForwardTemplateIssue[]
+  onSubjectChange: (value: string) => void
+  onBodyChange: (value: string) => void
+  subjectRef: React.RefObject<HTMLInputElement | null>
+  bodyRef: React.RefObject<HTMLTextAreaElement | null>
+  onFieldFocus: (field: TemplateField) => void
+  onInsertToken: (token: string) => void
+  preview: { isPending: boolean; isError: boolean; error: unknown }
+}
+
+function TemplateFields({
+  subtitle,
+  fallback,
+  fallbackLabel,
+  subject,
+  body,
+  subjectId,
+  bodyId,
+  subjectIssues,
+  bodyIssues,
+  onSubjectChange,
+  onBodyChange,
+  subjectRef,
+  bodyRef,
+  onFieldFocus,
+  onInsertToken,
+  preview,
+}: TemplateFieldsProps) {
+  return (
+    <div className="modal-body">
+      <div className="hint">{subtitle}</div>
+      <div className="tpl-legend" aria-label="Insert a variable">
+        {FORWARD_TEMPLATE_VARIABLES.map((v) => (
+          <button
+            key={v.token}
+            type="button"
+            className="tpl-chip"
+            title={`${v.label}: ${v.description}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onInsertToken(v.token)}
+          >
+            {v.token}
+          </button>
+        ))}
+      </div>
+      <div className="hint">Click a variable to insert it where your cursor is.</div>
+
+      <div className="compose-field">
+        <label htmlFor={subjectId}>Subject</label>
+        <input
+          id={subjectId}
+          ref={subjectRef}
+          type="text"
+          value={subject}
+          placeholder={fallback.subject}
+          onFocus={() => onFieldFocus("subject")}
+          onChange={(e) => onSubjectChange(e.target.value)}
+        />
+        <IssueList issues={subjectIssues} />
+      </div>
+
+      <div className="compose-field">
+        <label htmlFor={bodyId}>Body</label>
+        <textarea
+          id={bodyId}
+          ref={bodyRef}
+          className="tpl-body"
+          rows={12}
+          value={body}
+          placeholder={`Leave both fields empty to use ${fallbackLabel}…`}
+          onFocus={() => onFieldFocus("body")}
+          onChange={(e) => onBodyChange(e.target.value)}
+        />
+        <IssueList issues={bodyIssues} />
+      </div>
+
+      {preview.isPending && <div className="hint">Rendering a preview…</div>}
+      {preview.isError && !preview.isPending && (
+        <div className="tpl-issue" role="alert">
+          {errorMessage(preview.error)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function useTemplateDraft(initial: ForwardTemplateInitial, fallback: ForwardTemplatePair) {
+  const [seed] = React.useState(() => resolveTemplateSeed(initial, fallback))
+  const [subject, setSubject] = React.useState(seed.subject)
+  const [body, setBody] = React.useState(seed.body)
+  const subjectRef = React.useRef<HTMLInputElement | null>(null)
+  const bodyRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const focusedField = React.useRef<TemplateField>("body")
+
+  const insertToken = (token: string) => {
+    const field = focusedField.current
+    const el = field === "subject" ? subjectRef.current : bodyRef.current
+    const value = field === "subject" ? subject : body
+    const setValue = field === "subject" ? setSubject : setBody
+    const next = insertAt(
+      value,
+      el?.selectionStart ?? value.length,
+      el?.selectionEnd ?? value.length,
+      token,
+    )
+    setValue(next.value)
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(next.caret, next.caret)
+    })
+  }
+
+  const fill = (next: ForwardTemplatePair) => {
+    setSubject(next.subject)
+    setBody(next.body)
+  }
+
+  return {
+    subject,
+    setSubject,
+    body,
+    setBody,
+    pristine: subject === seed.subject && body === seed.body,
+    fill,
+    subjectRef,
+    bodyRef,
+    focusField: (field: TemplateField) => (focusedField.current = field),
+    insertToken,
+  }
+}
+
+function TemplateModalFoot({
+  previewing,
+  fallback,
+  fallbackLabel,
+  onBack,
+  onFill,
+  previewDisabled,
+  onPreview,
+  onClose,
+  saveDisabled,
+  onSave,
+}: {
+  previewing: boolean
+  fallback: ForwardTemplatePair
+  fallbackLabel: string
+  onBack: () => void
+  onFill: (next: ForwardTemplatePair) => void
+  previewDisabled: boolean
+  onPreview: () => void
+  onClose: () => void
+  saveDisabled: boolean
+  onSave: () => void
+}) {
+  return (
+    <div className="modal-foot">
+      {previewing ? (
+        <button className="btn" onClick={onBack}>
+          <Icons.ChevronLeft size={13} /> Back to editor
+        </button>
+      ) : (
+        <>
+          <button className="btn" onClick={() => onFill(fallback)}>
+            Copy in the {fallbackLabel}
+          </button>
+          <button className="btn" onClick={() => onFill({ subject: "", body: "" })}>
+            Clear
+          </button>
+        </>
+      )}
+      <div className="spacer" />
+      {!previewing && (
+        <button className="btn" disabled={previewDisabled} onClick={onPreview}>
+          <Icons.Eye size={13} /> Preview
+        </button>
+      )}
+      <button className="btn" onClick={onClose}>
+        Cancel
+      </button>
+      <button className="btn primary" disabled={saveDisabled} onClick={onSave}>
+        <Icons.Check size={13} /> Save
+      </button>
+    </div>
+  )
+}
+
 function ForwardTemplateEditor({
   onClose,
   title,
@@ -70,40 +289,19 @@ function ForwardTemplateEditor({
   pending,
 }: ForwardTemplateModalProps) {
   const preview = usePreviewForwardTemplate()
-  const [seed] = React.useState(() => resolveTemplateSeed(initial, fallback))
-  const [subject, setSubject] = React.useState(seed.subject)
-  const [body, setBody] = React.useState(seed.body)
+  const draft = useTemplateDraft(initial, fallback)
+  const { subject, body } = draft
   const [rendered, setRendered] = React.useState<PreviewForwardTemplateResponse | null>(null)
   const modalRef = useModalFocus<HTMLDivElement>(true)
   const titleId = React.useId()
-
-  const subjectRef = React.useRef<HTMLInputElement | null>(null)
-  const bodyRef = React.useRef<HTMLTextAreaElement | null>(null)
-  const focusedField = React.useRef<"subject" | "body">("body")
   const subjectId = React.useId()
   const bodyId = React.useId()
-
-  const insertToken = (token: string) => {
-    const field = focusedField.current
-    const el = field === "subject" ? subjectRef.current : bodyRef.current
-    const value = field === "subject" ? subject : body
-    const setValue = field === "subject" ? setSubject : setBody
-    const start = el?.selectionStart ?? value.length
-    const end = el?.selectionEnd ?? value.length
-    setValue(value.slice(0, start) + token + value.slice(end))
-    requestAnimationFrame(() => {
-      if (!el) return
-      el.focus()
-      const caret = start + token.length
-      el.setSelectionRange(caret, caret)
-    })
-  }
 
   const subjectIssues = forwardTemplateIssues(subject)
   const bodyIssues = forwardTemplateIssues(body)
   const hasIssues = subjectIssues.length > 0 || bodyIssues.length > 0
 
-  const backdrop = usePristineDismiss(onClose, subject === seed.subject && body === seed.body)
+  const backdrop = usePristineDismiss(onClose, draft.pristine)
 
   const onPreview = () => {
     const input: PreviewForwardTemplateRequest = {}
@@ -129,124 +327,40 @@ function ForwardTemplateEditor({
         </div>
 
         {rendered ? (
-          <div className="modal-body">
-            <div className="tpl-email">
-              <div className="tpl-email-subject">{rendered.subject}</div>
-              <iframe
-                className="tpl-preview-frame"
-                sandbox=""
-                srcDoc={rendered.html}
-                title="Email preview"
-              />
-            </div>
-            <div className="hint">
-              Rendered with sample data · subject from {SOURCE_LABEL[rendered.subjectSource]} · body
-              from {SOURCE_LABEL[rendered.bodySource]}
-            </div>
-          </div>
+          <TemplatePreview rendered={rendered} />
         ) : (
-          <div className="modal-body">
-            <div className="hint">{subtitle}</div>
-            <div className="tpl-legend" aria-label="Insert a variable">
-              {FORWARD_TEMPLATE_VARIABLES.map((v) => (
-                <button
-                  key={v.token}
-                  type="button"
-                  className="tpl-chip"
-                  title={`${v.label}: ${v.description}`}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => insertToken(v.token)}
-                >
-                  {v.token}
-                </button>
-              ))}
-            </div>
-            <div className="hint">Click a variable to insert it where your cursor is.</div>
-
-            <div className="compose-field">
-              <label htmlFor={subjectId}>Subject</label>
-              <input
-                id={subjectId}
-                ref={subjectRef}
-                type="text"
-                value={subject}
-                placeholder={fallback.subject}
-                onFocus={() => (focusedField.current = "subject")}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-              <IssueList issues={subjectIssues} />
-            </div>
-
-            <div className="compose-field">
-              <label htmlFor={bodyId}>Body</label>
-              <textarea
-                id={bodyId}
-                ref={bodyRef}
-                className="tpl-body"
-                rows={12}
-                value={body}
-                placeholder={`Leave both fields empty to use ${fallbackLabel}…`}
-                onFocus={() => (focusedField.current = "body")}
-                onChange={(e) => setBody(e.target.value)}
-              />
-              <IssueList issues={bodyIssues} />
-            </div>
-
-            {preview.isPending && <div className="hint">Rendering a preview…</div>}
-            {preview.isError && !preview.isPending && (
-              <div className="tpl-issue" role="alert">
-                {errorMessage(preview.error)}
-              </div>
-            )}
-          </div>
+          <TemplateFields
+            subtitle={subtitle}
+            fallback={fallback}
+            fallbackLabel={fallbackLabel}
+            subject={subject}
+            body={body}
+            subjectId={subjectId}
+            bodyId={bodyId}
+            subjectIssues={subjectIssues}
+            bodyIssues={bodyIssues}
+            onSubjectChange={draft.setSubject}
+            onBodyChange={draft.setBody}
+            subjectRef={draft.subjectRef}
+            bodyRef={draft.bodyRef}
+            onFieldFocus={draft.focusField}
+            onInsertToken={draft.insertToken}
+            preview={preview}
+          />
         )}
 
-        <div className="modal-foot">
-          {rendered ? (
-            <button className="btn" onClick={() => setRendered(null)}>
-              <Icons.ChevronLeft size={13} /> Back to editor
-            </button>
-          ) : (
-            <>
-              <button
-                className="btn"
-                onClick={() => {
-                  setSubject(fallback.subject)
-                  setBody(fallback.body)
-                }}
-              >
-                Copy in the {fallbackLabel}
-              </button>
-              <button
-                className="btn"
-                onClick={() => {
-                  setSubject("")
-                  setBody("")
-                }}
-              >
-                Clear
-              </button>
-            </>
-          )}
-          <div className="spacer" />
-          {!rendered && (
-            <button className="btn" disabled={hasIssues || preview.isPending} onClick={onPreview}>
-              <Icons.Eye size={13} /> Preview
-            </button>
-          )}
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            className="btn primary"
-            disabled={hasIssues || pending}
-            onClick={() =>
-              onSave({ subject: toStoredTemplate(subject), body: toStoredTemplate(body) })
-            }
-          >
-            <Icons.Check size={13} /> Save
-          </button>
-        </div>
+        <TemplateModalFoot
+          previewing={rendered !== null}
+          fallback={fallback}
+          fallbackLabel={fallbackLabel}
+          onBack={() => setRendered(null)}
+          onFill={draft.fill}
+          previewDisabled={hasIssues || preview.isPending}
+          onPreview={onPreview}
+          onClose={onClose}
+          saveDisabled={hasIssues || pending}
+          onSave={() => onSave({ subject: toStoredTemplate(subject), body: toStoredTemplate(body) })}
+        />
       </div>
     </div>
   )
