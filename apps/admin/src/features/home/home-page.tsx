@@ -544,7 +544,7 @@ function SectionTile({
                   label={`Pins per week, last ${s.spark.length} weeks: ${s.spark.join(", ")}`}
                 />
               ) : (
-                <div className="hub-spark hub-spark-empty">No data yet</div>
+                <div className="hub-spark">No data yet</div>
               ))}
           </div>
           {s.metrics && (

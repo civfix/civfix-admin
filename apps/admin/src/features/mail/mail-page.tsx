@@ -160,7 +160,7 @@ function ComposeEditor({ onClose, onSend, pending }: ComposeModalProps) {
     <div className="modal-overlay" {...backdrop}>
       <div
         ref={modalRef}
-        className="modal compose-modal"
+        className="modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

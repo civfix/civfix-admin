@@ -28,7 +28,7 @@ export function PagePreview({ cleanupId, title }: { cleanupId: string; title: st
         // eslint-disable-next-line @next/next/no-img-element
         <img className="pg-cover" src={page.coverUrl} alt="" />
       )}
-      <div className="pg-seo">
+      <div>
         <div className="pg-seo-title">{page.seo.title ?? title}</div>
         {page.seo.description && <div className="pg-seo-desc">{page.seo.description}</div>}
         <div className="pg-seo-meta mono">

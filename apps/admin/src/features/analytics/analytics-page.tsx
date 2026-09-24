@@ -307,7 +307,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
             return (
               <div className="cat-breakdown">
                 {d.rows.map((r) => (
-                  <div key={r.cat} className="cat-bd-row res-row">
+                  <div key={r.cat} className="cat-bd-row">
                     <span className="cat-bd-dot" style={{ background: categoryCssVar(r.cat) }} />
                     <span className="cat-bd-name">{REPORT_CATEGORY_LABELS[r.cat]}</span>
                     <span className="cat-bd-track">
