@@ -18,6 +18,12 @@ export const ORG_STATUS_VIEW: Record<OrgVerificationStatus, { label: string; cls
   rejected: { label: "Rejected", cls: "status-flag" },
 }
 
+// The shared client passes enum values it does not know through, so a status added server-side
+// must render as its raw value instead of crashing the org views.
+export function orgStatusView(status: string): { label: string; cls: string } {
+  return ORG_STATUS_VIEW[status as OrgVerificationStatus] ?? { label: status, cls: "priority-low" }
+}
+
 export const ORG_KIND_LABEL: Record<OrgVerificationKind, string> = {
   nonprofit: "Nonprofit",
   government: "Government",
@@ -46,7 +52,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
   if (!org) return null
 
   const verification = org.verification ?? null
-  const statusView = ORG_STATUS_VIEW[org.verifiedStatus]
+  const statusView = orgStatusView(org.verifiedStatus)
   const documentIds = verification?.documentMediaIds ?? []
   const pending = org.verifiedStatus === "pending"
 

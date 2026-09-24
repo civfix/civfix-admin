@@ -16,7 +16,7 @@ import { OrgEventsPanel } from "@/features/orgs/org-events-panel"
 import { ProfilePanel } from "@/features/orgs/profile-panel"
 import {
   ORG_KIND_LABEL,
-  ORG_STATUS_VIEW,
+  orgStatusView,
   VerificationPanel,
 } from "@/features/orgs/verification-panel"
 import {
@@ -60,7 +60,7 @@ function OrgRow({
   selected: boolean
   onClick: () => void
 }) {
-  const view = ORG_STATUS_VIEW[org.verifiedStatus]
+  const view = orgStatusView(org.verifiedStatus)
   const suspended = !!org.suspendedAt
   return (
     <div
@@ -139,7 +139,7 @@ function OrgDetail({
   }
   const org = q.data
   if (!org) return null
-  const statusView = ORG_STATUS_VIEW[org.verifiedStatus]
+  const statusView = orgStatusView(org.verifiedStatus)
   const suspended = !!org.suspendedAt
 
   const onSuspend = async () => {

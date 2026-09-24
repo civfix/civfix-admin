@@ -26,7 +26,7 @@ import {
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { toastUnlessShownInline, useUpdateOrg } from "@/features/orgs/use-orgs"
-import { ORG_KIND_LABEL, ORG_STATUS_VIEW } from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL, orgStatusView } from "@/features/orgs/verification-panel"
 import { useNav, useToast } from "@/store/ui-store"
 
 /** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
@@ -41,7 +41,7 @@ export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
 
 function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) {
   const nav = useNav()
-  const statusView = ORG_STATUS_VIEW[org.verifiedStatus]
+  const statusView = orgStatusView(org.verifiedStatus)
   const socials = SOCIAL_PLATFORMS.filter((p) => !!org.socialLinks?.[p])
   return (
     <div className="org-panel">
