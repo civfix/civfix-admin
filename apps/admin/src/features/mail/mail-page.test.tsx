@@ -4,7 +4,10 @@ import type {
   GetForwardTemplateDefaultResponse,
   InboundEmailDTO,
   InboundEmailListItemDTO,
-  InboxListResponse,
+  InboxFeedEmailItemDTO,
+  InboxFeedItemDTO,
+  InboxFeedReplyItemDTO,
+  InboxFeedResponse,
   MailListResponse,
   MailStatsResponse,
   MailThreadDTO,
@@ -111,8 +114,84 @@ const PRESS = inboxItem({
   unread: false,
 })
 
-function inboxPage(items: InboundEmailListItemDTO[], nextCursor: string | null = null) {
-  return { items, nextCursor } satisfies InboxListResponse
+function emailFeedItem(item: InboundEmailListItemDTO) {
+  return { ...item, source: "email" } satisfies InboxFeedEmailItemDTO
+}
+
+const QUESTION_FEED = emailFeedItem(QUESTION)
+const PRESS_FEED = emailFeedItem(PRESS)
+
+const REPORT_REPLY = {
+  source: "reply",
+  id: "m-1",
+  threadId: "t-1",
+  reportId: "r-1",
+  cleanupId: null,
+  org: "Oakland Public Works",
+  from: "clerk@oaklandca.gov",
+  subject: "Re: Pothole on 5th Ave",
+  preview: "Crew is scheduled for Monday",
+  ts: TS,
+  unread: true,
+  threadStatus: "needs_action",
+  hasAttachments: false,
+  authVerdict: "fail",
+  publication: "withheld",
+} satisfies InboxFeedReplyItemDTO
+
+const EVENT_REPLY = {
+  source: "reply",
+  id: "m-2",
+  threadId: "t-3",
+  reportId: null,
+  cleanupId: "c-1",
+  org: "Parks Department",
+  from: "parks@oaklandca.gov",
+  subject: "Re: Lake Merritt cleanup",
+  preview: "Gloves will be at the boathouse",
+  ts: TS,
+  unread: false,
+  threadStatus: "replied",
+  hasAttachments: false,
+  authVerdict: "pass",
+  publication: null,
+} satisfies InboxFeedReplyItemDTO
+
+const REPORT_REPLY_THREAD = {
+  ...thread({
+    id: "t-1",
+    subject: "Re: Pothole on 5th Ave",
+    dir: "in",
+    from: "clerk@oaklandca.gov",
+    status: "needs_action",
+    reportId: "r-1",
+  }),
+  messages: [
+    {
+      id: "m-1",
+      who: "Oakland Public Works",
+      from: "clerk@oaklandca.gov",
+      to: "outreach@civfix.org",
+      dir: "in",
+      body: "Body of Re: Pothole on 5th Ave",
+      ts: TS,
+      attachments: [],
+      authVerdict: "fail",
+      publication: "withheld",
+    },
+  ],
+} satisfies MailThreadDTO
+
+function mockThreadDetails(...threads: MailThreadDTO[]) {
+  apiMock.getMailThread.mockImplementation(async ({ id }: { id: string }) => {
+    const t = threads.find((x) => x.id === id)
+    if (!t) throw new Error(`no thread ${id}`)
+    return t
+  })
+}
+
+function feedPage(items: InboxFeedItemDTO[], nextCursor: string | null = null) {
+  return { items, nextCursor } satisfies InboxFeedResponse
 }
 
 function inboxDetail(item: InboundEmailListItemDTO): InboundEmailDTO {
@@ -137,14 +216,14 @@ const STATS = { unread: 2, threads: 17, sent: 40, bounced: 3, failed: 1 } satisf
 
 // The page always loads the stats strip, the forward template and both folder lists, so every test
 // resolves the ones it is not about.
-function mockChrome({ inbox = inboxPage([]) }: { inbox?: InboxListResponse } = {}) {
+function mockChrome({ feed = feedPage([]) }: { feed?: InboxFeedResponse } = {}) {
   apiMock.getMailStats.mockResolvedValue(STATS)
   apiMock.getForwardTemplateDefault.mockResolvedValue({
     subjectTemplate: null,
     bodyTemplate: null,
     updatedAt: null,
   } satisfies GetForwardTemplateDefaultResponse)
-  apiMock.listInbox.mockResolvedValue(inbox)
+  apiMock.listInboxFeed.mockResolvedValue(feed)
 }
 
 describe("MailPage outreach", () => {
@@ -320,8 +399,8 @@ describe("MailPage inbox", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Inbox/ }))
   }
 
-  it("switches to the Inbox folder with its own chips and no stats strip", async () => {
-    mockChrome({ inbox: inboxPage([]) })
+  it("switches to the Inbox folder with the feed filter chips and no stats strip", async () => {
+    mockChrome()
     apiMock.listMail.mockResolvedValue(mailPage([]))
     renderWithQuery(<MailPage focusId={null} />)
     await screen.findByText("Sent · 7d")
@@ -329,101 +408,148 @@ describe("MailPage inbox", () => {
 
     expect(screen.getByRole("radio", { name: /Inbox/ })).toHaveAttribute("aria-checked", "true")
     expect(screen.queryByText("Sent · 7d")).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unread" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Archived" })).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Needs attention" })).not.toBeInTheDocument()
-    expect(screen.getByPlaceholderText("Search sender, subject…")).toBeInTheDocument()
+    for (const chip of ["All", "Unread", "Replies", "Needs review", "Unmatched", "Archived"]) {
+      expect(screen.getByRole("button", { name: chip })).toBeInTheDocument()
+    }
+    for (const chip of ["Inbound", "Outbound", "Needs attention"]) {
+      expect(screen.queryByRole("button", { name: chip })).not.toBeInTheDocument()
+    }
+    expect(within(listCard()).getByRole("heading", { name: "All" })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Search sender, subject, org…")).toBeInTheDocument()
   })
 
-  it("shows the loading state while the inbox is in flight", async () => {
+  it("shows the loading state while the inbox feed is in flight", async () => {
     mockChrome()
-    apiMock.listInbox.mockReturnValue(new Promise(() => {}))
+    apiMock.listInboxFeed.mockReturnValue(new Promise(() => {}))
     apiMock.listMail.mockResolvedValue(mailPage([]))
     renderWithQuery(<MailPage focusId={null} />)
     await openInbox()
     expect(within(listCard()).getByRole("status")).toHaveTextContent("Loading inbox...")
-  })
-
-  it("shows the empty copy when the inbox is empty", async () => {
-    mockChrome({ inbox: inboxPage([]) })
-    apiMock.listMail.mockResolvedValue(mailPage([]))
-    renderWithQuery(<MailPage focusId={null} />)
-    await openInbox()
-    expect(await within(listCard()).findByText("Empty")).toBeInTheDocument()
-    expect(within(listCard()).getByText("No messages here.")).toBeInTheDocument()
     expect(within(detailCard()).getByText("No message selected")).toBeInTheDocument()
   })
 
-  it("shows the error state with the failure message and a retry", async () => {
+  it("shows the per-filter empty copy when the inbox feed is empty", async () => {
     mockChrome()
-    apiMock.listInbox.mockRejectedValue(new Error("Inbox backend unreachable"))
     apiMock.listMail.mockResolvedValue(mailPage([]))
+    renderWithQuery(<MailPage focusId={null} />)
+    await openInbox()
+    expect(await within(listCard()).findByText("Inbox is empty")).toBeInTheDocument()
+    expect(
+      within(listCard()).getByText("City replies and other mail sent to civfix show up here."),
+    ).toBeInTheDocument()
+    expect(within(detailCard()).getByText("No message selected")).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Needs review" }))
+
+    expect(await within(listCard()).findByText("Nothing to review")).toBeInTheDocument()
+    expect(
+      within(listCard()).getByText("Replies held back from a report chat or event show up here."),
+    ).toBeInTheDocument()
+  })
+
+  it("shows the error state with the failure message and refetches the feed on retry", async () => {
+    mockChrome()
+    apiMock.listInboxFeed.mockRejectedValue(new Error("Inbox backend unreachable"))
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    mockInboxMessages(PRESS)
     renderWithQuery(<MailPage focusId={null} />)
     await openInbox()
     const alert = await within(listCard()).findByRole("alert")
     expect(alert).toHaveTextContent("Could not load this")
     expect(alert).toHaveTextContent("Inbox backend unreachable")
-    expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument()
+
+    apiMock.listInboxFeed.mockResolvedValue(feedPage([PRESS_FEED]))
+    await userEvent.click(within(alert).getByRole("button", { name: "Try again" }))
+
+    expect(await within(listCard()).findByText("Press inquiry")).toBeInTheDocument()
+    expect(within(listCard()).queryByRole("alert")).not.toBeInTheDocument()
   })
 
-  it("renders inbox rows and auto-selects the first message into the reader", async () => {
-    mockChrome({ inbox: inboxPage([QUESTION, PRESS]) })
+  it("renders reply and email rows and auto-selects the first item into the reader", async () => {
+    mockChrome({ feed: feedPage([REPORT_REPLY, QUESTION_FEED, EVENT_REPLY]) })
     apiMock.listMail.mockResolvedValue(mailPage([]))
-    mockInboxMessages(QUESTION, PRESS)
+    mockThreadDetails(REPORT_REPLY_THREAD)
     renderWithQuery(<MailPage focusId={null} />)
     await openInbox()
 
-    await within(listCard()).findByText("Question about my report")
+    await within(listCard()).findByText("Re: Pothole on 5th Ave")
     const list = listCard()
+    expect(within(list).getByText("3")).toBeInTheDocument()
+    expect(within(list).getByText("Oakland Public Works")).toBeInTheDocument()
+    expect(within(list).getByText("Report reply")).toBeInTheDocument()
+    expect(within(list).getByText("Withheld")).toBeInTheDocument()
+    expect(within(list).getByText("Question about my report")).toBeInTheDocument()
     expect(within(list).getByText("resident@example.com")).toBeInTheDocument()
     expect(within(list).getByText("support")).toBeInTheDocument()
     expect(within(list).getByText("Unread")).toBeInTheDocument()
-    expect(within(list).getByText("Press inquiry")).toBeInTheDocument()
-    expect(within(list).getByText("reporter@news.example")).toBeInTheDocument()
-    expect(within(list).getByText("Read")).toBeInTheDocument()
+    expect(within(list).getByText("Re: Lake Merritt cleanup")).toBeInTheDocument()
+    expect(within(list).getByText("Parks Department")).toBeInTheDocument()
+    expect(within(list).getByText("Event reply")).toBeInTheDocument()
+    expect(within(list).getByText("Replied")).toBeInTheDocument()
+    expect(apiMock.listInboxFeed).toHaveBeenCalledWith({ filter: "all" })
 
     const card = detailCard()
-    expect(await within(card).findByText("Body of Question about my report")).toBeInTheDocument()
-    expect(within(card).getByText("to hello@civfix.org")).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: /Mark read/ })).toBeEnabled()
-    expect(within(card).getByRole("button", { name: /Archive/ })).toBeEnabled()
-    expect(apiMock.getInboxMessage).toHaveBeenCalledWith({ id: "i-1" })
+    expect(await within(card).findByText("Body of Re: Pothole on 5th Ave")).toBeInTheDocument()
+    expect(within(card).getByText("Failed sender check")).toBeInTheDocument()
+    expect(within(card).getByText("Withheld")).toBeInTheDocument()
+    expect(within(card).getByRole("button", { name: /Publish reply/ })).toBeInTheDocument()
+    expect(within(card).getByRole("button", { name: /View report/ })).toBeInTheDocument()
+    expect(within(card).getByPlaceholderText("Reply to Oakland Public Works…")).toBeInTheDocument()
+    expect(apiMock.getMailThread).toHaveBeenCalledWith({ id: "t-1" })
+    expect(apiMock.getInboxMessage).not.toHaveBeenCalled()
   })
 
-  it("opens the clicked message in the reader", async () => {
-    mockChrome({ inbox: inboxPage([QUESTION, PRESS]) })
+  it("opens a clicked email row in the inbound message reader", async () => {
+    mockChrome({ feed: feedPage([REPORT_REPLY, PRESS_FEED]) })
     apiMock.listMail.mockResolvedValue(mailPage([]))
-    mockInboxMessages(QUESTION, PRESS)
+    mockThreadDetails(REPORT_REPLY_THREAD)
+    mockInboxMessages(PRESS)
     renderWithQuery(<MailPage focusId={null} />)
     await openInbox()
-    await within(detailCard()).findByText("Body of Question about my report")
+    await within(detailCard()).findByText("Body of Re: Pothole on 5th Ave")
 
     await userEvent.click(within(listCard()).getByText("Press inquiry"))
 
     const card = detailCard()
     expect(await within(card).findByText("Body of Press inquiry")).toBeInTheDocument()
+    expect(within(card).getByText("to hello@civfix.org")).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: /Mark read/ })).toBeDisabled()
+    expect(within(card).getByRole("button", { name: /Archive/ })).toBeEnabled()
+    expect(within(card).queryByRole("button", { name: /Publish reply/ })).not.toBeInTheDocument()
+    expect(apiMock.getInboxMessage).toHaveBeenCalledWith({ id: "i-2" })
   })
 
-  it("sends the chosen filter chip to the api", async () => {
-    mockChrome({ inbox: inboxPage([PRESS]) })
+  it("sends the chosen filter chip and search to listInboxFeed and titles the list with the chip", async () => {
+    mockChrome({ feed: feedPage([PRESS_FEED]) })
     apiMock.listMail.mockResolvedValue(mailPage([]))
     mockInboxMessages(PRESS)
     renderWithQuery(<MailPage focusId={null} />)
     await openInbox()
     await within(listCard()).findByText("Press inquiry")
 
-    await userEvent.click(screen.getByRole("button", { name: "Unread" }))
-    await waitFor(() => expect(apiMock.listInbox).toHaveBeenLastCalledWith({ status: "unread" }))
+    const chips = [
+      ["Unread", "unread"],
+      ["Replies", "replies"],
+      ["Needs review", "review"],
+      ["Unmatched", "unmatched"],
+      ["Archived", "archived"],
+    ] as const
+    for (const [label, filter] of chips) {
+      await userEvent.click(screen.getByRole("button", { name: label }))
+      await waitFor(() => expect(apiMock.listInboxFeed).toHaveBeenLastCalledWith({ filter }))
+      expect(within(listCard()).getByRole("heading", { name: label })).toBeInTheDocument()
+    }
 
-    await userEvent.click(screen.getByRole("button", { name: "Archived" }))
-    await waitFor(() => expect(apiMock.listInbox).toHaveBeenLastCalledWith({ status: "archived" }))
+    await userEvent.type(screen.getByPlaceholderText("Search sender, subject, org…"), "press")
+    await waitFor(() =>
+      expect(apiMock.listInboxFeed).toHaveBeenLastCalledWith({ filter: "archived", q: "press" }),
+    )
   })
 
   it("shows Load more when a cursor is returned and fetches the next page with it", async () => {
     mockChrome()
-    apiMock.listInbox.mockImplementation(async (params: { cursor?: string }) =>
-      params.cursor === "in-2" ? inboxPage([PRESS]) : inboxPage([QUESTION], "in-2"),
+    apiMock.listInboxFeed.mockImplementation(async (params: { cursor?: string }) =>
+      params.cursor === "feed-2" ? feedPage([PRESS_FEED]) : feedPage([QUESTION_FEED], "feed-2"),
     )
     apiMock.listMail.mockResolvedValue(mailPage([]))
     mockInboxMessages(QUESTION, PRESS)
@@ -434,11 +560,12 @@ describe("MailPage inbox", () => {
     await userEvent.click(screen.getByRole("button", { name: "Load more" }))
 
     expect(await within(listCard()).findByText("Press inquiry")).toBeInTheDocument()
-    expect(apiMock.listInbox).toHaveBeenLastCalledWith({ status: "all", cursor: "in-2" })
+    expect(apiMock.listInboxFeed).toHaveBeenLastCalledWith({ filter: "all", cursor: "feed-2" })
+    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument()
   })
 
   it("opens an inbox: deep link in the Inbox folder", async () => {
-    mockChrome({ inbox: inboxPage([QUESTION, PRESS]) })
+    mockChrome({ feed: feedPage([QUESTION_FEED, PRESS_FEED]) })
     apiMock.listMail.mockResolvedValue(mailPage([]))
     mockInboxMessages(QUESTION, PRESS)
     renderWithQuery(<MailPage focusId="inbox:i-2" />)
@@ -446,5 +573,6 @@ describe("MailPage inbox", () => {
     expect(screen.getByRole("radio", { name: /Inbox/ })).toHaveAttribute("aria-checked", "true")
     expect(await within(detailCard()).findByText("Body of Press inquiry")).toBeInTheDocument()
     expect(within(detailCard()).queryByText("Body of Question about my report")).not.toBeInTheDocument()
+    expect(apiMock.getInboxMessage).not.toHaveBeenCalledWith({ id: "i-1" })
   })
 })
