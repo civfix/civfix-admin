@@ -251,6 +251,11 @@ function ChatMessageRow({
             <span className="dsc-msg-who">{authorName}</span>
           )}
           {handle && !removed && <span className="dsc-msg-handle mono">{handle}</span>}
+          {msg.from?.official && !removed && (
+            <span className="pill status-ok tight" title="The official CivFix account">
+              <Icons.Check size={10} /> Official
+            </span>
+          )}
           {msg.forwardedToCity && (
             <span className="pill status-progress tight" title="Forwarded to the routed city">
               <Icons.Send size={10} /> Forwarded to city
@@ -437,7 +442,7 @@ function ReportDiscussion({
           className="rep-followup"
           rows={3}
           maxLength={MESSAGE_BODY_MAX}
-          placeholder="Message the neighbors in this report's chat…"
+          placeholder="Message the neighbors as CivFix…"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {

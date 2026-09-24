@@ -2508,6 +2508,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .evt-msg-who { font-weight: 700; font-size: 12px; color: var(--sun-700); }
 .evt-msg-when { font-family: var(--font-mono); font-size: 10px; color: var(--ink-4); }
 .evt-msg-text { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink); line-height: 1.4; }
+.evt-post-hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
 
 /* -- Report discussion (public comment thread; distinct from the Activity timeline) -- */
 .dsc-list { display: flex; flex-direction: column; gap: 10px; }
@@ -2843,6 +2844,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .mail-bounce-note { background: var(--bloom-50); color: var(--bloom-700); border: 1px solid color-mix(in oklab, var(--bloom) 18%, transparent); }
 .mail-action-note { background: var(--sky-50); color: var(--sky-700); border: 1px solid color-mix(in oklab, var(--sky) 20%, transparent); }
+.mail-withheld-note { margin-top: 8px; }
+.mail-withheld-note .btn { flex-shrink: 0; margin-left: auto; }
 .mail-reader-foot { padding: 14px 18px; border-top: 1px solid var(--border-soft); display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Mail thread bubbles */

@@ -1,6 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  mutationOptions,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import type {
   ComposeRequest,
   GetForwardTemplateDefaultResponse,
@@ -11,6 +17,7 @@ import type {
   MarkMailReadRequest,
   PreviewForwardTemplateRequest,
   PreviewForwardTemplateResponse,
+  PublishMailReplyRequest,
   ReplyRequest,
   ResendRequest,
   SetForwardTemplateDefaultRequest,
@@ -56,10 +63,11 @@ export function useMailStats() {
   })
 }
 
-function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
+export function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
   if (id) qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.mail.all })
   qc.invalidateQueries({ queryKey: queryKeys.mail.stats })
+  qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
 }
 
@@ -101,6 +109,22 @@ export function useResendMail() {
     mutationFn: (input: ResendRequest) => api.resendMail(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
   })
+}
+
+export function publishMailReplyOptions(qc: ReturnType<typeof useQueryClient>) {
+  return mutationOptions({
+    mutationFn: (input: PublishMailReplyRequest) => api.publishMailReply(input),
+    onSuccess: (_res, { id }) => {
+      invalidateMail(qc, id)
+      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
+      qc.invalidateQueries({ queryKey: queryKeys.events.all })
+    },
+  })
+}
+
+export function usePublishMailReply() {
+  const qc = useQueryClient()
+  return useMutation(publishMailReplyOptions(qc))
 }
 
 export function useForwardTemplateDefault() {

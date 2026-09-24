@@ -723,6 +723,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
               >
                 <Icons.Send size={13} /> Post update <span className="kbdhint">⌘⏎</span>
               </button>
+              <div className="evt-post-hint">Updates are posted as CivFix, not from your own account.</div>
             </div>
           </div>
         </div>
