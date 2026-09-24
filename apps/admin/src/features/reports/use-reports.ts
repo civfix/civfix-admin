@@ -107,7 +107,7 @@ export function useFlagReport() {
       try {
         report = await qc.fetchQuery(reportQuery(id))
       } catch {
-        // The flag already changed; a failed read only costs the wording, not the success.
+        // The flag already changed and the refetch failed: skip the toast rather than guess its wording.
         return
       }
       useUiStore

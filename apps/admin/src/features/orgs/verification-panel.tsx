@@ -13,7 +13,6 @@ import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verif
 import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
 import { useNav } from "@/store/ui-store"
 
-
 const APPROVE_KINDS: OrgVerificationKind[] = ["nonprofit", "government", "community"]
 
 export function VerificationPanel({ orgId }: { orgId: string }) {

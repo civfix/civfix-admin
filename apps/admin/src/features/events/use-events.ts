@@ -79,7 +79,7 @@ export function useFlagEvent() {
       try {
         event = await qc.fetchQuery(eventQuery(id))
       } catch {
-        // The flag already changed; a failed read only costs the wording, not the success.
+        // The flag already changed and the refetch failed: skip the toast rather than guess its wording.
         return
       }
       useUiStore
