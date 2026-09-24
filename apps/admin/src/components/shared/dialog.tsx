@@ -69,6 +69,8 @@ export function promptDialog(
   })
 }
 
+const PROMPT_FIELD_ROWS = 3
+
 const NATIVE_ENTER_TAGS = new Set(["BUTTON", "A", "SELECT"])
 
 // The window listener sees Enter from every focused control. A focused button, link or select keeps
@@ -88,6 +90,71 @@ function enterAccepts({
   if (targetTag === "TEXTAREA" && !modified) return false
   if (request.kind === "confirm") return false
   return modified
+}
+
+function useDialogKeys(
+  current: DialogRequest | null,
+  cancel: () => void,
+  accept: () => void,
+): void {
+  React.useEffect(() => {
+    if (!current) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        cancel()
+        return
+      }
+      if (e.key !== "Enter") return
+      const targetTag = (e.target as HTMLElement | null)?.tagName
+      if (e.repeat) {
+        // A held key's repeats must not answer the dialog its first press opened, neither here nor by
+        // natively clicking whichever button now has focus. A textarea keeps them as newlines.
+        if (targetTag !== "TEXTAREA") e.preventDefault()
+      } else if (enterAccepts({ request: current, targetTag, modified: e.metaKey || e.ctrlKey })) {
+        e.preventDefault()
+        accept()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [current, cancel, accept])
+}
+
+function PromptField({
+  request,
+  fieldId,
+  titleId,
+  fieldRef,
+  value,
+  onChange,
+}: {
+  request: PromptRequest
+  fieldId: string
+  titleId: string
+  fieldRef: React.RefObject<HTMLTextAreaElement | null>
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <>
+      {request.label && (
+        <label className="dialog-label" htmlFor={fieldId}>
+          {request.label}
+        </label>
+      )}
+      <textarea
+        ref={fieldRef}
+        id={fieldId}
+        aria-labelledby={request.label ? undefined : titleId}
+        className="dialog-input"
+        rows={PROMPT_FIELD_ROWS}
+        value={value}
+        placeholder={request.placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </>
+  )
 }
 
 export function DialogHost() {
@@ -130,28 +197,7 @@ export function DialogHost() {
     close()
   }, [current, value, close])
 
-  React.useEffect(() => {
-    if (!current) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        cancel()
-        return
-      }
-      if (e.key !== "Enter") return
-      const targetTag = (e.target as HTMLElement | null)?.tagName
-      if (e.repeat) {
-        // A held key's repeats must not answer the dialog its first press opened, neither here nor by
-        // natively clicking whichever button now has focus. A textarea keeps them as newlines.
-        if (targetTag !== "TEXTAREA") e.preventDefault()
-      } else if (enterAccepts({ request: current, targetTag, modified: e.metaKey || e.ctrlKey })) {
-        e.preventDefault()
-        accept()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [current, cancel, accept])
+  useDialogKeys(current, cancel, accept)
 
   const backdrop = useBackdropDismiss(cancel)
 
@@ -182,23 +228,14 @@ export function DialogHost() {
             </p>
           )}
           {current.kind === "prompt" && (
-            <>
-              {current.label && (
-                <label className="dialog-label" htmlFor={fieldId}>
-                  {current.label}
-                </label>
-              )}
-              <textarea
-                ref={fieldRef}
-                id={fieldId}
-                aria-labelledby={current.label ? undefined : titleId}
-                className="dialog-input"
-                rows={3}
-                value={value}
-                placeholder={current.placeholder}
-                onChange={(e) => setValue(e.target.value)}
-              />
-            </>
+            <PromptField
+              request={current}
+              fieldId={fieldId}
+              titleId={titleId}
+              fieldRef={fieldRef}
+              value={value}
+              onChange={setValue}
+            />
           )}
         </div>
         <div className="modal-foot dialog-foot">

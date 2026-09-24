@@ -6,6 +6,7 @@ import L from "leaflet"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { withCartoKey } from "@/lib/carto"
 import { CATEGORY_GLYPHS } from "@/lib/category"
+import { MAP_SETTLE_MS } from "@/lib/timing"
 
 // Leaflet rather than community-web's MapLibre seam: a deliberate choice for this internal tool.
 // Leaflet touches window at import, so this module must be loaded through next/dynamic with ssr:false.
@@ -43,7 +44,25 @@ const MAP_TILES = {
 
 export type MapTint = keyof typeof MAP_TILES
 
-export const MAP_HOME = { center: [39.5, -98.35] as [number, number], zoom: 4 }
+const MAP_HOME = { center: [39.5, -98.35] as [number, number], zoom: 4 }
+const BASEMAP_MAX_ZOOM = 20
+
+function addBasemap(map: L.Map, tint: MapTint): L.TileLayer {
+  const tiles = MAP_TILES[tint] ?? MAP_TILES.voyager
+  return L.tileLayer(tiles.url, {
+    attribution: tiles.attribution,
+    subdomains: tiles.subdomains,
+    maxZoom: BASEMAP_MAX_ZOOM,
+    detectRetina: true,
+  }).addTo(map)
+}
+
+const PIN_VIEWBOX_WIDTH = 64
+const PIN_VIEWBOX_HEIGHT = 76
+// Centers the 24-unit glyph (the icon set's grid) in the teardrop's head.
+const PIN_GLYPH_OFFSET = "translate(20 16)"
+const PIN_WIDTH = 31
+const PIN_WIDTH_ACTIVE = 40
 
 // Report pins are gray once routed and red while they still need a routing contact; events take the
 // fill of their kind.
@@ -77,21 +96,21 @@ function pinIcon(
   // constant own entry of GLYPHS may reach it (an inherited key like "constructor" would not).
   const glyph = Object.hasOwn(GLYPHS, glyphKey) ? GLYPHS[glyphKey]! : CATEGORY_GLYPHS.other
   const fill = PIN_FILL[state] ?? PIN_FILL.routed
-  const w = active ? 40 : 31
-  const h = w * (76 / 64)
+  const width = active ? PIN_WIDTH_ACTIVE : PIN_WIDTH
+  const height = width * (PIN_VIEWBOX_HEIGHT / PIN_VIEWBOX_WIDTH)
   const html =
-    `<div class="pi-pin2 ${state}${active ? " is-active" : ""}" style="width:${w}px;height:${h}px">` +
-    `<svg viewBox="0 0 64 76" width="${w}" height="${h}">` +
+    `<div class="pi-pin2 ${state}${active ? " is-active" : ""}" style="width:${width}px;height:${height}px">` +
+    `<svg viewBox="0 0 ${PIN_VIEWBOX_WIDTH} ${PIN_VIEWBOX_HEIGHT}" width="${width}" height="${height}">` +
     `<path d="${TEARDROP}" style="fill:${fill};stroke:var(--fg-on-color)" stroke-width="2.5"/>` +
-    `<g transform="translate(20 16)" style="stroke:var(--fg-on-color)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="${glyph}"/></g>` +
+    `<g transform="${PIN_GLYPH_OFFSET}" style="stroke:var(--fg-on-color)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="${glyph}"/></g>` +
     `</svg>` +
     `</div>`
   return L.divIcon({
     html,
     className: "pi-pin2-wrap",
-    iconSize: [w, h],
-    iconAnchor: [w / 2, h],
-    popupAnchor: [0, -h],
+    iconSize: [width, height],
+    iconAnchor: [width / 2, height],
+    popupAnchor: [0, -height],
   })
 }
 
@@ -109,7 +128,13 @@ function tooltipNode(text: string): HTMLElement {
   return el
 }
 
-const TOOLTIP_OPTIONS: L.TooltipOptions = { direction: "top", offset: [0, -30], className: "pi-map-tip" }
+// Lifts the tooltip clear of the pin head, since the marker is anchored at the pin's tip.
+const PIN_TOOLTIP_OFFSET: L.PointExpression = [0, -30]
+const TOOLTIP_OPTIONS: L.TooltipOptions = {
+  direction: "top",
+  offset: PIN_TOOLTIP_OFFSET,
+  className: "pi-map-tip",
+}
 
 // A keyboard marker is a role=button tab stop, and its divIcon has no text of its own to name it.
 function labelMarker(marker: L.Marker, text: string | null): void {
@@ -123,6 +148,93 @@ function syncTooltip(marker: L.Marker, text: string | null): void {
   if (!text) marker.unbindTooltip()
   else if (marker.getTooltip()) marker.setTooltipContent(tooltipNode(text))
   else marker.bindTooltip(tooltipNode(text), TOOLTIP_OPTIONS)
+}
+
+// What each marker last rendered, so a sync skips the DivIcon rebuild and DOM teardown, the tooltip
+// rebind and setLatLng when nothing visible changed. Without it one activeId change re-icons every
+// marker instead of just the two whose active state flipped.
+interface RenderedMarker {
+  key: string
+  text: string | null
+  lat: number
+  lng: number
+}
+
+interface MarkerSync {
+  activeId: string | null
+  interactive: boolean
+  markers: Record<string, L.Marker>
+  rendered: Record<string, RenderedMarker>
+  latestPins: Record<string, MapPin>
+  onTap: (pin: MapPin) => void
+}
+
+function createMarker(
+  map: L.Map,
+  pin: MapPin,
+  icon: L.DivIcon,
+  text: string | null,
+  sync: MarkerSync,
+): L.Marker {
+  const marker = L.marker([pin.lat, pin.lng], { icon, riseOnHover: true, keyboard: sync.interactive })
+  marker.addTo(map)
+  syncTooltip(marker, text)
+  if (sync.interactive) labelMarker(marker, text)
+  const tap = () => {
+    const latest = sync.latestPins[pin.id]
+    if (latest) sync.onTap(latest)
+  }
+  marker.on("click", tap)
+  marker.on("keydown", (e: L.LeafletKeyboardEvent) => {
+    if (!isKeyboardActivationKey(e.originalEvent.key)) return
+    e.originalEvent.preventDefault()
+    tap()
+  })
+  return marker
+}
+
+function updateMarker(
+  marker: L.Marker,
+  prev: RenderedMarker | undefined,
+  next: RenderedMarker,
+  icon: () => L.DivIcon,
+  interactive: boolean,
+): void {
+  if (!prev || prev.key !== next.key) marker.setIcon(icon())
+  if (!prev || prev.text !== next.text) {
+    syncTooltip(marker, next.text)
+    if (interactive) labelMarker(marker, next.text)
+  }
+  if (!prev || prev.lat !== next.lat || prev.lng !== next.lng) marker.setLatLng([next.lat, next.lng])
+}
+
+function syncMarkers(map: L.Map, pins: MapPin[], sync: MarkerSync): void {
+  const { markers, rendered, latestPins } = sync
+  const nextIds = new Set(pins.map((p) => p.id))
+  for (const id of Object.keys(markers)) {
+    if (nextIds.has(id)) continue
+    markers[id]?.remove()
+    delete markers[id]
+    delete rendered[id]
+    delete latestPins[id]
+  }
+
+  for (const p of pins) {
+    latestPins[p.id] = p
+    const active = String(p.id) === String(sync.activeId)
+    const next: RenderedMarker = {
+      // Everything pinIcon() depends on: an equal key means an identical DivIcon.
+      key: `${p.category}|${p.draft}|${p.kind}|${active}`,
+      text: tooltipText(p),
+      lat: p.lat,
+      lng: p.lng,
+    }
+    const icon = () => pinIcon(p.category, { active, draft: p.draft, kind: p.kind })
+    const existing = markers[p.id]
+    if (existing) updateMarker(existing, rendered[p.id], next, icon, sync.interactive)
+    else markers[p.id] = createMarker(map, p, icon(), next.text, sync)
+    rendered[p.id] = next
+  }
 }
 
 export interface LeafletMapProps {
@@ -148,12 +260,7 @@ export function LeafletMap({
   const mapRef = React.useRef<L.Map | null>(null)
   const tileRef = React.useRef<L.TileLayer | null>(null)
   const markersRef = React.useRef<Record<string, L.Marker>>({})
-  // What each marker last rendered, so reconcile skips the DivIcon rebuild and DOM teardown, the tooltip
-  // rebind and setLatLng when nothing visible changed. Without it one activeId change re-icons every
-  // marker instead of just the two whose active state flipped.
-  const renderRef = React.useRef<
-    Record<string, { key: string; text: string | null; lat: number; lng: number }>
-  >({})
+  const renderRef = React.useRef<Record<string, RenderedMarker>>({})
   // The latest pin per id: marker handlers are bound once, and a refetch replaces the pin objects.
   const pinsRef = React.useRef<Record<string, MapPin>>({})
   // Keep the latest onPinTap without re-running the create effect.
@@ -177,25 +284,19 @@ export function LeafletMap({
     })
     mapRef.current = map
 
-    const t = MAP_TILES[tint] ?? MAP_TILES.voyager
-    tileRef.current = L.tileLayer(t.url, {
-      attribution: t.attribution,
-      subdomains: t.subdomains,
-      maxZoom: 20,
-      detectRetina: true,
-    }).addTo(map)
+    tileRef.current = addBasemap(map, tint)
 
     if (interactive) {
       L.control.zoom({ position: "topright" }).addTo(map)
     }
 
-    const ro = new ResizeObserver(() => map.invalidateSize())
-    ro.observe(elRef.current)
-    const t0 = setTimeout(() => map.invalidateSize(), 60)
+    const resizeObserver = new ResizeObserver(() => map.invalidateSize())
+    resizeObserver.observe(elRef.current)
+    const settleTimer = setTimeout(() => map.invalidateSize(), MAP_SETTLE_MS)
 
     return () => {
-      ro.disconnect()
-      clearTimeout(t0)
+      resizeObserver.disconnect()
+      clearTimeout(settleTimer)
       map.remove()
       mapRef.current = null
       markersRef.current = {}
@@ -215,69 +316,19 @@ export function LeafletMap({
     const map = mapRef.current
     if (!map) return
     if (tileRef.current) tileRef.current.remove()
-    const t = MAP_TILES[tint] ?? MAP_TILES.voyager
-    tileRef.current = L.tileLayer(t.url, {
-      attribution: t.attribution,
-      subdomains: t.subdomains,
-      maxZoom: 20,
-      detectRetina: true,
-    }).addTo(map)
+    tileRef.current = addBasemap(map, tint)
   }, [tint])
 
   React.useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    const next: Record<string, MapPin> = {}
-    pins.forEach((p) => {
-      next[p.id] = p
-    })
-
-    Object.keys(markersRef.current).forEach((id) => {
-      if (!next[id]) {
-        markersRef.current[id]?.remove()
-        delete markersRef.current[id]
-        delete renderRef.current[id]
-        delete pinsRef.current[id]
-      }
-    })
-
-    pins.forEach((p) => {
-      pinsRef.current[p.id] = p
-      const existing = markersRef.current[p.id]
-      const active = String(p.id) === String(activeId)
-      // Everything pinIcon() depends on: an equal key means an identical DivIcon.
-      const key = `${p.category}|${p.draft}|${p.kind}|${active}`
-      const text = tooltipText(p)
-      if (existing) {
-        const prev = renderRef.current[p.id]
-        if (!prev || prev.key !== key) {
-          existing.setIcon(pinIcon(p.category, { active, draft: p.draft, kind: p.kind }))
-        }
-        if (!prev || prev.text !== text) {
-          syncTooltip(existing, text)
-          if (interactive) labelMarker(existing, text)
-        }
-        if (!prev || prev.lat !== p.lat || prev.lng !== p.lng) {
-          existing.setLatLng([p.lat, p.lng])
-        }
-      } else {
-        const icon = pinIcon(p.category, { active, draft: p.draft, kind: p.kind })
-        const m = L.marker([p.lat, p.lng], { icon, riseOnHover: true, keyboard: interactive }).addTo(map)
-        syncTooltip(m, text)
-        if (interactive) labelMarker(m, text)
-        const tap = () => {
-          const latest = pinsRef.current[p.id]
-          if (latest) onPinTapRef.current?.(latest)
-        }
-        m.on("click", tap)
-        m.on("keydown", (e: L.LeafletKeyboardEvent) => {
-          if (!isKeyboardActivationKey(e.originalEvent.key)) return
-          e.originalEvent.preventDefault()
-          tap()
-        })
-        markersRef.current[p.id] = m
-      }
-      renderRef.current[p.id] = { key, text, lat: p.lat, lng: p.lng }
+    syncMarkers(map, pins, {
+      activeId,
+      interactive,
+      markers: markersRef.current,
+      rendered: renderRef.current,
+      latestPins: pinsRef.current,
+      onTap: (pin) => onPinTapRef.current?.(pin),
     })
   }, [pins, activeId, interactive])
 

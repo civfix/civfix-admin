@@ -10,9 +10,9 @@ import type { AdminOperatorDTO } from "@civfix/shared"
  * "forbidden" is terminal: Access authenticated the user but they are not an allowlisted operator, so
  * retrying the bootstrap would only loop.
  */
-export type AuthStatus = "idle" | "loading" | "authenticated" | "anonymous" | "forbidden" | "signing-out"
+type AuthStatus = "idle" | "loading" | "authenticated" | "anonymous" | "forbidden" | "signing-out"
 
-export type SignedOutStatus = Extract<AuthStatus, "anonymous" | "forbidden" | "signing-out">
+type SignedOutStatus = Extract<AuthStatus, "anonymous" | "forbidden" | "signing-out">
 
 export interface AuthState {
   status: AuthStatus

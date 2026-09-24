@@ -49,23 +49,3 @@ export function ErrorState({
     </div>
   )
 }
-
-export function Skeleton({
-  width = "100%",
-  height = 16,
-  radius = 8,
-  className = "",
-}: {
-  width?: number | string
-  height?: number | string
-  radius?: number
-  className?: string
-}) {
-  return (
-    <div
-      className={`skel ${className}`}
-      style={{ width, height, borderRadius: radius }}
-      aria-hidden="true"
-    />
-  )
-}
