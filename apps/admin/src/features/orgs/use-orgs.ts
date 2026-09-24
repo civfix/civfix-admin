@@ -21,10 +21,7 @@ import type {
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import { queryKeys } from "@/lib/query"
-import {
-  EVIDENCE_URL_MAX_CACHE_MS,
-  evidenceUrlLifetimeMs,
-} from "@/features/orgs/evidence-cache"
+import { EVIDENCE_URL_MAX_CACHE_MS, evidenceStaleTime } from "@/features/orgs/evidence-cache"
 import type { OrgProfileErrors } from "@/features/orgs/org-form"
 import { uploadOrgLogo, type LogoFileFacts } from "@/features/orgs/org-logo-upload"
 import { useUiStore } from "@/store/ui-store"
@@ -85,7 +82,7 @@ export function useOrgVerificationDocument(mediaId: string | null) {
     queryKey: queryKeys.media.document(mediaId ?? ""),
     queryFn: () => api.adminGetMedia({ id: mediaId as string }),
     enabled: !!mediaId,
-    staleTime: (query) => evidenceUrlLifetimeMs(query.state.data?.expiresAt),
+    staleTime: evidenceStaleTime,
     gcTime: EVIDENCE_URL_MAX_CACHE_MS,
   })
 }
@@ -120,18 +117,13 @@ export function useDecideOrgVerification() {
 
 /**
  * Create/update render server field errors inline (slug conflict, VALIDATION.fields), so the hooks opt
- * out of the global error toast (a mutation-level onError replaces the QueryClient default). The form
- * maps the error to the fields it renders and calls this with what it could show: anything the form
- * has no field for — an unknown key, a CONFLICT on an unchanged slug, a rejected reason after the
- * prompt closed — still surfaces as the toast instead of vanishing.
+ * out of the global error toast. The form maps the error to the fields it renders and calls this with
+ * what it could show: anything the form has no field for (an unknown key, a CONFLICT on an unchanged
+ * slug, a rejected reason after the prompt closed) still surfaces as the toast instead of vanishing.
  */
 export function toastUnlessShownInline(err: unknown, shown: OrgProfileErrors) {
   if (Object.keys(shown).length > 0) return
   useUiStore.getState().showToast(errorMessage(err))
-}
-
-function quietOnError() {
-  /* handled by the form: see toastUnlessShownInline */
 }
 
 export function useCreateOrg() {
@@ -142,14 +134,14 @@ export function useCreateOrg() {
       qc.setQueryData(queryKeys.orgs.detail(org.id), org)
       invalidateOrgLists(qc)
     },
-    onError: quietOnError,
+    meta: { errorToast: false },
   })
 }
 
 export function useUploadOrgLogo() {
   return useMutation({
     mutationFn: (file: Blob & LogoFileFacts) => uploadOrgLogo({ api, file }),
-    onError: quietOnError,
+    meta: { errorToast: false },
   })
 }
 
@@ -161,7 +153,7 @@ export function useUpdateOrg() {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
       invalidateOrg(qc, id)
     },
-    onError: quietOnError,
+    meta: { errorToast: false },
   })
 }
 

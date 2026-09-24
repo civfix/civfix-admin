@@ -5,6 +5,7 @@ import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { useModalFocus } from "@/components/shared/modal-focus"
 import {
   buildCreateRequest,
   clearChangedFieldErrors,
@@ -14,7 +15,13 @@ import {
   type OrgProfileDraft,
   type OrgProfileErrors,
 } from "@/features/orgs/org-form"
-import { OrgProfileFields, ReasonField, FieldError } from "@/features/orgs/org-form-fields"
+import {
+  FieldError,
+  OrgProfileFields,
+  ReasonField,
+  fieldErrorId,
+  fieldHintId,
+} from "@/features/orgs/org-form-fields"
 import { toastUnlessShownInline, useCreateOrg } from "@/features/orgs/use-orgs"
 import { UserPicker, type PickedUser } from "@/features/orgs/user-picker"
 import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
@@ -83,13 +90,14 @@ function CreateOrgSlideOver({
 
   const pending = create.isPending
   // Overlay click, Escape, the close button and Cancel all come through here: none of them may
-  // dismiss the form while the request is in flight.
+  // dismiss the form while the request is in flight, nor while a logo upload would be orphaned.
   const close = React.useCallback(() => {
-    if (inFlight.current || pending) return
+    if (inFlight.current || pending || logoUploading) return
     onClose()
-  }, [onClose, pending])
+  }, [onClose, pending, logoUploading])
 
   const pristine =
+    !logoUploading &&
     owner === null &&
     draft.logoMediaId === null &&
     verifiedKind === "" &&
@@ -100,6 +108,7 @@ function CreateOrgSlideOver({
     draft.description === "" &&
     draft.websiteUrl === ""
   const backdrop = usePristineDismiss(close, pristine)
+  const panelRef = useModalFocus<HTMLElement>(true)
 
   const localErrors = React.useMemo(
     () => (submitted ? validateCreate(draft, owner, reason) : {}),
@@ -154,6 +163,7 @@ function CreateOrgSlideOver({
     <>
       <div className="panel-overlay open" {...backdrop} />
       <aside
+        ref={panelRef}
         className="panel org-create-panel open"
         role="dialog"
         aria-modal="true"
@@ -172,7 +182,7 @@ function CreateOrgSlideOver({
               className="closebtn"
               onClick={close}
               aria-label="Close"
-              disabled={pending}
+              disabled={pending || logoUploading}
             >
               <Icons.X size={16} />
             </button>
@@ -199,14 +209,26 @@ function CreateOrgSlideOver({
                 <div className="sub">
                   <div className="sub-head">Owner</div>
                   <div className="sub-body">
-                    <div className={`field ${errors.ownerUserId ? "has-error" : ""}`}>
-                      <span className="lbl">
+                    <div
+                      className={`field ${errors.ownerUserId ? "has-error" : ""}`}
+                      role="group"
+                      aria-labelledby="org-create-owner-label"
+                      aria-describedby={
+                        errors.ownerUserId
+                          ? fieldErrorId("org-create-owner")
+                          : fieldHintId("org-create-owner")
+                      }
+                    >
+                      <span className="lbl" id="org-create-owner-label">
                         Owner
                         <span className="opt">an existing civfix account</span>
                       </span>
                       <UserPicker value={owner} onChange={setOwner} />
-                      <FieldError text={errors.ownerUserId} />
-                      <span className="hint">
+                      <FieldError
+                        id={fieldErrorId("org-create-owner")}
+                        text={errors.ownerUserId}
+                      />
+                      <span className="hint" id={fieldHintId("org-create-owner")}>
                         The owner can edit the organization, manage its members and host under its
                         name. Ownership can be transferred later from the Members tab.
                       </span>
@@ -261,7 +283,12 @@ function CreateOrgSlideOver({
           <div className="panel-foot">
             {logoUploading && <span className="hint">Uploading the logo…</span>}
             <div className="spacer" />
-            <button type="button" className="btn ghost" onClick={close} disabled={pending}>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={close}
+              disabled={pending || logoUploading}
+            >
               Cancel
             </button>
             <button type="submit" className="btn primary" disabled={pending || logoUploading}>

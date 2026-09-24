@@ -23,6 +23,7 @@ import {
   orgListParams,
 } from "@/features/orgs/orgs-filters"
 import { parseOrgFocus, type OrgDetailTab } from "@/features/orgs/org-focus"
+import { menuFocusIndex } from "@/features/orgs/org-members"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { useAdminOrg, useOrgsInfinite, useSetOrgSuspended } from "@/features/orgs/use-orgs"
 import { useToast } from "@/store/ui-store"
@@ -64,6 +65,7 @@ function OrgRow({
       className={`qrow org-row ${selected ? "selected" : ""}`}
       role="button"
       tabIndex={0}
+      aria-current={selected ? "true" : undefined}
       onClick={onClick}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
@@ -127,9 +129,11 @@ function OrgDetail({
   const toast = useToast()
   // Guards the button against a second click while the reason prompt is open.
   const busy = React.useRef(false)
+  const tabIds = React.useId()
+  const tabRefs = React.useRef(new Map<OrgDetailTab, HTMLButtonElement>())
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />
-  if (q.isError) {
+  if (q.isError && !q.data) {
     return (
       <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load this organization" />
     )
@@ -138,6 +142,18 @@ function OrgDetail({
   if (!org) return null
   const statusView = orgStatusView(org.verifiedStatus)
   const suspended = !!org.suspendedAt
+  const tabId = (t: OrgDetailTab) => `${tabIds}-tab-${t}`
+  const panelId = `${tabIds}-panel`
+
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const current = DETAIL_TABS.findIndex((t) => t.id === tab)
+    const next = menuFocusIndex(e.key, current, DETAIL_TABS.length, "horizontal")
+    if (next === null) return
+    e.preventDefault()
+    const target = DETAIL_TABS[next]!.id
+    onTab(target)
+    tabRefs.current.get(target)?.focus()
+  }
 
   const onSuspend = async () => {
     if (busy.current || suspend.isPending) return
@@ -220,6 +236,17 @@ function OrgDetail({
           </div>
         </div>
       )}
+      {q.isError && (
+        <div className="org-banner tone-alert" role="status">
+          <Icons.AlertTriangle size={14} />
+          <div>
+            <b>Could not refresh this organization.</b> Showing what was last loaded.{" "}
+            <button type="button" className="btn sm ghost" onClick={() => void q.refetch()}>
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
       {org.deletedAt && (
         <div className="org-banner" role="status">
           <Icons.Trash size={14} />
@@ -230,13 +257,20 @@ function OrgDetail({
         </div>
       )}
 
-      <div className="profile-tabs org-tabs" role="tablist">
+      <div className="profile-tabs org-tabs" role="tablist" onKeyDown={onTabKeyDown}>
         {DETAIL_TABS.map((t) => (
           <button
             key={t.id}
+            ref={(el) => {
+              if (el) tabRefs.current.set(t.id, el)
+              else tabRefs.current.delete(t.id)
+            }}
+            id={tabId(t.id)}
             type="button"
             role="tab"
             aria-selected={tab === t.id}
+            aria-controls={tab === t.id ? panelId : undefined}
+            tabIndex={tab === t.id ? 0 : -1}
             className={`profile-tab ${tab === t.id ? "on" : ""}`}
             onClick={() => onTab(t.id)}
           >
@@ -244,13 +278,15 @@ function OrgDetail({
             {t.id === "members" && <span className="profile-tab-n">{org.memberCount}</span>}
             {t.id === "events" && <span className="profile-tab-n">{org.eventCount}</span>}
             {t.id === "verification" && org.verifiedStatus === "pending" && (
-              <span className="profile-tab-n">!</span>
+              <span className="profile-tab-n" role="img" aria-label="awaiting decision">
+                !
+              </span>
             )}
           </button>
         ))}
       </div>
 
-      <div className="org-tab-body">
+      <div className="org-tab-body" role="tabpanel" id={panelId} aria-labelledby={tabId(tab)}>
         {tab === "profile" && <ProfilePanel key={`pr-${org.id}`} org={org} />}
         {tab === "verification" && <VerificationPanel key={`v-${org.id}`} orgId={org.id} />}
         {tab === "members" && <MembersPanel key={`m-${org.id}`} org={org} />}
@@ -287,8 +323,24 @@ export function OrgsPage({ focusId }: SectionPageProps) {
     if (focus.tab) setTab(focus.tab)
   }, [focus])
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-  }, [items, selId])
+    if (!selId && !focus.id && items.length) setSelId(items[0]!.id)
+  }, [items, selId, focus.id])
+
+  // A filter or search the operator changes must not leave the detail on an org the new list omits,
+  // but a refetch of the same list (after a verification decision, say) keeps the decided org on
+  // screen rather than jumping to another org's actions. A deep-linked org is never replaced.
+  const reselectFor = React.useRef<typeof listParams | null>(null)
+  const initialParams = React.useRef(listParams)
+  React.useEffect(() => {
+    if (listParams !== initialParams.current) reselectFor.current = listParams
+  }, [listParams])
+  React.useEffect(() => {
+    if (reselectFor.current !== listParams || !listQuery.isSuccess) return
+    reselectFor.current = null
+    const first = items[0]
+    if (!first || !selId || selId === focus.id || items.some((o) => o.id === selId)) return
+    setSelId(first.id)
+  }, [items, listParams, listQuery.isSuccess, selId, focus.id])
 
   const pickFilter = (next: string) => {
     setFilter(next)
@@ -329,6 +381,7 @@ export function OrgsPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search organizations"
             placeholder="Search name or slug…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

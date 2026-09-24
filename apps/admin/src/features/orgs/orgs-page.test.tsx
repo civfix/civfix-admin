@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import type {
   AdminOrgDTO,
   AdminOrgEventListResponse,
@@ -245,6 +245,7 @@ describe("OrgsPage paging, filters and search", () => {
     expect(await screen.findByRole("heading", { level: 3, name: "Verification queue" })).toBeInTheDocument()
     await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "pending" }))
     expect(await screen.findByText("/park-friends")).toBeInTheDocument()
+    await detailHeading("Park Friends")
     expect(screen.getByRole("tab", { name: /^Verification/ })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -347,7 +348,7 @@ describe("OrgsPage deep links and detail tabs", () => {
     expect(screen.getByRole("tab", { name: /^Members/ })).toHaveAttribute("aria-selected", "true")
     expect(await screen.findByText("Sam Lee")).toBeInTheDocument()
     expect(apiMock.adminListOrgMembers).toHaveBeenCalledWith({ id: "org-1" })
-    expect(screen.getByText("Transfer ownership before removing")).toBeInTheDocument()
+    expect(screen.getByText("Transfer ownership before changing this role or removing")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Actions for Sam Lee" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Add member/ })).toBeEnabled()
   })
@@ -411,7 +412,8 @@ describe("OrgsPage deep links and detail tabs", () => {
 
     await detailHeading("River Keepers")
     expect(screen.getByText("This organization has never applied for verification.")).toBeInTheDocument()
-    expect(screen.getByText(/This application was already decided\./)).toBeInTheDocument()
+    expect(screen.getByText("No application is awaiting a decision.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument()
   })
 
   it("id/events opens the Events tab on upcoming events and lists them", async () => {
@@ -470,5 +472,150 @@ describe("OrgsPage deep links and detail tabs", () => {
     expect(await screen.findByText("No members")).toBeInTheDocument()
     expect(screen.getByRole("tab", { name: /^Members/ })).toHaveAttribute("aria-selected", "true")
     expect(screen.getByRole("tab", { name: "Profile" })).toHaveAttribute("aria-selected", "false")
+  })
+})
+
+describe("OrgsPage list accessibility", () => {
+  it("marks only the selected row as current", async () => {
+    apiMock.adminListOrgs.mockResolvedValue(listPage([RIVER, PARK]))
+    mockOrgDetails(RIVER, PARK)
+    renderWithQuery(<OrgsPage focusId={null} />)
+
+    await detailHeading("River Keepers")
+    expect(queueRowOf(screen.getByText("/river-keepers"))).toHaveAttribute("aria-current", "true")
+    expect(queueRowOf(screen.getByText("/park-friends"))).not.toHaveAttribute("aria-current")
+
+    fireEvent.keyDown(queueRowOf(screen.getByText("/park-friends")), { key: "Enter" })
+
+    await detailHeading("Park Friends")
+    expect(queueRowOf(screen.getAllByText("/park-friends")[0]!)).toHaveAttribute("aria-current", "true")
+    expect(queueRowOf(screen.getByText("/river-keepers"))).not.toHaveAttribute("aria-current")
+  })
+
+  it("names the search box", async () => {
+    apiMock.adminListOrgs.mockResolvedValue(listPage([]))
+    renderWithQuery(<OrgsPage focusId={null} />)
+
+    expect(screen.getByRole("textbox", { name: "Search organizations" })).toBeInTheDocument()
+  })
+})
+
+describe("OrgsPage detail tabs accessibility", () => {
+  async function renderDetail() {
+    apiMock.adminListOrgs.mockResolvedValue(listPage([PARK]))
+    mockOrgDetails(PARK)
+    apiMock.adminListOrgMembers.mockResolvedValue({ items: [], nextCursor: null })
+    apiMock.adminListOrgEvents.mockResolvedValue({ items: [], nextCursor: null })
+    renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("Park Friends")
+  }
+
+  it("ties the tab body to the selected tab and keeps only that tab in the Tab order", async () => {
+    await renderDetail()
+
+    const profile = screen.getByRole("tab", { name: "Profile" })
+    const panel = screen.getByRole("tabpanel", { name: "Profile" })
+    expect(profile).toHaveAttribute("aria-controls", panel.id)
+    expect(profile).toHaveAttribute("tabindex", "0")
+    expect(screen.getByRole("tab", { name: /^Members/ })).toHaveAttribute("tabindex", "-1")
+  })
+
+  it("moves between tabs with the arrow, Home and End keys", async () => {
+    await renderDetail()
+    const profile = screen.getByRole("tab", { name: "Profile" })
+
+    fireEvent.keyDown(profile, { key: "ArrowRight" })
+    const verification = screen.getByRole("tab", { name: /^Verification/ })
+    expect(verification).toHaveAttribute("aria-selected", "true")
+    expect(verification).toHaveFocus()
+
+    fireEvent.keyDown(verification, { key: "End" })
+    expect(screen.getByRole("tab", { name: /^Events/ })).toHaveFocus()
+
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowRight" })
+    expect(profile).toHaveFocus()
+    expect(profile).toHaveAttribute("aria-selected", "true")
+
+    fireEvent.keyDown(profile, { key: "ArrowLeft" })
+    expect(screen.getByRole("tab", { name: /^Events/ })).toHaveFocus()
+  })
+
+  it("names the awaiting-decision badge", async () => {
+    await renderDetail()
+    expect(screen.getByRole("tab", { name: "Verification awaiting decision" })).toBeInTheDocument()
+  })
+})
+
+describe("OrgsPage background refresh", () => {
+  it("keeps the loaded organization and an open profile draft when a refetch fails", async () => {
+    apiMock.adminListOrgs.mockResolvedValue(listPage([RIVER]))
+    mockOrgDetails(RIVER)
+    const { client } = renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("River Keepers")
+    fireEvent.click(screen.getByRole("button", { name: /Edit profile/ }))
+    fireEvent.change(screen.getByLabelText(/^Description/), { target: { value: "Draft text" } })
+
+    apiMock.adminGetOrg.mockRejectedValue(new Error("Gateway timeout"))
+    await act(() => client.invalidateQueries({ queryKey: ["admin", "orgs", "detail", "org-1"] }))
+
+    await waitFor(() => expect(apiMock.adminGetOrg).toHaveBeenCalledTimes(2))
+    expect(screen.queryByText("Could not load this organization")).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/^Description/)).toHaveValue("Draft text")
+    expect(
+      within(detailCard()).getByText(/Could not refresh this organization/),
+    ).toBeInTheDocument()
+  })
+})
+
+describe("OrgsPage selection", () => {
+  it("moves the selection to the first row when a filter change leaves it out", async () => {
+    const suspended = makeOrg({
+      id: "org-9",
+      slug: "quiet-club",
+      name: "Quiet Club",
+      suspendedAt: "2026-03-01T10:00:00.000Z",
+    })
+    apiMock.adminListOrgs.mockImplementation((params: { suspended?: boolean }) =>
+      Promise.resolve(params.suspended ? listPage([suspended]) : listPage([RIVER, PARK])),
+    )
+    mockOrgDetails(RIVER, PARK, suspended)
+    renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("River Keepers")
+
+    fireEvent.click(screen.getByRole("button", { name: /^Suspended/ }))
+
+    await detailHeading("Quiet Club")
+    expect(queueRowOf(screen.getAllByText("/quiet-club")[0]!)).toHaveClass("selected")
+  })
+
+  it("keeps the selection when a filter change still lists it", async () => {
+    apiMock.adminListOrgs.mockImplementation((params: { verified?: string }) =>
+      Promise.resolve(params.verified === "pending" ? listPage([RIVER, PARK]) : listPage([RIVER, PARK])),
+    )
+    mockOrgDetails(RIVER, PARK)
+    renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("River Keepers")
+    fireEvent.click(screen.getByText("/park-friends"))
+    await detailHeading("Park Friends")
+
+    fireEvent.click(screen.getByRole("button", { name: /^Verified/ }))
+
+    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "verified" }))
+    await detailHeading("Park Friends")
+  })
+
+  it("keeps a decided organization on screen after it leaves the verification queue", async () => {
+    const applied = makeOrg({ id: "org-3", slug: "tree-crew", name: "Tree Crew", verifiedStatus: "pending" })
+    let queue = [applied, PARK]
+    apiMock.adminListOrgs.mockImplementation(() => Promise.resolve(listPage(queue)))
+    mockOrgDetails(applied, PARK)
+    const { client } = renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("Tree Crew")
+
+    queue = [PARK]
+    await act(() => client.invalidateQueries({ queryKey: ["admin", "orgs"] }))
+
+    await waitFor(() => expect(screen.queryByText("/tree-crew", { selector: ".mono" })).not.toBeInTheDocument())
+    expect(within(detailCard()).getByRole("heading", { level: 2, name: "Tree Crew" })).toBeInTheDocument()
   })
 })

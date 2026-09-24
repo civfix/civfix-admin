@@ -40,6 +40,18 @@ export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
   )
 }
 
+/** Only an https url becomes a link; anything else stored is shown as text so it is never hidden. */
+function UrlFact({ url }: { url: string | null | undefined }) {
+  if (isHttpsUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer noopener">
+        {url}
+      </a>
+    )
+  }
+  return <>{url || "\u2014"}</>
+}
+
 function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) {
   const nav = useNav()
   const statusView = orgStatusView(org.verifiedStatus)
@@ -75,25 +87,13 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
             <div className="umr">
               <span>Website</span>
               <span>
-                {isHttpsUrl(org.websiteUrl) ? (
-                  <a href={org.websiteUrl} target="_blank" rel="noreferrer noopener">
-                    {org.websiteUrl}
-                  </a>
-                ) : (
-                  (org.websiteUrl ?? "—")
-                )}
+                <UrlFact url={org.websiteUrl} />
               </span>
             </div>
             <div className="umr">
               <span>Donation link</span>
               <span>
-                {isHttpsUrl(org.donationUrl) ? (
-                  <a href={org.donationUrl} target="_blank" rel="noreferrer noopener">
-                    {org.donationUrl}
-                  </a>
-                ) : (
-                  "None"
-                )}
+                <UrlFact url={org.donationUrl} />
               </span>
             </div>
             <div className="umr">
@@ -274,7 +274,12 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
           !dirty && <span className="muted">No changes yet</span>
         )}
         <div className="spacer" />
-        <button type="button" className="btn ghost" onClick={onDone} disabled={update.isPending}>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={onDone}
+          disabled={update.isPending || logoUploading}
+        >
           Cancel
         </button>
         <button
