@@ -5,6 +5,8 @@ import type {
   EventPageStatus,
 } from "@civfix/shared"
 
+import { publicPagePath } from "@/features/pages/page-path"
+
 export const PAGE_FILTERS = ["all", "published", "unpublished", "draft", "flagged"] as const
 export type PageFilter = (typeof PAGE_FILTERS)[number]
 
@@ -26,7 +28,7 @@ export function pageRowFromDTO(page: EventPageDTO): AdminEventPageListItemDTO {
   return {
     cleanupId: page.cleanupId,
     slug: page.slug,
-    title: page.seo.title ?? (page.slug === null ? "Signup page" : `/${page.slug}`),
+    title: page.seo.title ?? (page.slug === null ? "Signup page" : publicPagePath(page.slug)),
     status: page.status,
     visibility: page.visibility,
     organizer: null,

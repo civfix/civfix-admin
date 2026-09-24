@@ -31,11 +31,19 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
 }
 
 /** A compact sparkline (the design's hub spark): min/max-normalized bars, last bar accented. */
-export function Spark({ values, hue = "moss" }: { values: number[]; hue?: string }) {
+export function Spark({
+  values,
+  label,
+  hue = "moss",
+}: {
+  values: number[]
+  label: string
+  hue?: string
+}) {
   const max = Math.max(...values)
   const min = Math.min(...values)
   return (
-    <div className="hub-spark">
+    <div className={`hub-spark hue-${hue}`} role="img" aria-label={label}>
       {values.map((v, i) => (
         <span
           // eslint-disable-next-line react/no-array-index-key
@@ -44,7 +52,7 @@ export function Spark({ values, hue = "moss" }: { values: number[]; hue?: string
           style={
             {
               height: `${10 + ((v - min) / (max - min || 1)) * 88}%`,
-              "--sh": `var(--${hue})`,
+              "--sh": "var(--hue)",
             } as React.CSSProperties
           }
         />

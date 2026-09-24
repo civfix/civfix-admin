@@ -55,18 +55,14 @@ export function BroadcastLog({ items }: { items: AdminBroadcastListItemDTO[] }) 
               <span className="age">{formatDateTime(item.createdAt)}</span>
             </div>
             <div className="bcast-meta">
-              <span
+              <button
+                type="button"
                 className="lnk-inline"
-                role="button"
-                tabIndex={0}
                 title="Open the event"
                 onClick={() => nav("events", item.cleanupId)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") nav("events", item.cleanupId)
-                }}
               >
                 {item.eventTitle ?? "Event"}
-              </span>
+              </button>
               <span className="sep">·</span>
               <span>{item.channels.length > 0 ? item.channels.join(", ") : "no channel"}</span>
               <span className="sep">·</span>

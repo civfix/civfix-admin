@@ -3,6 +3,7 @@
 import * as React from "react"
 import {
   REPORT_CATEGORY_LABELS,
+  type AnalyticsKpi,
   type AnalyticsKpisResponse,
 } from "@civfix/shared"
 
@@ -40,10 +41,19 @@ function initials(name: string): string {
 function humanizeHours(hours: number): string {
   if (hours <= 0) return "—"
   if (hours < 1) return "<1h"
-  if (hours < 24) return `${Math.round(hours)}h`
-  const days = Math.floor(hours / 24)
-  const rem = Math.round(hours % 24)
+  const total = Math.round(hours)
+  if (total < 24) return `${total}h`
+  const days = Math.floor(total / 24)
+  const rem = total % 24
   return rem > 0 ? `${days}d ${rem}h` : `${days}d`
+}
+
+function visibleKpis(kpis: AnalyticsKpisResponse): AnalyticsKpi[] {
+  return kpis.kpis.filter((k) => !/route/i.test(k.label))
+}
+
+function isPercentKpi(k: AnalyticsKpi): boolean {
+  return /resolved/i.test(k.label)
 }
 
 function AnalyticsCard<T>({
@@ -102,23 +112,18 @@ function KpiDelta({ delta, dir }: { delta: string; dir: "up" | "down" | "flat" }
   )
 }
 
-function KpiStrip({ kpis }: { kpis: AnalyticsKpisResponse }) {
+function KpiStrip({ kpis }: { kpis: AnalyticsKpi[] }) {
   return (
     <>
-      {kpis.kpis
-        .filter((k) => !/route/i.test(k.label))
-        .map((k) => {
-          const isPct = /resolved/i.test(k.label)
-          return (
-            <div key={k.label} className="statcell">
-              <div className="statcell-label">{k.label}</div>
-              <div className="statcell-num">
-                {isPct ? `${Math.round(k.num)}%` : k.num.toLocaleString()}
-              </div>
-              <KpiDelta delta={k.delta} dir={k.dir} />
-            </div>
-          )
-        })}
+      {kpis.map((k) => (
+        <div key={k.label} className="statcell">
+          <div className="statcell-label">{k.label}</div>
+          <div className="statcell-num">
+            {isPercentKpi(k) ? `${Math.round(k.num)}%` : k.num.toLocaleString()}
+          </div>
+          <KpiDelta delta={k.delta} dir={k.dir} />
+        </div>
+      ))}
     </>
   )
 }
@@ -137,24 +142,22 @@ export function AnalyticsPage(_props: SectionPageProps) {
   const topContributorsQuery = useAnalyticsTopContributors()
 
   const kpis = kpisQuery.data
+  const shownKpis = kpis ? visibleKpis(kpis) : []
   const events = eventsQuery.data
+  const byCategory = byCategoryQuery.data
 
-  const canExport = !!kpis
+  const canExport = !!kpis && !!events && !!byCategory
   const exportCsv = () => {
-    if (!kpis) return
+    if (!kpis || !events || !byCategory) return
     const rows: (string | number)[][] = [["Metric", "Value", "Change"]]
-    kpis.kpis
-      .filter((k) => !/route/i.test(k.label))
-      .forEach((k) => rows.push([k.label, k.num, k.delta]))
-    if (events) {
-      rows.push(["Cleanup events (month)", events.thisMonth, ""])
-      rows.push(["Volunteers", events.volunteers, ""])
-    }
+    shownKpis.forEach((k) =>
+      rows.push([k.label, isPercentKpi(k) ? `${Math.round(k.num)}%` : k.num, k.delta]),
+    )
+    rows.push(["Cleanup events (month)", events.thisMonth, ""])
+    rows.push(["Volunteers", events.volunteers, ""])
     rows.push([])
     rows.push(["Category", "Reports", "Share %"])
-    ;(byCategoryQuery.data?.rows ?? []).forEach((c) =>
-      rows.push([REPORT_CATEGORY_LABELS[c.cat], c.count, c.pct]),
-    )
+    byCategory.rows.forEach((c) => rows.push([REPORT_CATEGORY_LABELS[c.cat], c.count, c.pct]))
     downloadCsv("civfix-analytics.csv", rows)
     toast("Analytics exported · civfix-analytics.csv")
   }
@@ -189,11 +192,15 @@ export function AnalyticsPage(_props: SectionPageProps) {
         <div className="strip-state">
           <ErrorState error={kpisQuery.error} onRetry={() => kpisQuery.refetch()} />
         </div>
-      ) : kpis ? (
-        <div className="statusstrip kpi-strip">
-          <KpiStrip kpis={kpis} />
+      ) : shownKpis.length === 0 ? (
+        <div className="strip-state">
+          <EmptyState title="No data yet" sub="Nothing to show for this window." />
         </div>
-      ) : null}
+      ) : (
+        <div className="statusstrip kpi-strip">
+          <KpiStrip kpis={shownKpis} />
+        </div>
+      )}
 
       <div className="analytics-grid">
         { }
@@ -363,17 +370,25 @@ export function AnalyticsPage(_props: SectionPageProps) {
         >
           {(d) => (
             <div className="table-scroll">
-              <div className="table">
-                <div className="trow thead jt">
-                  <span>Jurisdiction</span>
-                  <span>Pins</span>
-                  <span>Resolved</span>
+              <div className="table" role="table" aria-label="Top jurisdictions">
+                <div className="trow thead jt" role="row">
+                  <span role="columnheader">Jurisdiction</span>
+                  <span role="columnheader">Pins</span>
+                  <span role="columnheader">Resolved</span>
                 </div>
                 {d.rows.map((j, i) => (
-                  <div key={`${j.org}-${i}`} className="trow jt">
-                    <span className="td-strong">{j.org}</span>
-                    <span className="mono">{j.pins}</span>
-                    <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
+                  <div key={`${j.org}-${i}`} className="trow jt" role="row">
+                    <span className="td-strong" role="cell">
+                      {j.org}
+                    </span>
+                    <span className="mono" role="cell">
+                      {j.pins}
+                    </span>
+                    <span
+                      className="mono"
+                      role="cell"
+                      style={{ color: "var(--moss-700)", fontWeight: 700 }}
+                    >
                       { }
                       {j.resolved}%
                     </span>
@@ -395,23 +410,29 @@ export function AnalyticsPage(_props: SectionPageProps) {
         >
           {(d) => (
             <div className="table-scroll">
-              <div className="table">
-                <div className="trow thead ct">
-                  <span>Neighbor</span>
-                  <span>Reports</span>
-                  <span>Cleanups</span>
+              <div className="table" role="table" aria-label="Top contributors">
+                <div className="trow thead ct" role="row">
+                  <span role="columnheader">Neighbor</span>
+                  <span role="columnheader">Reports</span>
+                  <span role="columnheader">Cleanups</span>
                 </div>
                 {d.rows.map((c, i) => (
-                  <div key={`${c.name}-${c.city}-${i}`} className="trow ct">
-                    <span className="contrib-cell">
+                  <div key={`${c.name}-${c.city}-${i}`} className="trow ct" role="row">
+                    <span className="contrib-cell" role="cell">
                       <span className="contrib-av">{initials(c.name)}</span>
                       <span className="contrib-text">
                         <span className="td-strong">{c.name}</span>
                         <span className="contrib-city">{c.city || "—"}</span>
                       </span>
                     </span>
-                    <span className="mono">{c.reports}</span>
-                    <span className="mono" style={{ color: "var(--moss-700)", fontWeight: 700 }}>
+                    <span className="mono" role="cell">
+                      {c.reports}
+                    </span>
+                    <span
+                      className="mono"
+                      role="cell"
+                      style={{ color: "var(--moss-700)", fontWeight: 700 }}
+                    >
                       {c.cleanups}
                     </span>
                   </div>

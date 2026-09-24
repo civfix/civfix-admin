@@ -11,9 +11,11 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { useDebounced } from "@/hooks/use-debounced"
 import { formatDateTime } from "@/lib/dates"
 import { pageListParams, pageRowFromDTO } from "@/features/pages/pages-filters"
+import { publicPagePath } from "@/features/pages/page-path"
 import { PagePreview } from "@/features/pages/page-preview"
 import {
   useAdminEventPage,
@@ -47,7 +49,18 @@ function PageRow({
 }) {
   const view = PAGE_STATUS_VIEW[item.status]
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
+      }}
+    >
       <div className="leading">
         <span className="evt-row-ico hue-lilac" title="Signup page">
           <Icons.Globe size={15} />
@@ -57,11 +70,11 @@ function PageRow({
         <div className="top">
           <span className="title">{item.title}</span>
           {item.flaggedAt && (
-            <span className="rep-flag-dot" title="Flagged">
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
               <Icons.Flag size={10} />
             </span>
           )}
-          <span className="ident">{item.slug ? `/${item.slug}` : "no slug"}</span>
+          <span className="ident">{item.slug ? publicPagePath(item.slug) : "no slug"}</span>
         </div>
         <div className="sub">
           <span className="strong">{VISIBILITY_LABEL[item.visibility]}</span>
@@ -96,6 +109,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
   const nav = useNav()
   const view = PAGE_STATUS_VIEW[item.status]
   const flagged = item.flaggedAt != null
+  const pageName = item.slug ? publicPagePath(item.slug) : item.title
 
   const onFlag = async () => {
     if (flagged) {
@@ -113,7 +127,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
     if (reason === null || reason.trim() === "") return
     flag.mutate(
       { id: item.cleanupId, flagged: true, reason: reason.trim() },
-      { onSuccess: () => toast(`Flagged · /${item.slug ?? item.cleanupId}`) },
+      { onSuccess: () => toast(`Flagged · ${pageName}`) },
     )
   }
 
@@ -130,7 +144,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
     if (reason === null || reason.trim() === "") return
     unpublish.mutate(
       { id: item.cleanupId, reason: reason.trim() },
-      { onSuccess: () => toast(`Unpublished · /${item.slug ?? item.cleanupId}`) },
+      { onSuccess: () => toast(`Unpublished · ${pageName}`) },
     )
   }
 
@@ -143,7 +157,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
           </span>
         </span>
         <div className="rep-head-text">
-          <div className="crumb mono">{item.slug ? `/e/${item.slug}` : "unpublished draft"}</div>
+          <div className="crumb mono">{item.slug ? publicPagePath(item.slug) : "unpublished draft"}</div>
           <h2>{item.title}</h2>
         </div>
         {flagged && (
@@ -236,6 +250,7 @@ export function PagesPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState("published")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
 
   const debouncedQuery = useDebounced(query, 250)
   const listParams = React.useMemo(
@@ -251,21 +266,22 @@ export function PagesPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
+  // Only the first load picks a page on the operator's behalf. A pick that later drops out of the
+  // list (a filter, a search, or an unpublish under the Published chip) clears instead, so the
+  // moderation buttons never land on a page nobody chose.
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.cleanupId)
-    if (
-      selId &&
-      selId !== focusId &&
-      items.length &&
-      !items.some((x) => x.cleanupId === selId)
-    ) {
-      setSelId(items[0]!.cleanupId)
+    if (!listQuery.isSuccess) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.cleanupId)
+      return
     }
-  }, [items, selId, focusId])
+    setAutoPick(false)
+    if (selId !== focusId && !items.some((x) => x.cleanupId === selId)) setSelId(null)
+  }, [listQuery.isSuccess, items, selId, focusId, autoPick])
 
   const listed = items.find((x) => x.cleanupId === selId) ?? null
   const linked = useAdminEventPage(
-    selId !== null && listed === null && !listQuery.isLoading ? selId : null,
+    selId !== null && selId === focusId && listed === null && !listQuery.isPending ? selId : null,
   )
   const selected = listed ?? (linked.data ? pageRowFromDTO(linked.data) : null)
 
@@ -298,6 +314,7 @@ export function PagesPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search signup pages"
             placeholder="Search slug or title…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -310,7 +327,12 @@ export function PagesPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>Pages</h3>
             <div className="spacer" />
-            <span className="meta">{items.length}</span>
+            {listQuery.isSuccess && (
+              <span className="meta">
+                {items.length}
+                {listQuery.hasNextPage ? "+" : ""}
+              </span>
+            )}
           </div>
           <div className="queue-list">
             {listQuery.isLoading ? (

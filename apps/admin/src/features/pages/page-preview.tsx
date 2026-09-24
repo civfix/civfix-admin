@@ -6,6 +6,7 @@ import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { pageBlockViews } from "@/features/pages/page-blocks"
+import { publicPagePath } from "@/features/pages/page-path"
 import { useAdminEventPage } from "@/features/pages/use-pages"
 
 export function PagePreview({ cleanupId, title }: { cleanupId: string; title: string }) {
@@ -31,7 +32,7 @@ export function PagePreview({ cleanupId, title }: { cleanupId: string; title: st
         <div className="pg-seo-title">{page.seo.title ?? title}</div>
         {page.seo.description && <div className="pg-seo-desc">{page.seo.description}</div>}
         <div className="pg-seo-meta mono">
-          {page.slug ? `/${page.slug}` : "no public slug"} · theme {page.theme.accent} ·{" "}
+          {page.slug ? publicPagePath(page.slug) : "no public slug"} · theme {page.theme.accent} ·{" "}
           {page.seo.noindex ? "noindex" : "indexable"}
         </div>
       </div>

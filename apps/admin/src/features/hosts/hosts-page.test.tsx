@@ -44,6 +44,7 @@ function host(overrides: Partial<AdminHostListItemDTO> & { id: string; name: str
 }
 
 const ada = host({ id: "h-ada", name: "Ada Lovelace", handle: "@ada" })
+const cy = host({ id: "h-cy", name: "Cy Twombly", handle: "@cy" })
 const bob = host({
   id: "h-bob",
   name: "Bob Builder",
@@ -156,6 +157,49 @@ describe("HostsPage list states", () => {
   })
 })
 
+describe("HostsPage list accessibility", () => {
+  it("selects a host row with Enter and with Space and marks the selected row as current", async () => {
+    apiMock.adminListHosts.mockResolvedValue(page([ada, bob]))
+    apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    const list = listSection()
+    const adaRow = await within(list).findByRole("button", { name: /^Ada Lovelace/ })
+    const bobRow = within(list).getByRole("button", { name: /^Bob Builder/ })
+    await waitFor(() => expect(adaRow).toHaveAttribute("aria-current", "true"))
+    expect(bobRow).not.toHaveAttribute("aria-current")
+
+    bobRow.focus()
+    await userEvent.keyboard("{Enter}")
+    expect(
+      await within(detailSection()).findByRole("heading", { name: "Bob Builder", level: 2 }),
+    ).toBeInTheDocument()
+    expect(bobRow).toHaveAttribute("aria-current", "true")
+    expect(adaRow).not.toHaveAttribute("aria-current")
+
+    adaRow.focus()
+    await userEvent.keyboard(" ")
+    expect(
+      await within(detailSection()).findByRole("heading", { name: "Ada Lovelace", level: 2 }),
+    ).toBeInTheDocument()
+  })
+
+  it("names the search box", async () => {
+    apiMock.adminListHosts.mockResolvedValue(page([]))
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    expect(screen.getByRole("textbox", { name: "Search hosts" })).toBeInTheDocument()
+  })
+
+  it("marks the list count as partial while more hosts can be loaded", async () => {
+    apiMock.adminListHosts.mockResolvedValue(page([ada], "cursor-2"))
+    apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    expect(await within(listSection()).findByText("1+")).toBeInTheDocument()
+  })
+})
+
 describe("HostsPage detail pane", () => {
   it("opens the clicked host with its suspension note and broadcast log", async () => {
     apiMock.adminListHosts.mockResolvedValue(page([ada, bob]))
@@ -212,6 +256,18 @@ describe("HostsPage detail pane", () => {
     expect(within(alert).getByText("Log unavailable")).toBeInTheDocument()
   })
 
+  it("does not ask for more of a broadcast log that failed to load", async () => {
+    apiMock.adminListHosts.mockResolvedValue(page([ada]))
+    apiMock.adminListBroadcasts.mockRejectedValue(new Error("Log unavailable"))
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    const detail = detailSection()
+    await within(detail).findByRole("alert")
+    expect(within(detail).queryByText(/Load more of the broadcast log/)).not.toBeInTheDocument()
+    expect(within(detail).queryByText("No events in the loaded log")).not.toBeInTheDocument()
+    expect(within(detail).getByText("No events to show")).toBeInTheDocument()
+  })
+
   it("pages the broadcast log with its cursor", async () => {
     apiMock.adminListHosts.mockResolvedValue(page([ada]))
     apiMock.adminListBroadcasts
@@ -249,6 +305,59 @@ describe("HostsPage detail pane", () => {
       expect(window.location.hash).toBe("#/events/ev-9")
     }
     expect(scrollTo).toHaveBeenCalledTimes(2)
+  })
+
+  it("opens the event from the broadcast log link with Enter and with Space", async () => {
+    apiMock.adminListHosts.mockResolvedValue(page([ada]))
+    apiMock.adminListBroadcasts.mockResolvedValue(
+      broadcasts([broadcast({ id: "b-1", cleanupId: "ev-9", eventTitle: "Beach day" })]),
+    )
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {})
+    onTestFinished(() => scrollTo.mockRestore())
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    const [logLink] = await within(detailSection()).findAllByRole("button", { name: "Beach day" })
+    for (const key of ["{Enter}", " "]) {
+      window.history.pushState(null, "", "#/hosts")
+      logLink!.focus()
+      await userEvent.keyboard(key)
+      expect(window.location.hash).toBe("#/events/ev-9")
+    }
+  })
+
+  it("clears the selection instead of jumping to another host when a suspended host leaves the Active list", async () => {
+    let suspended = false
+    apiMock.adminListHosts.mockImplementation(async (params: { suspended?: boolean }) =>
+      params.suspended === false ? page(suspended ? [cy] : [ada, cy]) : page([ada, cy]),
+    )
+    apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
+    apiMock.adminSetHostMessagingSuspended.mockImplementation(async () => {
+      suspended = true
+      return {}
+    })
+    renderWithQuery(
+      <>
+        <HostsPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+
+    await within(listSection()).findByText("Ada Lovelace")
+    await userEvent.click(screen.getByRole("button", { name: "Active" }))
+    expect(
+      await within(detailSection()).findByRole("heading", { name: "Ada Lovelace", level: 2 }),
+    ).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Suspend messaging" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Spamming attendees")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Suspend messaging" }))
+
+    await waitFor(() => expect(within(listSection()).queryByText("Ada Lovelace")).not.toBeInTheDocument())
+    const detail = detailSection()
+    expect(await within(detail).findByText("No host selected")).toBeInTheDocument()
+    expect(within(detail).queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
+    expect(within(detail).queryByRole("button", { name: "Suspend messaging" })).not.toBeInTheDocument()
   })
 
   it("suspends messaging with the typed reason", async () => {
@@ -346,6 +455,33 @@ describe("HostsPage deep link", () => {
     expect(
       await within(detailSection()).findByRole("heading", { name: "Bob Builder", level: 2 }),
     ).toBeInTheDocument()
+  })
+
+  it("does not blame the loaded window when the host list itself failed", async () => {
+    apiMock.adminListHosts.mockRejectedValue(new Error("Hosts backend down"))
+    renderWithQuery(<HostsPage focusId="h-bob" />)
+
+    await within(listSection()).findByRole("alert")
+    const detail = detailSection()
+    expect(within(detail).queryByText("That host is not in this window")).not.toBeInTheDocument()
+    expect(within(detail).getByText("No host selected")).toBeInTheDocument()
+  })
+
+  it("does not show the deep-link explanation after a manual pick is searched out of the list", async () => {
+    apiMock.adminListHosts.mockImplementation(async (params: { q?: string }) =>
+      params.q ? page([]) : page([ada, bob]),
+    )
+    apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    await userEvent.click(await within(listSection()).findByText("Bob Builder"))
+    await within(detailSection()).findByRole("heading", { name: "Bob Builder", level: 2 })
+    await userEvent.type(screen.getByRole("textbox", { name: "Search hosts" }), "nobody")
+
+    expect(await within(listSection()).findByText("No hosts here")).toBeInTheDocument()
+    const detail = detailSection()
+    expect(within(detail).queryByText("That host is not in this window")).not.toBeInTheDocument()
+    expect(within(detail).getByText("No host selected")).toBeInTheDocument()
   })
 
   it("explains when the focused host is not in the loaded window and keeps holding it", async () => {

@@ -1,13 +1,16 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type {
   AdminEventPageListItemDTO,
   AdminEventPageListResponse,
   AdminGetEventPageResponse,
 } from "@civfix/shared"
 
+import { DialogHost } from "@/components/shared/dialog"
+import { Toast } from "@/components/shell/toast"
 import type * as ApiModule from "@/lib/api"
+import { useUiStore } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
 import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
@@ -115,6 +118,10 @@ function detailPane(title: string): HTMLElement {
   return section
 }
 
+afterEach(() => {
+  useUiStore.setState({ toast: null })
+})
+
 describe("PagesPage list states", () => {
   it("shows the loading state while the list is in flight", async () => {
     apiMock.adminListEventPages.mockReturnValue(new Promise(() => {}))
@@ -160,9 +167,9 @@ describe("PagesPage list states", () => {
     )
     renderWithQuery(<PagesPage focusId={null} />)
 
-    expect(await screen.findByText("/echo-park-cleanup")).toBeInTheDocument()
     const list = listPane()
-    expect(within(list).getByText("/river-day")).toBeInTheDocument()
+    expect(await within(list).findByText("/e/echo-park-cleanup")).toBeInTheDocument()
+    expect(within(list).getByText("/e/river-day")).toBeInTheDocument()
     expect(within(list).getByText("no slug")).toBeInTheDocument()
     expect(within(list).getByText("1,234 views")).toBeInTheDocument()
     expect(within(list).getByText("42 views")).toBeInTheDocument()
@@ -190,7 +197,7 @@ describe("PagesPage list states", () => {
     expect(await within(detail).findByText("Monthly lakeside sweep")).toBeInTheDocument()
     expect(within(detail).getByText("About the day")).toBeInTheDocument()
     expect(within(detail).getByText("Bring gloves and water.")).toBeInTheDocument()
-    expect(within(detail).getByText(/\/echo-park-cleanup · theme bloom · indexable/)).toBeInTheDocument()
+    expect(within(detail).getByText(/^\/e\/echo-park-cleanup · theme bloom · indexable$/)).toBeInTheDocument()
     expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: ECHO_ID })
   })
 
@@ -214,7 +221,7 @@ describe("PagesPage list states", () => {
     ).toBeInTheDocument()
     expect(within(detail).getByRole("button", { name: "Clear flag" })).toBeEnabled()
     expect(within(detail).getByRole("button", { name: "Unpublish" })).toBeDisabled()
-    expect(await within(detail).findByText(/\/river-day · theme bloom · noindex/)).toBeInTheDocument()
+    expect(await within(detail).findByText(/^\/e\/river-day · theme bloom · noindex$/)).toBeInTheDocument()
   })
 
   it("shows the draft crumb for a page without a slug", async () => {
@@ -233,6 +240,150 @@ describe("PagesPage list states", () => {
   })
 })
 
+describe("PagesPage list accessibility", () => {
+  it("selects a page row with Enter and with Space and marks the selected row as current", async () => {
+    apiMock.adminListEventPages.mockResolvedValue(listPage([echoPage, riverPage]))
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    renderWithQuery(<PagesPage focusId={null} />)
+
+    const list = listPane()
+    const echoRow = await within(list).findByRole("button", { name: /^Echo Park Cleanup/ })
+    const riverRow = within(list).getByRole("button", { name: /^LA River Day/ })
+    await waitFor(() => expect(echoRow).toHaveAttribute("aria-current", "true"))
+    expect(riverRow).not.toHaveAttribute("aria-current")
+
+    riverRow.focus()
+    await userEvent.keyboard("{Enter}")
+    expect(await screen.findByRole("heading", { level: 2, name: "LA River Day" })).toBeInTheDocument()
+    expect(riverRow).toHaveAttribute("aria-current", "true")
+    expect(echoRow).not.toHaveAttribute("aria-current")
+
+    echoRow.focus()
+    await userEvent.keyboard(" ")
+    expect(await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" })).toBeInTheDocument()
+  })
+
+  it("names the search box and the flagged marker", async () => {
+    apiMock.adminListEventPages.mockResolvedValue(listPage([riverPage]))
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    renderWithQuery(<PagesPage focusId={null} />)
+
+    expect(screen.getByRole("textbox", { name: "Search signup pages" })).toBeInTheDocument()
+    expect(await within(listPane()).findByRole("img", { name: "Flagged" })).toBeInTheDocument()
+  })
+
+  it("marks the list count as partial while more pages can be loaded", async () => {
+    apiMock.adminListEventPages.mockResolvedValue(listPage([echoPage], "cursor-2"))
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    renderWithQuery(<PagesPage focusId={null} />)
+
+    expect(await within(listPane()).findByText("1+")).toBeInTheDocument()
+  })
+})
+
+describe("PagesPage moderation", () => {
+  function renderWithChrome() {
+    return renderWithQuery(
+      <>
+        <PagesPage focusId={null} />
+        <DialogHost />
+        <Toast />
+      </>,
+    )
+  }
+
+  it("names a flagged page by its public /e path in the toast", async () => {
+    apiMock.adminListEventPages.mockResolvedValue(listPage([echoPage]))
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    apiMock.adminFlagEventPage.mockResolvedValue({})
+    renderWithChrome()
+
+    await userEvent.click(await screen.findByRole("button", { name: "Flag" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Copied a city logo")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Flag page" }))
+
+    expect(await screen.findByText("Flagged · /e/echo-park-cleanup")).toBeInTheDocument()
+  })
+
+  it("names a page without a slug by its title in the toast", async () => {
+    apiMock.adminListEventPages.mockResolvedValue(listPage([lakePage]))
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id, { slug: null, status: "draft" })),
+    )
+    apiMock.adminUnpublishEventPage.mockResolvedValue({})
+    renderWithChrome()
+
+    await userEvent.click(await screen.findByRole("button", { name: "Unpublish" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Impersonates a city agency")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Unpublish page" }))
+
+    expect(await screen.findByText("Unpublished · Silver Lake Sweep")).toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(LAKE_ID))).not.toBeInTheDocument()
+  })
+
+  it("clears the selection instead of jumping to another page when an unpublished page leaves the Published list", async () => {
+    const otherPublished = { ...riverPage, status: "published", flaggedAt: null, flagReason: null, flaggedBy: null } satisfies AdminEventPageListItemDTO
+    let unpublished = false
+    apiMock.adminListEventPages.mockImplementation(async () =>
+      listPage(unpublished ? [otherPublished] : [echoPage, otherPublished]),
+    )
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    apiMock.adminUnpublishEventPage.mockImplementation(async () => {
+      unpublished = true
+      return {}
+    })
+    renderWithChrome()
+
+    await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" })
+    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Impersonates a city agency")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Unpublish page" }))
+
+    await waitFor(() =>
+      expect(within(listPane()).queryByText("Echo Park Cleanup")).not.toBeInTheDocument(),
+    )
+    expect(await screen.findByText("No page selected")).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Unpublish" })).not.toBeInTheDocument()
+  })
+
+  it("does not fetch a manually picked page on its own after a filter drops it from the list", async () => {
+    apiMock.adminListEventPages.mockImplementation(async (params: { status?: string }) =>
+      listPage(params.status === "draft" ? [lakePage] : [echoPage, riverPage]),
+    )
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    renderWithQuery(<PagesPage focusId={null} />)
+
+    await userEvent.click(await within(listPane()).findByText("LA River Day"))
+    await screen.findByRole("heading", { level: 2, name: "LA River Day" })
+    await waitFor(() => expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: RIVER_ID }))
+    const riverReads = () =>
+      apiMock.adminGetEventPage.mock.calls.filter(([arg]) => (arg as { id: string }).id === RIVER_ID)
+        .length
+    const readsBefore = riverReads()
+
+    await userEvent.click(screen.getByRole("button", { name: "Draft" }))
+    expect(await within(listPane()).findByText("Silver Lake Sweep")).toBeInTheDocument()
+    expect(riverReads()).toBe(readsBefore)
+    expect(await screen.findByText("No page selected")).toBeInTheDocument()
+  })
+})
+
 describe("PagesPage paging, filters and search", () => {
   it("requests published pages first and loads the next page with the cursor", async () => {
     apiMock.adminListEventPages
@@ -243,17 +394,17 @@ describe("PagesPage paging, filters and search", () => {
     )
     renderWithQuery(<PagesPage focusId={null} />)
 
-    await screen.findByText("/echo-park-cleanup")
+    await within(listPane()).findByText("/e/echo-park-cleanup")
     expect(apiMock.adminListEventPages).toHaveBeenNthCalledWith(1, { status: "published" })
 
     await userEvent.click(screen.getByRole("button", { name: "Load more" }))
 
-    expect(await screen.findByText("/river-day")).toBeInTheDocument()
+    expect(await within(listPane()).findByText("/e/river-day")).toBeInTheDocument()
     expect(apiMock.adminListEventPages).toHaveBeenNthCalledWith(2, {
       status: "published",
       cursor: "cursor-2",
     })
-    expect(screen.getByText("/echo-park-cleanup")).toBeInTheDocument()
+    expect(within(listPane()).getByText("/e/echo-park-cleanup")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument()
     expect(within(listPane()).getByText("2")).toBeInTheDocument()
   })
@@ -343,7 +494,7 @@ describe("PagesPage deep links", () => {
     expect(within(detail).getByText("Copied a city logo")).toBeInTheDocument()
     expect(within(detail).getByRole("button", { name: "Unpublish" })).toBeDisabled()
     expect(screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" })).not.toBeInTheDocument()
-    expect(screen.getByText("/echo-park-cleanup")).toBeInTheDocument()
+    expect(within(listPane()).getByText("/e/echo-park-cleanup")).toBeInTheDocument()
   })
 
   it("shows the linked-page error when the focused page cannot be fetched", async () => {
