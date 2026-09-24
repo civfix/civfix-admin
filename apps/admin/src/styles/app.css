@@ -681,7 +681,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .attachment-chip.unlinked:active { transform: none; }
 
 /* Text for screen readers only; clip rather than display:none so it stays in the accessibility tree. */
-.sr-only {
+.visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -691,4 +691,11 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* A row that is a button can only hold phrasing content, so its title and meta are spans that must
+   still stack; the meta's ellipsis also needs a block box. */
+.prow-main .prow-title,
+.prow-main .prow-meta {
+  display: block;
 }

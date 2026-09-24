@@ -129,7 +129,7 @@ export function UserPicker({
       </div>
       {/* Stays mounted so a screen reader hears each new result count; the visible note is hidden from it
           to avoid reading the same line twice. */}
-      <span className="sr-only" role="status">
+      <span className="visually-hidden" role="status">
         {announcement}
       </span>
       {/* Plain buttons in a list: each result is an ordinary Tab stop that picks the user. */}
