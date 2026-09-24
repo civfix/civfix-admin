@@ -9,6 +9,7 @@ import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { isNotFound } from "@/lib/api"
 import { isHttpsUrl } from "@/lib/external-url"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   GOV_CHECKS,
   GOV_CHECK_STATUS_VIEW,
@@ -264,7 +265,7 @@ export function GovClaimDetail({
                 ))}
               </div>
               <div className="hint" style={{ marginTop: 10 }}>
-                Verify the applicant before approving — approval grants a government role on the
+                Verify the applicant before approving: approval grants a government role on the
                 account behind the contact email.
               </div>
             </div>
@@ -303,7 +304,7 @@ export function GovClaimDetail({
                 </div>
                 <div className="umr">
                   <span>Jurisdiction</span>
-                  <span className="mono">{claim.jurisdictionGeoid ?? "—"}</span>
+                  <span className="mono">{claim.jurisdictionGeoid ?? EMPTY_VALUE}</span>
                 </div>
               </div>
               {claim.jurisdictionGeoid && (

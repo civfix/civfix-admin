@@ -12,9 +12,8 @@ export const ERROR_TOAST_MS = 8000
 const TOAST_MS: Record<ToastTone, number> = { ok: SUCCESS_TOAST_MS, error: ERROR_TOAST_MS }
 
 /**
- * Global ephemeral toast, driven by the UI store: `useToast()` after a successful write, and the query
- * client's mutation cache for every failed write. Toasts confirm destructive writes that have no real
- * undo, so the trailing affordance is a dismiss "X", not an "Undo" that would imply a revert.
+ * Toasts confirm writes that have no real undo, so the trailing affordance is a dismiss, not an "Undo"
+ * that would imply a revert.
  *
  * The status region stays mounted so screen readers announce each new toast, and holds only the message:
  * the dismiss button sits beside it, so "Dismiss" is not read as part of the announcement, and exists

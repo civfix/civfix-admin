@@ -10,6 +10,7 @@ import {
 import { Icons } from "@/components/icons"
 import { categoryCssVar } from "@/lib/category"
 import { downloadCsv } from "@/lib/csv"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { PageHead, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { BarChart } from "@/features/analytics/analytics-charts"
@@ -27,7 +28,6 @@ import {
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 function initials(name: string): string {
   const out = name
     .split(" ")
@@ -39,7 +39,7 @@ function initials(name: string): string {
 }
 
 function humanizeHours(hours: number): string {
-  if (hours <= 0) return "—"
+  if (hours <= 0) return EMPTY_VALUE
   if (hours < 1) return "<1h"
   const total = Math.round(hours)
   if (total < 24) return `${total}h`
@@ -183,7 +183,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
         </button>
       </PageHead>
 
-      { }
       {kpisQuery.isLoading ? (
         <div className="strip-state">
           <LoadingState label="Loading KPIs..." />
@@ -203,7 +202,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
       )}
 
       <div className="analytics-grid">
-        { }
         <AnalyticsCard
           title="Pins per week"
           meta="8-week trend"
@@ -214,7 +212,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           {(d) => <BarChart values={d.weeks} labels={d.labels} />}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="By category"
           meta="this month"
@@ -237,7 +234,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Report funnel"
           meta="pin → resolved"
@@ -267,7 +263,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Mapping coverage"
           meta="jurisdictions"
@@ -300,7 +295,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Median resolution time"
           meta="by report type"
@@ -327,7 +321,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           }}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Cleanup events"
           meta="8-month trend"
@@ -346,7 +339,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
                   <span className="es-num">{d.volunteers.toLocaleString()}</span>
                   <span className="es-lbl">volunteers</span>
                 </div>
-                { }
                 {d.bags > 0 ? (
                   <div className="es-stat">
                     <span className="es-num">{d.bags.toLocaleString()}</span>
@@ -359,7 +351,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Top jurisdictions"
           meta="by pin volume"
@@ -389,7 +380,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
                       role="cell"
                       style={{ color: "var(--moss-700)", fontWeight: 700 }}
                     >
-                      { }
                       {j.resolved}%
                     </span>
                   </div>
@@ -399,7 +389,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Top contributors"
           meta="reports + cleanups"
@@ -422,7 +411,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
                       <span className="contrib-av">{initials(c.name)}</span>
                       <span className="contrib-text">
                         <span className="td-strong">{c.name}</span>
-                        <span className="contrib-city">{c.city || "—"}</span>
+                        <span className="contrib-city">{c.city || EMPTY_VALUE}</span>
                       </span>
                     </span>
                     <span className="mono" role="cell">

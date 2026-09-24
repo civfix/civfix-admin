@@ -7,24 +7,16 @@ import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation
 import { withCartoKey } from "@/lib/carto"
 import { CATEGORY_GLYPHS } from "@/lib/category"
 
-/**
- * The civfix universal map (ported from the design's map.jsx PinItMap). Real OpenStreetMap data via
- * Leaflet + CARTO raster tiles - a deliberate design-fidelity choice for this internal tool (it matches
- * the prototype exactly and does NOT use MapLibre/pmtiles like community-web).
- *
- * This module imports Leaflet at the top level, so it MUST only ever be loaded on the client. It is
- * imported via next/dynamic with `ssr:false` from live-map.tsx (and any future minimap). Leaflet's CSS
- * is imported globally in src/app/globals.css.
- */
+// Leaflet rather than community-web's MapLibre seam: a deliberate choice for this internal tool.
+// Leaflet touches window at import, so this module must be loaded through next/dynamic with ssr:false.
 
 export interface MapPin {
-  /** Stable marker id. */
   id: string
   lat: number
   lng: number
-  /** Report category for the glyph; null/omitted falls back to a generic pin. */
+  /** Null or omitted falls back to the generic glyph. */
   category?: string | null
-  /** When true, renders the red "needs attention" pin. */
+  /** Renders the red "needs attention" pin. */
   draft?: boolean
   /** "event" renders the yellow cleanup pin; "event-volunteer" the moss other-volunteer pin. */
   kind?: string | null
@@ -53,8 +45,8 @@ export type MapTint = keyof typeof MAP_TILES
 
 export const MAP_HOME = { center: [39.5, -98.35] as [number, number], zoom: 4 }
 
-// Brand pin as a Leaflet divIcon. Routed jurisdictions render gray with a glyph; jurisdictions that
-// still need a routing contact render red; events render yellow. (Ported from map.jsx.)
+// Report pins are gray once routed and red while they still need a routing contact; events take the
+// fill of their kind.
 const TEARDROP =
   "M32 4 C46 4 58 16 58 30 C58 46 40 60 34 68 C33 69 31 69 30 68 C24 60 6 46 6 30 C6 16 18 4 32 4 Z"
 const GLYPHS: Record<string, string> = {
@@ -62,7 +54,6 @@ const GLYPHS: Record<string, string> = {
   cleanup:
     "M3 6 L21 6 M19 6 V20 a2 2 0 0 1 -2 2 H7 a2 2 0 0 1 -2 -2 V6 M9 6 V4 a1 1 0 0 1 1 -1 h4 a1 1 0 0 1 1 1 V6 M9 11 V17 M12 11 V17 M15 11 V17",
   event: "M4 7 a1 1 0 0 1 1 -1 h14 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z M16 4 v4 M8 4 v4 M4 11 h16",
-  // "Other Volunteer" events: a cupped-hands-with-heart glyph, distinct from the cleanup calendar.
   "event-volunteer":
     "M12 9 a2 2 0 0 1 3 -1.3 a2 2 0 0 1 0.5 3 L12 14 L8.5 10.7 a2 2 0 0 1 0.5 -3 A2 2 0 0 1 12 9 Z M4 13 v5 a1 1 0 0 0 1 1 h2 v-6 Z M20 13 v5 a1 1 0 0 1 -1 1 h-2 v-6 Z",
 }
@@ -72,15 +63,13 @@ const PIN_FILL: Record<string, string> = {
   event: "#E5AE1C",
   "event-volunteer": "#5B8C6E",
 }
-// Marker kinds that render with the "event" family of treatments (no draft/needs override).
+// Event kinds own their fill and glyph; `draft` never overrides them.
 const EVENT_KINDS = new Set(["event", "event-volunteer"])
 
 function pinIcon(
   category: string | null | undefined,
   { active = false, draft = false, kind = null }: { active?: boolean; draft?: boolean; kind?: string | null },
 ): L.DivIcon {
-  // Event markers (cleanup / other-volunteer) own their own fill + glyph by kind; everything else is a
-  // report pin (red when it needs attention, gray when handled).
   const isEvent = kind != null && EVENT_KINDS.has(kind)
   const state = isEvent ? kind : draft ? "needs" : "routed"
   const glyphKey = isEvent ? kind : category || "other"
@@ -146,10 +135,6 @@ export interface LeafletMapProps {
   onPinTap?: (pin: MapPin) => void
 }
 
-/**
- * Imperative Leaflet wrapper. Creates the map once, swaps the tile layer on tint change, and
- * reconciles markers when `pins` / `activeId` change. Mirrors map.jsx PinItMap behavior.
- */
 export function LeafletMap({
   pins = [],
   center = MAP_HOME.center,
@@ -163,11 +148,9 @@ export function LeafletMap({
   const mapRef = React.useRef<L.Map | null>(null)
   const tileRef = React.useRef<L.TileLayer | null>(null)
   const markersRef = React.useRef<Record<string, L.Marker>>({})
-  // Per-id memo of the last-rendered visual descriptor (category|draft|kind|active), tooltip text and
-  // position, so reconcile can skip the expensive DivIcon rebuild + DOM teardown (setIcon), the tooltip
-  // rebind and the setLatLng call when nothing visible actually changed for that marker. Without this, a
-  // single activeId change re-icons and DOM-replaces ALL N markers; with it, only the de-activated +
-  // newly-active markers do.
+  // What each marker last rendered, so reconcile skips the DivIcon rebuild and DOM teardown, the tooltip
+  // rebind and setLatLng when nothing visible changed. Without it one activeId change re-icons every
+  // marker instead of just the two whose active state flipped.
   const renderRef = React.useRef<
     Record<string, { key: string; text: string | null; lat: number; lng: number }>
   >({})
@@ -177,7 +160,6 @@ export function LeafletMap({
   const onPinTapRef = React.useRef(onPinTap)
   onPinTapRef.current = onPinTap
 
-  // Create the map once.
   React.useEffect(() => {
     if (!elRef.current || mapRef.current) return
     const map = L.map(elRef.current, {
@@ -191,8 +173,7 @@ export function LeafletMap({
       touchZoom: interactive,
       boxZoom: false,
       keyboard: false,
-      // Note: Leaflet's legacy `tap` option was dropped from @types/leaflet (and is a no-op in modern
-      // Leaflet), so it is intentionally omitted here; touch tap is handled natively.
+      // No `tap`: the legacy option is a no-op in modern Leaflet and gone from @types/leaflet.
     })
     mapRef.current = map
 
@@ -221,7 +202,7 @@ export function LeafletMap({
       renderRef.current = {}
       pinsRef.current = {}
     }
-    // Intentionally run once on mount.
+    // Created once; the effects below apply later prop changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -230,7 +211,6 @@ export function LeafletMap({
     mapRef.current?.setView([centerLat, centerLng], zoom)
   }, [centerLat, centerLng, zoom])
 
-  // Swap tiles when tint changes.
   React.useEffect(() => {
     const map = mapRef.current
     if (!map) return
@@ -244,7 +224,6 @@ export function LeafletMap({
     }).addTo(map)
   }, [tint])
 
-  // Reconcile markers.
   React.useEffect(() => {
     const map = mapRef.current
     if (!map) return
@@ -266,13 +245,11 @@ export function LeafletMap({
       pinsRef.current[p.id] = p
       const existing = markersRef.current[p.id]
       const active = String(p.id) === String(activeId)
-      // One cheap string capturing everything pinIcon() depends on. Equal key => identical DivIcon, so
-      // we can skip rebuilding the HTML/SVG and the setIcon DOM teardown entirely.
+      // Everything pinIcon() depends on: an equal key means an identical DivIcon.
       const key = `${p.category}|${p.draft}|${p.kind}|${active}`
       const text = tooltipText(p)
       if (existing) {
         const prev = renderRef.current[p.id]
-        // Re-icon only when the visual descriptor changed (e.g. this pin just gained/lost active).
         if (!prev || prev.key !== key) {
           existing.setIcon(pinIcon(p.category, { active, draft: p.draft, kind: p.kind }))
         }
@@ -280,7 +257,6 @@ export function LeafletMap({
           syncTooltip(existing, text)
           if (interactive) labelMarker(existing, text)
         }
-        // Re-position only when the coordinates actually moved.
         if (!prev || prev.lat !== p.lat || prev.lng !== p.lng) {
           existing.setLatLng([p.lat, p.lng])
         }

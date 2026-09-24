@@ -18,7 +18,6 @@ const WHEN_OPTIONS: { value: AdminOrgEventWhen; label: string }[] = [
   { value: "all", label: "All" },
 ]
 
-/** Events hosted under the org's name; a row opens the event in the Events section. */
 export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
   const [when, setWhen] = React.useState<AdminOrgEventWhen>("upcoming")
   const q = useOrgEventsInfinite(org.id, when)

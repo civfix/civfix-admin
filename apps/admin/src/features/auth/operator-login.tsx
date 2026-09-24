@@ -5,19 +5,8 @@ import * as React from "react"
 import { useOperatorBootstrap, useOperatorSession } from "@/hooks/use-admin-auth"
 import { SOURCE } from "@/lib/source"
 
-/**
- * Full-page operator gate (Cloudflare Access SSO, doc 16; same-origin deployment), styled with the admin
- * design system. The dashboard renders this whenever there is no authenticated operator session (see
- * providers.tsx).
- *
- * Authentication is delegated to Cloudflare Access and the user has already passed it to load this SPA
- * (the whole origin is Access-gated). The AuthHydrator establishes the operator session on mount. This
- * screen covers the two states where that did not produce a session:
- *   - anonymous: the exchange could not be completed (Access misconfigured / backend unreachable /
- *     transient). Offer a retry.
- *   - forbidden: Access authenticated the user but their email is not on the operator allowlist (a clean
- *     403). Terminal - show a clear not-authorized message.
- */
+// No credential form: the whole origin is Access-gated, so anyone seeing this has already signed in to
+// Access and only the operator session exchange failed or was refused.
 export function OperatorLogin() {
   const { status } = useOperatorSession()
   const bootstrap = useOperatorBootstrap()

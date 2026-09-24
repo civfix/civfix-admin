@@ -24,7 +24,7 @@ describe("home preview presentation", () => {
   it("leads the moderation tile with the server-side queue total when the summary carries one", () => {
     expect(getModerationPreviewPresentation(4)).toEqual({
       lead: 4,
-      unit: "queued — user reports, held media, clusters and appeals",
+      unit: "queued · user reports, held media, clusters and appeals",
     })
     expect(getModerationPreviewPresentation(0).lead).toBe(0)
   })

@@ -60,7 +60,7 @@ export function pageBlockView(block: EventPageBlock): PageBlockView {
       for (const item of block.items) {
         const when = plain(item.time)
         const what = plain(item.title)
-        lines.push(when === "" ? what : `${when} — ${what}`)
+        lines.push(when === "" ? what : `${when} · ${what}`)
         pushText(lines, item.description)
       }
       break
@@ -68,7 +68,7 @@ export function pageBlockView(block: EventPageBlock): PageBlockView {
       title = plain(block.title) || null
       for (const entry of block.entries) {
         const role = plain(entry.role)
-        lines.push(role === "" ? plain(entry.name) : `${plain(entry.name)} — ${role}`)
+        lines.push(role === "" ? plain(entry.name) : `${plain(entry.name)} · ${role}`)
         pushText(lines, entry.bio)
       }
       break

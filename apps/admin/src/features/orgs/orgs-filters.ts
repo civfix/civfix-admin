@@ -41,7 +41,6 @@ export function orgListParams(filter: string, q?: string): AdminOrgListQuery {
   return { ...params, verified: filter }
 }
 
-/** The chip count for a filter, read from the page-one `counts` (absent facets stay blank). */
 export function orgFilterCount(
   counts: AdminOrgCounts | undefined,
   filter: OrgFilter,

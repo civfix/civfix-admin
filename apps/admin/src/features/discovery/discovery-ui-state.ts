@@ -1,3 +1,5 @@
+import { EMPTY_VALUE } from "@/lib/empty-value"
+
 export type JurisdictionFilter = "all" | "attention" | "clear"
 export type JurisdictionSort = "pop" | "reports" | "oldest"
 
@@ -16,9 +18,9 @@ export function getCountDisplay({
   count: number | null
   isLoading: boolean
   isError: boolean
-}): number | "Loading…" | "—" {
+}): number | "Loading…" | typeof EMPTY_VALUE {
   if (isLoading) return "Loading…"
-  if (isError || count === null) return "—"
+  if (isError || count === null) return EMPTY_VALUE
   return count
 }
 

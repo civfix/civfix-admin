@@ -42,7 +42,6 @@ import { useReportListInfinite } from "@/features/reports/use-reports"
 import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
@@ -464,7 +463,6 @@ function EventDetail({ eventId }: { eventId: string }) {
 
       <div className="rep-grid">
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">
               About
@@ -486,7 +484,6 @@ function EventDetail({ eventId }: { eventId: string }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Meet location</div>
             <div className="sub-body" style={{ padding: 10 }}>
@@ -512,7 +509,6 @@ function EventDetail({ eventId }: { eventId: string }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Activity</div>
             <div className="sub-body">
@@ -545,7 +541,6 @@ function EventDetail({ eventId }: { eventId: string }) {
             </div>
           </div>
 
-          { }
           {event.eventKind === "cleanup" && (
             <div className="sub">
               <div className="sub-head">
@@ -588,7 +583,6 @@ function EventDetail({ eventId }: { eventId: string }) {
         </div>
 
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">Turnout</div>
             <div className="sub-body">
@@ -633,7 +627,6 @@ function EventDetail({ eventId }: { eventId: string }) {
                   </div>
                 )
               )}
-              { }
               {(event.status === "in_progress" || event.status === "completed") && (
                 <div className="evt-stat-row" style={{ gap: 8, alignItems: "center", marginTop: 6 }}>
                   <input
@@ -658,7 +651,6 @@ function EventDetail({ eventId }: { eventId: string }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Organizer</div>
             <div className="sub-body">
@@ -688,7 +680,6 @@ function EventDetail({ eventId }: { eventId: string }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Message attendees</div>
             <div className="sub-body">
@@ -746,7 +737,6 @@ function EventDetail({ eventId }: { eventId: string }) {
         </div>
       </div>
 
-      { }
       <div className="rep-actions">
         <span className="rep-actions-label">Moderate</span>
         <div className="spacer" />
@@ -772,7 +762,6 @@ function EventDetail({ eventId }: { eventId: string }) {
         </div>
       )}
 
-      { }
       {pickerOpen && event.eventKind === "cleanup" && (
         <LinkReportsPicker
           excludeIds={new Set(event.linkedReports.map((r) => r.id))}
@@ -838,7 +827,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
         title="Events"
         subtitle={
           <span>
-            Events neighbors organize on civfix — cleanups and other volunteer events alike. Track
+            Cleanups and other volunteer events neighbors organize on civfix. Track
             turnout, keep them on the level, and message attendees.
           </span>
         }

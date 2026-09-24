@@ -3,9 +3,8 @@ import { ORG_SLUG_MAX, ORG_SLUG_MIN, OrgSlugSchema } from "@civfix/shared"
 export const PUBLIC_ORG_ORIGIN = "https://civfix.org"
 
 /**
- * Derive a URL slug from an organization name: lowercase, ASCII-folded, non-alphanumerics collapsed
- * into single hyphens, trimmed to ORG_SLUG_MAX without leaving a dangling hyphen. May return a string
- * shorter than ORG_SLUG_MIN (e.g. for "LA"); the caller validates with slugProblem before submitting.
+ * May return a string shorter than ORG_SLUG_MIN (e.g. for "LA"); the caller validates with
+ * slugProblem before submitting.
  */
 export function deriveSlug(name: string): string {
   // NFKD splits accented letters into base + combining mark; \p{M} drops the marks.
@@ -20,9 +19,8 @@ export function deriveSlug(name: string): string {
 }
 
 /**
- * Human-readable reason a slug is not acceptable, or null when OrgSlugSchema accepts it. The copy
- * mirrors the schema (3–40 chars, lowercase letters/digits, single hyphens between groups) so the
- * live hint matches what the server would reject.
+ * The copy mirrors OrgSlugSchema (3–40 chars, lowercase letters/digits, single hyphens between groups)
+ * so the live hint matches what the server would reject.
  */
 export function slugProblem(slug: string): string | null {
   const value = slug.trim()
@@ -36,7 +34,6 @@ export function slugProblem(slug: string): string | null {
   return OrgSlugSchema.safeParse(value).success ? null : "Not a valid slug."
 }
 
-/** The public organization page for a slug (opened in a new tab from the console). */
 export function publicOrgUrl(slug: string): string {
   return `${PUBLIC_ORG_ORIGIN}/orgs/${encodeURIComponent(slug)}`
 }

@@ -37,9 +37,8 @@ export function useBackdropDismiss<T extends HTMLElement = HTMLDivElement>(
 
 /**
  * Escape and the backdrop dismiss a modal only while it holds nothing the operator would lose; once
- * there is a draft, its close button and Cancel are the deliberate ways to discard it. Returns the
- * backdrop props. The shell yields Escape to any open modal (escape-owner.ts), so Escape here closes
- * only the modal and never navigates.
+ * there is a draft, its close button and Cancel are the deliberate ways to discard it. The shell yields
+ * Escape to any open modal (escape-owner.ts), so Escape here closes only the modal and never navigates.
  */
 export function usePristineDismiss<T extends HTMLElement = HTMLDivElement>(
   onClose: () => void,

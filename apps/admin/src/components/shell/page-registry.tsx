@@ -4,7 +4,6 @@ import * as React from "react"
 
 import type { PageId } from "@/store/ui-store"
 
-
 export interface SectionPageProps {
   focusId: string | null
 }

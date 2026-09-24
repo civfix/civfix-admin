@@ -4,12 +4,6 @@ import * as React from "react"
 
 import { Icons } from "@/components/icons"
 
-/**
- * Shared page primitives, ported from the design (pages-shared.jsx). The section pages compose these to
- * match the prototype's structure exactly (class names + DOM preserved).
- */
-
-/** Page header with title, subtitle, and right-side actions (and optional meta on the far right). */
 export function PageHead({
   title,
   subtitle,
@@ -18,7 +12,7 @@ export function PageHead({
 }: {
   title: React.ReactNode
   subtitle?: React.ReactNode
-  /** Right-side actions (buttons). */
+  /** Right-side actions. */
   children?: React.ReactNode
   meta?: React.ReactNode
 }) {
@@ -34,10 +28,8 @@ export function PageHead({
   )
 }
 
-/** One option in a FilterChips control: either a bare string or a { value, label, count }. */
 export type FilterOption = string | { value: string; label: string; count?: React.ReactNode }
 
-/** Segmented filter control (`.filter-chips`): one pressed toggle per option. */
 export function FilterChips({
   options,
   value,
@@ -47,7 +39,6 @@ export function FilterChips({
   options: FilterOption[]
   value: string
   onChange: (value: string) => void
-  /** Names the group for assistive tech, e.g. "Status". */
   ariaLabel?: string
 }) {
   return (
@@ -73,7 +64,6 @@ export function FilterChips({
   )
 }
 
-/** Empty state (`.empty-state`). */
 export function EmptyState({
   icon,
   title,

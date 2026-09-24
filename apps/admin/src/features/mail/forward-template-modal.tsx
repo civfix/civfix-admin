@@ -153,7 +153,7 @@ function ForwardTemplateEditor({
                   key={v.token}
                   type="button"
                   className="tpl-chip"
-                  title={`${v.label} — ${v.description}`}
+                  title={`${v.label}: ${v.description}`}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => insertToken(v.token)}
                 >

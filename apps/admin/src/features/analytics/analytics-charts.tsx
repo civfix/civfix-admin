@@ -1,13 +1,7 @@
 "use client"
 
-/**
- * Analytics chart helpers, ported from the design (metrics.jsx BarChart and pages-operations.jsx
- * Spark). Class names + DOM mirror the prototype so they render pixel-faithfully against the ported
- * admin.css (`.barchart*`, `.hub-spark*`). Used by the Analytics cards (pins-per-week + cleanup
- * events use BarChart; Spark is available for compact inline trends).
- */
+// Class names and DOM match the `.barchart*` and `.hub-spark*` rules in admin.css.
 
-/** A column bar chart with an optional label row; the last bar gets the `now` accent. */
 export function BarChart({ values, labels }: { values: number[]; labels?: string[] }) {
   const max = Math.max(...values, 1)
   return (
@@ -30,7 +24,6 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
   )
 }
 
-/** A compact sparkline (the design's hub spark): min/max-normalized bars, last bar accented. */
 export function Spark({
   values,
   label,

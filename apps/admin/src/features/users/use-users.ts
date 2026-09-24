@@ -25,7 +25,7 @@ import { queryKeys } from "@/lib/query"
 
 /**
  * One flat page of users (home preview, the org user picker). Keyed under `users.page`, not
- * `users.list`, so its plain response can never land in — or be read as — the users page's infinite
+ * `users.list`, so its plain response can never land in, or be read as, the users page's infinite
  * cache entry for the same params. `keepPreviousData` holds the last results while a new search runs.
  */
 export function useUserList(params: AdminUserListQuery, opts: { keepPreviousData?: boolean } = {}) {

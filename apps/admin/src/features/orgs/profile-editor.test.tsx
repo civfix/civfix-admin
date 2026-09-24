@@ -5,6 +5,7 @@ import { AppError, ErrorCode, type AdminOrgDTO } from "@civfix/shared"
 import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
 import { makeQueryClient } from "@/lib/query"
@@ -137,8 +138,8 @@ describe("ProfilePanel facts", () => {
   it("shows the same placeholder for an empty website and a missing donation link", () => {
     renderWithQuery(<ProfilePanel org={{ ...RIVER, websiteUrl: "", donationUrl: null }} />)
 
-    expect(factValue("Website")).toHaveTextContent(/^\u2014$/)
-    expect(factValue("Donation link")).toHaveTextContent(/^\u2014$/)
+    expect(factValue("Website").textContent).toBe(EMPTY_VALUE)
+    expect(factValue("Donation link").textContent).toBe(EMPTY_VALUE)
   })
 
   it("shows a donation link that is not https as plain text rather than as missing", () => {

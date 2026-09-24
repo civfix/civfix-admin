@@ -19,7 +19,6 @@ import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
-
 export function useInboxList(params: InboxListQuery) {
   return useQuery<InboxListResponse>({
     queryKey: queryKeys.inbox.page(params),

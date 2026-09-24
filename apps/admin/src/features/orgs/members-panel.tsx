@@ -146,7 +146,6 @@ function MemberRow({
     const flipUp = rect.bottom + 220 > window.innerHeight
     setMenuPos(flipUp ? { bottom: window.innerHeight - rect.top + 4, right } : { top: rect.bottom + 4, right })
   }
-  /** Close the menu; `returnFocus` hands focus back to the trigger (keyboard dismissals). */
   const closeMenu = React.useCallback((returnFocus: boolean) => {
     setMenuPos(null)
     if (returnFocus) triggerRef.current?.focus({ preventScroll: true })

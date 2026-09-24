@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest"
 
 import { formatDate, formatDateTime } from "./dates"
-
-const PLACEHOLDER = "\u2014"
+import { EMPTY_VALUE } from "./empty-value"
 
 describe("formatDate", () => {
   it.each([null, undefined, ""])("renders the placeholder for %j", (value) => {
-    expect(formatDate(value)).toBe(PLACEHOLDER)
+    expect(formatDate(value)).toBe(EMPTY_VALUE)
   })
 
   it.each([
@@ -24,7 +23,7 @@ describe("formatDate", () => {
 
 describe("formatDateTime", () => {
   it.each([null, undefined, ""])("renders the placeholder for %j", (value) => {
-    expect(formatDateTime(value)).toBe(PLACEHOLDER)
+    expect(formatDateTime(value)).toBe(EMPTY_VALUE)
   })
 
   it.each([

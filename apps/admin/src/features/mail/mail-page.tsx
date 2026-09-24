@@ -54,8 +54,8 @@ import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
 import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav, useToast } from "@/store/ui-store"
 import { errorMessage } from "@/lib/error-messages"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import type { SectionPageProps } from "@/components/shell/page-registry"
-
 
 type Folder = "outreach" | "inbox"
 
@@ -120,7 +120,7 @@ function correspondent(sel: MailThreadDTO): string {
     const m = sel.messages[i]!
     if (m.dir === "out" && m.to) return m.to
   }
-  return sel.to || "—"
+  return sel.to || EMPTY_VALUE
 }
 
 interface ComposeModalProps {
@@ -423,7 +423,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
         {sel.status === "bounced" && (
           <div className="mail-bounce-note">
             <Icons.AlertTriangle size={14} />
-            Hard bounce — the address rejected delivery. Try a different contact or the city&apos;s
+            Hard bounce: the address rejected delivery. Try a different contact or the city&apos;s
             reporting form.
           </div>
         )}
@@ -720,7 +720,6 @@ export function MailPage({ focusId }: SectionPageProps) {
         </button>
       </PageHead>
 
-      { }
       <div
         className="mailbox-switch"
         role="radiogroup"
@@ -770,7 +769,7 @@ export function MailPage({ focusId }: SectionPageProps) {
             <div className="statusstrip mail-strip">
               <div className="statcell">
                 <div className="statcell-label">Outbound · 7d</div>
-                <div className="statcell-num">—</div>
+                <div className="statcell-num">{EMPTY_VALUE}</div>
                 <div className="statcell-hot">No outbound mail in the last 7 days</div>
               </div>
               <div className="statcell">

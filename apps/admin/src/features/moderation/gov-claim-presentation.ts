@@ -10,26 +10,23 @@ import {
 
 import { errorMessage } from "@/lib/error-messages"
 
-/** Pill treatment per claim lifecycle status. */
 export const GOV_CLAIM_STATUS_VIEW: Record<GovClaimStatus, { cls: string; label: string }> = {
   pending: { cls: "status-new", label: "Pending" },
   approved: { cls: "status-ok", label: "Approved" },
   rejected: { cls: "status-flag", label: "Rejected" },
 }
 
-/** Pill treatment per verification check state. */
 export const GOV_CHECK_STATUS_VIEW: Record<GovCheckStatus, { cls: string; label: string }> = {
   verified: { cls: "status-ok", label: "Verified" },
   pending: { cls: "status-new", label: "Pending" },
 }
 
-/** How the applicant reached us. */
 export const GOV_METHOD_LABEL: Record<GovMethod, string> = {
   email: "Emailed us",
   cold_outreach: "Cold outreach",
 }
 
-/** The three verification checks, in the order the detail panel lists them. */
+/** In the order the detail panel lists them. */
 export const GOV_CHECKS: readonly GovVerificationCheck[] = ["linkedin", "directory", "callback"]
 
 export function govCheckLabel(check: GovVerificationCheck): string {
@@ -74,7 +71,7 @@ export function govClaimApproveErrorMessage(error: unknown): string {
     error,
     {
       [ErrorCode.FORBIDDEN]:
-        "That contact email belongs to an operator account. Operator accounts are managed through ADMIN_EMAILS and cannot be re-roled here — the applicant needs a different address.",
+        "That contact email belongs to an operator account. Operator accounts are managed through ADMIN_EMAILS and cannot be re-roled here, so the applicant needs a different address.",
     },
     {
       fields: {

@@ -5,16 +5,10 @@ import L from "leaflet"
 
 import { withCartoKey } from "@/lib/carto"
 
-/** The GeoJSON object type L.geoJSON accepts, derived from Leaflet's own signature (avoids a direct @types/geojson import). */
+// Derived from Leaflet's own signature, so no direct @types/geojson dependency is needed.
 type LeafletGeoJson = Parameters<typeof L.geoJSON>[0]
 
-/**
- * A small Leaflet map that draws ONE jurisdiction's boundary polygon and fits to it — the directory's
- * "is this in the right place?" verification view. CARTO Voyager raster basemap (same tiles as the
- * marker map.tsx); the polygon is the server-simplified GeoJSON from GET /admin/jurisdictions/:geoid/
- * geometry. Like leaflet-map.tsx this imports Leaflet at the top level, so it MUST be loaded client-only
- * via next/dynamic (ssr:false). Leaflet's CSS is imported globally in globals.css.
- */
+// Leaflet touches window at import, so this module must be loaded through next/dynamic with ssr:false.
 
 const TILE = {
   url: withCartoKey("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"),
@@ -23,7 +17,6 @@ const TILE = {
   subdomains: "abcd",
 }
 
-/** Boundary fill/stroke by jurisdiction layer, so a city reads differently from a county/federal land. */
 const LAYER_COLOR: Record<string, string> = {
   place: "#5B8C6E",
   county: "#3F7CAC",
@@ -33,11 +26,9 @@ const LAYER_COLOR: Record<string, string> = {
 }
 
 export interface BoundaryMapProps {
-  /** GeoJSON Polygon/MultiPolygon geometry. */
   geometry: { type: string; coordinates: unknown }
-  /** [west, south, east, north] for fit-bounds. */
+  /** [west, south, east, north] */
   bbox: [number, number, number, number]
-  /** Jurisdiction layer, drives the boundary color. */
   layer?: string
 }
 
@@ -46,13 +37,13 @@ export function BoundaryMap({ geometry, bbox, layer = "place" }: BoundaryMapProp
   const mapRef = React.useRef<L.Map | null>(null)
   const shapeRef = React.useRef<L.GeoJSON | null>(null)
 
-  // Create the map once.
   React.useEffect(() => {
     if (!elRef.current || mapRef.current) return
     const map = L.map(elRef.current, {
       zoomControl: true,
       attributionControl: true,
-      scrollWheelZoom: false, // require an explicit zoom (it sits inside a scrollable detail panel)
+      // The map sits inside a scrollable detail panel, so the wheel must scroll the panel.
+      scrollWheelZoom: false,
     })
     mapRef.current = map
     L.tileLayer(TILE.url, {
@@ -73,10 +64,8 @@ export function BoundaryMap({ geometry, bbox, layer = "place" }: BoundaryMapProp
       mapRef.current = null
       shapeRef.current = null
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Draw / redraw the boundary and fit to its bbox whenever the geometry changes.
   React.useEffect(() => {
     const map = mapRef.current
     if (!map) return

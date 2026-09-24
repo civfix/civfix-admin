@@ -19,7 +19,7 @@ import { slugProblem } from "@/features/orgs/org-slug"
 export { MAX_ORG_DESCRIPTION, MAX_ORG_NAME, SOCIAL_PLATFORMS }
 export type { SocialPlatform }
 
-/** The editable profile fields, as the form holds them (strings; "" means empty). */
+/** Form state: text fields are strings and "" means empty. */
 export interface OrgProfileDraft {
   name: string
   slug: string
@@ -77,7 +77,6 @@ export function draftFromOrg(org: AdminOrgDTO): OrgProfileDraft {
   }
 }
 
-/** The social links object the API accepts, or null when every handle is blank. */
 export function socialLinksFromDraft(social: Record<SocialPlatform, string>): SocialLinks | null {
   const out: SocialLinks = {}
   let any = false
@@ -91,10 +90,7 @@ export function socialLinksFromDraft(social: Record<SocialPlatform, string>): So
   return any ? out : null
 }
 
-/**
- * Client-side validation mirroring the create/update request schemas, so the operator sees inline
- * errors before a round-trip. Returns an empty object when the draft is acceptable.
- */
+/** Mirrors the create/update request schemas so the operator sees inline errors before a round-trip. */
 export function validateProfileDraft(draft: OrgProfileDraft): OrgProfileErrors {
   const errors: OrgProfileErrors = {}
   const name = draft.name.trim()
@@ -199,10 +195,10 @@ export function buildUpdateRequest(
 }
 
 /**
- * Map a failed create/update to inline field errors. A CONFLICT is the slug (the only unique field an
- * operator supplies) — but only when the request actually carried a slug, which an edit that leaves
- * the slug alone does not; a VALIDATION error carries `fields` keyed by request field. Anything else
- * returns an empty object so the caller falls back to the error toast.
+ * A CONFLICT is the slug (the only unique field an operator supplies), but only when the request
+ * actually carried a slug, which an edit that leaves the slug alone does not. A VALIDATION error
+ * carries `fields` keyed by request field. Anything else returns an empty object so the caller falls
+ * back to the error toast.
  */
 export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }): OrgProfileErrors {
   if (!(raw instanceof Error)) return {}
@@ -235,9 +231,8 @@ export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }):
 }
 
 /**
- * Drop the server-reported errors for every profile field whose value changed between two drafts:
- * the operator is fixing that field, so the stale server message must not stick to it. Returns the
- * same object when nothing was cleared, so callers can skip a state update.
+ * A changed field is one the operator is fixing, so its stale server message must not stick to it.
+ * Returns the same object when nothing was cleared, so callers can skip a state update.
  */
 export function clearChangedFieldErrors(
   errors: OrgProfileErrors,
@@ -258,7 +253,6 @@ export function clearChangedFieldErrors(
   return out
 }
 
-/** Keep only the errors under `keys` — the fields a given form actually renders. */
 export function pickFieldErrors(
   errors: OrgProfileErrors,
   keys: readonly (keyof OrgProfileErrors)[],
@@ -278,7 +272,6 @@ const PROFILE_EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
   ...SOCIAL_PLATFORMS,
 ]
 
-/** The server errors the profile editor can show next to a field, for a failed update. */
 export function updateFieldErrors(raw: unknown, request: AdminUpdateOrgRequest): OrgProfileErrors {
   return pickFieldErrors(fieldErrorsFromError(raw, request), PROFILE_EDITOR_FIELDS)
 }

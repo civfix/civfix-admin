@@ -45,11 +45,11 @@ import {
 import { getUserMessageDestination } from "./profile-activity-navigation"
 import { userSearchTerm } from "./user-search"
 import { isNotFound } from "@/lib/api"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 type NavFn = ReturnType<typeof useNav>
-
 
 const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   active: { cls: "status-ok", label: USER_STATUS_LABELS.active },
@@ -500,7 +500,7 @@ function UserDetail({ userId }: { userId: string }) {
         <div className="udh-text">
           <h2>{user.name}</h2>
           <div className="udh-sub">
-            <span className="mono">{isMissing(user.handle) ? "—" : user.handle}</span>
+            <span className="mono">{isMissing(user.handle) ? EMPTY_VALUE : user.handle}</span>
             {!isMissing(user.city) && (
               <>
                 <span className="sep">·</span>
@@ -523,7 +523,7 @@ function UserDetail({ userId }: { userId: string }) {
           {isReportVerified && (
             <span
               className="pill status-new"
-              title="Report-verified — this reporter's reports auto-forward to their jurisdiction"
+              title="Report-verified: this reporter's reports auto-forward to their jurisdiction"
             >
               <Icons.Check size={11} /> Report-verified
             </span>
@@ -554,7 +554,7 @@ function UserDetail({ userId }: { userId: string }) {
           type="button"
           className="pm-item pm-copy"
           onClick={onCopyId}
-          title="Copy the raw account UUID (admin/DB only — not shown to neighbors)"
+          title="Copy the raw account UUID (admin/DB only, not shown to neighbors)"
         >
           <Icons.Hash size={13} /> <span className="mono">{user.id}</span>
           <Icons.Copy size={12} />
@@ -607,7 +607,7 @@ function UserDetail({ userId }: { userId: string }) {
       <div className="user-actions">
         {deleted && (
           <span className="rep-actions-label">
-            Account self-deleted — status actions disabled. Per-content removal stays available.
+            Account self-deleted, so status actions are disabled. Per-content removal stays available.
           </span>
         )}
         <div className="spacer" />
@@ -684,7 +684,7 @@ function UserRow({
               <Icons.Flag size={10} />
             </span>
           )}
-          <span className="ident">{isMissing(user.handle) ? "—" : user.handle}</span>
+          <span className="ident">{isMissing(user.handle) ? EMPTY_VALUE : user.handle}</span>
         </div>
         <div className="sub">
           {!isMissing(user.city) && (
@@ -763,7 +763,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
         title="Users"
         subtitle={
           <span>
-            Every neighbor on civfix and what they&apos;ve contributed — the reports they&apos;ve
+            Every neighbor on civfix and what they&apos;ve contributed: the reports they&apos;ve
             filed, cleanups they&apos;ve joined, and messages they&apos;ve sent.
           </span>
         }

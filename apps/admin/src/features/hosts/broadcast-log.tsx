@@ -9,6 +9,7 @@ import type {
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDateTime } from "@/lib/dates"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { useNav } from "@/store/ui-store"
 
 export const BROADCAST_STATUS_VIEW: Record<BroadcastStatus, { label: string; cls: string }> = {
@@ -95,7 +96,7 @@ export function BroadcastLog({ items }: { items: AdminBroadcastListItemDTO[] }) 
               )}
             </div>
             <div className="bcast-hash mono">
-              subject hash {item.subjectHash ?? "—"} · finished {formatDateTime(item.finishedAt)}
+              subject hash {item.subjectHash ?? EMPTY_VALUE} · finished {formatDateTime(item.finishedAt)}
             </div>
           </div>
         )

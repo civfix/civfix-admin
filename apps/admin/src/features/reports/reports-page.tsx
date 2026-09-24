@@ -58,7 +58,6 @@ import {
 import { useNav, useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
@@ -146,7 +145,6 @@ function chatAuthorName(msg: ChatMessageDTO): string {
   return msg.from?.name ?? "Removed"
 }
 
-/** A sender-less status event (report status changes, etc.). Read-only; can't be deleted. */
 function ChatSystemRow({ msg }: { msg: ChatMessageDTO }) {
   return (
     <div className="dsc-msg system" title="Automated status event">
@@ -293,12 +291,8 @@ function ChatMessageRow({
   )
 }
 
-/**
- * The report chat as neighbors see it, read through the ADMIN plane, including sender-less SYSTEM status
- * events. Operators moderate here and can post into the same public thread. Remove goes through the
- * admin remove endpoint (soft-delete) and is gated to non-system rows (a status event has no author and
- * can't be removed).
- */
+// Operators moderate and post in the same public thread neighbors see. Remove is a soft-delete offered
+// only on authored rows: a system status event has no author to remove.
 function ReportDiscussion({
   reportId,
   cityDept,
@@ -685,7 +679,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     const ok = await confirmDialog({
       title: "Reject report",
       body: sendAttempted
-        ? "This rejects the report's verification verdict. It was already emailed to the city — rejecting does not recall that email."
+        ? "This rejects the report's verification verdict. It was already emailed to the city, and rejecting does not recall that email."
         : "This rejects the report's verification verdict. It is not sent to the city.",
       danger: true,
       confirmLabel: "Reject",
@@ -699,7 +693,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
   return (
     <div className="rep-detail">
-      { }
       <div className="rep-head">
         <span className="rep-head-pin">
           {pin ? (
@@ -723,7 +716,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             <Icons.Flag size={11} /> Flagged
           </span>
         )}
-        { }
         <span
           className={`pill ${outreachView.cls} tight`}
           style={report.flagged ? undefined : { marginLeft: "auto" }}
@@ -736,7 +728,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
 
       <div className="rep-grid">
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">
               Report
@@ -761,7 +752,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">
               Location
@@ -830,7 +820,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          { }
           {galleryMedia.length > 0 && (
             <div className="sub">
               <div className="sub-head">
@@ -878,7 +867,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           )}
 
-          { }
           <div className="sub">
             <div className="sub-head">Activity</div>
             <div className="sub-body">
@@ -915,7 +903,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          { }
           {report.linkedEvents.length > 0 && (
             <div className="sub">
               <div className="sub-head">
@@ -934,7 +921,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           )}
 
-          { }
           <ReportDiscussion
             reportId={report.id}
             cityDept={report.city.dept}
@@ -943,7 +929,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         </div>
 
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">Reporter</div>
             <div className="sub-body">
@@ -976,7 +961,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">
               Routed to
@@ -1011,11 +995,10 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               ) : (
                 <div className="rep-city-contact warn">
                   <Icons.AlertTriangle size={12} />
-                  <span>No contact on file — set one in Jurisdictions</span>
+                  <span>No contact on file. Set one in Jurisdictions.</span>
                 </div>
               )}
 
-              { }
               <div className="rep-city-contact" style={{ marginTop: 8 }}>
                 <OutreachIco size={12} />
                 <span>
@@ -1041,7 +1024,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">
               Send to jurisdiction
@@ -1161,7 +1143,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Message the city</div>
             <div className="sub-body">
@@ -1173,7 +1154,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 className="rep-followup"
                 style={{ marginTop: 8 }}
                 rows={3}
-                placeholder={`Message ${report.city.dept} — e.g. nudge for an update…`}
+                placeholder={`Message ${report.city.dept}, e.g. nudge for an update…`}
                 aria-label="Message to the city"
                 maxLength={FOLLOWUP_MAX}
                 value={text}
@@ -1198,7 +1179,6 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
         </div>
       </div>
 
-      { }
       <div className="rep-actions">
         <span className="rep-actions-label">Quick status</span>
         {statusActions.length === 0 ? (
@@ -1293,7 +1273,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
         title="Reports"
         subtitle={
           <span>
-            Every report neighbors submit — verified, then routed to the right city department. Track
+            Every report neighbors submit, verified and then routed to the right city department. Track
             status, follow up with the city, and close the loop.
           </span>
         }

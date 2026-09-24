@@ -13,6 +13,7 @@ import { promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import { orgStatusView } from "@/lib/org-status"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   buildUpdateRequest,
   clearChangedFieldErrors,
@@ -28,7 +29,6 @@ import { useUpdateOrg } from "@/features/orgs/use-orgs"
 import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 import { useNav } from "@/store/ui-store"
 
-/** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
 export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
   const [editing, setEditing] = React.useState(false)
   return editing ? (
@@ -47,7 +47,7 @@ function UrlFact({ url }: { url: string | null | undefined }) {
       </a>
     )
   }
-  return <>{url || "\u2014"}</>
+  return <>{url || EMPTY_VALUE}</>
 }
 
 function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) {
@@ -80,7 +80,7 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
             </div>
             <div className="umr">
               <span>Kind</span>
-              <span>{org.verifiedKind ? ORG_KIND_LABEL[org.verifiedKind] : "—"}</span>
+              <span>{org.verifiedKind ? ORG_KIND_LABEL[org.verifiedKind] : EMPTY_VALUE}</span>
             </div>
             <div className="umr">
               <span>Website</span>
@@ -98,7 +98,7 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
               <span>Social</span>
               <span>
                 {socials.length === 0 ? (
-                  "—"
+                  EMPTY_VALUE
                 ) : (
                   <span className="social-links">
                     {socials.map((p) => (
