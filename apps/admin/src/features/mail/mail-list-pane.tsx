@@ -18,6 +18,7 @@ import {
   type ListLoadState,
   type NextPageState,
 } from "@/components/shared/section-list"
+import { useNow } from "@/hooks/use-now"
 import { INBOX_EMPTY_COPY, feedKey } from "@/features/inbox/inbox-feed"
 import { InboxRow } from "@/features/inbox/inbox-views"
 import { outreachBoxLabel, type MailBox } from "@/features/mail/mail-page-state"
@@ -67,12 +68,16 @@ const FeedRow = React.memo(function FeedRow({
   item,
   selected,
   onSelect,
+  now,
 }: {
   item: InboxFeedItemDTO
   selected: boolean
   onSelect: (key: string) => void
+  now: number
 }) {
-  return <InboxRow item={item} selected={selected} onClick={() => onSelect(feedKey(item))} />
+  return (
+    <InboxRow item={item} selected={selected} onClick={() => onSelect(feedKey(item))} now={now} />
+  )
 })
 
 function ListRows({
@@ -82,15 +87,16 @@ function ListRows({
   selectedId,
   onSelect,
 }: Pick<MailListPaneProps, "outreach" | "mailItems" | "feedItems" | "selectedId" | "onSelect">) {
+  const now = useNow()
   if (outreach) {
     return mailItems.map((t) => (
-      <MailRow key={t.id} item={t} selected={selectedId === t.id} onSelect={onSelect} />
+      <MailRow key={t.id} item={t} selected={selectedId === t.id} onSelect={onSelect} now={now} />
     ))
   }
   return feedItems.map((item) => {
     const key = feedKey(item)
     return (
-      <FeedRow key={key} item={item} selected={selectedId === key} onSelect={onSelect} />
+      <FeedRow key={key} item={item} selected={selectedId === key} onSelect={onSelect} now={now} />
     )
   })
 }

@@ -6,6 +6,7 @@ import type { JurisdictionDirectoryDTO } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
+import { useNow } from "@/hooks/use-now"
 import { useSelection } from "@/hooks/use-selection"
 import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
@@ -128,6 +129,7 @@ function DirectoryListBody({
   onSelect: (geoid: string) => void
   showOldest: boolean
 }) {
+  const now = useNow()
   return (
     <ListStates
       query={listQuery}
@@ -147,6 +149,7 @@ function DirectoryListBody({
           item={item}
           selected={selectedGeoid === item.geoid}
           onSelect={onSelect}
+          now={now}
           showOldest={showOldest}
         />
       ))}

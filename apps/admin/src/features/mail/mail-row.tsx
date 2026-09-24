@@ -17,10 +17,12 @@ export const MailRow = React.memo(function MailRow({
   item,
   selected,
   onSelect,
+  now,
 }: {
   item: MailThreadListItemDTO
   selected: boolean
   onSelect: (id: string) => void
+  now: number
 }) {
   return (
     <div
@@ -42,7 +44,7 @@ export const MailRow = React.memo(function MailRow({
         <div className="mail-row-top">
           <span className="mail-from">{rowCorrespondent(item)}</span>
           <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
-            {relativeAgo(item.ts)}
+            {relativeAgo(item.ts, now)}
           </span>
         </div>
         <div className="mail-subject">{item.subject || "(no subject)"}</div>

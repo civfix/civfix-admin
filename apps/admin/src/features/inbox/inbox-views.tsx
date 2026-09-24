@@ -30,10 +30,12 @@ export function InboxRow({
   item,
   selected,
   onClick,
+  now = Date.now(),
 }: {
   item: InboxFeedItemDTO
   selected: boolean
   onClick: () => void
+  now?: number
 }) {
   const isEmail = item.source === "email"
   return (
@@ -58,7 +60,7 @@ export function InboxRow({
             {(isEmail ? item.from : item.org || item.from) || "(unknown sender)"}
           </span>
           <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
-            {relativeAgo(item.ts)}
+            {relativeAgo(item.ts, now)}
           </span>
         </div>
         <div className="mail-subject">

@@ -51,15 +51,15 @@ function MappedSub({ item }: { item: JurisdictionDirectoryDTO }) {
   )
 }
 
-function WaitingAge({ oldestReportAt }: { oldestReportAt: string | null }) {
-  const overdue = isOverdue(oldestReportAt)
+function WaitingAge({ oldestReportAt, now }: { oldestReportAt: string | null; now: number }) {
+  const overdue = isOverdue(oldestReportAt, now)
   return (
     <span
       className={`age juris-age ${overdue ? "overdue" : ""}`}
       title={oldestReportAt ? "Oldest waiting report" : "No waiting reports"}
     >
       {overdue && <Icons.AlertTriangle size={10} />}
-      {formatWaitingAge(oldestReportAt)}
+      {formatWaitingAge(oldestReportAt, now)}
     </span>
   )
 }
@@ -68,14 +68,16 @@ function RowAge({
   item,
   unmapped,
   showOldest,
+  now,
 }: {
   item: JurisdictionDirectoryDTO
   unmapped: boolean
   showOldest: boolean
+  now: number
 }) {
   if (showOldest) {
     if (unmapped && !item.oldestReportAt) return null
-    return <WaitingAge oldestReportAt={item.oldestReportAt} />
+    return <WaitingAge oldestReportAt={item.oldestReportAt} now={now} />
   }
   if (unmapped) return null
   return <span className="age">{formatMonthDay(item.lastRouted)}</span>
@@ -85,11 +87,13 @@ export const JurisdictionRow = React.memo(function JurisdictionRow({
   item,
   selected,
   onSelect,
+  now,
   showOldest = false,
 }: {
   item: JurisdictionDirectoryDTO
   selected: boolean
   onSelect: (id: string) => void
+  now: number
   showOldest?: boolean
 }) {
   const unmapped = item.geoid === UNMAPPED_GEOID
@@ -136,7 +140,7 @@ export const JurisdictionRow = React.memo(function JurisdictionRow({
         </div>
       </div>
       <div className="trailing">
-        <RowAge item={item} unmapped={unmapped} showOldest={showOldest} />
+        <RowAge item={item} unmapped={unmapped} showOldest={showOldest} now={now} />
         <span className="row-arrow">
           <Icons.ChevronRight size={14} />
         </span>
