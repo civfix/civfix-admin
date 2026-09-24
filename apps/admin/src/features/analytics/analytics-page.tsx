@@ -27,7 +27,6 @@ import {
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 function initials(name: string): string {
   const out = name
     .split(" ")
@@ -183,7 +182,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
         </button>
       </PageHead>
 
-      { }
       {kpisQuery.isLoading ? (
         <div className="strip-state">
           <LoadingState label="Loading KPIs..." />
@@ -203,7 +201,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
       )}
 
       <div className="analytics-grid">
-        { }
         <AnalyticsCard
           title="Pins per week"
           meta="8-week trend"
@@ -214,7 +211,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           {(d) => <BarChart values={d.weeks} labels={d.labels} />}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="By category"
           meta="this month"
@@ -237,7 +233,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Report funnel"
           meta="pin → resolved"
@@ -267,7 +262,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Mapping coverage"
           meta="jurisdictions"
@@ -300,7 +294,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Median resolution time"
           meta="by report type"
@@ -327,7 +320,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           }}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Cleanup events"
           meta="8-month trend"
@@ -346,7 +338,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
                   <span className="es-num">{d.volunteers.toLocaleString()}</span>
                   <span className="es-lbl">volunteers</span>
                 </div>
-                { }
                 {d.bags > 0 ? (
                   <div className="es-stat">
                     <span className="es-num">{d.bags.toLocaleString()}</span>
@@ -359,7 +350,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Top jurisdictions"
           meta="by pin volume"
@@ -389,7 +379,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
                       role="cell"
                       style={{ color: "var(--moss-700)", fontWeight: 700 }}
                     >
-                      { }
                       {j.resolved}%
                     </span>
                   </div>
@@ -399,7 +388,6 @@ export function AnalyticsPage(_props: SectionPageProps) {
           )}
         </AnalyticsCard>
 
-        { }
         <AnalyticsCard
           title="Top contributors"
           meta="reports + cleanups"

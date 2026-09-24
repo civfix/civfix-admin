@@ -39,7 +39,6 @@ import {
 import { PAGE_LABEL, useNav, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 const HUB_ICON: Record<string, IconComponent> = {
   discovery: Icons.Pin,
   reports: Icons.FileText,
@@ -191,7 +190,6 @@ function initials(name: string): string {
     .join("")
     .toUpperCase()
 }
-
 
 const POPULATION_FORMAT = new Intl.NumberFormat("en", {
   notation: "compact",
