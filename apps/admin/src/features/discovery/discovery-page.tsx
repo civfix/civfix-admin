@@ -13,7 +13,7 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { toAppError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 import {
   REPORT_CATEGORIES,
   categoryLabel,
@@ -31,11 +31,20 @@ import {
   useSaveJurisdictionContacts,
 } from "@/features/discovery/use-discovery"
 import {
+  getCountDisplay,
   getJurisdictionSort,
-  getNeedsMappingCountDisplay,
+  initialDirectoryState,
+  pickSelected,
   type JurisdictionFilter,
   type JurisdictionSort,
 } from "@/features/discovery/discovery-ui-state"
+import {
+  contactsPayload,
+  jurisdictionFields,
+  noteAndHandleFields,
+  parseHandle,
+  partialSaveMessage,
+} from "@/features/discovery/discovery-payloads"
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useForwardTemplateDefault } from "@/features/mail/use-mail"
 
@@ -156,6 +165,7 @@ function JurisdictionRow({
         className={`qrow ${selected ? "selected" : ""}`}
         role="button"
         tabIndex={0}
+        aria-current={selected ? "true" : undefined}
         onClick={onClick}
         onKeyDown={onKeyDown}
       >
@@ -196,6 +206,7 @@ function JurisdictionRow({
       className={`qrow ${selected ? "selected" : ""}`}
       role="button"
       tabIndex={0}
+      aria-current={selected ? "true" : undefined}
       onClick={onClick}
       onKeyDown={onKeyDown}
     >
@@ -266,13 +277,14 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const saveContacts = useSaveJurisdictionContacts()
   const geometry = useJurisdictionGeometry(dto.geoid)
 
-  const [contacts, setContacts] = React.useState<Record<string, string>>(() => {
+  const [seedContacts] = React.useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {}
     dto.contacts.forEach((c: DiscoveryContact) => {
       if (c.email) seed[c.category] = c.email
     })
     return seed
   })
+  const [contacts, setContacts] = React.useState<Record<string, string>>(seedContacts)
   const [opNote, setOpNote] = React.useState("")
   const [defaultEmail, setDefaultEmail] = React.useState(dto.email ?? "")
   const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
@@ -301,24 +313,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const headPin = dom ? categoryPinSrc(dom) : null
   const isFlagged = dto.flaggedAt !== null
   const busy = saveContacts.isPending || patch.isPending
-
-  const contactsPayload = (): Partial<Record<ReportCategory, string | null>> => {
-    const out: Partial<Record<ReportCategory, string | null>> = {}
-    REPORT_TYPES.forEach((c) => {
-      const v = contacts[c.id]?.trim()
-      if (v) out[c.id] = v
-    })
-    return out
-  }
-
-  const jurisdictionFields = (): { defaultEmails?: string[]; formUrl?: string | null } => {
-    const out: { defaultEmails?: string[]; formUrl?: string | null } = {}
-    const email = defaultEmail.trim()
-    if (email) out.defaultEmails = [email]
-    const url = formUrl.trim()
-    if (url) out.formUrl = url
-    return out
-  }
+  const parsedHandle = parseHandle(handle)
+  const saveBlocked = busy || parsedHandle.error !== null
 
   const onFlag = async () => {
     if (!isFlagged) {
@@ -336,23 +332,12 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     )
   }
 
-  const normalizedHandle = handle.trim().replace(/^@+/, "").toLowerCase()
-  const handleChanged = normalizedHandle !== (dto.handle ?? "")
-
-  const noteAndHandleFields = () => {
-    const note = opNote.trim()
-    return {
-      ...(note ? { notes: note } : {}),
-      ...(handleChanged ? { handle: normalizedHandle } : {}),
-    }
-  }
-
   const onSaveDraft = () => {
-    const contacts = contactsPayload()
-    const jf = jurisdictionFields()
-    const extras = noteAndHandleFields()
+    const contactFields = contactsPayload(seedContacts, contacts)
+    const jf = jurisdictionFields(defaultEmail, formUrl)
+    const extras = noteAndHandleFields(opNote, parsedHandle.value, dto.handle)
     if (
-      Object.keys(contacts).length === 0 &&
+      Object.keys(contactFields).length === 0 &&
       Object.keys(jf).length === 0 &&
       Object.keys(extras).length === 0
     ) {
@@ -360,36 +345,37 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       return
     }
     patch.mutate(
-      { geoid: dto.geoid, contacts, ...jf, ...extras },
-      {
-        onSuccess: () => toast(`Draft saved for ${dto.org}`),
-        onError: (err) => toast(toAppError(err).message),
-      },
+      { geoid: dto.geoid, contacts: contactFields, ...jf, ...extras },
+      { onSuccess: () => toast(`Draft saved for ${dto.org}`) },
     )
   }
 
   const onSaveContacts = () => {
     if (!canSave) return
+    const extras = noteAndHandleFields(opNote, parsedHandle.value, dto.handle)
+    const savesExtrasFirst = Object.keys(extras).length > 0
     const saveAndRoute = () =>
       saveContacts.mutate(
-        { geoid: dto.geoid, contacts: contactsPayload(), ...jurisdictionFields() },
+        {
+          geoid: dto.geoid,
+          contacts: contactsPayload(seedContacts, contacts),
+          ...jurisdictionFields(defaultEmail, formUrl),
+        },
         {
           onSuccess: () =>
             toast(`Contacts saved for ${dto.org} · discovery task closed`),
+          onError: (err) =>
+            toast(
+              savesExtrasFirst ? partialSaveMessage(extras, errorMessage(err)) : errorMessage(err),
+              "error",
+            ),
         },
       )
-    const extras = noteAndHandleFields()
-    if (Object.keys(extras).length === 0) {
+    if (!savesExtrasFirst) {
       saveAndRoute()
       return
     }
-    patch.mutate(
-      { geoid: dto.geoid, ...extras },
-      {
-        onSuccess: saveAndRoute,
-        onError: (err) => toast(toAppError(err).message),
-      },
-    )
+    patch.mutate({ geoid: dto.geoid, ...extras }, { onSuccess: saveAndRoute })
   }
 
   return (
@@ -471,6 +457,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             <div className="sub-body">
               <div className="field" style={{ marginTop: 0, marginBottom: 0 }}>
                 <textarea
+                  aria-label="Note for the next operator"
                   placeholder="Add a note for the next operator…"
                   value={opNote}
                   onChange={(e) => setOpNote(e.target.value)}
@@ -501,9 +488,14 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                   aria-label="Jurisdiction discussion handle"
                 />
               </div>
+              {parsedHandle.error && (
+                <span className="field-error" role="alert">
+                  <Icons.AlertTriangle size={11} /> {parsedHandle.error}
+                </span>
+              )}
               <div className="hint" style={{ marginTop: 8 }}>
-                Residents can tag “@{normalizedHandle || "handle"}” in a report’s discussion to forward it
-                to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to clear.
+                Residents can tag “@{parsedHandle.value || "handle"}” in a report’s discussion to forward
+                it to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to clear.
                 Saved by either “Save draft” or “Save &amp; route”.
               </div>
             </div>
@@ -517,6 +509,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 <Icons.Mail size={13} />
                 <input
                   type="email"
+                  aria-label="Default contact email"
                   value={defaultEmail}
                   placeholder="e.g. reports@city.gov"
                   onChange={(e) => setDefaultEmail(e.target.value)}
@@ -526,6 +519,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 <Icons.Building size={13} />
                 <input
                   type="url"
+                  aria-label="Report form URL"
                   value={formUrl}
                   placeholder="e.g. https://city.gov/report"
                   onChange={(e) => setFormUrl(e.target.value)}
@@ -533,7 +527,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
               </div>
               <div className="hint" style={{ marginTop: 8 }}>
                 The default email routes any category without its own contact below; the form URL is the
-                city’s public reporting page.
+                city’s public reporting page. Clearing the default email or form URL here does not remove
+                the saved one.
               </div>
             </div>
           </div>
@@ -575,6 +570,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                         <Icons.Mail size={13} />
                         <input
                           type="email"
+                          aria-label={`${c.label} contact email`}
                           value={contacts[c.id] ?? ""}
                           placeholder={
                             attention
@@ -613,7 +609,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                   disabled={defaultTemplate.isLoading}
                   onClick={() => {
                     if (defaultTemplate.isError) {
-                      toast(toAppError(defaultTemplate.error).message)
+                      toast(errorMessage(defaultTemplate.error), "error")
                       return
                     }
                     setTemplateOpen(true)
@@ -638,7 +634,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </button>
         <button
           className="btn"
-          disabled={busy}
+          disabled={saveBlocked}
           onClick={onSaveDraft}
           title="Saves the contacts, the note and the @handle without closing the discovery task"
         >
@@ -646,7 +642,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </button>
         <button
           className={`btn ${canSave ? "success" : ""}`}
-          disabled={!canSave || busy}
+          disabled={!canSave || saveBlocked}
           onClick={onSaveContacts}
           title={
             canSave
@@ -690,7 +686,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 toast(`Email template saved for ${dto.org}`)
                 setTemplateOpen(false)
               },
-              onError: (err) => toast(toAppError(err).message),
             },
           )
         }
@@ -766,13 +761,15 @@ function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 }
 
 export function DiscoveryPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState<JurisdictionFilter>("attention")
+  const [initial] = React.useState(() => initialDirectoryState(focusId))
+  const [filter, setFilter] = React.useState<JurisdictionFilter>(initial.filter)
   const [layer, setLayer] = React.useState<"all" | JurisdictionLayer>("all")
   const [sort, setSort] = React.useState<JurisdictionSort>("pop")
-  const [query, setQuery] = React.useState(focusId ?? "")
+  const [query, setQuery] = React.useState(initial.query)
   const [selId, setSelId] = React.useState<string | null>(focusId)
+  const [lastSeen, setLastSeen] = React.useState<JurisdictionDirectoryDTO | null>(null)
 
-  const [debouncedQ, setDebouncedQ] = React.useState("")
+  const [debouncedQ, setDebouncedQ] = React.useState(initial.query)
   React.useEffect(() => {
     const t = setTimeout(() => setDebouncedQ(query.trim()), 250)
     return () => clearTimeout(t)
@@ -803,37 +800,40 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const total = listQuery.data?.pages[0]?.total ?? null
   const facets = listQuery.data?.pages[0]?.facets ?? null
   const needsMappingTotal = needsMappingCountQuery.data?.pages[0]?.total ?? null
-  const needsMappingCountDisplay = getNeedsMappingCountDisplay({
+  const needsMappingCountDisplay = getCountDisplay({
     count: needsMappingTotal,
     isLoading: needsMappingCountQuery.isLoading,
     isError: needsMappingCountQuery.isError,
   })
   const allTotal = facets ? facets.routed + facets.unrouted : filter === "all" ? total : null
+  const listCountDisplay = (count: number | null) =>
+    getCountDisplay({ count, isLoading: listQuery.isLoading, isError: listQuery.isError })
 
   React.useEffect(() => {
-    if (focusId) {
-      setSelId(focusId)
-      setQuery(focusId)
-    }
+    if (!focusId) return
+    const next = initialDirectoryState(focusId)
+    setFilter(next.filter)
+    setQuery(next.query)
+    setDebouncedQ(next.query)
+    setSelId(focusId)
   }, [focusId])
 
-  const focused = selId ? (items.find((x) => x.geoid === selId) ?? null) : null
-  const holdingFocus = selId !== null && selId === focusId
-  const selected = focused ?? (holdingFocus ? null : (items[0] ?? null))
+  const selected = pickSelected(items, selId, lastSeen)
+  React.useEffect(() => {
+    if (selected && selected !== lastSeen) setLastSeen(selected)
+  }, [selected, lastSeen])
+  React.useEffect(() => {
+    if (selId === null && items[0]) setSelId(items[0].geoid)
+  }, [selId, items])
+  const selectionNotListed =
+    selId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
 
   const catFilters = [
     { value: "attention", label: "Needs mapping", count: needsMappingCountDisplay },
-    { value: "clear", label: "Routed", count: facets?.routed ?? 0 },
-    { value: "all", label: "All", count: allTotal ?? 0 },
+    { value: "clear", label: "Routed", count: listCountDisplay(facets?.routed ?? null) },
+    { value: "all", label: "All", count: listCountDisplay(allTotal) },
   ]
 
-  const onFilterChange = (v: JurisdictionFilter) => {
-    setFilter(v)
-    // The "needs mapping" view is about the most-overdue reports first, so default it to the
-    // oldest-first sort; leaving the view falls back to population unless the operator picked reports.
-    if (v === "attention") setSort("oldest")
-    else if (sort === "oldest") setSort("pop")
-  }
   const headerCount =
     filter === "attention" ? needsMappingTotal : filter === "clear" ? facets?.routed : total
   const headerCountDisplay = filter === "attention" ? needsMappingCountDisplay : headerCount ?? items.length
@@ -854,13 +854,14 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         <FilterChips
           options={catFilters}
           value={filter}
-          onChange={(v) => onFilterChange(v as JurisdictionFilter)}
+          onChange={(v) => setFilter(v as JurisdictionFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search jurisdictions"
             placeholder="Search place or GEOID…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -953,6 +954,12 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
             ) : (
               <JurisdictionDetail key={selected.geoid} dto={selected} />
             )
+          ) : selectionNotListed ? (
+            <EmptyState
+              title="Not in this list"
+              sub={`No loaded jurisdiction has GEOID ${selId}.`}
+              icon={<Icons.Search size={20} />}
+            />
           ) : (
             <EmptyState
               title="No jurisdiction selected"

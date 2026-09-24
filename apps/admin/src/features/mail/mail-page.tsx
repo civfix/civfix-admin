@@ -22,6 +22,7 @@ import {
 } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { useModalFocus } from "@/components/shared/modal-focus"
 import {
   useComposeMail,
@@ -49,15 +50,23 @@ import {
   resolveFeedSelection,
 } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
-import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
+import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
 import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav, useToast } from "@/store/ui-store"
-import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
 type Folder = "outreach" | "inbox"
+
+const FOLDERS: readonly Folder[] = ["outreach", "inbox"]
+
+const FOLDER_ARROW_STEP: Record<string, number> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+}
 
 const BOX_LABEL: Record<string, string> = {
   all: "All",
@@ -92,19 +101,14 @@ function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
 function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
   if (!focusId) return { folder: "outreach", id: null }
   if (focusId.startsWith("inbox:")) {
-    return { folder: "inbox", id: emailFocusKey(focusId.slice("inbox:".length)) }
+    const id = focusId.slice("inbox:".length)
+    return { folder: "inbox", id: id ? emailFocusKey(id) : null }
   }
   return { folder: "outreach", id: focusId }
 }
 
 function ts(value: string): string {
   return relativeAgo(value)
-}
-
-function tsTitle(value: string): string {
-  if (!value) return ""
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString()
 }
 
 function correspondent(sel: MailThreadDTO): string {
@@ -234,7 +238,15 @@ function MailRow({
   return (
     <div
       className={`mail-row ${selected ? "selected" : ""} ${item.unread ? "unread" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
+      }}
     >
       <span className={`mail-dir ${item.dir}`}>
         {item.dir === "in" ? <Icons.ArrowDown size={13} /> : <Icons.ArrowUp size={13} />}
@@ -288,7 +300,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
 
   const sendReply = () => {
     const body = text.trim()
-    if (!body) return
+    if (!body || reply.isPending) return
     reply.mutate(
       { id: sel.id, body },
       {
@@ -299,30 +311,16 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
             if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
           }, 50)
         },
-        onError: (err) =>
-          toast(errorMessage(err, {}, { fallback: "Couldn't send the reply. Please try again." })),
       },
     )
   }
 
   const markReplied = () => {
-    setStatus.mutate(
-      { id: sel.id, status: "replied" },
-      {
-        onSuccess: () => toast("Marked replied"),
-        onError: (err) => toast(errorMessage(err, {}, { fallback: "Couldn't update the thread." })),
-      },
-    )
+    setStatus.mutate({ id: sel.id, status: "replied" }, { onSuccess: () => toast("Marked replied") })
   }
 
   const onResend = () => {
-    resend.mutate(
-      { id: sel.id },
-      {
-        onSuccess: () => toast("Message resent"),
-        onError: (err) => toast(errorMessage(err, {}, { fallback: "Couldn't resend the message." })),
-      },
-    )
+    resend.mutate({ id: sel.id }, { onSuccess: () => toast("Message resent") })
   }
 
   const onFixRouting = () => {
@@ -442,7 +440,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
       {sel.status === "bounced" ? (
         <div className="mail-reader-foot">
           {sel.jurisdictionGeoid && (
-            <button className="btn primary" disabled={resend.isPending} onClick={onFixRouting}>
+            <button className="btn primary" onClick={onFixRouting}>
               <Icons.AlertTriangle size={13} /> Fix routing contact
             </button>
           )}
@@ -455,11 +453,14 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
           <textarea
             className="mail-reply-input"
             rows={3}
-            placeholder={`Reply to ${sel.org}…`}
+            aria-label="Reply"
+            placeholder={`Reply to ${whoLabel}…`}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) sendReply()
+              if (e.key !== "Enter" || !(e.metaKey || e.ctrlKey)) return
+              e.preventDefault()
+              sendReply()
             }}
           />
           <div className="mail-composer-foot">
@@ -504,9 +505,13 @@ export function MailPage({ focusId }: SectionPageProps) {
   const [folder, setFolder] = React.useState<Folder>(initial.folder)
   const [box, setBox] = React.useState("all")
   const [selId, setSelId] = React.useState<string | null>(initial.id)
-  const [selItem, setSelItem] = React.useState<{ item: InboxFeedItemDTO; view: string } | null>(null)
+  const [selItem, setSelItem] = React.useState<InboxFeedItemDTO | null>(null)
   const [composeOpen, setComposeOpen] = React.useState(false)
   const [templateOpen, setTemplateOpen] = React.useState(false)
+  const folderRefs = React.useRef<Record<Folder, HTMLButtonElement | null>>({
+    outreach: null,
+    inbox: null,
+  })
   const outreach = folder === "outreach"
 
   const [query, setQuery] = React.useState("")
@@ -534,7 +539,6 @@ export function MailPage({ focusId }: SectionPageProps) {
       : {},
   )
   const feedFilter = isInboxFeedFilter(box) ? box : "all"
-  const feedView = `${feedFilter}:${q ?? ""}`
   const inboxFeedQuery = useInboxFeedInfinite(
     !outreach ? { filter: feedFilter, q } : { filter: "all" },
   )
@@ -557,25 +561,27 @@ export function MailPage({ focusId }: SectionPageProps) {
     () => (outreach ? mailItems.map((t) => t.id) : [...feedByKey.keys()]),
     [outreach, mailItems, feedByKey],
   )
-  const selFeedItem = outreach ? undefined : resolveFeedSelection(feedByKey, selItem, selId, feedView)
+  const selFeedItem = outreach ? undefined : resolveFeedSelection(feedByKey, selItem, selId)
 
   const statsQuery = useMailStats()
   const stats = statsQuery.data
 
   React.useEffect(() => {
+    if (!focusId) return
     const p = parseFocus(focusId)
-    if (p.id) {
-      setFolder(p.folder)
-      setBox("all")
-      setSelId(p.id)
-    }
+    setFolder(p.folder)
+    setBox("all")
+    setSelId(p.id)
   }, [focusId])
   React.useEffect(() => {
     const listed = selId ? feedByKey.get(selId) : undefined
-    if (listed) setSelItem({ item: listed, view: feedView })
-    if (!activeIds.length || (selId && (activeIds.includes(selId) || selFeedItem))) return
-    setSelId(activeIds[0]!)
-  }, [activeIds, selId, selFeedItem, feedByKey, feedView])
+    if (listed) setSelItem(listed)
+  }, [selId, feedByKey])
+  // A selection that leaves the list (a deep link past the first page, a filter change, an action
+  // that drops the row) stays open through its by-id reader rather than jumping to another row.
+  React.useEffect(() => {
+    if (selId === null && activeIds.length) setSelId(activeIds[0]!)
+  }, [selId, activeIds])
 
   const switchFolder = (next: Folder) => {
     if (next === folder) return
@@ -608,11 +614,23 @@ export function MailPage({ focusId }: SectionPageProps) {
         setSelId(null)
         toast(`Message sent to ${input.to}`)
       },
-      onError: (err) => {
-        toast(errorMessage(err, {}, { fallback: "Couldn't send the message. Please try again." }))
-      },
     })
   }
+
+  const onFolderKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = FOLDER_ARROW_STEP[e.key]
+    if (!step) return
+    e.preventDefault()
+    const next = FOLDERS[(FOLDERS.indexOf(folder) + step + FOLDERS.length) % FOLDERS.length]!
+    switchFolder(next)
+    folderRefs.current[next]?.focus()
+  }
+
+  const serverTotal = outreach && box === "all" && !q ? stats?.threads : undefined
+  const countLabel =
+    serverTotal !== undefined
+      ? serverTotal.toLocaleString()
+      : `${activeCount}${activeListQuery.hasNextPage ? "+" : ""}`
 
   const statusOptions: FilterOption[] = outreach
     ? [
@@ -639,7 +657,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           disabled={forwardTemplate.isLoading}
           onClick={() => {
             if (forwardTemplate.isError) {
-              toast(toAppError(forwardTemplate.error).message)
+              toast(errorMessage(forwardTemplate.error), "error")
               return
             }
             setTemplateOpen(true)
@@ -653,20 +671,35 @@ export function MailPage({ focusId }: SectionPageProps) {
       </PageHead>
 
       { }
-      <div className="mailbox-switch" role="radiogroup" aria-label="Mailbox folder">
+      <div
+        className="mailbox-switch"
+        role="radiogroup"
+        aria-label="Mailbox folder"
+        onKeyDown={onFolderKeyDown}
+      >
         <button
+          ref={(el) => {
+            folderRefs.current.outreach = el
+          }}
+          type="button"
           className={`mbx ${outreach ? "active" : ""}`}
           role="radio"
           aria-checked={outreach}
+          tabIndex={outreach ? 0 : -1}
           onClick={() => switchFolder("outreach")}
         >
           <Icons.Mail size={13} /> Outreach
           {stats && stats.threads > 0 && <span className="mbx-c">{stats.threads}</span>}
         </button>
         <button
+          ref={(el) => {
+            folderRefs.current.inbox = el
+          }}
+          type="button"
           className={`mbx ${!outreach ? "active" : ""}`}
           role="radio"
           aria-checked={!outreach}
+          tabIndex={outreach ? -1 : 0}
           onClick={() => switchFolder("inbox")}
         >
           <Icons.Inbox size={13} /> Inbox
@@ -729,6 +762,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search mail"
             placeholder={outreach ? "Search org, subject, sender…" : "Search sender, subject, org…"}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -741,7 +775,7 @@ export function MailPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>{outreach ? (BOX_LABEL[box] ?? "All") : INBOX_FEED_FILTER_LABELS[feedFilter]}</h3>
             <div className="spacer" />
-            <span className="meta">{activeCount}</span>
+            <span className="meta">{countLabel}</span>
           </div>
           <div className="queue-list">
             {activeListQuery.isLoading ? (
@@ -848,7 +882,6 @@ export function MailPage({ focusId }: SectionPageProps) {
                 toast("Default template saved")
                 setTemplateOpen(false)
               },
-              onError: (err) => toast(toAppError(err).message),
             },
           )
         }

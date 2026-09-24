@@ -3,11 +3,8 @@
 import type { MailAttachment } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { formatBytes } from "@/features/inbox/attachments"
 import { isWebUrl } from "@/lib/external-url"
-
-function sizeLabel(bytes: number): string {
-  return `${(bytes / 1024).toFixed(0)}k`
-}
 
 // An attachment key comes from mail the platform received, so only an http(s) url becomes a link;
 // any other scheme (javascript:, data:) or a bare storage key renders inert.
@@ -16,7 +13,7 @@ export function AttachmentChip({ attachment }: { attachment: MailAttachment }) {
     return (
       <span className="btn sm attachment-chip unlinked">
         {attachment.filename}
-        <span className="attachment-meta">{sizeLabel(attachment.size)}</span>
+        <span className="attachment-meta">{formatBytes(attachment.size)}</span>
         <span className="attachment-meta">link unavailable</span>
       </span>
     )
@@ -29,7 +26,7 @@ export function AttachmentChip({ attachment }: { attachment: MailAttachment }) {
       rel="noopener noreferrer"
     >
       <Icons.ExternalLink size={13} /> {attachment.filename}
-      <span className="attachment-meta">{sizeLabel(attachment.size)}</span>
+      <span className="attachment-meta">{formatBytes(attachment.size)}</span>
     </a>
   )
 }

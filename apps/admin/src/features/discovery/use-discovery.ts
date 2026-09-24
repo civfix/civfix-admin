@@ -138,6 +138,7 @@ export function useSaveJurisdictionContacts() {
   return useMutation({
     mutationFn: (input: SaveContactsRequest) => api.saveJurisdictionContacts(input),
     onSuccess: () => invalidateDiscovery(qc),
+    meta: { errorToast: false },
   })
 }
 

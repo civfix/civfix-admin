@@ -24,13 +24,14 @@ import type {
   SetMailStatusRequest,
 } from "@civfix/shared"
 
+import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
 
 export function useMailList(params: MailListQuery) {
   return useQuery<MailListResponse>({
-    queryKey: queryKeys.mail.list(params),
+    queryKey: queryKeys.mail.page(params),
     queryFn: () => api.listMail(params),
   })
 }
@@ -53,6 +54,10 @@ export function useMailThread(id: string | null) {
     queryKey: queryKeys.mail.detail(id ?? ""),
     queryFn: () => api.getMailThread({ id: id as string }),
     enabled: !!id,
+    refetchInterval: (query) =>
+      attachmentRefreshInterval(
+        query.state.data?.messages.reduce((n, m) => n + m.attachments.length, 0) ?? 0,
+      ),
   })
 }
 
@@ -147,5 +152,6 @@ export function useSetForwardTemplateDefault() {
 export function usePreviewForwardTemplate() {
   return useMutation<PreviewForwardTemplateResponse, unknown, PreviewForwardTemplateRequest>({
     mutationFn: (input) => api.previewForwardTemplate(input),
+    meta: { errorToast: false },
   })
 }

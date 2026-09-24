@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, expect, it, vi } from "vitest"
+import { QueryClientProvider } from "@tanstack/react-query"
+import { describe, expect, it, onTestFinished, vi } from "vitest"
 import type {
   GetForwardTemplateDefaultResponse,
   JurisdictionDirectoryDTO,
@@ -9,6 +10,9 @@ import type {
 } from "@civfix/shared"
 
 import type * as ApiModule from "@/lib/api"
+import { categoryLabel } from "@/lib/category"
+import { makeQueryClient } from "@/lib/query"
+import { useUiStore, type ToastTone } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
 import { DiscoveryPage } from "@/features/discovery/discovery-page"
@@ -101,6 +105,14 @@ function listCalls(): Record<string, unknown>[] {
 
 function chip(name: RegExp): HTMLElement {
   return screen.getByRole("button", { name })
+}
+
+function spyToasts() {
+  const original = useUiStore.getState().showToast
+  const showToast = vi.fn<(text: string, tone?: ToastTone) => void>()
+  useUiStore.setState({ showToast })
+  onTestFinished(() => useUiStore.setState({ showToast: original }))
+  return showToast
 }
 
 describe("DiscoveryPage", () => {
@@ -302,27 +314,229 @@ describe("DiscoveryPage", () => {
     )
   })
 
-  it("deep-links a focusId into the search box and opens that jurisdiction", async () => {
+  it("deep-links a focusId on the All filter with the search already applied, so a routed jurisdiction opens", async () => {
     mockDetailQueries()
-    apiMock.listJurisdictions.mockResolvedValue(page([LA, PASADENA]))
+    apiMock.listJurisdictions.mockImplementation(async (params: { filter?: string; q?: string }) =>
+      params.filter === "all" && params.q === "0656000" ? page([PASADENA]) : page([LA]),
+    )
     renderWithQuery(<DiscoveryPage focusId="0656000" />)
 
     expect(screen.getByPlaceholderText("Search place or GEOID…")).toHaveValue("0656000")
     expect(await screen.findByRole("heading", { level: 2, name: "Pasadena" })).toBeInTheDocument()
-    await waitFor(() =>
-      expect(listCalls()).toContainEqual({ filter: "needs_mapping", sort: "oldest", q: "0656000", limit: 50 }),
-    )
-    // The first request goes out before the debounce settles, so it carries no search term.
-    expect(listCalls()[0]).toEqual({ filter: "needs_mapping", sort: "oldest", limit: 50 })
+    expect(listCalls()[0]).toEqual({ filter: "all", sort: "population", q: "0656000", limit: 50 })
+    expect(listCalls().every((call) => call.q === "0656000")).toBe(true)
   })
 
-  it("holds an empty detail pane when the focused jurisdiction is not in the loaded page (current behavior)", async () => {
+  it("switches to the All filter when a new focusId arrives", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockImplementation(async (params: { filter?: string; q?: string }) =>
+      params.filter === "all" && params.q === "0656000" ? page([PASADENA]) : page([LA]),
+    )
+    const { rerender, client } = renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <DiscoveryPage focusId="0656000" />
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByRole("heading", { level: 2, name: "Pasadena" })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Search place or GEOID…")).toHaveValue("0656000")
+  })
+
+  it("keeps a focused jurisdiction selected when the list does not have it, and says so", async () => {
     mockDetailQueries()
     apiMock.listJurisdictions.mockResolvedValue(page([LA]))
     renderWithQuery(<DiscoveryPage focusId="9999999" />)
 
-    expect(await screen.findByRole("button", { name: /^Los Angeles/ })).toBeInTheDocument()
-    expect(screen.getByText("No jurisdiction selected")).toBeInTheDocument()
+    const laRow = await screen.findByRole("button", { name: /^Los Angeles/ })
+    expect(screen.getByText("Not in this list")).toBeInTheDocument()
+    expect(screen.getByText("No loaded jurisdiction has GEOID 9999999.")).toBeInTheDocument()
     expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
+    expect(laRow).not.toHaveAttribute("aria-current")
+  })
+
+  it("keeps a routed jurisdiction open when saving it drops it from the Needs mapping list", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA, PASADENA]))
+    apiMock.saveJurisdictionContacts.mockImplementation(async () => {
+      apiMock.listJurisdictions.mockResolvedValue(page([PASADENA]))
+      return { ok: true }
+    })
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /^Los Angeles/ })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole("heading", { level: 2, name: "Los Angeles" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Pasadena/ })).not.toHaveAttribute("aria-current")
+  })
+
+  it("marks the selected row current", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA, PASADENA]))
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+
+    const laRow = await screen.findByRole("button", { name: /^Los Angeles/ })
+    expect(laRow).toHaveAttribute("aria-current", "true")
+    expect(screen.getByRole("button", { name: /^Pasadena/ })).not.toHaveAttribute("aria-current")
+  })
+
+  it("shows loading, not zero, on the Routed and All chips while the directory loads", async () => {
+    apiMock.listJurisdictions.mockReturnValue(new Promise(() => {}))
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+
+    await screen.findByRole("status")
+    expect(chip(/^Routed/)).toHaveTextContent("Loading…")
+    expect(chip(/^All/)).toHaveTextContent("Loading…")
+  })
+
+  it("keeps the operator's sort through a visit to Needs mapping", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA]))
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("button", { name: /^Los Angeles/ })
+
+    await userEvent.click(chip(/^Routed/))
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Sort jurisdictions" }), "reports")
+    await userEvent.click(chip(/^Needs mapping/))
+    await userEvent.click(chip(/^Routed/))
+
+    expect(screen.getByRole("combobox", { name: "Sort jurisdictions" })).toHaveValue("reports")
+  })
+
+  it("names every search and contact field", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA]))
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    for (const name of [
+      "Search jurisdictions",
+      "Note for the next operator",
+      "Default contact email",
+      "Report form URL",
+      `${categoryLabel("trash")} contact email`,
+    ]) {
+      expect(screen.getByRole("textbox", { name })).toBeInTheDocument()
+    }
+  })
+})
+
+describe("DiscoveryPage saving", () => {
+  it("sends null for a contact the operator emptied, so the old address stops receiving reports", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([PASADENA]))
+    apiMock.patchJurisdiction.mockResolvedValue({ ok: true })
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Pasadena" })
+
+    await userEvent.clear(screen.getByDisplayValue("trash@pasadena.gov"))
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
+
+    await waitFor(() => expect(apiMock.patchJurisdiction).toHaveBeenCalled())
+    expect(apiMock.patchJurisdiction).toHaveBeenCalledWith({
+      geoid: "0656000",
+      contacts: { trash: null },
+      defaultEmails: ["reports@pasadena.gov"],
+    })
+    expect(
+      screen.getByText(/Clearing the default email or form URL here does not remove the saved one\./),
+    ).toBeInTheDocument()
+  })
+
+  it("normalizes the @handle the way the server does before comparing it", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([jurisdiction({ handle: "la" })]))
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    const handle = screen.getByRole("textbox", { name: "Jurisdiction discussion handle" })
+    await userEvent.clear(handle)
+    await userEvent.type(handle, "@ LA")
+    expect(screen.getByText(/Residents can tag \u201c@la\u201d/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
+    expect(apiMock.patchJurisdiction).not.toHaveBeenCalled()
+  })
+
+  it("shows an invalid @handle inline and holds both saves", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([PASADENA]))
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Pasadena" })
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Jurisdiction discussion handle" }), "a")
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Handle must be 2-40 characters using lowercase letters, numbers, or underscores.",
+    )
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: /Save & route/ })).toBeDisabled()
+  })
+
+  it("shows one error toast when Save draft fails", async () => {
+    const toasts = spyToasts()
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA]))
+    apiMock.patchJurisdiction.mockRejectedValue(new Error("Jurisdiction service down"))
+    renderWithQuery(<DiscoveryPage focusId={null} />, makeQueryClient())
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
+
+    await waitFor(() => expect(toasts).toHaveBeenCalled())
+    expect(toasts).toHaveBeenCalledTimes(1)
+    expect(toasts).toHaveBeenCalledWith("Jurisdiction service down", "error")
+  })
+
+  it("shows one error toast when saving the email template fails", async () => {
+    const toasts = spyToasts()
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA]))
+    apiMock.patchJurisdiction.mockRejectedValue(new Error("Jurisdiction service down"))
+    renderWithQuery(<DiscoveryPage focusId={null} />, makeQueryClient())
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+    const edit = screen.getByRole("button", { name: "Edit template" })
+    await waitFor(() => expect(edit).toBeEnabled())
+
+    await userEvent.click(edit)
+    const dialog = screen.getByRole("dialog", { name: "Forwarding email for Los Angeles" })
+    await userEvent.type(within(dialog).getByLabelText("Subject"), "Report forwarded")
+    await userEvent.click(within(dialog).getByRole("button", { name: /Save/ }))
+
+    await waitFor(() => expect(toasts).toHaveBeenCalled())
+    expect(toasts).toHaveBeenCalledTimes(1)
+  })
+
+  it("says what was saved when Save & route saves the note but not the contacts", async () => {
+    const toasts = spyToasts()
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA]))
+    apiMock.patchJurisdiction.mockResolvedValue({ ok: true })
+    apiMock.saveJurisdictionContacts.mockRejectedValue(new Error("Contacts service down"))
+    renderWithQuery(<DiscoveryPage focusId={null} />, makeQueryClient())
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Note for the next operator" }),
+      "Called the clerk",
+    )
+    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
+
+    await waitFor(() => expect(toasts).toHaveBeenCalled())
+    expect(apiMock.patchJurisdiction).toHaveBeenCalledWith({ geoid: "0644000", notes: "Called the clerk" })
+    expect(toasts).toHaveBeenCalledTimes(1)
+    expect(toasts).toHaveBeenCalledWith(
+      "The note was saved, but the contacts were not: Contacts service down",
+      "error",
+    )
   })
 })

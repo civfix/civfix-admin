@@ -383,14 +383,154 @@ describe("MailPage outreach", () => {
     expect(within(detailCard()).queryByText("Body of Pothole on 5th Ave")).not.toBeInTheDocument()
   })
 
-  it("replaces a deep-linked thread focusId that is not on the first page with the first row (current behavior)", async () => {
+  it("keeps a deep-linked thread that is not on the first page open, with no row selected", async () => {
     const OLD = thread({ id: "t-9", subject: "Old thread" })
     mockChrome()
     apiMock.listMail.mockResolvedValue(mailPage([POTHOLE, GRAFFITI]))
     mockThreads(POTHOLE, GRAFFITI, OLD)
     renderWithQuery(<MailPage focusId="t-9" />)
+    await within(listCard()).findByText("Pothole on 5th Ave")
+    expect(await within(detailCard()).findByText("Body of Old thread")).toBeInTheDocument()
+    expect(within(detailCard()).queryByText("Body of Pothole on 5th Ave")).not.toBeInTheDocument()
+    for (const row of within(listCard()).getAllByRole("button", { name: /Oakland|Parks/ })) {
+      expect(row).not.toHaveAttribute("aria-current")
+    }
+  })
+
+  it("keeps the open thread when a filter chip drops it from the list", async () => {
+    mockChrome()
+    apiMock.listMail.mockImplementation(async (params: { dir?: string }) =>
+      params.dir === "out" ? mailPage([GRAFFITI]) : mailPage([POTHOLE, GRAFFITI]),
+    )
+    mockThreads(POTHOLE, GRAFFITI)
+    renderWithQuery(<MailPage focusId={null} />)
+    await within(detailCard()).findByText("Body of Pothole on 5th Ave")
+
+    await userEvent.click(screen.getByRole("button", { name: "Outbound" }))
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Pothole on 5th Ave")).not.toBeInTheDocument(),
+    )
+    expect(within(listCard()).getByText("Graffiti at Lake Merritt")).toBeInTheDocument()
+
+    expect(within(detailCard()).getByText("Body of Pothole on 5th Ave")).toBeInTheDocument()
+    expect(apiMock.getMailThread).not.toHaveBeenCalledWith({ id: "t-2" })
+  })
+
+  it("selects a row from the keyboard and marks the selected row current", async () => {
+    mockChrome()
+    apiMock.listMail.mockResolvedValue(mailPage([POTHOLE, GRAFFITI]))
+    apiMock.markMailRead.mockResolvedValue({ ok: true })
+    mockThreads(POTHOLE, GRAFFITI)
+    renderWithQuery(<MailPage focusId={null} />)
+    await within(detailCard()).findByText("Body of Pothole on 5th Ave")
+
+    const pothole = within(listCard()).getByRole("button", { name: /Pothole on 5th Ave/ })
+    const graffiti = within(listCard()).getByRole("button", { name: /Graffiti at Lake Merritt/ })
+    expect(pothole).toHaveAttribute("tabindex", "0")
+    expect(pothole).toHaveAttribute("aria-current", "true")
+    expect(graffiti).not.toHaveAttribute("aria-current")
+
+    graffiti.focus()
+    await userEvent.keyboard("{Enter}")
+    expect(await within(detailCard()).findByText("Body of Graffiti at Lake Merritt")).toBeInTheDocument()
+    expect(graffiti).toHaveAttribute("aria-current", "true")
+
+    pothole.focus()
+    await userEvent.keyboard(" ")
     expect(await within(detailCard()).findByText("Body of Pothole on 5th Ave")).toBeInTheDocument()
-    expect(within(detailCard()).queryByText("Body of Old thread")).not.toBeInTheDocument()
+  })
+
+  it("moves between the mailbox folders with the arrow keys, one tab stop for the group", async () => {
+    mockChrome()
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    renderWithQuery(<MailPage focusId={null} />)
+    const outreach = screen.getByRole("radio", { name: /Outreach/ })
+    const inbox = screen.getByRole("radio", { name: /Inbox/ })
+    expect(outreach).toHaveAttribute("tabindex", "0")
+    expect(inbox).toHaveAttribute("tabindex", "-1")
+
+    outreach.focus()
+    await userEvent.keyboard("{ArrowRight}")
+    expect(inbox).toHaveAttribute("aria-checked", "true")
+    expect(inbox).toHaveFocus()
+    expect(inbox).toHaveAttribute("tabindex", "0")
+
+    await userEvent.keyboard("{ArrowLeft}")
+    expect(outreach).toHaveAttribute("aria-checked", "true")
+    expect(outreach).toHaveFocus()
+  })
+
+  it("names the search box and the reply field", async () => {
+    mockChrome()
+    apiMock.listMail.mockResolvedValue(mailPage([POTHOLE]))
+    mockThreads(POTHOLE)
+    renderWithQuery(<MailPage focusId={null} />)
+    expect(screen.getByRole("textbox", { name: "Search mail" })).toBeInTheDocument()
+    expect(await within(detailCard()).findByRole("textbox", { name: "Reply" })).toBeInTheDocument()
+  })
+
+  it("shows the server thread total on the All list and marks a partial count when more pages exist", async () => {
+    mockChrome()
+    apiMock.listMail.mockImplementation(async (params: { dir?: string }) =>
+      params.dir === "out" ? mailPage([GRAFFITI], "mail-2") : mailPage([POTHOLE, GRAFFITI], "mail-2"),
+    )
+    mockThreads(POTHOLE, GRAFFITI)
+    renderWithQuery(<MailPage focusId={null} />)
+    await within(listCard()).findByText("Pothole on 5th Ave")
+    expect(within(listCard()).getByText(String(STATS.threads))).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Outbound" }))
+    expect(await within(listCard()).findByText("1+")).toBeInTheDocument()
+  })
+})
+
+describe("MailPage reader", () => {
+  it("sends one reply however many times Cmd/Ctrl+Enter is pressed while it is in flight", async () => {
+    mockChrome()
+    apiMock.listMail.mockResolvedValue(mailPage([POTHOLE]))
+    apiMock.replyMail.mockReturnValue(new Promise(() => {}))
+    mockThreads(POTHOLE)
+    renderWithQuery(<MailPage focusId={null} />)
+    const reply = await within(detailCard()).findByPlaceholderText("Reply to Oakland Public Works…")
+
+    await userEvent.type(reply, "Crew is on the way")
+    await userEvent.keyboard("{Control>}{Enter}{/Control}")
+    await userEvent.keyboard("{Control>}{Enter}{/Control}")
+    await userEvent.keyboard("{Meta>}{Enter}{/Meta}")
+
+    await waitFor(() => expect(apiMock.replyMail).toHaveBeenCalledTimes(1))
+    expect(apiMock.replyMail).toHaveBeenCalledWith({ id: "t-1", body: "Crew is on the way" })
+  })
+
+  it("addresses the reply placeholder to the correspondent when the thread has no org", async () => {
+    const NO_ORG = { ...REPORT_REPLY_THREAD, org: "", reportId: null }
+    mockChrome()
+    apiMock.listMail.mockResolvedValue(mailPage([thread({ id: "t-1", subject: "Re: Pothole", org: "" })]))
+    mockThreadDetails(NO_ORG)
+    renderWithQuery(<MailPage focusId={null} />)
+    expect(
+      await within(detailCard()).findByPlaceholderText("Reply to clerk@oaklandca.gov…"),
+    ).toBeInTheDocument()
+  })
+
+  it("keeps Fix routing contact usable while a resend is in flight", async () => {
+    const BOUNCED = thread({
+      id: "t-5",
+      subject: "Graffiti report",
+      status: "bounced",
+      jurisdictionGeoid: "0653000",
+    })
+    mockChrome()
+    apiMock.listMail.mockResolvedValue(mailPage([BOUNCED]))
+    apiMock.resendMail.mockReturnValue(new Promise(() => {}))
+    mockThreads(BOUNCED)
+    renderWithQuery(<MailPage focusId={null} />)
+    const resend = await within(detailCard()).findByRole("button", { name: /Resend/ })
+
+    await userEvent.click(resend)
+
+    await waitFor(() => expect(resend).toBeDisabled())
+    expect(within(detailCard()).getByRole("button", { name: /Fix routing contact/ })).toBeEnabled()
   })
 })
 
@@ -574,5 +714,39 @@ describe("MailPage inbox", () => {
     expect(await within(detailCard()).findByText("Body of Press inquiry")).toBeInTheDocument()
     expect(within(detailCard()).queryByText("Body of Question about my report")).not.toBeInTheDocument()
     expect(apiMock.getInboxMessage).not.toHaveBeenCalledWith({ id: "i-1" })
+  })
+
+  it("keeps a picked reply open when a filter chip drops it from the feed", async () => {
+    mockChrome()
+    apiMock.listInboxFeed.mockImplementation(async (params: { filter?: string }) =>
+      params.filter === "unmatched" ? feedPage([PRESS_FEED]) : feedPage([REPORT_REPLY, PRESS_FEED]),
+    )
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    mockThreadDetails(REPORT_REPLY_THREAD)
+    mockInboxMessages(PRESS)
+    renderWithQuery(<MailPage focusId={null} />)
+    await openInbox()
+    await within(detailCard()).findByText("Body of Re: Pothole on 5th Ave")
+
+    await userEvent.click(screen.getByRole("button", { name: "Unmatched" }))
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Re: Pothole on 5th Ave")).not.toBeInTheDocument(),
+    )
+    expect(within(listCard()).getByText("Press inquiry")).toBeInTheDocument()
+
+    expect(within(detailCard()).getByText("Body of Re: Pothole on 5th Ave")).toBeInTheDocument()
+    expect(apiMock.getInboxMessage).not.toHaveBeenCalled()
+  })
+
+  it("opens the first row for an inbox: deep link that names no message", async () => {
+    mockChrome({ feed: feedPage([QUESTION_FEED, PRESS_FEED]) })
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    mockInboxMessages(QUESTION, PRESS)
+    renderWithQuery(<MailPage focusId="inbox:" />)
+
+    expect(screen.getByRole("radio", { name: /Inbox/ })).toHaveAttribute("aria-checked", "true")
+    expect(
+      await within(detailCard()).findByText("Body of Question about my report"),
+    ).toBeInTheDocument()
   })
 })

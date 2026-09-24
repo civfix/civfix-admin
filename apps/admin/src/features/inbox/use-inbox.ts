@@ -15,13 +15,14 @@ import type {
   SetInboxStatusRequest,
 } from "@civfix/shared"
 
+import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
 
 export function useInboxList(params: InboxListQuery) {
   return useQuery<InboxListResponse>({
-    queryKey: queryKeys.inbox.list(params),
+    queryKey: queryKeys.inbox.page(params),
     queryFn: () => api.listInbox(params),
   })
 }
@@ -61,6 +62,7 @@ export function useInboxMessage(id: string | null) {
     queryKey: queryKeys.inbox.detail(id ?? ""),
     queryFn: () => api.getInboxMessage({ id: id as string }),
     enabled: !!id,
+    refetchInterval: (query) => attachmentRefreshInterval(query.state.data?.attachments.length ?? 0),
   })
 }
 

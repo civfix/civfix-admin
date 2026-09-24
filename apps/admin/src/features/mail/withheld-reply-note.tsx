@@ -11,7 +11,6 @@ import {
   withheldNote,
   withheldReason,
 } from "@/features/mail/mail-presentation"
-import { errorMessage } from "@/lib/error-messages"
 import { useToast } from "@/store/ui-store"
 
 export function WithheldReplyNote({
@@ -38,11 +37,7 @@ export function WithheldReplyNote({
     if (!ok) return
     publish.mutate(
       { id: threadId, messageId: msg.id },
-      {
-        onSuccess: (res) => toast(PUBLISH_TOAST[res.publication]),
-        onError: (err) =>
-          toast(errorMessage(err, {}, { fallback: "Couldn't publish the reply. Please try again." })),
-      },
+      { onSuccess: (res) => toast(PUBLISH_TOAST[res.publication]) },
     )
   }
 
