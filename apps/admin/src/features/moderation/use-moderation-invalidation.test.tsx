@@ -44,15 +44,18 @@ async function invalidatedBy<I>(
   return spy.mock.calls.map(([filters]) => filters?.queryKey)
 }
 
+const SUBJECT = { flag: "MOD-101", kind: "user_report" } as const
+
 describe("moderation decisions refresh the sections the decision changes", () => {
   it.each([
     ["approve", "approveModeration", () => useApproveModeration(), { id: "m1" }],
     ["remove", "removeModeration", () => useRemoveModeration(), { id: "m1" }],
     ["hold", "holdModeration", () => useHoldModeration(), { id: "m1" }],
     ["appeal", "appealModeration", () => useAppealModeration(), { id: "m1", decision: "uphold" as const }],
-  ] as const)("%s", async (_name, method, useHook, input) => {
+  ] as const)("%s", async (_name, method, useHook, request) => {
     apiMock[method].mockResolvedValue({ ok: true })
-    const keys = await invalidatedBy(useHook as never, input)
+    const keys = await invalidatedBy(useHook as never, { request, item: SUBJECT })
+    expect(apiMock[method]).toHaveBeenCalledWith(request)
     expect(keys).toEqual(
       expect.arrayContaining([
         queryKeys.moderation.all,
@@ -65,13 +68,44 @@ describe("moderation decisions refresh the sections the decision changes", () =>
   })
 })
 
+describe("moderation decisions confirm from the item the operator decided", () => {
+  it.each([
+    ["approve", "approveModeration", () => useApproveModeration(), { id: "m1" }, "image", "MOD-101 · approved"],
+    ["keep", "approveModeration", () => useApproveModeration(), { id: "m1" }, "user_report", "MOD-101 · kept"],
+    ["remove", "removeModeration", () => useRemoveModeration(), { id: "m1" }, "image", "MOD-101 · removed"],
+    ["hold", "holdModeration", () => useHoldModeration(), { id: "m1" }, "image", "MOD-101 · held for review"],
+    [
+      "uphold",
+      "appealModeration",
+      () => useAppealModeration(),
+      { id: "m1", decision: "uphold" as const },
+      "appeal",
+      "MOD-101 · appeal upheld",
+    ],
+    [
+      "overturn",
+      "appealModeration",
+      () => useAppealModeration(),
+      { id: "m1", decision: "overturn" as const },
+      "appeal",
+      "MOD-101 · appeal overturned",
+    ],
+  ] as const)("%s", async (_name, method, useHook, request, kind, text) => {
+    apiMock[method].mockResolvedValue({ ok: true })
+    await invalidatedBy(useHook as never, { request, item: { flag: "MOD-101", kind } })
+    expect(useUiStore.getState().toast).toMatchObject({ text, tone: "ok" })
+  })
+})
+
 describe("gov claim approval", () => {
   it("shows its own error copy once, in the error tone", async () => {
     apiMock.approveGovClaim.mockRejectedValue(new AppError(ErrorCode.FORBIDDEN, "Forbidden"))
     const client = makeQueryClient()
     const { result } = renderHook(() => useApproveGovClaim(), { wrapper: wrapperFor(client) })
     await act(async () => {
-      await result.current.mutateAsync({ id: "gc-1" }).catch(() => undefined)
+      await result.current
+        .mutateAsync({ request: { id: "gc-1" }, claim: { name: "Maya Rivera" } })
+        .catch(() => undefined)
     })
     expect(useUiStore.getState().toast).toMatchObject({
       text: govClaimApproveErrorMessage(new AppError(ErrorCode.FORBIDDEN, "Forbidden")),

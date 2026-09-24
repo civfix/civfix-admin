@@ -25,7 +25,7 @@ import {
   useSetOrgMemberRole,
 } from "@/features/orgs/use-orgs"
 import { PickedUserAvatar, UserPicker, type PickedUser } from "@/features/orgs/user-picker"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 
 export function MembersPanel({ org }: { org: AdminOrgDTO }) {
   const q = useOrgMembersInfinite(org.id)
@@ -120,7 +120,6 @@ function MemberRow({
   ownerName: string | null
 }) {
   const nav = useNav()
-  const toast = useToast()
   const setRole = useSetOrgMemberRole()
   const remove = useRemoveOrgMember()
   // The menu is position:fixed (anchored to the trigger's rect) so the card's overflow:hidden and the
@@ -228,17 +227,11 @@ function MemberRow({
       prompting.current = false
     }
     if (reason === null || reason.trim() === "") return
-    setRole.mutate(
-      { id: org.id, userId: member.user.id, role: to, reason: reason.trim() },
-      {
-        onSuccess: () =>
-          toast(
-            copy.transfer
-              ? `${member.user.name} now owns ${org.name}`
-              : `${member.user.name} · ${ORG_ROLE_LABEL[to]}`,
-          ),
-      },
-    )
+    setRole.mutate({
+      request: { id: org.id, userId: member.user.id, role: to, reason: reason.trim() },
+      memberName: member.user.name,
+      orgName: org.name,
+    })
   }
 
   const onRemove = async () => {
@@ -260,10 +253,11 @@ function MemberRow({
       prompting.current = false
     }
     if (reason === null || reason.trim() === "") return
-    remove.mutate(
-      { id: org.id, userId: member.user.id, reason: reason.trim() },
-      { onSuccess: () => toast(`${member.user.name} removed from ${org.name}`) },
-    )
+    remove.mutate({
+      request: { id: org.id, userId: member.user.id, reason: reason.trim() },
+      memberName: member.user.name,
+      orgName: org.name,
+    })
   }
 
   const picked: PickedUser = { id: member.user.id, name: member.user.name, handle: member.user.handle }
@@ -382,7 +376,6 @@ function AddMemberForm({
   onDone: () => void
 }) {
   const add = useAddOrgMember()
-  const toast = useToast()
   const [user, setUser] = React.useState<PickedUser | null>(null)
   const [role, setRole] = React.useState<OrganizationMemberRole>("member")
   const [reason, setReason] = React.useState("")
@@ -413,17 +406,12 @@ function AddMemberForm({
       if (!ok) return
     }
     add.mutate(
-      { id: org.id, userId: user.id, role, reason: reason.trim() },
       {
-        onSuccess: () => {
-          toast(
-            transfer
-              ? `${user.name} now owns ${org.name}`
-              : `${user.name} added as ${ORG_ROLE_LABEL[role].toLowerCase()}`,
-          )
-          onDone()
-        },
+        request: { id: org.id, userId: user.id, role, reason: reason.trim() },
+        memberName: user.name,
+        orgName: org.name,
       },
+      { onSuccess: onDone },
     )
   }
 

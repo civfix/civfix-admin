@@ -9,22 +9,16 @@ import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import { orgStatusView } from "@/lib/org-status"
 import { EvidenceList } from "@/features/orgs/evidence-list"
-import { canDecideVerification } from "@/features/orgs/org-verification"
+import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verification"
 import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 
-export const ORG_KIND_LABEL: Record<OrgVerificationKind, string> = {
-  nonprofit: "Nonprofit",
-  government: "Government",
-  community: "Community group",
-}
 
 const APPROVE_KINDS: OrgVerificationKind[] = ["nonprofit", "government", "community"]
 
 export function VerificationPanel({ orgId }: { orgId: string }) {
   const q = useAdminOrg(orgId)
   const decide = useDecideOrgVerification()
-  const toast = useToast()
   const nav = useNav()
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />
@@ -52,10 +46,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
       confirmLabel: "Verify organization",
     })
     if (!ok) return
-    decide.mutate(
-      { id: org.id, decision: "verified", kind },
-      { onSuccess: () => toast(`${org.name} verified · ${ORG_KIND_LABEL[kind]}`) },
-    )
+    decide.mutate({ id: org.id, decision: "verified", kind })
   }
 
   const onReject = async () => {
@@ -69,10 +60,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
       danger: true,
     })
     if (reason === null || reason.trim() === "") return
-    decide.mutate(
-      { id: org.id, decision: "rejected", reason: reason.trim() },
-      { onSuccess: () => toast(`${org.name} rejected`) },
-    )
+    decide.mutate({ id: org.id, decision: "rejected", reason: reason.trim() })
   }
 
   return (

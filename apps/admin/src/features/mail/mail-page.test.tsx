@@ -20,6 +20,8 @@ import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
 import { detailCard, listCard } from "@/test/panes"
 import { MailPage } from "@/features/mail/mail-page"
+import { DialogHost } from "@/components/shared/dialog"
+import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -691,6 +693,45 @@ describe("MailPage inbox", () => {
     expect(apiMock.getInboxMessage).not.toHaveBeenCalled()
   })
 
+  it("confirms a published reply though the refreshed thread drops its note before the feed refetch lands", async () => {
+    useUiStore.setState({ toast: null })
+    mockChrome({ feed: feedPage([REPORT_REPLY]) })
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    apiMock.markMailRead.mockResolvedValue({ ok: true })
+    mockThreadDetails(REPORT_REPLY_THREAD)
+    let releaseFeed: () => void = () => {}
+    apiMock.publishMailReply.mockImplementation(async () => {
+      mockThreadDetails({
+        ...REPORT_REPLY_THREAD,
+        messages: [{ ...REPORT_REPLY_THREAD.messages[0]!, publication: "published" as const }],
+      })
+      apiMock.listInboxFeed.mockReturnValue(
+        new Promise((resolve) => {
+          releaseFeed = () => resolve(feedPage([{ ...REPORT_REPLY, publication: "published" as const }]))
+        }),
+      )
+      return { publication: "published" }
+    })
+    renderWithQuery(
+      <>
+        <MailPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await openInbox()
+
+    await userEvent.click(await within(detailCard()).findByRole("button", { name: /Publish reply/ }))
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Publish reply" }))
+
+    await waitFor(() =>
+      expect(within(detailCard()).queryByRole("button", { name: /Publish reply/ })).not.toBeInTheDocument(),
+    )
+    releaseFeed()
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({ text: "Reply published", tone: "ok" }),
+    )
+  })
+
   it("opens a clicked email row in the inbound message reader", async () => {
     mockChrome({ feed: feedPage([REPORT_REPLY, PRESS_FEED]) })
     apiMock.listMail.mockResolvedValue(mailPage([]))
@@ -826,6 +867,7 @@ describe("MailPage inbox", () => {
   })
 
   it("still clears a message the operator archives out of the list after opening it", async () => {
+    useUiStore.setState({ toast: null })
     let status = "unread"
     mockChrome()
     apiMock.listInboxFeed.mockImplementation(async () =>
@@ -851,6 +893,7 @@ describe("MailPage inbox", () => {
     )
     const archive = await within(detailCard()).findByRole("button", { name: /Archive/ })
     await waitFor(() => expect(archive).toBeEnabled())
+    expect(useUiStore.getState().toast).toBeNull()
     await userEvent.click(archive)
 
     await waitFor(() =>
@@ -858,6 +901,7 @@ describe("MailPage inbox", () => {
     )
     expect(await within(detailCard()).findByText("No message selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByText("Body of Press inquiry")).not.toBeInTheDocument()
+    expect(useUiStore.getState().toast).toMatchObject({ text: "Archived", tone: "ok" })
   })
 
   it("opens the first row for an inbox: deep link that names no message", async () => {

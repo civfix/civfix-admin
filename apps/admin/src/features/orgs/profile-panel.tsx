@@ -25,8 +25,8 @@ import {
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { useUpdateOrg } from "@/features/orgs/use-orgs"
-import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
-import { useNav, useToast } from "@/store/ui-store"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
+import { useNav } from "@/store/ui-store"
 
 /** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
 export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
@@ -170,7 +170,6 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
 
 function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }) {
   const update = useUpdateOrg()
-  const toast = useToast()
   // The draft and the diff share one snapshot taken when editing starts: diffing against the live
   // prop would PATCH an untouched field back to its old value after a mid-edit refetch.
   const [baseline] = React.useState(org)
@@ -219,10 +218,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
     }
     setServerErrors({})
     update.mutate(body, {
-      onSuccess: () => {
-        toast(`${draft.name.trim()} updated`)
-        onDone()
-      },
+      onSuccess: onDone,
       onError: (err) => setServerErrors(updateFieldErrors(err, body)),
     })
   }

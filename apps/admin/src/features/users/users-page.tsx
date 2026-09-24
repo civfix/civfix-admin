@@ -266,15 +266,11 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   const events = useUserEvents(tab === "events" ? userId : null)
   const messages = useUserMessages(tab === "messages" ? userId : null)
   const removeMsg = useRemoveUserMessage()
-  const toast = useToast()
 
   const onRemoveMessage = async (m: UserMessageItemDTO) => {
     const reason = await promptDialog({ title: "Remove message", label: "Reason (optional)" })
     if (reason === null) return
-    removeMsg.mutate(
-      { id: userId, messageId: m.id, ...(reason ? { reason } : {}) },
-      { onSuccess: () => toast("Message removed") },
-    )
+    removeMsg.mutate({ id: userId, messageId: m.id, ...(reason ? { reason } : {}) })
   }
 
   if (tab === "reports") {
@@ -442,13 +438,7 @@ function UserDetail({ userId }: { userId: string }) {
   ]
 
   const onFlag = () => {
-    flag.mutate(
-      { id: user.id },
-      {
-        onSuccess: () =>
-          toast(user.flagged ? `${user.name} · flag cleared` : `${user.name} · account flagged`),
-      },
-    )
+    flag.mutate({ request: { id: user.id }, name: user.name, wasFlagged: user.flagged })
   }
 
   const onBan = async () => {
@@ -460,10 +450,7 @@ function UserDetail({ userId }: { userId: string }) {
       confirmLabel: "Ban",
     })
     if (!ok) return
-    setStatus.mutate(
-      { id: user.id, status: "banned" },
-      { onSuccess: () => toast(`${user.name} · account banned`) },
-    )
+    setStatus.mutate({ request: { id: user.id, status: "banned" }, name: user.name })
   }
 
   const onSuspend = async () => {
@@ -475,10 +462,7 @@ function UserDetail({ userId }: { userId: string }) {
       confirmLabel: "Suspend",
     })
     if (!ok) return
-    setStatus.mutate(
-      { id: user.id, status: "suspended" },
-      { onSuccess: () => toast(`${user.name} · account suspended`) },
-    )
+    setStatus.mutate({ request: { id: user.id, status: "suspended" }, name: user.name })
   }
 
   const onReactivate = async () => {
@@ -490,10 +474,7 @@ function UserDetail({ userId }: { userId: string }) {
       confirmLabel: verb,
     })
     if (!ok) return
-    setStatus.mutate(
-      { id: user.id, status: "active" },
-      { onSuccess: () => toast(`${user.name} · account reactivated`) },
-    )
+    setStatus.mutate({ request: { id: user.id, status: "active" }, name: user.name })
   }
 
   const onCopyId = () => {
@@ -508,18 +489,7 @@ function UserDetail({ userId }: { userId: string }) {
 
   const isReportVerified = !!user.reportVerified
   const onToggleReportVerified = () => {
-    const next = !isReportVerified
-    setReportVerified.mutate(
-      { id: user.id, value: next },
-      {
-        onSuccess: () =>
-          toast(
-            next
-              ? `${user.name} · report-verified`
-              : `${user.name} · report-verification removed`,
-          ),
-      },
-    )
+    setReportVerified.mutate({ request: { id: user.id, value: !isReportVerified }, name: user.name })
   }
 
   return (

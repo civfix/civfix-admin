@@ -74,10 +74,21 @@ function invalidateInbox(qc: ReturnType<typeof useQueryClient>, id?: string) {
   ])
 }
 
-export function useSetInboxStatus() {
+const STATUS_TOAST: Record<SetInboxStatusRequest["status"], string | null> = {
+  unread: null,
+  read: "Marked read",
+  archived: "Archived",
+}
+
+/** `quiet` is for a status change the operator did not ask for, such as reading a message by opening it. */
+export function useSetInboxStatus({ quiet = false }: { quiet?: boolean } = {}) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetInboxStatusRequest) => api.setInboxStatus(input),
     onSuccess: (_res, { id }) => invalidateInbox(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { status }: SetInboxStatusRequest) =>
+        quiet ? null : STATUS_TOAST[status],
+    },
   })
 }

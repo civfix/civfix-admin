@@ -24,7 +24,7 @@ import {
 } from "@/features/orgs/org-form-fields"
 import { useCreateOrg } from "@/features/orgs/use-orgs"
 import { UserPicker, type PickedUser } from "@/features/orgs/user-picker"
-import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 
 const VERIFICATION_OPTIONS: { value: "" | OrgVerificationKind; label: string }[] = [
   { value: "", label: "Leave unverified" },

@@ -6,11 +6,14 @@ import type {
   AdminEventPageListResponse,
   AdminGetEventPageResponse,
   FlagEventPageRequest,
+  FlagEventPageResponse,
   UnpublishEventPageRequest,
+  UnpublishEventPageResponse,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
+import { publicPagePath } from "@/features/pages/page-path"
 
 export function useEventPagesInfinite(params: AdminEventPageListQuery) {
   return useInfiniteQuery<AdminEventPageListResponse>({
@@ -33,6 +36,10 @@ export function useAdminEventPage(cleanupId: string | null) {
   })
 }
 
+function pageName(page: Pick<FlagEventPageResponse, "slug" | "title">): string {
+  return page.slug ? publicPagePath(page.slug) : page.title
+}
+
 function invalidatePages(qc: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
@@ -50,6 +57,10 @@ export function useFlagEventPage() {
         invalidatePages(qc),
         qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
       ]),
+    meta: {
+      successMessage: (page: FlagEventPageResponse, { flagged }: FlagEventPageRequest) =>
+        flagged ? `Flagged · ${pageName(page)}` : "Flag cleared",
+    },
   })
 }
 
@@ -62,5 +73,8 @@ export function useUnpublishEventPage() {
         invalidatePages(qc),
         qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
       ]),
+    meta: {
+      successMessage: (page: UnpublishEventPageResponse) => `Unpublished · ${pageName(page)}`,
+    },
   })
 }

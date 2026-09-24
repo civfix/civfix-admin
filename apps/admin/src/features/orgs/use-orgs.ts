@@ -28,6 +28,8 @@ import {
   type OrgProfileErrors,
 } from "@/features/orgs/org-form"
 import { uploadOrgLogo, type LogoFileFacts } from "@/features/orgs/org-logo-upload"
+import { ORG_ROLE_LABEL } from "@/features/orgs/org-members"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 
 /** Every organization (adminListOrgs), keyset-paged; page one carries the chip `counts`. */
 export function useOrgsInfinite(params: AdminOrgListQuery) {
@@ -121,6 +123,12 @@ export function useDecideOrgVerification() {
   return useMutation({
     mutationFn: (input: DecideOrgVerificationRequest) => api.adminDecideOrgVerification(input),
     onSuccess: (_res, { id }) => invalidateOrg(qc, id),
+    meta: {
+      successMessage: (org: GetAdminOrgResponse, { decision, kind }: DecideOrgVerificationRequest) => {
+        if (decision === "rejected") return `${org.name} rejected`
+        return kind ? `${org.name} verified · ${ORG_KIND_LABEL[kind]}` : `${org.name} verified`
+      },
+    },
   })
 }
 
@@ -144,6 +152,7 @@ export function useCreateOrg() {
     meta: {
       errorMessage: (error: unknown, request: AdminCreateOrgRequest) =>
         messageUnlessShownInline(fieldErrorsFromError(error, request), error),
+      successMessage: (org: GetAdminOrgResponse) => `${org.name} created`,
     },
   })
 }
@@ -166,6 +175,7 @@ export function useUpdateOrg() {
     meta: {
       errorMessage: (error: unknown, request: AdminUpdateOrgRequest) =>
         messageUnlessShownInline(updateFieldErrors(error, request), error),
+      successMessage: (org: GetAdminOrgResponse) => `${org.name} updated`,
     },
   })
 }
@@ -178,29 +188,61 @@ export function useSetOrgSuspended() {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
       return invalidateOrg(qc, id)
     },
+    meta: {
+      successMessage: (org: GetAdminOrgResponse, { suspended }: AdminSetOrgSuspendedRequest) =>
+        suspended ? `${org.name} suspended` : `${org.name} restored`,
+    },
   })
+}
+
+/** A roster write plus the names its confirmation toast uses, which the request only carries as ids. */
+export interface OrgMemberVariables<R> {
+  request: R
+  memberName: string
+  orgName: string
 }
 
 export function useAddOrgMember() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AdminAddOrgMemberRequest) => api.adminAddOrgMember(input),
-    onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
+    mutationFn: ({ request }: OrgMemberVariables<AdminAddOrgMemberRequest>) => api.adminAddOrgMember(request),
+    onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
+    meta: {
+      successMessage: (
+        _res: unknown,
+        { request: { role }, memberName, orgName }: OrgMemberVariables<AdminAddOrgMemberRequest>,
+      ) =>
+        role === "owner"
+          ? `${memberName} now owns ${orgName}`
+          : `${memberName} added as ${ORG_ROLE_LABEL[role].toLowerCase()}`,
+    },
   })
 }
 
 export function useSetOrgMemberRole() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AdminSetOrgMemberRoleRequest) => api.adminSetOrgMemberRole(input),
-    onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
+    mutationFn: ({ request }: OrgMemberVariables<AdminSetOrgMemberRoleRequest>) =>
+      api.adminSetOrgMemberRole(request),
+    onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
+    meta: {
+      successMessage: (
+        _res: unknown,
+        { request: { role }, memberName, orgName }: OrgMemberVariables<AdminSetOrgMemberRoleRequest>,
+      ) => (role === "owner" ? `${memberName} now owns ${orgName}` : `${memberName} · ${ORG_ROLE_LABEL[role]}`),
+    },
   })
 }
 
 export function useRemoveOrgMember() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AdminRemoveOrgMemberRequest) => api.adminRemoveOrgMember(input),
-    onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
+    mutationFn: ({ request }: OrgMemberVariables<AdminRemoveOrgMemberRequest>) =>
+      api.adminRemoveOrgMember(request),
+    onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { memberName, orgName }: OrgMemberVariables<AdminRemoveOrgMemberRequest>) =>
+        `${memberName} removed from ${orgName}`,
+    },
   })
 }

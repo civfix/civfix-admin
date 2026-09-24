@@ -100,27 +100,64 @@ function invalidateUsers(qc: ReturnType<typeof useQueryClient>, id: string) {
   ])
 }
 
+export interface FlagUserVariables {
+  request: FlagUserRequest
+  name: string
+  /** Whether the account was flagged when the operator toggled it; the endpoint flips it. */
+  wasFlagged: boolean
+}
+
 export function useFlagUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: FlagUserRequest) => api.flagUser(input),
-    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+    mutationFn: ({ request }: FlagUserVariables) => api.flagUser(request),
+    onSuccess: (_res, { request: { id } }) => invalidateUsers(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { name, wasFlagged }: FlagUserVariables) =>
+        wasFlagged ? `${name} · flag cleared` : `${name} · account flagged`,
+    },
   })
+}
+
+const STATUS_TOAST: Partial<Record<SetUserStatusRequest["status"], string>> = {
+  banned: "account banned",
+  suspended: "account suspended",
+  active: "account reactivated",
+}
+
+export interface SetUserStatusVariables {
+  request: SetUserStatusRequest
+  name: string
 }
 
 export function useSetUserStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: SetUserStatusRequest) => api.setUserStatus(input),
-    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+    mutationFn: ({ request }: SetUserStatusVariables) => api.setUserStatus(request),
+    onSuccess: (_res, { request: { id } }) => invalidateUsers(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { request, name }: SetUserStatusVariables) => {
+        const outcome = STATUS_TOAST[request.status]
+        return outcome ? `${name} · ${outcome}` : null
+      },
+    },
   })
+}
+
+export interface SetUserReportVerifiedVariables {
+  request: SetUserReportVerifiedRequest
+  name: string
 }
 
 export function useSetUserReportVerified() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: SetUserReportVerifiedRequest) => api.setUserReportVerified(input),
-    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
+    mutationFn: ({ request }: SetUserReportVerifiedVariables) => api.setUserReportVerified(request),
+    onSuccess: (_res, { request: { id } }) => invalidateUsers(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { request, name }: SetUserReportVerifiedVariables) =>
+        request.value ? `${name} · report-verified` : `${name} · report-verification removed`,
+    },
   })
 }
 
@@ -133,6 +170,6 @@ export function useRemoveUserMessage() {
         qc.invalidateQueries({ queryKey: queryKeys.users.messages(id) }),
         invalidateUsers(qc, id),
       ]),
+    meta: { successMessage: () => "Message removed" },
   })
 }
-

@@ -18,7 +18,6 @@ import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { replyOriginLabel } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
-import { useToast } from "@/store/ui-store"
 
 const STATUS_CLS: Record<InboundEmailStatus, string> = {
   unread: "status-flag",
@@ -103,7 +102,6 @@ export function InboxRow({
 
 export function InboxReader({ id }: { id: string }) {
   const q = useInboxMessage(id)
-  const toast = useToast()
   const setStatus = useSetInboxStatus()
 
   if (q.isLoading) return <LoadingState label="Loading message..." />
@@ -111,10 +109,8 @@ export function InboxReader({ id }: { id: string }) {
   const sel = q.data
   if (!sel) return <EmptyState title="No message selected" icon={<Icons.Inbox size={20} />} />
 
-  const markRead = () =>
-    setStatus.mutate({ id: sel.id, status: "read" }, { onSuccess: () => toast("Marked read") })
-  const archive = () =>
-    setStatus.mutate({ id: sel.id, status: "archived" }, { onSuccess: () => toast("Archived") })
+  const markRead = () => setStatus.mutate({ id: sel.id, status: "read" })
+  const archive = () => setStatus.mutate({ id: sel.id, status: "archived" })
 
   return (
     <div className="mail-reader">

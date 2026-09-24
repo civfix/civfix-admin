@@ -34,7 +34,7 @@ import {
 } from "@/features/moderation/use-moderation"
 import { useGovClaimListInfinite } from "@/features/moderation/use-gov-claims"
 import { GovClaimDetail, GovClaimRow } from "@/features/moderation/gov-claims-views"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -151,7 +151,6 @@ function signalKey(signals: readonly ModerationSignal[], index: number): string 
 
 function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: (id: string) => void }) {
   const q = useModerationItem(itemId)
-  const toast = useToast()
   const nav = useNav()
 
   const approve = useApproveModeration()
@@ -192,13 +191,8 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
     })
     if (note === null) return
     approve.mutate(
-      { id: item.id, ...(note ? { note } : {}) },
-      {
-        onSuccess: () => {
-          toast(`${item.flag} · ${isUserReport ? "kept" : "approved"}`)
-          onResolved(item.id)
-        },
-      },
+      { request: { id: item.id, ...(note ? { note } : {}) }, item },
+      { onSuccess: () => onResolved(item.id) },
     )
   }
 
@@ -216,13 +210,8 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
     })
     if (reason === null) return
     remove.mutate(
-      { id: item.id, ...(reason ? { reason } : {}) },
-      {
-        onSuccess: () => {
-          toast(`${item.flag} · removed`)
-          onResolved(item.id)
-        },
-      },
+      { request: { id: item.id, ...(reason ? { reason } : {}) }, item },
+      { onSuccess: () => onResolved(item.id) },
     )
   }
 
@@ -233,13 +222,8 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
     })
     if (note === null) return
     hold.mutate(
-      { id: item.id, ...(note ? { note } : {}) },
-      {
-        onSuccess: () => {
-          toast(`${item.flag} · held for review`)
-          onResolved(item.id)
-        },
-      },
+      { request: { id: item.id, ...(note ? { note } : {}) }, item },
+      { onSuccess: () => onResolved(item.id) },
     )
   }
 
@@ -250,13 +234,8 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
     })
     if (note === null) return
     appeal.mutate(
-      { id: item.id, decision, ...(note ? { note } : {}) },
-      {
-        onSuccess: () => {
-          toast(`${item.flag} · appeal ${decision === "uphold" ? "upheld" : "overturned"}`)
-          onResolved(item.id)
-        },
-      },
+      { request: { id: item.id, decision, ...(note ? { note } : {}) }, item },
+      { onSuccess: () => onResolved(item.id) },
     )
   }
 

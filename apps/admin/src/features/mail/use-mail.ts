@@ -18,6 +18,7 @@ import type {
   PreviewForwardTemplateRequest,
   PreviewForwardTemplateResponse,
   PublishMailReplyRequest,
+  PublishMailReplyResponse,
   ReplyRequest,
   ResendRequest,
   SetForwardTemplateDefaultRequest,
@@ -25,6 +26,7 @@ import type {
 } from "@civfix/shared"
 
 import { attachmentRefreshInterval } from "@/features/inbox/attachments"
+import { PUBLISH_TOAST } from "@/features/mail/mail-presentation"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
@@ -83,14 +85,24 @@ export function useComposeMail() {
   return useMutation({
     mutationFn: (input: ComposeRequest) => api.composeMail(input),
     onSuccess: () => invalidateMail(qc),
+    meta: { successMessage: (_res: unknown, { to }: ComposeRequest) => `Message sent to ${to}` },
   })
+}
+
+export interface ReplyMailVariables {
+  request: ReplyRequest
+  /** Who the reply goes to, as the thread names them. */
+  recipient: string
 }
 
 export function useReplyMail() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: ReplyRequest) => api.replyMail(input),
-    onSuccess: (_res, { id }) => invalidateMail(qc, id),
+    mutationFn: ({ request }: ReplyMailVariables) => api.replyMail(request),
+    onSuccess: (_res, { request }) => invalidateMail(qc, request.id),
+    meta: {
+      successMessage: (_res: unknown, { recipient }: ReplyMailVariables) => `Reply sent to ${recipient}`,
+    },
   })
 }
 
@@ -107,6 +119,10 @@ export function useSetMailStatus() {
   return useMutation({
     mutationFn: (input: SetMailStatusRequest) => api.setMailStatus(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { status }: SetMailStatusRequest) =>
+        status === "replied" ? "Marked replied" : null,
+    },
   })
 }
 
@@ -115,6 +131,7 @@ export function useResendMail() {
   return useMutation({
     mutationFn: (input: ResendRequest) => api.resendMail(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
+    meta: { successMessage: () => "Message resent" },
   })
 }
 
@@ -127,6 +144,9 @@ export function publishMailReplyOptions(qc: ReturnType<typeof useQueryClient>) {
         qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
         qc.invalidateQueries({ queryKey: queryKeys.events.all }),
       ]),
+    meta: {
+      successMessage: (res: PublishMailReplyResponse) => PUBLISH_TOAST[res.publication],
+    },
   })
 }
 
@@ -149,6 +169,7 @@ export function useSetForwardTemplateDefault() {
     onSuccess: (res) => {
       qc.setQueryData(queryKeys.mail.forwardTemplate, res)
     },
+    meta: { successMessage: () => "Default template saved" },
   })
 }
 

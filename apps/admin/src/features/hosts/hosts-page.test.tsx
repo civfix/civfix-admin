@@ -14,6 +14,7 @@ import { HostsPage } from "@/features/hosts/hosts-page"
 import { apiMock } from "@/test/api-mock"
 import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
+import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -350,7 +351,7 @@ describe("HostsPage detail pane", () => {
     apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
     apiMock.adminSetHostMessagingSuspended.mockImplementation(async () => {
       suspended = true
-      return {}
+      return { ok: true, suspended: true }
     })
     renderWithQuery(
       <>
@@ -377,13 +378,53 @@ describe("HostsPage detail pane", () => {
     expect(within(detail).queryByRole("button", { name: "Suspend messaging" })).not.toBeInTheDocument()
   })
 
+  it("confirms the suspension once the broadcast log refetch lands after the list dropped the host", async () => {
+    useUiStore.setState({ toast: null })
+    let suspended = false
+    let releaseLog!: (res: AdminBroadcastListResponse) => void
+    const logRefetch = new Promise<AdminBroadcastListResponse>((resolve) => {
+      releaseLog = resolve
+    })
+    apiMock.adminListHosts.mockImplementation(async () => page(suspended ? [cy] : [ada, cy]))
+    apiMock.adminListBroadcasts.mockImplementation(() =>
+      suspended ? logRefetch : Promise.resolve(broadcasts([])),
+    )
+    apiMock.adminSetHostMessagingSuspended.mockImplementation(async () => {
+      suspended = true
+      return { ok: true, suspended: true }
+    })
+    renderWithQuery(
+      <>
+        <HostsPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await within(detailSection()).findByRole("heading", { name: "Ada Lovelace", level: 2 })
+
+    await userEvent.click(screen.getByRole("button", { name: "Suspend messaging" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Spamming attendees")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Suspend messaging" }))
+
+    expect(await within(detailSection()).findByText("No host selected")).toBeInTheDocument()
+    await act(async () => {
+      releaseLog(broadcasts([]))
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "Messaging suspended · Ada Lovelace",
+        tone: "ok",
+      }),
+    )
+  })
+
   it("clears a deep-linked host too once a suspend drops it from the list", async () => {
     let suspended = false
     apiMock.adminListHosts.mockImplementation(async () => page(suspended ? [cy] : [ada, cy]))
     apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
     apiMock.adminSetHostMessagingSuspended.mockImplementation(async () => {
       suspended = true
-      return {}
+      return { ok: true, suspended: true }
     })
     renderWithQuery(
       <>
@@ -409,7 +450,7 @@ describe("HostsPage detail pane", () => {
   it("suspends messaging with the typed reason", async () => {
     apiMock.adminListHosts.mockResolvedValue(page([ada]))
     apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
-    apiMock.adminSetHostMessagingSuspended.mockResolvedValue({})
+    apiMock.adminSetHostMessagingSuspended.mockResolvedValue({ ok: true, suspended: true })
     renderWithQuery(
       <>
         <HostsPage focusId={null} />

@@ -328,16 +328,14 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     if (!isFlagged) {
       const reason = await promptDialog({ title: "Flag jurisdiction", label: "Reason (optional)" })
       if (reason === null) return
-      patch.mutate(
-        { geoid: dto.geoid, flagged: true, flagReason: reason || undefined },
-        { onSuccess: () => toast(`${dto.org} flagged for review`) },
-      )
+      patch.mutate({
+        request: { geoid: dto.geoid, flagged: true, flagReason: reason || undefined },
+        org: dto.org,
+        action: "flag",
+      })
       return
     }
-    patch.mutate(
-      { geoid: dto.geoid, flagged: false },
-      { onSuccess: () => toast(`Flag cleared for ${dto.org}`) },
-    )
+    patch.mutate({ request: { geoid: dto.geoid, flagged: false }, org: dto.org, action: "flag" })
   }
 
   const onSaveDraft = () => {
@@ -354,17 +352,16 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       return
     }
     patch.mutate(
-      { geoid: dto.geoid, contacts: contactFields, ...jf, ...extras },
       {
-        onSuccess: () => {
-          contactsSaved(sentEdits)
-          toast(`Draft saved for ${dto.org}`)
-        },
+        request: { geoid: dto.geoid, contacts: contactFields, ...jf, ...extras },
+        org: dto.org,
+        action: "draft",
       },
+      { onSuccess: () => contactsSaved(sentEdits) },
     )
   }
 
-  const onSaveContacts = () => {
+  const onSaveContacts = async () => {
     if (!canSave) return
     const extras = noteAndHandleFields(opNote, parsedHandle.value, dto.handle)
     const savesExtrasFirst = Object.keys(extras).length > 0
@@ -377,20 +374,24 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             contacts: routingContactsPayload(sentEdits, contacts),
             ...jurisdictionFields(defaultEmail, formUrl),
           },
+          org: dto.org,
           ...(savesExtrasFirst ? { savedFirst: extras } : {}),
         },
-        {
-          onSuccess: () => {
-            contactsSaved(sentEdits)
-            toast(`Contacts saved for ${dto.org} · discovery task closed`)
-          },
-        },
+        { onSuccess: () => contactsSaved(sentEdits) },
       )
     if (!savesExtrasFirst) {
       saveAndRoute()
       return
     }
-    patch.mutate({ geoid: dto.geoid, ...extras }, { onSuccess: saveAndRoute })
+    // Awaited rather than chained through a per-call callback: that is dropped once this pane unmounts,
+    // which would save the note but never the contacts.
+    try {
+      await patch.mutateAsync({ request: { geoid: dto.geoid, ...extras }, org: dto.org, action: "extras" })
+    } catch {
+      // The query client already toasted the failure, and the contacts must not save without the note.
+      return
+    }
+    saveAndRoute()
   }
 
   return (
@@ -692,16 +693,15 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         onSave={({ subject, body }) =>
           patch.mutate(
             {
-              geoid: dto.geoid,
-              forwardSubjectTemplate: subject,
-              forwardBodyTemplate: body,
-            },
-            {
-              onSuccess: () => {
-                toast(`Email template saved for ${dto.org}`)
-                setTemplateOpen(false)
+              request: {
+                geoid: dto.geoid,
+                forwardSubjectTemplate: subject,
+                forwardBodyTemplate: body,
               },
+              org: dto.org,
+              action: "template",
             },
+            { onSuccess: () => setTemplateOpen(false) },
           )
         }
       />

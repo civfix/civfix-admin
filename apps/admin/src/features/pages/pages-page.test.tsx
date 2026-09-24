@@ -317,7 +317,11 @@ describe("PagesPage moderation", () => {
     apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
       Promise.resolve(eventPage(id)),
     )
-    apiMock.adminFlagEventPage.mockResolvedValue({})
+    apiMock.adminFlagEventPage.mockResolvedValue({
+      ...echoPage,
+      flaggedAt: "2026-09-12T08:00:00.000Z",
+      flagReason: "Copied a city logo",
+    })
     renderWithChrome()
 
     await userEvent.click(await screen.findByRole("button", { name: "Flag" }))
@@ -333,7 +337,7 @@ describe("PagesPage moderation", () => {
     apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
       Promise.resolve(eventPage(id, { slug: null, status: "draft" })),
     )
-    apiMock.adminUnpublishEventPage.mockResolvedValue({})
+    apiMock.adminUnpublishEventPage.mockResolvedValue({ ...lakePage, status: "unpublished" })
     renderWithChrome()
 
     await userEvent.click(await screen.findByRole("button", { name: "Unpublish" }))
@@ -356,7 +360,7 @@ describe("PagesPage moderation", () => {
     )
     apiMock.adminUnpublishEventPage.mockImplementation(async () => {
       unpublished = true
-      return {}
+      return { ...echoPage, status: "unpublished" }
     })
     renderWithChrome()
 
@@ -372,6 +376,44 @@ describe("PagesPage moderation", () => {
     expect(await screen.findByText("No page selected")).toBeInTheDocument()
     expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Unpublish" })).not.toBeInTheDocument()
+  })
+
+  it("confirms the unpublish once the page preview refetch lands after the list dropped the page", async () => {
+    useUiStore.setState({ toast: null })
+    const otherPublished = { ...riverPage, status: "published", flaggedAt: null, flagReason: null, flaggedBy: null } satisfies AdminEventPageListItemDTO
+    let unpublished = false
+    let releasePreview!: (page: AdminGetEventPageResponse) => void
+    const previewRefetch = new Promise<AdminGetEventPageResponse>((resolve) => {
+      releasePreview = resolve
+    })
+    apiMock.adminListEventPages.mockImplementation(async () =>
+      listPage(unpublished ? [otherPublished] : [echoPage, otherPublished]),
+    )
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      unpublished ? previewRefetch : Promise.resolve(eventPage(id)),
+    )
+    apiMock.adminUnpublishEventPage.mockImplementation(async () => {
+      unpublished = true
+      return { ...echoPage, status: "unpublished" }
+    })
+    renderWithChrome()
+
+    await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" })
+    await userEvent.click(screen.getByRole("button", { name: "Unpublish" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Impersonates a city agency")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Unpublish page" }))
+
+    expect(await screen.findByText("No page selected")).toBeInTheDocument()
+    await act(async () => {
+      releasePreview(eventPage(ECHO_ID, { status: "unpublished" }))
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "Unpublished · /e/echo-park-cleanup",
+        tone: "ok",
+      }),
+    )
   })
 
   it("keeps a manually picked page open, read by id, after a filter drops it from the list", async () => {

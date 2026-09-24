@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { describe, expect, it, onTestFinished, vi } from "vitest"
@@ -376,6 +376,41 @@ describe("DiscoveryPage", () => {
     expect(await screen.findByText("No jurisdiction selected")).toBeInTheDocument()
     expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Pasadena/ })).not.toHaveAttribute("aria-current")
+  })
+
+  it("confirms Save & route even when the list drops the jurisdiction before the needs-mapping count refetch lands", async () => {
+    useUiStore.setState({ toast: null })
+    mockDetailQueries()
+    let releaseCount: () => void = () => {}
+    apiMock.listJurisdictions.mockResolvedValue(page([LA, PASADENA]))
+    apiMock.saveJurisdictionContacts.mockImplementation(async () => {
+      apiMock.listJurisdictions.mockImplementation((params: { filter?: string }) =>
+        params.filter === "needs_mapping"
+          ? new Promise((resolve) => {
+              releaseCount = () => resolve(page([PASADENA]))
+            })
+          : Promise.resolve(page([PASADENA])),
+      )
+      return { ok: true }
+    })
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await userEvent.click(chip(/^All/))
+    await waitFor(() => expect(listCalls().at(-1)).toMatchObject({ filter: "all" }))
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
+
+    expect(await screen.findByText("No jurisdiction selected")).toBeInTheDocument()
+    await act(async () => {
+      releaseCount()
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "Contacts saved for Los Angeles · discovery task closed",
+        tone: "ok",
+      }),
+    )
   })
 
   it("marks the selected row current", async () => {

@@ -2,29 +2,32 @@
 
 import {
   keepPreviousData,
+  queryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import type {
-  AdminRemoveReportMessageRequest,
-  AdminReportListQuery,
-  AdminReportListResponse,
-  AdminSendReportMessageRequest,
-  ChatHistoryResponse,
-  FlagReportRequest,
-  GetAdminReportResponse,
-  RemoveReportRequest,
-  RouteReportRequest,
-  SendFollowupRequest,
-  SetReportStatusRequest,
-  SetReportVerdictRequest,
+import {
+  ADMIN_REPORT_STATUS_LABELS,
+  type AdminRemoveReportMessageRequest,
+  type AdminReportListQuery,
+  type AdminReportListResponse,
+  type AdminSendReportMessageRequest,
+  type ChatHistoryResponse,
+  type FlagReportRequest,
+  type GetAdminReportResponse,
+  type RemoveReportRequest,
+  type RouteReportRequest,
+  type SendFollowupRequest,
+  type SetReportStatusRequest,
+  type SetReportVerdictRequest,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
-
+import { useUiStore } from "@/store/ui-store"
+import { shortId } from "@/features/reports/report-id"
 
 export function useReportList(params: AdminReportListQuery) {
   return useQuery<AdminReportListResponse>({
@@ -50,12 +53,15 @@ export function useReportListInfinite(
   })
 }
 
-export function useReport(id: string | null) {
-  return useQuery<GetAdminReportResponse>({
-    queryKey: queryKeys.reports.detail(id ?? ""),
-    queryFn: () => api.getAdminReport({ id: id as string }),
-    enabled: !!id,
+function reportQuery(id: string) {
+  return queryOptions<GetAdminReportResponse>({
+    queryKey: queryKeys.reports.detail(id),
+    queryFn: () => api.getAdminReport({ id }),
   })
+}
+
+export function useReport(id: string | null) {
+  return useQuery({ ...reportQuery(id ?? ""), enabled: !!id })
 }
 
 export function useRefreshReportMedia(id: string): () => void {
@@ -82,6 +88,10 @@ export function useSetReportStatus() {
   return useMutation({
     mutationFn: (input: SetReportStatusRequest) => api.setReportStatus(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { id, status }: SetReportStatusRequest) =>
+        `${shortId(id)} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`,
+    },
   })
 }
 
@@ -89,7 +99,21 @@ export function useFlagReport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: FlagReportRequest) => api.flagReport(input),
-    onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    // The endpoint toggles, so another operator's flag since this load flips the outcome: word the
+    // toast from the report as it now is.
+    onSuccess: async (_res, { id }) => {
+      await invalidateReports(qc, id)
+      let report: GetAdminReportResponse
+      try {
+        report = await qc.fetchQuery(reportQuery(id))
+      } catch {
+        // The flag already changed; a failed read only costs the wording, not the success.
+        return
+      }
+      useUiStore
+        .getState()
+        .showToast(report.flagged ? `${shortId(id)} · flagged for review` : `${shortId(id)} · flag cleared`)
+    },
   })
 }
 
@@ -98,6 +122,9 @@ export function useRemoveReport() {
   return useMutation({
     mutationFn: (input: RemoveReportRequest) => api.removeReport(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { id }: RemoveReportRequest) => `${shortId(id)} · report removed`,
+    },
   })
 }
 
@@ -106,6 +133,7 @@ export function useSendReportFollowup() {
   return useMutation({
     mutationFn: (input: SendFollowupRequest) => api.sendReportFollowup(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    meta: { successMessage: () => "Follow-up sent to city" },
   })
 }
 
@@ -123,11 +151,20 @@ export function useRouteReport() {
   })
 }
 
+const VERDICT_TOAST: Record<SetReportVerdictRequest["verdict"], string> = {
+  approved: "approved",
+  rejected: "rejected",
+}
+
 export function useSetReportVerdict() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetReportVerdictRequest) => api.setReportVerdict(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { id, verdict }: SetReportVerdictRequest) =>
+        `${shortId(id)} · ${VERDICT_TOAST[verdict]}`,
+    },
   })
 }
 
@@ -163,6 +200,7 @@ export function useSendReportMessage() {
         qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) }),
         qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) }),
       ]),
+    meta: { successMessage: () => "Message posted to the report chat" },
   })
 }
 
@@ -171,5 +209,6 @@ export function useRemoveReportMessage() {
   return useMutation({
     mutationFn: (input: AdminRemoveReportMessageRequest) => api.adminRemoveReportMessage(input),
     onSuccess: (_res, { id }) => qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) }),
+    meta: { successMessage: () => "Message removed" },
   })
 }

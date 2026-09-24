@@ -276,7 +276,6 @@ function MailRow({
 function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: string | null }) {
   const q = useMailThread(threadId)
   const nav = useNav()
-  const toast = useToast()
 
   const reply = useReplyMail()
   const setStatus = useSetMailStatus()
@@ -302,11 +301,10 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
     const body = text.trim()
     if (!body || reply.isPending) return
     reply.mutate(
-      { id: sel.id, body },
+      { request: { id: sel.id, body }, recipient: whoLabel },
       {
         onSuccess: () => {
           setText("")
-          toast(`Reply sent to ${whoLabel}`)
           setTimeout(() => {
             if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
           }, 50)
@@ -316,11 +314,11 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
   }
 
   const markReplied = () => {
-    setStatus.mutate({ id: sel.id, status: "replied" }, { onSuccess: () => toast("Marked replied") })
+    setStatus.mutate({ id: sel.id, status: "replied" })
   }
 
   const onResend = () => {
-    resend.mutate({ id: sel.id }, { onSuccess: () => toast("Message resent") })
+    resend.mutate({ id: sel.id })
   }
 
   const onFixRouting = () => {
@@ -527,7 +525,7 @@ export function MailPage({ focusId }: SectionPageProps) {
   const forwardTemplate = useForwardTemplateDefault()
   const setForwardTemplate = useSetForwardTemplateDefault()
   const markRead = useMarkMailRead()
-  const setInboxStatus = useSetInboxStatus()
+  const setInboxStatus = useSetInboxStatus({ quiet: true })
 
   const mailListQuery = useMailListInfinite(
     outreach
@@ -665,7 +663,6 @@ export function MailPage({ focusId }: SectionPageProps) {
       onSuccess: () => {
         setComposeOpen(false)
         openFresh("outreach")
-        toast(`Message sent to ${input.to}`)
       },
     })
   }
@@ -930,12 +927,7 @@ export function MailPage({ focusId }: SectionPageProps) {
         onSave={({ subject, body }) =>
           setForwardTemplate.mutate(
             { subjectTemplate: subject, bodyTemplate: body },
-            {
-              onSuccess: () => {
-                toast("Default template saved")
-                setTemplateOpen(false)
-              },
-            },
+            { onSuccess: () => setTemplateOpen(false) },
           )
         }
       />

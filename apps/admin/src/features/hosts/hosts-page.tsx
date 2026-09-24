@@ -25,7 +25,7 @@ import {
   useAdminHostsInfinite,
   useSetHostMessagingSuspended,
 } from "@/features/hosts/use-hosts"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const FILTER_LABEL: Record<(typeof HOST_FILTERS)[number], string> = {
@@ -100,7 +100,6 @@ function HostDetail({
   activityWindow: HostActivityWindow
 }) {
   const suspend = useSetHostMessagingSuspended()
-  const toast = useToast()
   const nav = useNav()
   const logParams = React.useMemo(
     () => hostBroadcastParams(row.host.id, activityWindow),
@@ -132,17 +131,10 @@ function HostDetail({
       danger: next,
     })
     if (reason === null || reason.trim() === "") return
-    suspend.mutate(
-      { id: row.host.id, suspended: next, reason: reason.trim() },
-      {
-        onSuccess: () =>
-          toast(
-            next
-              ? `Messaging suspended · ${row.host.name}`
-              : `Messaging restored · ${row.host.name}`,
-          ),
-      },
-    )
+    suspend.mutate({
+      request: { id: row.host.id, suspended: next, reason: reason.trim() },
+      hostName: row.host.name,
+    })
   }
 
   return (

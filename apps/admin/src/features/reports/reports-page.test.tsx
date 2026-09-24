@@ -517,6 +517,34 @@ describe("ReportsPage correctness and accessibility", () => {
     expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
   })
 
+  it("still confirms a Reject when the list refetch drops the report before its detail refetch lands", async () => {
+    let rejected = false
+    apiMock.listAdminReports.mockImplementation(async () => page(rejected ? [TAG] : [COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    const heldDetail = deferred<AdminReportDTO>()
+    apiMock.getAdminReport
+      .mockResolvedValueOnce(detail(COUCH))
+      .mockImplementation(() => heldDetail.promise)
+    apiMock.setReportVerdict.mockImplementation(async () => {
+      rejected = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({ text: "#r1a2b3c4 · rejected", tone: "ok" }),
+    )
+    await act(async () => {
+      heldDetail.resolve(detail(COUCH))
+    })
+  })
+
   it("labels a selection that left the filter as selected, not linked", async () => {
     apiMock.listAdminReports.mockImplementation(async (params: { filter?: string }) =>
       params.filter === "completed" ? page([COUCH]) : page([COUCH, TAG]),

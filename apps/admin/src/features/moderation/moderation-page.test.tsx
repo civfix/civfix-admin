@@ -616,6 +616,36 @@ describe("ModerationPage selection after a decision", () => {
     expect(rowIn(listCard("Gov claims"), "Maya Rivera")).not.toHaveAttribute("aria-current")
   })
 
+  it("still confirms Keep when the queue drops the item before the detail refetch settles", async () => {
+    resetShellAfterTest()
+    const detailRefetch = deferred<ModerationItemDTO>()
+    apiMock.listModeration
+      .mockResolvedValueOnce(modPage([COMMENT_REPORT, APPEAL]))
+      .mockResolvedValue(modPage([APPEAL]))
+    apiMock.getModerationItem
+      .mockResolvedValueOnce(modDetail(COMMENT_REPORT))
+      .mockReturnValue(detailRefetch.promise)
+    apiMock.approveModeration.mockResolvedValue({})
+    renderWithQuery(
+      <>
+        <ModerationPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await within(detailCard()).findByRole("heading", { name: "MOD-101" })
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: "Keep" }))
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }))
+
+    expect(await within(detailCard()).findByText("No item selected")).toBeInTheDocument()
+    await act(async () => {
+      detailRefetch.resolve(modDetail(COMMENT_REPORT))
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({ text: "MOD-101 · kept", tone: "ok" }),
+    )
+  })
+
   it("words Keep the same way in the button, the dialog and the toast", async () => {
     resetShellAfterTest()
     apiMock.listModeration.mockResolvedValue(modPage([COMMENT_REPORT]))
@@ -686,6 +716,42 @@ describe("ModerationPage selection after a decision", () => {
     )
     expect(await within(detailCard()).findByText("No claim selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: "Lee Park" })).not.toBeInTheDocument()
+  })
+
+  it("still confirms a gov claim approval when the list drops the claim before the detail refetch settles", async () => {
+    resetShellAfterTest()
+    const detailRefetch = deferred<GovClaimDTO>()
+    const SECOND = claim({ id: "gc-3", name: "Lee Park" })
+    apiMock.listModeration.mockResolvedValue(modPage([]))
+    apiMock.listGovClaims
+      .mockResolvedValueOnce(claimPage([RIVERA, SECOND]))
+      .mockResolvedValue(claimPage([SECOND]))
+    apiMock.getGovClaim.mockResolvedValueOnce(RIVERA).mockReturnValue(detailRefetch.promise)
+    apiMock.approveGovClaim.mockResolvedValue({})
+    renderWithQuery(
+      <>
+        <ModerationPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await openGovClaims()
+    await within(detailCard()).findByRole("heading", { name: "Maya Rivera" })
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: "Approve" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Approve and provision" }),
+    )
+
+    expect(await within(detailCard()).findByText("No claim selected")).toBeInTheDocument()
+    await act(async () => {
+      detailRefetch.resolve({ ...RIVERA, status: "approved" })
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "Maya Rivera approved · government role provisioned",
+        tone: "ok",
+      }),
+    )
   })
 
   it("drops the deep link when the operator switches sections, so Queue opens its first item again", async () => {

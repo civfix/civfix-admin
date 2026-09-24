@@ -35,10 +35,11 @@ import {
   useUnlinkReport,
 } from "@/features/events/use-events"
 import { parseBags } from "@/features/events/event-outcome"
+import { shortId } from "@/features/events/event-id"
 import { pluralize } from "@/features/reports/plural"
 import { SubmitShortcutHint, SUBMIT_KEYSHORTCUTS } from "@/features/reports/submit-shortcut"
 import { useReportListInfinite } from "@/features/reports/use-reports"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -65,10 +66,6 @@ const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> 
 
 function firstName(name: string): string {
   return name.split(" ")[0] ?? name
-}
-
-function shortId(id: string): string {
-  return `#${id.replace(/-/g, "").slice(0, 8)}`
 }
 
 function initials(name: string): string {
@@ -363,7 +360,6 @@ function EventRow({
 function EventDetail({ eventId }: { eventId: string }) {
   const q = useEvent(eventId)
   const nav = useNav()
-  const toast = useToast()
 
   const flag = useFlagEvent()
   const cancel = useCancelEvent()
@@ -395,48 +391,18 @@ function EventDetail({ eventId }: { eventId: string }) {
   const send = () => {
     const body = text.trim()
     if (!body || postMessage.isPending) return
-    postMessage.mutate(
-      { id: event.id, body },
-      {
-        onSuccess: () => {
-          setText("")
-          toast("Update posted to attendees")
-        },
-      },
-    )
+    postMessage.mutate({ id: event.id, body }, { onSuccess: () => setText("") })
   }
 
   const bags = parseBags(bagsInput)
 
   const logOutcome = () => {
     if (bags === null) return
-    outcome.mutate(
-      { id: event.id, bags },
-      {
-        onSuccess: () => {
-          setBagsInput("")
-          toast(`Outcome logged · ${pluralize(bags, "bag")}`)
-        },
-      },
-    )
+    outcome.mutate({ id: event.id, bags }, { onSuccess: () => setBagsInput("") })
   }
 
   const onFlag = () => {
-    flag.mutate(
-      { id: event.id },
-      {
-        // The endpoint toggles, so another operator's flag since this load flips the outcome: word the
-        // toast from the event as it now is.
-        onSuccess: async () => {
-          const { data } = await q.refetch()
-          toast(
-            data?.flagged
-              ? `${shortId(event.id)} · flagged for review`
-              : `${shortId(event.id)} · flag cleared`,
-          )
-        },
-      },
-    )
+    flag.mutate({ id: event.id })
   }
 
   const cancelBlockedReason = cancelBlockedFor(event.status)
@@ -451,28 +417,11 @@ function EventDetail({ eventId }: { eventId: string }) {
       cancelLabel: "Keep event",
     })
     if (!ok) return
-    cancel.mutate(
-      { id: event.id },
-      {
-        onSuccess: () => toast(`${shortId(event.id)} · event cancelled`),
-      },
-    )
+    cancel.mutate({ id: event.id })
   }
 
   const onLink = (reportIds: string[]) => {
-    linkReports.mutate(
-      { id: event.id, reportIds },
-      {
-        onSuccess: () => {
-          setPickerOpen(false)
-          toast(
-            reportIds.length === 1
-              ? `${shortId(event.id)} · 1 report linked`
-              : `${shortId(event.id)} · ${reportIds.length} reports linked`,
-          )
-        },
-      },
-    )
+    linkReports.mutate({ id: event.id, reportIds }, { onSuccess: () => setPickerOpen(false) })
   }
 
   const onUnlink = async (report: LinkedReportRef) => {
@@ -483,10 +432,7 @@ function EventDetail({ eventId }: { eventId: string }) {
       confirmLabel: "Unlink",
     })
     if (!ok) return
-    unlinkReport.mutate(
-      { id: event.id, reportId: report.id },
-      { onSuccess: () => toast(`${shortId(event.id)} · report unlinked`) },
-    )
+    unlinkReport.mutate({ id: event.id, reportId: report.id })
   }
 
   return (

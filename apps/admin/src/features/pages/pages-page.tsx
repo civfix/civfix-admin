@@ -23,7 +23,7 @@ import {
   useFlagEventPage,
   useUnpublishEventPage,
 } from "@/features/pages/use-pages"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const PAGE_STATUS_VIEW: Record<EventPageStatus, { label: string; cls: string }> = {
@@ -109,15 +109,13 @@ function PageRow({
 function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
   const flag = useFlagEventPage()
   const unpublish = useUnpublishEventPage()
-  const toast = useToast()
   const nav = useNav()
   const view = pageStatusView(item.status)
   const flagged = item.flaggedAt != null
-  const pageName = item.slug ? publicPagePath(item.slug) : item.title
 
   const onFlag = async () => {
     if (flagged) {
-      flag.mutate({ id: item.cleanupId, flagged: false }, { onSuccess: () => toast("Flag cleared") })
+      flag.mutate({ id: item.cleanupId, flagged: false })
       return
     }
     const reason = await promptDialog({
@@ -129,10 +127,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
       required: true,
     })
     if (reason === null || reason.trim() === "") return
-    flag.mutate(
-      { id: item.cleanupId, flagged: true, reason: reason.trim() },
-      { onSuccess: () => toast(`Flagged · ${pageName}`) },
-    )
+    flag.mutate({ id: item.cleanupId, flagged: true, reason: reason.trim() })
   }
 
   const onUnpublish = async () => {
@@ -146,10 +141,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
       danger: true,
     })
     if (reason === null || reason.trim() === "") return
-    unpublish.mutate(
-      { id: item.cleanupId, reason: reason.trim() },
-      { onSuccess: () => toast(`Unpublished · ${pageName}`) },
-    )
+    unpublish.mutate({ id: item.cleanupId, reason: reason.trim() })
   }
 
   return (

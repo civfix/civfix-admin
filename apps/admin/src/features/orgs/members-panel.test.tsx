@@ -1,6 +1,6 @@
-import { fireEvent, screen, within } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { AdminOrgMemberListResponse } from "@civfix/shared"
+import type { AdminOrgMemberListResponse, GetAdminOrgResponse } from "@civfix/shared"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
@@ -9,6 +9,8 @@ import { renderWithQuery } from "@/test/render"
 import { DialogHost } from "@/components/shared/dialog"
 import { MembersPanel } from "@/features/orgs/members-panel"
 import { OWNER, SAM, makeOrg, member } from "@/features/orgs/test-fixtures"
+import { useAdminOrg } from "@/features/orgs/use-orgs"
+import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -75,6 +77,53 @@ describe("MembersPanel row actions", () => {
     expect(await screen.findByRole("button", { name: "Actions for Rosa Park" })).toBeDisabled()
     expect(screen.getByText("Transfer ownership before changing this role or removing")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Actions for Sam Lee" })).toBeEnabled()
+  })
+
+  it("confirms a removal once the organization refetch lands after the roster dropped the member", async () => {
+    useUiStore.setState({ toast: null })
+    const org = makeOrg()
+    let removed = false
+    let releaseOrg!: (org: GetAdminOrgResponse) => void
+    const orgRefetch = new Promise<GetAdminOrgResponse>((resolve) => {
+      releaseOrg = resolve
+    })
+    apiMock.adminListOrgMembers.mockImplementation(async () => ({
+      items: removed ? [member(OWNER, "owner")] : [member(OWNER, "owner"), member(SAM, "member")],
+      nextCursor: null,
+    }))
+    apiMock.adminGetOrg.mockImplementation(() => (removed ? orgRefetch : Promise.resolve(org)))
+    apiMock.adminRemoveOrgMember.mockImplementation(async () => {
+      removed = true
+      return { ok: true }
+    })
+    function OrgDetailObserver() {
+      useAdminOrg(org.id)
+      return null
+    }
+    renderWithQuery(
+      <>
+        <OrgDetailObserver />
+        <MembersPanel org={org} />
+        <DialogHost />
+      </>,
+    )
+
+    await userEvent.click(await screen.findByRole("button", { name: "Actions for Sam Lee" }))
+    await userEvent.click(screen.getByRole("menuitem", { name: "Remove" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Left the organization")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Remove member" }))
+
+    await waitFor(() => expect(screen.queryByText("Sam Lee")).not.toBeInTheDocument())
+    await act(async () => {
+      releaseOrg(org)
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: `Sam Lee removed from ${org.name}`,
+        tone: "ok",
+      }),
+    )
   })
 
   it("gives the menu's label and divider their menu roles", async () => {

@@ -6,6 +6,7 @@ import type {
   AppealModerationRequest,
   GetModerationItemResponse,
   HoldModerationRequest,
+  ModerationItemDTO,
   ModerationListQuery,
   ModerationListResponse,
   RemoveModerationRequest,
@@ -56,34 +57,60 @@ function invalidateModeration(qc: ReturnType<typeof useQueryClient>, id?: string
   ])
 }
 
+/** The item as the operator saw it, which the confirmation names. */
+export interface ModerationDecision<Request> {
+  request: Request
+  item: Pick<ModerationItemDTO, "flag" | "kind">
+}
+
 export function useApproveModeration() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: ApproveModerationRequest) => api.approveModeration(input),
-    onSuccess: (_res, { id }) => invalidateModeration(qc, id),
+    mutationFn: ({ request }: ModerationDecision<ApproveModerationRequest>) =>
+      api.approveModeration(request),
+    onSuccess: (_res, { request: { id } }) => invalidateModeration(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { item }: ModerationDecision<ApproveModerationRequest>) =>
+        `${item.flag} · ${item.kind === "user_report" ? "kept" : "approved"}`,
+    },
   })
 }
 
 export function useRemoveModeration() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: RemoveModerationRequest) => api.removeModeration(input),
-    onSuccess: (_res, { id }) => invalidateModeration(qc, id),
+    mutationFn: ({ request }: ModerationDecision<RemoveModerationRequest>) =>
+      api.removeModeration(request),
+    onSuccess: (_res, { request: { id } }) => invalidateModeration(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { item }: ModerationDecision<RemoveModerationRequest>) =>
+        `${item.flag} · removed`,
+    },
   })
 }
 
 export function useHoldModeration() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: HoldModerationRequest) => api.holdModeration(input),
-    onSuccess: (_res, { id }) => invalidateModeration(qc, id),
+    mutationFn: ({ request }: ModerationDecision<HoldModerationRequest>) =>
+      api.holdModeration(request),
+    onSuccess: (_res, { request: { id } }) => invalidateModeration(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { item }: ModerationDecision<HoldModerationRequest>) =>
+        `${item.flag} · held for review`,
+    },
   })
 }
 
 export function useAppealModeration() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AppealModerationRequest) => api.appealModeration(input),
-    onSuccess: (_res, { id }) => invalidateModeration(qc, id),
+    mutationFn: ({ request }: ModerationDecision<AppealModerationRequest>) =>
+      api.appealModeration(request),
+    onSuccess: (_res, { request: { id } }) => invalidateModeration(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { request, item }: ModerationDecision<AppealModerationRequest>) =>
+        `${item.flag} · appeal ${request.decision === "uphold" ? "upheld" : "overturned"}`,
+    },
   })
 }

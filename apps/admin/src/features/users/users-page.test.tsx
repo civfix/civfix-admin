@@ -287,6 +287,14 @@ function messageItem(over: Partial<UserMessageItemDTO> & { id: string; text: str
   } satisfies UserMessageItemDTO
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}
+
 describe("UsersPage selection", () => {
   it("clears the acted-on account when the refetched list no longer holds it, without opening another", async () => {
     let suspended = false
@@ -314,6 +322,40 @@ describe("UsersPage selection", () => {
     expect(await within(detailCard()).findByText("No user selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: "Ben Okafor" })).not.toBeInTheDocument()
     expect(rowOf("Ben Okafor")).not.toHaveAttribute("aria-current")
+  })
+
+  it("confirms the suspension once the account detail refetch lands after the list dropped the account", async () => {
+    resetShellAfterTest()
+    useUiStore.setState({ toast: null })
+    let suspended = false
+    const detailRefetch = deferred<AdminUserDTO>()
+    apiMock.listAdminUsers.mockImplementation(async () => page(suspended ? [BEN] : [ANA, BEN]))
+    apiMock.getAdminUser.mockImplementation(({ id }: { id: string }) =>
+      id === ANA.id && suspended ? detailRefetch.promise : Promise.resolve(detail(id === ANA.id ? ANA : BEN)),
+    )
+    apiMock.getUserReports.mockResolvedValue(NO_REPORTS)
+    apiMock.setUserStatus.mockImplementation(async () => {
+      suspended = true
+      return {}
+    })
+    renderWithQuery(
+      <>
+        <UsersPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: /Suspend/ }))
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }))
+
+    expect(await within(detailCard()).findByText("No user selected")).toBeInTheDocument()
+    await act(async () => {
+      detailRefetch.resolve(detail({ ...ANA, status: "suspended" }))
+    })
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({ text: "Ana Ruiz · account suspended", tone: "ok" }),
+    )
   })
 
   it("keeps the acted-on account open while the refetched list still holds it", async () => {

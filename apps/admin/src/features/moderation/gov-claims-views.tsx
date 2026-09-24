@@ -25,7 +25,7 @@ import {
   useRejectGovClaim,
   useVerifyGovClaimCheck,
 } from "@/features/moderation/use-gov-claims"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 
 export function GovClaimRow({
   item,
@@ -140,7 +140,6 @@ export function GovClaimDetail({
   const verifyCheck = useVerifyGovClaimCheck()
   const approve = useApproveGovClaim()
   const reject = useRejectGovClaim()
-  const toast = useToast()
   const nav = useNav()
 
   const busy = verifyCheck.isPending || approve.isPending || reject.isPending
@@ -175,7 +174,6 @@ export function GovClaimDetail({
           ...(stored.evidence ? { evidence: stored.evidence } : {}),
           ...keepNote,
         },
-        { onSuccess: () => toast(`${govCheckLabel(check)} · back to pending`) },
       )
       return
     }
@@ -195,7 +193,6 @@ export function GovClaimDetail({
         ...(evidence.trim() ? { evidence: evidence.trim() } : {}),
         ...keepNote,
       },
-      { onSuccess: () => toast(`${govCheckLabel(check)} · verified`) },
     )
   }
 
@@ -207,15 +204,7 @@ export function GovClaimDetail({
       confirmLabel: "Approve and provision",
     })
     if (!ok) return
-    approve.mutate(
-      { id: claim.id },
-      {
-        onSuccess: () => {
-          toast(`${claim.name} approved · government role provisioned`)
-          onDecided(claim.id)
-        },
-      },
-    )
+    approve.mutate({ request: { id: claim.id }, claim }, { onSuccess: () => onDecided(claim.id) })
   }
 
   const onReject = async () => {
@@ -230,13 +219,8 @@ export function GovClaimDetail({
     })
     if (reason === null || reason.trim() === "") return
     reject.mutate(
-      { id: claim.id, reason: reason.trim() },
-      {
-        onSuccess: () => {
-          toast(`${claim.name} rejected`)
-          onDecided(claim.id)
-        },
-      },
+      { request: { id: claim.id, reason: reason.trim() }, claim },
+      { onSuccess: () => onDecided(claim.id) },
     )
   }
 

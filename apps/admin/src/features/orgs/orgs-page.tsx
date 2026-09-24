@@ -15,7 +15,8 @@ import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 import { MembersPanel } from "@/features/orgs/members-panel"
 import { OrgEventsPanel } from "@/features/orgs/org-events-panel"
 import { ProfilePanel } from "@/features/orgs/profile-panel"
-import { ORG_KIND_LABEL, VerificationPanel } from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
+import { VerificationPanel } from "@/features/orgs/verification-panel"
 import {
   ORG_FILTERS,
   ORG_FILTER_LABEL,
@@ -26,7 +27,6 @@ import { parseOrgFocus, type OrgDetailTab } from "@/features/orgs/org-focus"
 import { menuFocusIndex } from "@/features/orgs/org-members"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { useAdminOrg, useOrgsInfinite, useSetOrgSuspended } from "@/features/orgs/use-orgs"
-import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const DETAIL_TABS: { id: OrgDetailTab; label: string }[] = [
@@ -126,7 +126,6 @@ function OrgDetail({
 }) {
   const q = useAdminOrg(orgId)
   const suspend = useSetOrgSuspended()
-  const toast = useToast()
   // Guards the button against a second click while the reason prompt is open.
   const busy = React.useRef(false)
   const tabIds = React.useId()
@@ -177,10 +176,7 @@ function OrgDetail({
       busy.current = false
     }
     if (reason === null || reason.trim() === "") return
-    suspend.mutate(
-      { id: org.id, suspended: !suspended, reason: reason.trim() },
-      { onSuccess: () => toast(suspended ? `${org.name} restored` : `${org.name} suspended`) },
-    )
+    suspend.mutate({ id: org.id, suspended: !suspended, reason: reason.trim() })
   }
 
   return (
@@ -303,7 +299,6 @@ export function OrgsPage({ focusId }: SectionPageProps) {
   const [selId, setSelId] = React.useState<string | null>(focus.id)
   const [tab, setTab] = React.useState<OrgDetailTab>(focus.tab ?? "profile")
   const [creating, setCreating] = React.useState(false)
-  const toast = useToast()
 
   const debouncedQuery = useDebounced(query, 250)
   const listParams = React.useMemo(
@@ -460,7 +455,6 @@ export function OrgsPage({ focusId }: SectionPageProps) {
         onClose={() => setCreating(false)}
         onCreated={(org) => {
           setCreating(false)
-          toast(`${org.name} created`)
           if (filter !== "all") setFilter("all")
           setQuery("")
           setTab("profile")

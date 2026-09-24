@@ -11,7 +11,7 @@ import { renderWithQuery } from "@/test/render"
 import { makeQueryClient } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
-import { userListItem } from "@/features/orgs/test-fixtures"
+import { makeOrg, userListItem } from "@/features/orgs/test-fixtures"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -168,6 +168,16 @@ describe("CreateOrgPanel request errors", () => {
     await submitCreate()
 
     expect(shown).toEqual([{ text: "Operators only.", tone: "error" }])
+  })
+
+  it("confirms the new organization once, in the ok tone", async () => {
+    mockOwner()
+    apiMock.adminCreateOrg.mockResolvedValue(makeOrg({ name: "River Keepers" }))
+    const shown = recordToasts()
+
+    await submitCreate()
+
+    expect(shown).toEqual([{ text: "River Keepers created", tone: "ok" }])
   })
 
   it("shows a field error next to its field and no toast", async () => {

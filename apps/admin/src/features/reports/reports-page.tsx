@@ -30,6 +30,7 @@ import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
 import { pluralize } from "@/features/reports/plural"
+import { shortId } from "@/features/reports/report-id"
 import {
   msgWhen,
   reactionLabel,
@@ -110,10 +111,6 @@ function initials(name: string): string {
     .slice(0, 2)
     .join("")
     .toUpperCase()
-}
-
-function shortId(id: string): string {
-  return `#${id.slice(0, 8)}`
 }
 
 function eventDate(iso: string): string {
@@ -314,7 +311,6 @@ function ReportDiscussion({
   const q = useReportChatHistory(reportId)
   const removeMsg = useRemoveReportMessage()
   const sendMsg = useSendReportMessage()
-  const toast = useToast()
   const nav = useNav()
   const [draft, setDraft] = React.useState("")
 
@@ -326,24 +322,13 @@ function ReportDiscussion({
       confirmLabel: "Remove",
     })
     if (!ok) return
-    removeMsg.mutate(
-      { id: reportId, messageId: msg.id },
-      { onSuccess: () => toast("Message removed") },
-    )
+    removeMsg.mutate({ id: reportId, messageId: msg.id })
   }
 
   const onSend = () => {
     const body = draft.trim()
     if (!body || sendMsg.isPending) return
-    sendMsg.mutate(
-      { id: reportId, body },
-      {
-        onSuccess: () => {
-          setDraft("")
-          toast("Message posted to the report chat")
-        },
-      },
-    )
+    sendMsg.mutate({ id: reportId, body }, { onSuccess: () => setDraft("") })
   }
 
   // Oldest first, matching the order neighbors see in the chat.
@@ -608,15 +593,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const send = () => {
     const body = text.trim()
     if (!body || !canSend) return
-    followup.mutate(
-      { id: report.id, to: "city", body },
-      {
-        onSuccess: () => {
-          setText("")
-          toast("Follow-up sent to city")
-        },
-      },
-    )
+    followup.mutate({ id: report.id, to: "city", body }, { onSuccess: () => setText("") })
   }
 
   const openRoute = () => {
@@ -672,12 +649,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     if (!ok) return
     verdict.mutate(
       { id: report.id, verdict: "approved" },
-      {
-        onSuccess: () => {
-          setApprovedLocally(true)
-          toast(`${shortId(report.id)} · approved`)
-        },
-      },
+      { onSuccess: () => setApprovedLocally(true) },
     )
   }
 
@@ -691,28 +663,11 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       })
       if (!ok) return
     }
-    setStatus.mutate(
-      { id: report.id, status },
-      { onSuccess: () => toast(`${shortId(report.id)} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`) },
-    )
+    setStatus.mutate({ id: report.id, status })
   }
 
   const onFlag = () => {
-    flag.mutate(
-      { id: report.id },
-      {
-        // The endpoint toggles, so another operator's flag since this load flips the outcome: word the
-        // toast from the report as it now is.
-        onSuccess: async () => {
-          const { data } = await q.refetch()
-          toast(
-            data?.flagged
-              ? `${shortId(report.id)} · flagged for review`
-              : `${shortId(report.id)} · flag cleared`,
-          )
-        },
-      },
-    )
+    flag.mutate({ id: report.id })
   }
 
   const onRemove = async () => {
@@ -723,15 +678,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       confirmLabel: "Remove",
     })
     if (!ok) return
-    remove.mutate(
-      { id: report.id },
-      {
-        onSuccess: () => {
-          toast(`${shortId(report.id)} · report removed`)
-          onRemoved(report.id)
-        },
-      },
-    )
+    remove.mutate({ id: report.id }, { onSuccess: () => onRemoved(report.id) })
   }
 
   const onReject = async () => {
@@ -746,12 +693,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     if (!ok) return
     verdict.mutate(
       { id: report.id, verdict: "rejected" },
-      {
-        onSuccess: () => {
-          setApprovedLocally(false)
-          toast(`${shortId(report.id)} · rejected`)
-        },
-      },
+      { onSuccess: () => setApprovedLocally(false) },
     )
   }
 
