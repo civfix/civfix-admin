@@ -612,7 +612,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const OutreachIco = outreachView.icon
   const canCity = !!report.city.contact
   const routeAction = routeActionFor(report)
-  const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status]
+  // A status newer than this build arrives unvalidated; offer no transition rather than guess one.
+  const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status] ?? []
   const reporterProfileId = getReporterProfileId(report.reporter.id)
   const verdictApproved = report.verificationVerdict === "approved" || approvedLocally
   const verdictView = verdictPill(report.verificationVerdict, approvedLocally)
@@ -1287,7 +1288,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       <div className="rep-actions">
         <span className="rep-actions-label">Quick status</span>
         {statusActions.length === 0 ? (
-          <span className="hint">No status changes from {ADMIN_REPORT_STATUS_LABELS[report.status]}</span>
+          <span className="hint">
+            No status changes from {ADMIN_REPORT_STATUS_LABELS[report.status] ?? report.status}
+          </span>
         ) : (
           statusActions.map((s) => (
             <button
