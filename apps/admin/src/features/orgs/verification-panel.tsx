@@ -61,7 +61,6 @@ function OrgSummary({ org }: { org: AdminOrgDTO }) {
       <div className="sub-body">
         <div className="user-head">
           {org.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img className="user-av" src={org.logoUrl} alt="" />
           ) : (
             <span className="user-av">

@@ -25,7 +25,6 @@ function LinkedReportCard({
   const card = (
     <button className="evt-linked-card" onClick={onOpen} title={report.title}>
       <span className="evt-linked-thumb" aria-hidden="true">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={report.thumbUrl || categoryPinSrc(report.category)} alt="" />
       </span>
       <span className="evt-linked-body">

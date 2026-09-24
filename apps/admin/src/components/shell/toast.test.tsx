@@ -108,9 +108,13 @@ describe("Toast", () => {
     try {
       render(<Toast />)
       show("Saved")
-      act(() => vi.advanceTimersByTime(SUCCESS_TOAST_MS - 1))
+      act(() => {
+        vi.advanceTimersByTime(SUCCESS_TOAST_MS - 1)
+      })
       expect(screen.getByRole("status")).toHaveTextContent("Saved")
-      act(() => vi.advanceTimersByTime(1))
+      act(() => {
+        vi.advanceTimersByTime(1)
+      })
       expect(useUiStore.getState().toast).toBeNull()
     } finally {
       vi.useRealTimers()
@@ -122,9 +126,13 @@ describe("Toast", () => {
     try {
       render(<Toast />)
       show("Could not save", "error")
-      act(() => vi.advanceTimersByTime(SUCCESS_TOAST_MS))
+      act(() => {
+        vi.advanceTimersByTime(SUCCESS_TOAST_MS)
+      })
       expect(screen.getByRole("status")).toHaveTextContent("Could not save")
-      act(() => vi.advanceTimersByTime(ERROR_TOAST_MS - SUCCESS_TOAST_MS))
+      act(() => {
+        vi.advanceTimersByTime(ERROR_TOAST_MS - SUCCESS_TOAST_MS)
+      })
       expect(useUiStore.getState().toast).toBeNull()
     } finally {
       vi.useRealTimers()
@@ -137,11 +145,15 @@ describe("Toast", () => {
     show("Saved")
 
     await user.hover(screen.getByRole("status"))
-    act(() => vi.advanceTimersByTime(SUCCESS_TOAST_MS * 3))
+    act(() => {
+      vi.advanceTimersByTime(SUCCESS_TOAST_MS * 3)
+    })
     expect(screen.getByRole("status")).toHaveTextContent("Saved")
 
     await user.unhover(screen.getByRole("status"))
-    act(() => vi.advanceTimersByTime(SUCCESS_TOAST_MS))
+    act(() => {
+      vi.advanceTimersByTime(SUCCESS_TOAST_MS)
+    })
     expect(useUiStore.getState().toast).toBeNull()
   })
 })

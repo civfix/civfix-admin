@@ -55,7 +55,6 @@ function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) 
   return (
     <div className="org-evidence-view">
       {media.kind === "image" ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img className="org-evidence-img" src={media.url} alt={`Evidence document ${index + 1}`} />
       ) : null}
       <a className="btn sm" href={media.url} target="_blank" rel="noreferrer noopener">

@@ -15,7 +15,6 @@ export function UserAvatar({
   const className = `user-av${large ? " lg" : ""}`
   if (user.avatarUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img className={className} src={user.avatarUrl} alt="" />
     )
   }

@@ -36,7 +36,7 @@ export function setCartoTint(layer: L.TileLayer, tint: CartoTint): void {
   layer.setUrl(cartoUrl(tint))
 }
 
-export function attachResize(map: L.Map, container: HTMLElement): () => void {
+function attachResize(map: L.Map, container: HTMLElement): () => void {
   const resizeObserver = new ResizeObserver(() => map.invalidateSize())
   resizeObserver.observe(container)
   const settleTimer = setTimeout(() => map.invalidateSize(), MAP_SETTLE_MS)

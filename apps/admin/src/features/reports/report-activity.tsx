@@ -50,7 +50,6 @@ export function ReportActivity({ timeline }: { timeline: ReportTimelineItem[] })
         ) : (
           <div className="rep-timeline">
             {timeline.map((t, i) => (
-              // eslint-disable-next-line react/no-array-index-key
               <TimelineRow key={i} item={t} />
             ))}
           </div>

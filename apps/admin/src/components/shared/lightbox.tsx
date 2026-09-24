@@ -165,7 +165,6 @@ export function LightboxHost() {
           </button>
         </div>
         {status !== "failed" && (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             key={`${current.id}:${attempt}`}
             className={`lightbox-img ${status === "ready" ? "" : "pending"}`}

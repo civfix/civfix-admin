@@ -15,7 +15,6 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
   return (
     <div className="barchart">
       {values.map((v, i) => (
-        // eslint-disable-next-line react/no-array-index-key
         <div key={i} className="barchart-col">
           <div className="barchart-bar-wrap">
             <div
@@ -46,7 +45,6 @@ export function Spark({
     <div className={`hub-spark hue-${hue}`} role="img" aria-label={label}>
       {heights.map((height, i) => (
         <span
-          // eslint-disable-next-line react/no-array-index-key
           key={i}
           className={`hub-spark-bar ${i === heights.length - 1 ? "now" : ""}`}
           style={

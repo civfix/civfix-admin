@@ -25,7 +25,6 @@ function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
       title={categoryLabel}
     >
       {thumb ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumb}
           alt=""
@@ -34,7 +33,6 @@ function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
           onError={() => setBrokenThumb(thumb)}
         />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={categoryPinSrc(item.category)} alt="" loading="lazy" decoding="async" />
       )}
     </div>

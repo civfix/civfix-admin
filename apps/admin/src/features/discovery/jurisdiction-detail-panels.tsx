@@ -26,7 +26,6 @@ export function JurisdictionHeader({ dto }: { dto: JurisdictionDirectoryDTO }) {
     <div className="rep-head">
       <span className="rep-head-pin">
         {headPin ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={headPin} alt="" style={{ width: 30, height: 30, objectFit: "contain" }} />
         ) : (
           <Icons.Layers size={22} />
@@ -221,7 +220,6 @@ export function CategoryContactsGrid({
               >
                 <div className="ccat-cell-head">
                   <span className="ccat-pin">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={c.pin} alt="" />
                   </span>
                   <span className="ccat-label">{c.label}</span>

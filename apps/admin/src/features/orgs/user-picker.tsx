@@ -33,7 +33,6 @@ export interface PickedUser {
 export function PickedUserAvatar({ user, size = PICKED_AVATAR_SIZE }: { user: PickedUser; size?: number }) {
   const style: React.CSSProperties = { width: size, height: size, fontSize: Math.round(size * AVATAR_FONT_RATIO) }
   if (user.avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
     return <img className="user-av" style={style} src={user.avatarUrl} alt="" />
   }
   return (

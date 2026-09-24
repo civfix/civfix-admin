@@ -55,7 +55,8 @@ export function orgFilterCount(
       return counts.verified
     case "suspended":
       return counts.suspended
-    default:
+    case "rejected":
+    case "unverified":
       return undefined
   }
 }

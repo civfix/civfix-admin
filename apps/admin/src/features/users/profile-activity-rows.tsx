@@ -51,7 +51,6 @@ export function ProfileReportRow({ report, nav }: { report: UserReportItemDTO; n
       onKeyDown={onActivationKey(open)}
     >
       <span className="prow-pin" title={REPORT_CATEGORY_LABELS[report.category]}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={categoryPinSrc(report.category)} alt="" />
       </span>
       <div className="prow-body">

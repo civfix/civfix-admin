@@ -21,7 +21,6 @@ function MappedLeading({ item }: { item: JurisdictionDirectoryDTO }) {
   const dominant = dominantCategory(item.perCategoryCounts)
   const pin = dominant ? categoryPinSrc(dominant) : null
   if (!pin) return <Icons.Layers size={16} />
-  // eslint-disable-next-line @next/next/no-img-element
   return <img src={pin} alt="" />
 }
 

@@ -24,7 +24,6 @@ export function ImageThumbButton({ media, onOpen }: { media: ThumbMedia; onOpen:
       title="Expand this photo"
       onClick={onOpen}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={media.thumbUrl ?? media.url} alt="" loading="lazy" decoding="async" />
     </button>
   )
@@ -32,7 +31,6 @@ export function ImageThumbButton({ media, onOpen }: { media: ThumbMedia; onOpen:
 
 export function StillThumbFace({ thumbUrl }: { thumbUrl?: string | null }) {
   return thumbUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
     <img src={thumbUrl} alt="" loading="lazy" decoding="async" />
   ) : (
     <Icons.FileText size={14} />

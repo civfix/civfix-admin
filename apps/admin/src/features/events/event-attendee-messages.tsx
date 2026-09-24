@@ -16,7 +16,6 @@ function SentMessages({ messages }: { messages: AdminEventDTO["messages"] }) {
     <div className="evt-msgs">
       {messages.map((m, i) => (
         <div
-          // eslint-disable-next-line react/no-array-index-key
           key={i}
           className="evt-msg"
         >

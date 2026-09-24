@@ -13,7 +13,6 @@ import type {
   DiscoveryListQuery,
   DiscoveryListResponse,
   FlagDiscoveryRequest,
-  GetDiscoveryTaskResponse,
   JurisdictionGeometryResponse,
   PatchJurisdictionRequest,
   SaveContactsRequest,
@@ -32,14 +31,6 @@ export function useDiscoveryList(params: DiscoveryListQuery) {
   return useQuery<DiscoveryListResponse>({
     queryKey: queryKeys.discovery.list(params),
     queryFn: () => api.listDiscovery(params),
-  })
-}
-
-export function useDiscoveryTask(id: string | null) {
-  return useQuery<GetDiscoveryTaskResponse>({
-    queryKey: queryKeys.discovery.detail(id ?? ""),
-    queryFn: () => api.getDiscoveryTask({ id: id as string }),
-    enabled: !!id,
   })
 }
 

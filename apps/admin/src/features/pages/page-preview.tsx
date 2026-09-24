@@ -19,7 +19,6 @@ function PageBlockCard({ block }: { block: PageBlockView }) {
       {block.lines.length > 0 && (
         <div className="pg-block-body">
           {block.lines.map((line, index) => (
-            // eslint-disable-next-line react/no-array-index-key
             <p key={index}>{line}</p>
           ))}
         </div>
@@ -57,7 +56,6 @@ export function PagePreview({ cleanupId, title }: { cleanupId: string; title: st
   return (
     <div className="pg-preview">
       {page.coverUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
         <img className="pg-cover" src={page.coverUrl} alt="" />
       )}
       <div>

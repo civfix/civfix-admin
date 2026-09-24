@@ -37,7 +37,6 @@ export function HeldMediaCard({
                   title="Expand this image"
                   onClick={() => openLightbox(heldImages, index, refreshMedia)}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={m.thumbUrl ?? m.url}
                     alt={heldImages[index]?.alt ?? ""}
@@ -58,7 +57,6 @@ export function HeldMediaCard({
                 aria-label={`Held video ${heldVideoIds.indexOf(m.id) + 1} of ${heldVideoIds.length}`}
               >
                 {m.thumbUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.thumbUrl} alt="" loading="lazy" decoding="async" />
                 ) : (
                   <Icons.FileText size={14} />

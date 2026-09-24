@@ -48,7 +48,6 @@ export function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                   <div key={c.id} className="ccat-cell">
                     <div className="ccat-cell-head">
                       <span className="ccat-pin">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={c.pin} alt="" />
                       </span>
                       <span className="ccat-label">{c.label}</span>

@@ -39,7 +39,6 @@ function ReportHead({ report, outreach }: { report: AdminReportDTO; outreach: Ou
   return (
     <div className="rep-head">
       <span className="rep-head-pin">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={categoryPinSrc(report.category)} alt="" />
       </span>
       <div className="rep-head-text">

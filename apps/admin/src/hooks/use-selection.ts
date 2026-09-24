@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-export interface SelectionListState {
+interface SelectionListState {
   isSuccess: boolean
   isFetching: boolean
 }

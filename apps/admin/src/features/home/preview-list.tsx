@@ -14,7 +14,6 @@ function PeekGlyph({ item }: { item: PeekItem }) {
     return (
       <span className="peek-pin">
         {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt="" />
         ) : (
           <Icons.Layers size={13} />

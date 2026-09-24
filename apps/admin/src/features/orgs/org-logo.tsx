@@ -3,7 +3,7 @@
 import type * as React from "react"
 import { monogram, type AdminOrgDTO } from "@civfix/shared"
 
-export const ORG_LOGO_ROW_SIZE = 32
+const ORG_LOGO_ROW_SIZE = 32
 export const ORG_LOGO_HEADER_SIZE = 36
 const MONOGRAM_FONT_RATIO = 0.42
 
@@ -16,7 +16,6 @@ export function OrgLogo({
 }) {
   const style: React.CSSProperties = { width: size, height: size }
   if (org.logoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
     return <img className="org-logo" style={style} src={org.logoUrl} alt="" />
   }
   return (

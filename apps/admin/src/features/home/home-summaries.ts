@@ -8,13 +8,13 @@ import {
 } from "@/features/home/home-preview-presentation"
 import type { PageId } from "@/store/ui-store"
 
-export interface SectionStat {
+interface SectionStat {
   k: string
   v: ReactNode
   tone?: "warn" | "alert" | null
 }
 
-export interface SectionMetric {
+interface SectionMetric {
   k: string
   v: ReactNode
 }
