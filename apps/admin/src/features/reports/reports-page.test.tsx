@@ -1,11 +1,13 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type {
-  AdminReportDTO,
-  AdminReportListItemDTO,
-  AdminReportListResponse,
-  ChatHistoryResponse,
-  ChatMessageDTO,
+import {
+  AppError,
+  ErrorCode,
+  type AdminReportDTO,
+  type AdminReportListItemDTO,
+  type AdminReportListResponse,
+  type ChatHistoryResponse,
+  type ChatMessageDTO,
 } from "@civfix/shared"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -457,6 +459,40 @@ describe("ReportsPage correctness and accessibility", () => {
     )
     expect(within(detailCard()).getByText("No report selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
+  })
+
+  it("clears a pinned report once it is removed instead of showing it as not found", async () => {
+    const OLD = listItem({
+      id: "r9f9f9f9-0000-4000-8000-000000000009",
+      title: "Old broken hydrant",
+      category: "water",
+    })
+    let removed = false
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    apiMock.getAdminReport.mockImplementation(async ({ id }: { id: string }) => {
+      if (id === OLD.id) {
+        if (removed) throw new AppError(ErrorCode.NOT_FOUND, "Report not found")
+        return detail(OLD)
+      }
+      return detail(id === TAG.id ? TAG : COUCH)
+    })
+    apiMock.removeReport.mockImplementation(async () => {
+      removed = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage(OLD.id)
+    await within(detailCard()).findByRole("heading", { name: OLD.title })
+    expect(await within(listCard()).findByText("Linked report")).toBeInTheDocument()
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Remove report/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }))
+
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByText("Report not found")).not.toBeInTheDocument()
+    expect(within(listCard()).queryByText("Linked report")).not.toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("heading", { name: COUCH.title })).not.toBeInTheDocument()
   })
 
   it("clears a report that a verdict drops from the Needs verification list, without opening another", async () => {

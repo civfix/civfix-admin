@@ -149,7 +149,7 @@ function signalKey(signals: readonly ModerationSignal[], index: number): string 
   return `${label}#${earlier}`
 }
 
-function ModerationDetail({ itemId }: { itemId: string }) {
+function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: (id: string) => void }) {
   const q = useModerationItem(itemId)
   const toast = useToast()
   const nav = useNav()
@@ -196,6 +196,7 @@ function ModerationDetail({ itemId }: { itemId: string }) {
       {
         onSuccess: () => {
           toast(`${item.flag} · ${isUserReport ? "kept" : "approved"}`)
+          onResolved(item.id)
         },
       },
     )
@@ -219,6 +220,7 @@ function ModerationDetail({ itemId }: { itemId: string }) {
       {
         onSuccess: () => {
           toast(`${item.flag} · removed`)
+          onResolved(item.id)
         },
       },
     )
@@ -235,6 +237,7 @@ function ModerationDetail({ itemId }: { itemId: string }) {
       {
         onSuccess: () => {
           toast(`${item.flag} · held for review`)
+          onResolved(item.id)
         },
       },
     )
@@ -251,6 +254,7 @@ function ModerationDetail({ itemId }: { itemId: string }) {
       {
         onSuccess: () => {
           toast(`${item.flag} · appeal ${decision === "uphold" ? "upheld" : "overturned"}`)
+          onResolved(item.id)
         },
       },
     )
@@ -547,8 +551,9 @@ function GovClaimsSection() {
 
   // Only the first load picks a claim on the operator's behalf. A pick that a filter or search leaves
   // out stays open (the detail reads it by id); a pick that drops out of the same list after a refetch
-  // (a decision under the Pending chip) clears, so the pane never jumps to another claim's live Approve
-  // and Reject buttons. Decided only on data fetched for the current params.
+  // clears, so the pane never jumps to another claim's live Approve and Reject buttons. A decision
+  // clears its claim outright, since the list may still hold it (All) or never did. Decided only on
+  // data fetched for the current params.
   const [autoPick, setAutoPick] = React.useState(true)
   const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
@@ -561,6 +566,7 @@ function GovClaimsSection() {
     if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
     else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
   }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
+  const clearIfSelected = (id: string) => setSelId((cur) => (cur === id ? null : cur))
 
   return (
     <>
@@ -634,7 +640,7 @@ function GovClaimsSection() {
 
         <section className="card md-detail-card">
           {selId ? (
-            <GovClaimDetail key={selId} claimId={selId} />
+            <GovClaimDetail key={selId} claimId={selId} onDecided={clearIfSelected} />
           ) : (
             <EmptyState
               title="No claim selected"
@@ -671,8 +677,10 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
   }, [focusId])
   // Only the first load picks an item on the operator's behalf, and a deep-linked item is never
   // replaced. A pick that a filter or search leaves out stays open (the detail reads it by id); a pick
-  // that drops out of the same list after a refetch (a decision resolves it) clears, so the pane never
-  // jumps to another item's live decision buttons. Decided only on data fetched for the current params.
+  // that drops out of the same list after a refetch clears, so the pane never jumps to another item's
+  // live decision buttons. A decision clears its item outright: the detail carries no status, so a
+  // resolved item the list never held would otherwise keep live buttons. Decided only on data fetched
+  // for the current params.
   const [autoPick, setAutoPick] = React.useState(focusId === null)
   const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
@@ -685,6 +693,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
     if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
     else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
   }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
+  const clearIfSelected = (id: string) => setSelId((cur) => (cur === id ? null : cur))
 
   return (
     <>
@@ -762,7 +771,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <ModerationDetail key={selId} itemId={selId} />
+            <ModerationDetail key={selId} itemId={selId} onResolved={clearIfSelected} />
           ) : (
             <EmptyState
               title="No item selected"

@@ -563,7 +563,7 @@ function ReportPhotoFace({
   )
 }
 
-function ReportDetail({ reportId }: { reportId: string }) {
+function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (id: string) => void }) {
   const q = useReport(reportId)
   const nav = useNav()
   const toast = useToast()
@@ -726,7 +726,10 @@ function ReportDetail({ reportId }: { reportId: string }) {
     remove.mutate(
       { id: report.id },
       {
-        onSuccess: () => toast(`${shortId(report.id)} · report removed`),
+        onSuccess: () => {
+          toast(`${shortId(report.id)} · report removed`)
+          onRemoved(report.id)
+        },
       },
     )
   }
@@ -1317,8 +1320,9 @@ export function ReportsPage({ focusId }: SectionPageProps) {
   // Only the first load picks a report on the operator's behalf, and a deep-linked report is never
   // replaced. A pick that a filter or search leaves out stays open, pinned above the list and read by
   // id; a pick that drops out of the same list after a refetch (a verdict under the Needs verification
-  // chip, a removal) clears, so the pane never jumps to another report's live buttons. Decided only on
-  // data fetched for the current params.
+  // chip) clears, so the pane never jumps to another report's live buttons. A removal clears its report
+  // outright, since a removed report no longer loads by id. Decided only on data fetched for the
+  // current params.
   const listKey = JSON.stringify(listParams)
   const [autoPick, setAutoPick] = React.useState(focusId === null)
   const seenIn = React.useRef<{ id: string; list: string } | null>(null)
@@ -1335,6 +1339,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
     if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
     else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
   }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
+  const clearIfSelected = (id: string) => setSelId((cur) => (cur === id ? null : cur))
 
   const selInList = selId !== null && items.some((x) => x.id === selId)
   const pinnedQuery = useReport(selInList ? null : selId)
@@ -1430,7 +1435,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <ReportDetail key={selId} reportId={selId} />
+            <ReportDetail key={selId} reportId={selId} onRemoved={clearIfSelected} />
           ) : (
             <EmptyState
               title="No report selected"
