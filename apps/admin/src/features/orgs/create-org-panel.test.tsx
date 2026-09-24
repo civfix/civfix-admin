@@ -131,32 +131,55 @@ describe("CreateOrgPanel owner picker", () => {
   })
 })
 
+function recordToasts(): { text: string; tone: string }[] {
+  const shown: { text: string; tone: string }[] = []
+  const unsubscribe = useUiStore.subscribe((s, prev) => {
+    if (s.toast && s.toast !== prev.toast) shown.push({ text: s.toast.text, tone: s.toast.tone })
+  })
+  onTestFinished(unsubscribe)
+  return shown
+}
+
+async function submitCreate(): Promise<void> {
+  renderWithQuery(<CreateOrgPanel open onClose={vi.fn()} onCreated={vi.fn()} />, makeQueryClient())
+  await userEvent.type(screen.getByLabelText("Name"), "River Keepers")
+  await userEvent.click(await screen.findByRole("button", { name: /Ana Ruiz/ }))
+  await userEvent.type(screen.getByLabelText(/^Reason/), "Partner meeting")
+  await userEvent.click(screen.getByRole("button", { name: /Create organization/ }))
+  await waitFor(() => expect(apiMock.adminCreateOrg).toHaveBeenCalledTimes(1))
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: /Create organization/ })).toBeEnabled(),
+  )
+}
+
 describe("CreateOrgPanel request errors", () => {
-  it("shows exactly one toast for a failure the form has no field for", async () => {
+  function mockOwner(): void {
     apiMock.listAdminUsers.mockResolvedValue({
       items: [userListItem({ id: "u-ana", name: "Ana Ruiz" })],
       nextCursor: null,
     })
+  }
+
+  it("shows exactly one error toast for a failure the form has no field for", async () => {
+    mockOwner()
     apiMock.adminCreateOrg.mockRejectedValue(new AppError(ErrorCode.FORBIDDEN, "Operators only."))
-    const shown: string[] = []
-    const unsubscribe = useUiStore.subscribe((s, prev) => {
-      if (s.toast && s.toast !== prev.toast) shown.push(s.toast.text)
-    })
-    onTestFinished(unsubscribe)
-    renderWithQuery(
-      <CreateOrgPanel open onClose={vi.fn()} onCreated={vi.fn()} />,
-      makeQueryClient(),
-    )
+    const shown = recordToasts()
 
-    await userEvent.type(screen.getByLabelText("Name"), "River Keepers")
-    await userEvent.click(await screen.findByRole("button", { name: /Ana Ruiz/ }))
-    await userEvent.type(screen.getByLabelText(/^Reason/), "Partner meeting")
-    await userEvent.click(screen.getByRole("button", { name: /Create organization/ }))
+    await submitCreate()
 
-    await waitFor(() => expect(apiMock.adminCreateOrg).toHaveBeenCalledTimes(1))
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Create organization/ })).toBeEnabled(),
+    expect(shown).toEqual([{ text: "Operators only.", tone: "error" }])
+  })
+
+  it("shows a field error next to its field and no toast", async () => {
+    mockOwner()
+    apiMock.adminCreateOrg.mockRejectedValue(
+      new AppError(ErrorCode.VALIDATION, "Invalid", { fields: { name: "Name is too short." } }),
     )
-    expect(shown).toEqual(["Operators only."])
+    const shown = recordToasts()
+
+    await submitCreate()
+
+    expect(screen.getByText("Name is too short.")).toBeInTheDocument()
+    expect(shown).toEqual([])
   })
 })

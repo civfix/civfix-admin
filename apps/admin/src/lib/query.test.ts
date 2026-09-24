@@ -136,6 +136,27 @@ describe("makeQueryClient mutation defaults", () => {
     await observer.mutate().catch(() => undefined)
     expect(useUiStore.getState().toast).toBeNull()
   })
+
+  it("toasts the mutation's own copy, built from the error and the variables, in the error tone", async () => {
+    const observer = new MutationObserver<unknown, Error, { name: string }>(makeQueryClient(), {
+      mutationFn: () => Promise.reject(new AppError(ErrorCode.CONFLICT, "taken")),
+      meta: {
+        errorMessage: (error: unknown, variables: { name: string }) =>
+          `${variables.name}: ${(error as Error).message}`,
+      },
+    })
+    await observer.mutate({ name: "River Keepers" }).catch(() => undefined)
+    expect(useUiStore.getState().toast).toMatchObject({ text: "River Keepers: taken", tone: "error" })
+  })
+
+  it("does not toast when the mutation's copy returns null for an error its UI shows inline", async () => {
+    const observer = new MutationObserver(makeQueryClient(), {
+      mutationFn: () => Promise.reject(new AppError(ErrorCode.VALIDATION, "bad slug")),
+      meta: { errorMessage: () => null },
+    })
+    await observer.mutate().catch(() => undefined)
+    expect(useUiStore.getState().toast).toBeNull()
+  })
 })
 
 describe("queryKeys static keys", () => {

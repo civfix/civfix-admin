@@ -22,9 +22,12 @@ import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import { queryKeys } from "@/lib/query"
 import { EVIDENCE_URL_MAX_CACHE_MS, evidenceStaleTime } from "@/features/orgs/evidence-cache"
-import type { OrgProfileErrors } from "@/features/orgs/org-form"
+import {
+  fieldErrorsFromError,
+  updateFieldErrors,
+  type OrgProfileErrors,
+} from "@/features/orgs/org-form"
 import { uploadOrgLogo, type LogoFileFacts } from "@/features/orgs/org-logo-upload"
-import { useUiStore } from "@/store/ui-store"
 
 /** Every organization (adminListOrgs), keyset-paged; page one carries the chip `counts`. */
 export function useOrgsInfinite(params: AdminOrgListQuery) {
@@ -116,14 +119,12 @@ export function useDecideOrgVerification() {
 }
 
 /**
- * Create/update render server field errors inline (slug conflict, VALIDATION.fields), so the hooks opt
- * out of the global error toast. The form maps the error to the fields it renders and calls this with
- * what it could show: anything the form has no field for (an unknown key, a CONFLICT on an unchanged
- * slug, a rejected reason after the prompt closed) still surfaces as the toast instead of vanishing.
+ * Create and update show the server's field errors inline (slug conflict, VALIDATION.fields), so the
+ * global toast stays quiet for them; anything the form has no field for (an unknown key, a CONFLICT on
+ * an unchanged slug, a rejected reason after the prompt closed) still surfaces as the error toast.
  */
-export function toastUnlessShownInline(err: unknown, shown: OrgProfileErrors) {
-  if (Object.keys(shown).length > 0) return
-  useUiStore.getState().showToast(errorMessage(err))
+function messageUnlessShownInline(inline: OrgProfileErrors, error: unknown): string | null {
+  return Object.keys(inline).length > 0 ? null : errorMessage(error)
 }
 
 export function useCreateOrg() {
@@ -134,7 +135,10 @@ export function useCreateOrg() {
       qc.setQueryData(queryKeys.orgs.detail(org.id), org)
       invalidateOrgLists(qc)
     },
-    meta: { errorToast: false },
+    meta: {
+      errorMessage: (error: unknown, request: AdminCreateOrgRequest) =>
+        messageUnlessShownInline(fieldErrorsFromError(error, request), error),
+    },
   })
 }
 
@@ -153,7 +157,10 @@ export function useUpdateOrg() {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
       invalidateOrg(qc, id)
     },
-    meta: { errorToast: false },
+    meta: {
+      errorMessage: (error: unknown, request: AdminUpdateOrgRequest) =>
+        messageUnlessShownInline(updateFieldErrors(error, request), error),
+    },
   })
 }
 

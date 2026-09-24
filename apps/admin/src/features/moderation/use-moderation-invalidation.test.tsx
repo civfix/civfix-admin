@@ -1,10 +1,12 @@
 import type { ReactNode } from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { AppError, ErrorCode } from "@civfix/shared"
 
 import type * as ApiModule from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { makeQueryClient, queryKeys } from "@/lib/query"
+import { useUiStore } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
 import { makeTestQueryClient } from "@/test/render"
 import {
@@ -14,10 +16,15 @@ import {
   useRemoveModeration,
 } from "@/features/moderation/use-moderation"
 import { useApproveGovClaim } from "@/features/moderation/use-gov-claims"
+import { govClaimApproveErrorMessage } from "@/features/moderation/gov-claim-presentation"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
+})
+
+afterEach(() => {
+  useUiStore.setState({ toast: null })
 })
 
 function wrapperFor(client: ReturnType<typeof makeTestQueryClient>) {
@@ -59,13 +66,17 @@ describe("moderation decisions refresh the sections the decision changes", () =>
 })
 
 describe("gov claim approval", () => {
-  it("shows its own error copy, so it opts out of the central error toast", async () => {
-    apiMock.approveGovClaim.mockRejectedValue(new Error("boom"))
-    const client = makeTestQueryClient()
+  it("shows its own error copy once, in the error tone", async () => {
+    apiMock.approveGovClaim.mockRejectedValue(new AppError(ErrorCode.FORBIDDEN, "Forbidden"))
+    const client = makeQueryClient()
     const { result } = renderHook(() => useApproveGovClaim(), { wrapper: wrapperFor(client) })
     await act(async () => {
       await result.current.mutateAsync({ id: "gc-1" }).catch(() => undefined)
     })
-    expect(client.getMutationCache().getAll()[0]?.meta).toEqual({ errorToast: false })
+    expect(useUiStore.getState().toast).toMatchObject({
+      text: govClaimApproveErrorMessage(new AppError(ErrorCode.FORBIDDEN, "Forbidden")),
+      tone: "error",
+    })
+    expect(useUiStore.getState().toast?.text).toMatch(/^That contact email belongs to an operator account\./)
   })
 })

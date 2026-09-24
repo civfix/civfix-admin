@@ -30,8 +30,15 @@ import { errorMessage } from "@/lib/error-messages"
 declare module "@tanstack/react-query" {
   interface Register {
     mutationMeta: {
-      /** false when the mutation's own UI shows the error inline, so the global toast stays quiet. */
-      errorToast?: boolean
+      /** false when the mutation's own UI shows every error inline, so the global toast stays quiet. */
+      errorToast?: false
+      /**
+       * Domain copy for the global error toast, built from the error and the mutation's variables so it
+       * still shows after the component that fired the mutation unmounts. Returning null leaves this
+       * error to the UI, which shows it inline.
+       */
+      // Method syntax keeps the parameters bivariant, so a hook can declare its own variables type.
+      errorMessage?(error: unknown, variables: unknown): string | null
     }
   }
 }
@@ -56,9 +63,11 @@ export function makeQueryClient(): QueryClient {
     // The cache-level handler runs for every failed mutation, even one with its own onError, which
     // would silently replace a defaultOptions.mutations.onError.
     mutationCache: new MutationCache({
-      onError: (error, _variables, _onMutateResult, mutation) => {
-        if (mutation.meta?.errorToast === false) return
-        useUiStore.getState().showToast(errorMessage(error), "error")
+      onError: (error, variables, _onMutateResult, mutation) => {
+        const meta = mutation.meta
+        if (meta?.errorToast === false) return
+        const text = meta?.errorMessage ? meta.errorMessage(error, variables) : errorMessage(error)
+        if (text !== null) useUiStore.getState().showToast(text, "error")
       },
     }),
     defaultOptions: {

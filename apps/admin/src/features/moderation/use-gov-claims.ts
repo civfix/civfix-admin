@@ -13,7 +13,6 @@ import type {
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 import { govClaimApproveErrorMessage } from "@/features/moderation/gov-claim-presentation"
-import { useToast } from "@/store/ui-store"
 
 /**
  * Data hooks for the gov-provisioning queue (GET/POST /admin/gov-claims*). An operator verifies the
@@ -58,11 +57,9 @@ export function useVerifyGovClaimCheck() {
 
 export function useApproveGovClaim() {
   const qc = useQueryClient()
-  const toast = useToast()
   return useMutation({
     mutationFn: (input: ApproveGovClaimRequest) => api.approveGovClaim(input),
-    meta: { errorToast: false },
-    onError: (error) => toast(govClaimApproveErrorMessage(error)),
+    meta: { errorMessage: govClaimApproveErrorMessage },
     onSuccess: (_res, { id }) => {
       invalidateGovClaims(qc, id)
       qc.invalidateQueries({ queryKey: queryKeys.users.all })

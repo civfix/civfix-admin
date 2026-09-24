@@ -14,19 +14,17 @@ import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import { orgStatusView } from "@/lib/org-status"
 import {
-  SOCIAL_PLATFORMS as PROFILE_SOCIALS,
   buildUpdateRequest,
   clearChangedFieldErrors,
   draftFromOrg,
-  fieldErrorsFromError,
-  pickFieldErrors,
+  updateFieldErrors,
   validateProfileDraft,
   type OrgProfileDraft,
   type OrgProfileErrors,
 } from "@/features/orgs/org-form"
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
-import { toastUnlessShownInline, useUpdateOrg } from "@/features/orgs/use-orgs"
+import { useUpdateOrg } from "@/features/orgs/use-orgs"
 import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
 import { useNav, useToast } from "@/store/ui-store"
 
@@ -170,16 +168,6 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
   )
 }
 
-/** The fields the editor renders; a server error on anything else (the reason, say) is toasted. */
-const EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
-  "name",
-  "slug",
-  "description",
-  "websiteUrl",
-  "logoMediaId",
-  ...PROFILE_SOCIALS,
-]
-
 function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }) {
   const update = useUpdateOrg()
   const toast = useToast()
@@ -235,11 +223,7 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
         toast(`${draft.name.trim()} updated`)
         onDone()
       },
-      onError: (err) => {
-        const shown = pickFieldErrors(fieldErrorsFromError(err, body), EDITOR_FIELDS)
-        setServerErrors(shown)
-        toastUnlessShownInline(err, shown)
-      },
+      onError: (err) => setServerErrors(updateFieldErrors(err, body)),
     })
   }
 

@@ -22,7 +22,7 @@ import {
   fieldErrorId,
   fieldHintId,
 } from "@/features/orgs/org-form-fields"
-import { toastUnlessShownInline, useCreateOrg } from "@/features/orgs/use-orgs"
+import { useCreateOrg } from "@/features/orgs/use-orgs"
 import { UserPicker, type PickedUser } from "@/features/orgs/user-picker"
 import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
 
@@ -133,13 +133,9 @@ function CreateOrgSlideOver({
     setServerErrors({})
     create.mutate(request, {
       onSuccess: (org) => onCreated(org),
-      onError: (err) => {
-        // Every key fieldErrorsFromError can produce has a field in this form, so whatever it maps is
-        // shown inline; anything else (unknown field, non-validation failure) goes to the toast.
-        const fields = fieldErrorsFromError(err, request)
-        setServerErrors(fields)
-        toastUnlessShownInline(err, fields)
-      },
+      // Every key fieldErrorsFromError can produce has a field in this form, so whatever it maps is
+      // shown inline; useCreateOrg toasts anything else.
+      onError: (err) => setServerErrors(fieldErrorsFromError(err, request)),
       onSettled: () => {
         inFlight.current = false
       },

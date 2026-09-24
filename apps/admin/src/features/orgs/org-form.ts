@@ -267,3 +267,18 @@ export function pickFieldErrors(
   for (const key of keys) if (errors[key] !== undefined) out[key] = errors[key]
   return out
 }
+
+/** The fields the profile editor renders; a server error on anything else (the reason, say) is toasted. */
+const PROFILE_EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
+  "name",
+  "slug",
+  "description",
+  "websiteUrl",
+  "logoMediaId",
+  ...SOCIAL_PLATFORMS,
+]
+
+/** The server errors the profile editor can show next to a field, for a failed update. */
+export function updateFieldErrors(raw: unknown, request: AdminUpdateOrgRequest): OrgProfileErrors {
+  return pickFieldErrors(fieldErrorsFromError(raw, request), PROFILE_EDITOR_FIELDS)
+}
