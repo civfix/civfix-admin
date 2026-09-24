@@ -3,6 +3,7 @@
 import {
   MutationCache,
   QueryClient,
+  partialMatchKey,
   type InvalidateQueryFilters,
   type QueryKey,
 } from "@tanstack/react-query"
@@ -243,6 +244,20 @@ function isQueryKey(target: QueryKey | InvalidateQueryFilters): target is QueryK
   return Array.isArray(target)
 }
 
+// A second invalidation of a query whose refetch is in flight cancels that refetch and requests it
+// again, so a key that a broader key in the same batch already matches (or an earlier copy of itself)
+// would cost a duplicate request for no fresher data.
+function coveredByAnother(target: QueryKey, index: number, targets: readonly Invalidation[]): boolean {
+  return targets.some(
+    (other, otherIndex) =>
+      otherIndex !== index &&
+      other !== null &&
+      isQueryKey(other) &&
+      partialMatchKey(target, other) &&
+      (!partialMatchKey(other, target) || otherIndex < index),
+  )
+}
+
 /**
  * Invalidates each target in order (a null entry is skipped) and settles once every refetch has, so
  * a mutation that returns or awaits it stays pending until the screens it changed show fresh data.
@@ -252,10 +267,11 @@ export function invalidateKeys(
   targets: readonly Invalidation[],
 ): Promise<unknown> {
   return Promise.all(
-    targets.map((target) =>
-      target === null
-        ? null
-        : qc.invalidateQueries(isQueryKey(target) ? { queryKey: target } : target),
-    ),
+    targets.map((target, index) => {
+      if (target === null) return null
+      if (!isQueryKey(target)) return qc.invalidateQueries(target)
+      if (coveredByAnother(target, index, targets)) return null
+      return qc.invalidateQueries({ queryKey: target })
+    }),
   )
 }

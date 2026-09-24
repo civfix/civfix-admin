@@ -156,11 +156,7 @@ export function useRemoveUserMessage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: RemoveUserMessageRequest) => api.removeUserMessage(input),
-    onSuccess: (_res, { id }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.users.messages(id) }),
-        invalidateUsers(qc, id),
-      ]),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
     meta: { successMessage: () => "Message removed" },
   })
 }

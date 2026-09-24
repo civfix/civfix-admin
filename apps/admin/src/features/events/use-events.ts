@@ -145,10 +145,9 @@ export function useUnlinkReport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: { id: string; reportId: string }) => api.unlinkEventReport(input),
-    onSuccess: (_res, { id, reportId }) =>
+    onSuccess: (_res, { id }) =>
       Promise.all([
         invalidateEvents(qc, id),
-        qc.invalidateQueries({ queryKey: queryKeys.reports.detail(reportId) }),
         qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
       ]),
     meta: {
