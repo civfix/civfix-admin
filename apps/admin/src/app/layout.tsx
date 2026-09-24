@@ -37,6 +37,7 @@ export const metadata: Metadata = {
   title: "civfix Operations",
   description: "civfix admin and operator dashboard: discovery, reports, events, mail, users, and analytics.",
   applicationName: "civfix Operations",
+  icons: { icon: "/favicon.svg" },
   robots: { index: false, follow: false },
 }
 
