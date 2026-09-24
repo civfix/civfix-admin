@@ -1,9 +1,10 @@
-import { fireEvent, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
+import { dragOutToBackdrop } from "@/test/modal"
 import { renderWithQuery } from "@/test/render"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 
@@ -12,7 +13,8 @@ vi.mock("@/lib/api", async (importOriginal) => {
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
 
-// The backdrop is decorative (no role or name), so its class is the only handle on it.
+// The backdrop is decorative (no role or name) and a sibling of the panel, so its class is the only
+// handle on it.
 function backdrop(): HTMLElement {
   const el = document.querySelector<HTMLElement>(".panel-overlay")
   if (!el) throw new Error("backdrop is not rendered")
@@ -44,11 +46,14 @@ describe("CreateOrgPanel backdrop", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("River Keepers")
   })
 
-  it("ignores a click on the backdrop whose press started inside the panel", () => {
+  it("stays open, even untouched, when a press in a field is released over the backdrop", () => {
     const { onClose } = renderPanel()
-    fireEvent.pointerDown(screen.getByLabelText("Name"))
-    fireEvent.click(backdrop())
+
+    dragOutToBackdrop(screen.getByLabelText("Name"), backdrop())
+
     expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog", { name: "New organization" })).toBeInTheDocument()
+    expect(screen.getByLabelText("Name")).toHaveValue("")
   })
 
   it("still discards a filled-in draft through Cancel", async () => {

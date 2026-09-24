@@ -13,6 +13,7 @@ import type * as ApiModule from "@/lib/api"
 import { AppShell } from "@/components/shell/app-shell"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { dragOutToBackdrop, overlayOf } from "@/test/modal"
 import { waitForSectionPage } from "@/test/shell"
 import { useUiStore } from "@/store/ui-store"
 
@@ -46,12 +47,6 @@ async function openTemplate() {
   await vi.waitFor(() => expect(opener).toBeEnabled())
   await user.click(opener)
   return { user, opener, dialog: screen.getByRole("dialog", { name: TITLE }) }
-}
-
-function overlayOf(dialog: HTMLElement): HTMLElement {
-  const overlay = dialog.parentElement
-  if (!overlay) throw new Error("dialog has no overlay")
-  return overlay
 }
 
 // The section page is a React.lazy chunk: the first render in this worker would otherwise pay the cold
@@ -127,6 +122,15 @@ describe("Forward template modal", () => {
     const { user, dialog } = await openTemplate()
     await user.click(overlayOf(dialog))
     expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("stays open, even unedited, when a press in a field is released over the backdrop", async () => {
+    const { dialog } = await openTemplate()
+
+    dragOutToBackdrop(within(dialog).getByLabelText("Subject"), overlayOf(dialog))
+
+    expect(screen.getByRole("dialog", { name: TITLE })).toBeInTheDocument()
+    expect(screen.getByLabelText("Subject")).toHaveValue(DEFAULT_FORWARD_SUBJECT_TEMPLATE)
   })
 
   it("discards an edit only through Cancel, and returns focus to the opener", async () => {

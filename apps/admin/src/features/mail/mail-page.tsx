@@ -21,6 +21,7 @@ import {
   type FilterOption,
 } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 import {
   useComposeMail,
@@ -36,6 +37,7 @@ import {
 } from "@/features/mail/use-mail"
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useInboxFeedInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
+import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { InboxRow, InboxReader } from "@/features/inbox/inbox-views"
 import {
   INBOX_EMPTY_COPY,
@@ -52,7 +54,6 @@ import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav, useToast } from "@/store/ui-store"
 import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
-import { isWebUrl } from "@/lib/external-url"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -118,21 +119,23 @@ function correspondent(sel: MailThreadDTO): string {
   return sel.to || "—"
 }
 
-function ComposeModal({
-  open,
-  onClose,
-  onSend,
-  pending,
-}: {
+interface ComposeModalProps {
   open: boolean
   onClose: () => void
   onSend: (input: { to: string; subject: string; body: string }) => void
   pending: boolean
-}) {
+}
+
+function ComposeModal(props: ComposeModalProps) {
+  if (!props.open) return null
+  return <ComposeEditor {...props} />
+}
+
+function ComposeEditor({ onClose, onSend, pending }: ComposeModalProps) {
   const [to, setTo] = React.useState("")
   const [subject, setSubject] = React.useState("")
   const [body, setBody] = React.useState("")
-  const modalRef = useModalFocus<HTMLDivElement>(open)
+  const modalRef = useModalFocus<HTMLDivElement>(true)
   const toRef = React.useRef<HTMLInputElement>(null)
   const titleId = React.useId()
   const toId = React.useId()
@@ -142,38 +145,18 @@ function ComposeModal({
   // Focused here rather than with autoFocus: autoFocus lands before useModalFocus records the element
   // to restore, so closing would return focus to the dead field instead of the Compose button.
   React.useEffect(() => {
-    if (open) {
-      setTo("")
-      setSubject("")
-      setBody("")
-      toRef.current?.focus()
-    }
-  }, [open])
+    toRef.current?.focus()
+  }, [])
 
-  // Escape and the backdrop only dismiss an empty draft; once something is typed, Cancel and the
-  // close button are the deliberate ways to discard it (the same rule as the create-org panel).
-  const pristine = to === "" && subject === "" && body === ""
-  const dismiss = React.useCallback(() => {
-    if (pristine) onClose()
-  }, [pristine, onClose])
-  React.useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, dismiss])
+  const backdrop = usePristineDismiss(onClose, to === "" && subject === "" && body === "")
 
-  if (!open) return null
   const canSend = !!to.trim() && !!subject.trim() && !!body.trim() && !pending
 
   return (
-    <div className="modal-overlay" onClick={dismiss}>
+    <div className="modal-overlay" {...backdrop}>
       <div
         ref={modalRef}
         className="modal compose-modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -435,33 +418,7 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
                 {msg.truncated && (
                   <div className="hint">This message was cut at 64 KB for display.</div>
                 )}
-                {msg.attachments.length > 0 && (
-                  <div className="mail-attachments">
-                    {msg.attachments.map((att) => (
-                      isWebUrl(att.key) ? (
-                        <a
-                          key={att.key}
-                          className="btn sm"
-                          href={att.key}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <Icons.ExternalLink size={13} /> {att.filename}
-                          <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                            {(att.size / 1024).toFixed(0)}k
-                          </span>
-                        </a>
-                      ) : (
-                        <span key={att.key} title="Link unavailable">
-                          {att.filename}
-                          <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                            {(att.size / 1024).toFixed(0)}k
-                          </span>
-                        </span>
-                      )
-                    ))}
-                  </div>
-                )}
+                <AttachmentList attachments={msg.attachments} />
               </div>
             )
           })}

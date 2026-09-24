@@ -12,6 +12,7 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 import { toAppError } from "@/lib/api"
 import { usePreviewForwardTemplate } from "@/features/mail/use-mail"
@@ -102,19 +103,7 @@ function ForwardTemplateEditor({
   const bodyIssues = forwardTemplateIssues(body)
   const hasIssues = subjectIssues.length > 0 || bodyIssues.length > 0
 
-  // Escape and the backdrop only dismiss an unedited template; once it is edited, Cancel and the close
-  // button are the deliberate ways to discard it (the same rule as the create-org panel).
-  const pristine = subject === seed.subject && body === seed.body
-  const dismiss = React.useCallback(() => {
-    if (pristine) onClose()
-  }, [pristine, onClose])
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [dismiss])
+  const backdrop = usePristineDismiss(onClose, subject === seed.subject && body === seed.body)
 
   const onPreview = () => {
     const input: PreviewForwardTemplateRequest = {}
@@ -124,11 +113,10 @@ function ForwardTemplateEditor({
   }
 
   return (
-    <div className="modal-overlay" onClick={dismiss}>
+    <div className="modal-overlay" {...backdrop}>
       <div
         ref={modalRef}
         className="modal tpl-modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

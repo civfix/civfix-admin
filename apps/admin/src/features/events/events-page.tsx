@@ -7,7 +7,6 @@ import {
   type AdminEventDTO,
   type AdminEventListItemDTO,
   type AdminReportListItemDTO,
-  type EventStatus,
   type LinkedReportRef,
 } from "@civfix/shared"
 
@@ -15,9 +14,10 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 import { useDebounced } from "@/hooks/use-debounced"
-import { cancelBlockedFor, EVENT_STATUS_VIEW } from "@/lib/event-status"
+import { cancelBlockedFor, EVENT_STATUS_VIEW, eventStatusView } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
@@ -40,12 +40,6 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
-
-// The client passes a status newer than this build through unvalidated; show it raw rather than crash
-// or pass it off as Upcoming (the lib's eventStatusView fallback).
-function statusView(status: EventStatus): { cls: string; label: string } {
-  return EVENT_STATUS_VIEW[status] ?? { cls: "priority-low", label: status }
-}
 
 const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> = {
   create: Icons.Pin,
@@ -149,19 +143,8 @@ function LinkReportsPicker({
     searchRef.current?.focus()
   }, [])
 
-  // Escape and the backdrop only dismiss the picker while nothing is selected; once reports are
-  // picked, Cancel and the close button are the deliberate ways to drop the selection (the same rule
-  // as the create-org panel).
-  const dismiss = React.useCallback(() => {
-    if (picked.size === 0) onClose()
-  }, [picked, onClose])
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") dismiss()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [dismiss])
+  // The search text is cheap to retype, so only a selection makes the picker a draft worth keeping.
+  const backdrop = usePristineDismiss(onClose, picked.size === 0)
 
   const listQuery = useReportList({ q: query.trim() || undefined })
   const candidates = React.useMemo<AdminReportListItemDTO[]>(
@@ -181,11 +164,10 @@ function LinkReportsPicker({
   const canLink = picked.size > 0 && !pending
 
   return (
-    <div className="modal-overlay" onClick={dismiss}>
+    <div className="modal-overlay" {...backdrop}>
       <div
         ref={modalRef}
         className="modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -280,7 +262,7 @@ function EventRow({
 }) {
   const kindView = eventKindView(item.eventKind)
   const KindIco = kindView.icon
-  const statusPill = statusView(item.status)
+  const statusPill = eventStatusView(item.status)
   const nav = useNav()
   return (
     <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
@@ -408,7 +390,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   }
 
   const cancelBlockedReason = cancelBlockedFor(event.status)
-  const statusPill = statusView(event.status)
+  const statusPill = eventStatusView(event.status)
 
   const onCancel = async () => {
     const ok = await confirmDialog({

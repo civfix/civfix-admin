@@ -12,6 +12,7 @@ import type * as ApiModule from "@/lib/api"
 import { AppShell } from "@/components/shell/app-shell"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { dragOutToBackdrop, overlayOf } from "@/test/modal"
 import { waitForSectionPage } from "@/test/shell"
 import { useUiStore } from "@/store/ui-store"
 
@@ -48,12 +49,6 @@ async function openCompose() {
   const ctx = await openMail()
   await ctx.user.click(ctx.opener)
   return { ...ctx, dialog: screen.getByRole("dialog", { name: "New message" }) }
-}
-
-function overlayOf(dialog: HTMLElement): HTMLElement {
-  const overlay = dialog.parentElement
-  if (!overlay) throw new Error("dialog has no overlay")
-  return overlay
 }
 
 // The section page is a React.lazy chunk: the first render in this worker would otherwise pay the cold
@@ -130,6 +125,15 @@ describe("Mail compose modal", () => {
     const { user, dialog } = await openCompose()
     await user.click(overlayOf(dialog))
     expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("stays open, even with an empty draft, when a press in a field is released over the backdrop", async () => {
+    const { dialog } = await openCompose()
+
+    dragOutToBackdrop(within(dialog).getByLabelText("To"), overlayOf(dialog))
+
+    expect(screen.getByRole("dialog", { name: "New message" })).toBeInTheDocument()
+    expect(screen.getByLabelText("To")).toHaveValue("")
   })
 
   it("discards a dirty draft only through the close button, and returns focus to Compose", async () => {

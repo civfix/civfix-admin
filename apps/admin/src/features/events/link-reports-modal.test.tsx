@@ -13,6 +13,7 @@ import type * as ApiModule from "@/lib/api"
 import { AppShell } from "@/components/shell/app-shell"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { dragOutToBackdrop, overlayOf } from "@/test/modal"
 import { waitForSectionPage } from "@/test/shell"
 import { useUiStore } from "@/store/ui-store"
 
@@ -90,12 +91,6 @@ async function openPicker() {
   return { user, opener, dialog }
 }
 
-function overlayOf(dialog: HTMLElement): HTMLElement {
-  const overlay = dialog.parentElement
-  if (!overlay) throw new Error("dialog has no overlay")
-  return overlay
-}
-
 function reportRow(dialog: HTMLElement): HTMLElement {
   return within(dialog).getByRole("button", { name: new RegExp(REPORT.title) })
 }
@@ -171,6 +166,18 @@ describe("Events link-reports modal", () => {
     const { user, dialog } = await openPicker()
     await user.click(overlayOf(dialog))
     expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("stays open with its search, nothing selected, when a press in it is released over the backdrop", async () => {
+    const { user, dialog } = await openPicker()
+    const search = within(dialog).getByPlaceholderText("Search title, place, reporter…")
+    await user.type(search, "pier")
+
+    dragOutToBackdrop(search, overlayOf(dialog))
+
+    expect(screen.getByRole("dialog", { name: TITLE })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("Search title, place, reporter…")).toHaveValue("pier")
+    expect(screen.getByText("Select reports to link")).toBeInTheDocument()
   })
 
   it("drops a selection only through the close button, and returns focus to the opener", async () => {
