@@ -148,7 +148,7 @@ function EvidenceSection({ verification }: { verification: OrgVerification }) {
         </span>
       </div>
       <div className="sub-body">
-        <EvidenceList key={documentIds.join(",")} mediaIds={documentIds} />
+        <EvidenceList mediaIds={documentIds} />
       </div>
     </div>
   )
