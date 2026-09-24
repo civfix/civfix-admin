@@ -82,7 +82,10 @@ function pinIcon(
   // report pin (red when it needs attention, gray when handled).
   const isEvent = kind != null && EVENT_KINDS.has(kind)
   const state = isEvent ? kind : draft ? "needs" : "routed"
-  const glyph = GLYPHS[isEvent ? kind : category || "other"] ?? CATEGORY_GLYPHS.other
+  const glyphKey = isEvent ? kind : category || "other"
+  // The icon html goes through innerHTML and the category arrives from the API unvalidated, so only a
+  // constant own entry of GLYPHS may reach it (an inherited key like "constructor" would not).
+  const glyph = Object.hasOwn(GLYPHS, glyphKey) ? GLYPHS[glyphKey]! : CATEGORY_GLYPHS.other
   const fill = PIN_FILL[state] ?? PIN_FILL.routed
   const w = active ? 40 : 31
   const h = w * (76 / 64)
@@ -100,6 +103,20 @@ function pinIcon(
     iconAnchor: [w / 2, h],
     popupAnchor: [0, -h],
   })
+}
+
+export function tooltipText(pin: MapPin): string | null {
+  const title = pin.tip || pin.label
+  if (!title) return null
+  return pin.place ? `${title} · ${pin.place}` : title
+}
+
+// Leaflet writes string tooltip content with innerHTML and pin titles/places are citizen-authored, so
+// the content must be a node whose text is set with textContent.
+function tooltipNode(text: string): HTMLElement {
+  const el = document.createElement("span")
+  el.textContent = text
+  return el
 }
 
 export interface LeafletMapProps {
@@ -236,9 +253,9 @@ export function LeafletMap({
       } else {
         const icon = pinIcon(p.category, { active, draft: p.draft, kind: p.kind })
         const m = L.marker([p.lat, p.lng], { icon, riseOnHover: true }).addTo(map)
-        const tip = p.tip || p.label
+        const tip = tooltipText(p)
         if (tip) {
-          m.bindTooltip(tip + (p.place ? ` · ${p.place}` : ""), {
+          m.bindTooltip(tooltipNode(tip), {
             direction: "top",
             offset: [0, -30],
             className: "pi-map-tip",
