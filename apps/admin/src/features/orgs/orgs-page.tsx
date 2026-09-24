@@ -338,7 +338,6 @@ export function OrgsPage({ focusId }: SectionPageProps) {
 
   const pickFilter = (next: string) => {
     setFilter(next)
-    // The verification queue opens on the decision, everything else on the profile.
     if (next === "pending") setTab("verification")
     else if (tab === "verification") setTab("profile")
   }

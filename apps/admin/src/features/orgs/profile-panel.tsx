@@ -28,7 +28,6 @@ import { useUpdateOrg } from "@/features/orgs/use-orgs"
 import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 import { useNav } from "@/store/ui-store"
 
-/** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
 export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
   const [editing, setEditing] = React.useState(false)
   return editing ? (

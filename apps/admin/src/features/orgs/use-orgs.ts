@@ -31,7 +31,7 @@ import { uploadOrgLogo, type LogoFileFacts } from "@/features/orgs/org-logo-uplo
 import { ORG_ROLE_LABEL } from "@/features/orgs/org-members"
 import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 
-/** Every organization (adminListOrgs), keyset-paged; page one carries the chip `counts`. */
+/** Page one carries the chip `counts`. */
 export function useOrgsInfinite(params: AdminOrgListQuery) {
   return useInfiniteQuery<AdminOrgListResponse>({
     queryKey: queryKeys.orgs.list(params),

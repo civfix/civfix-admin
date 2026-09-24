@@ -34,8 +34,8 @@ const VERIFICATION_OPTIONS: { value: "" | OrgVerificationKind; label: string }[]
 ]
 
 /**
- * The "New organization" slide-over (`.panel`). The form only exists while the panel is open, so
- * closing it discards the draft, the submitted flag and every error: reopening always starts clean.
+ * The form only exists while the panel is open, so closing it discards the draft, the submitted flag
+ * and every error: reopening always starts clean.
  */
 export function CreateOrgPanel({
   open,
@@ -50,7 +50,6 @@ export function CreateOrgPanel({
   return <CreateOrgSlideOver onClose={onClose} onCreated={onCreated} />
 }
 
-/** The local checks the create form runs before a request: the profile, the owner and the reason. */
 function validateCreate(
   draft: OrgProfileDraft,
   owner: PickedUser | null,
@@ -63,11 +62,10 @@ function validateCreate(
 }
 
 /**
- * Everything the create request needs lives here: the profile fields, the owner picker (resolves a
- * person to a userId), the verification shortcut for operator-onboarded partners (DECISIONS §32) and
- * the audit reason. Local validation errors are recomputed live once the operator has tried to
- * submit; server errors (slug conflict, VALIDATION.fields) are held apart and cleared per field as
- * that field changes, so a message never outlives the value it was about.
+ * The verification shortcut is for operator-onboarded partners (DECISIONS §32). Local validation
+ * errors are recomputed live once the operator has tried to submit; server errors (slug conflict,
+ * VALIDATION.fields) are held apart and cleared per field as that field changes, so a message never
+ * outlives the value it was about.
  */
 function CreateOrgSlideOver({
   onClose,

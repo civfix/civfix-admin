@@ -183,9 +183,9 @@ export function LogoField({
 }
 
 /**
- * The profile fields shared by "New organization" and "Edit profile". In create mode the slug follows
- * the name until the operator edits it by hand; in edit mode the slug never auto-changes and a change
- * is called out because it breaks every existing link to the public page.
+ * In create mode the slug follows the name until the operator edits it by hand; in edit mode the slug
+ * never auto-changes and a change is called out because it breaks every existing link to the public
+ * page.
  */
 export function OrgProfileFields({
   draft,
