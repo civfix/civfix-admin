@@ -246,6 +246,23 @@ describe("HostsPage detail pane", () => {
     expect(within(detail).getByText("No events in the loaded log")).toBeInTheDocument()
   })
 
+  it("renders a broadcast status this build does not know as its raw value instead of crashing", async () => {
+    apiMock.adminListHosts.mockResolvedValue(page([ada]))
+    apiMock.adminListBroadcasts.mockResolvedValue(
+      broadcasts([
+        broadcast({
+          id: "b-9",
+          cleanupId: "ev-1",
+          status: "throttled" as AdminBroadcastListItemDTO["status"],
+        }),
+      ]),
+    )
+    renderWithQuery(<HostsPage focusId={null} />)
+
+    const detail = detailSection()
+    expect(await within(detail).findByText("throttled")).toHaveClass("priority-low")
+  })
+
   it("shows a broadcast log error inside the detail pane", async () => {
     apiMock.adminListHosts.mockResolvedValue(page([ada]))
     apiMock.adminListBroadcasts.mockRejectedValue(new Error("Log unavailable"))

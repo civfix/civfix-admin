@@ -20,6 +20,10 @@ export const BROADCAST_STATUS_VIEW: Record<BroadcastStatus, { label: string; cls
   failed: { label: "Failed", cls: "status-flag" },
 }
 
+function broadcastStatusView(status: BroadcastStatus): { label: string; cls: string } {
+  return Object.hasOwn(BROADCAST_STATUS_VIEW, status) ? BROADCAST_STATUS_VIEW[status] : { label: status, cls: "priority-low" }
+}
+
 export const BROADCAST_KIND_LABEL: Record<BroadcastKind, string> = {
   host_broadcast: "Host broadcast",
   confirmation: "Confirmation",
@@ -45,7 +49,7 @@ export function BroadcastLog({ items }: { items: AdminBroadcastListItemDTO[] }) 
   return (
     <div className="bcast-log">
       {items.map((item) => {
-        const view = BROADCAST_STATUS_VIEW[item.status]
+        const view = broadcastStatusView(item.status)
         return (
           <div key={item.id} className="bcast-row">
             <div className="bcast-top">

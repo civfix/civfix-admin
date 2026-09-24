@@ -202,6 +202,19 @@ describe("PagesPage list states", () => {
     expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: ECHO_ID })
   })
 
+  it("renders a page status this build does not know as its raw value instead of crashing", async () => {
+    const archived = { ...echoPage, status: "archived" as AdminEventPageListItemDTO["status"] }
+    apiMock.adminListEventPages.mockResolvedValue(listPage([archived]))
+    apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(eventPage(id)),
+    )
+    renderWithQuery(<PagesPage focusId={null} />)
+
+    const list = listPane()
+    expect(await within(list).findByText("archived")).toHaveClass("pill", "priority-low")
+    expect(within(detailPane("Echo Park Cleanup")).getByText("archived")).toBeInTheDocument()
+  })
+
   it("selecting a row swaps the detail pane to that page", async () => {
     apiMock.adminListEventPages.mockResolvedValue(listPage([echoPage, riverPage, lakePage]))
     apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>

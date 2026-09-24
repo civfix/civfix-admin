@@ -32,6 +32,10 @@ const PAGE_STATUS_VIEW: Record<EventPageStatus, { label: string; cls: string }> 
   unpublished: { label: "Unpublished", cls: "status-flag" },
 }
 
+function pageStatusView(status: EventPageStatus): { label: string; cls: string } {
+  return Object.hasOwn(PAGE_STATUS_VIEW, status) ? PAGE_STATUS_VIEW[status] : { label: status, cls: "priority-low" }
+}
+
 const VISIBILITY_LABEL: Record<EventVisibility, string> = {
   public: "Public",
   unlisted: "Unlisted",
@@ -47,7 +51,7 @@ function PageRow({
   selected: boolean
   onClick: () => void
 }) {
-  const view = PAGE_STATUS_VIEW[item.status]
+  const view = pageStatusView(item.status)
   return (
     <div
       className={`qrow ${selected ? "selected" : ""}`}
@@ -107,7 +111,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
   const unpublish = useUnpublishEventPage()
   const toast = useToast()
   const nav = useNav()
-  const view = PAGE_STATUS_VIEW[item.status]
+  const view = pageStatusView(item.status)
   const flagged = item.flaggedAt != null
   const pageName = item.slug ? publicPagePath(item.slug) : item.title
 
