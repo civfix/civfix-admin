@@ -1,4 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type {
   AdminOrgDTO,
   AdminOrgEventListResponse,
@@ -13,6 +14,7 @@ import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
 import { detailCard, queueRowOf } from "@/test/panes"
 import { OrgsPage } from "@/features/orgs/orgs-page"
+import { userListItem } from "@/features/orgs/test-fixtures"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -232,7 +234,7 @@ describe("OrgsPage paging, filters and search", () => {
     expect(screen.getByText("2 of 5")).toBeInTheDocument()
   })
 
-  it("the Pending review chip queries the verification queue and opens on the Verification tab", async () => {
+  it("the Pending review chip queries the verification queue and opens the Verification tab on the kept pick", async () => {
     apiMock.adminListOrgs.mockImplementation((params: { verified?: string }) =>
       Promise.resolve(params.verified === "pending" ? listPage([PARK]) : listPage([RIVER])),
     )
@@ -245,7 +247,8 @@ describe("OrgsPage paging, filters and search", () => {
     expect(await screen.findByRole("heading", { level: 3, name: "Verification queue" })).toBeInTheDocument()
     await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "pending" }))
     expect(await screen.findByText("/park-friends")).toBeInTheDocument()
-    await detailHeading("Park Friends")
+    await detailHeading("River Keepers")
+    expect(queueRowOf(screen.getByText("/park-friends"))).not.toHaveAttribute("aria-current")
     expect(screen.getByRole("tab", { name: /^Verification/ })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -568,7 +571,7 @@ describe("OrgsPage background refresh", () => {
 })
 
 describe("OrgsPage selection", () => {
-  it("moves the selection to the first row when a filter change leaves it out", async () => {
+  it("keeps the pick open when a filter change leaves it out, without selecting another row", async () => {
     const suspended = makeOrg({
       id: "org-9",
       slug: "quiet-club",
@@ -584,8 +587,9 @@ describe("OrgsPage selection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Suspended/ }))
 
-    await detailHeading("Quiet Club")
-    expect(queueRowOf(screen.getAllByText("/quiet-club")[0]!)).toHaveClass("selected")
+    expect(await screen.findByText("/quiet-club")).toBeInTheDocument()
+    await detailHeading("River Keepers")
+    expect(queueRowOf(screen.getByText("/quiet-club"))).not.toHaveClass("selected")
   })
 
   it("keeps the selection when a filter change still lists it", async () => {
@@ -604,7 +608,7 @@ describe("OrgsPage selection", () => {
     await detailHeading("Park Friends")
   })
 
-  it("keeps a decided organization on screen after it leaves the verification queue", async () => {
+  it("clears a decided organization that leaves the list, without opening another", async () => {
     const applied = makeOrg({ id: "org-3", slug: "tree-crew", name: "Tree Crew", verifiedStatus: "pending" })
     let queue = [applied, PARK]
     apiMock.adminListOrgs.mockImplementation(() => Promise.resolve(listPage(queue)))
@@ -616,6 +620,53 @@ describe("OrgsPage selection", () => {
     await act(() => client.invalidateQueries({ queryKey: ["admin", "orgs"] }))
 
     await waitFor(() => expect(screen.queryByText("/tree-crew", { selector: ".mono" })).not.toBeInTheDocument())
-    expect(within(detailCard()).getByRole("heading", { level: 2, name: "Tree Crew" })).toBeInTheDocument()
+    expect(await within(detailCard()).findByText("No organization selected")).toBeInTheDocument()
+    expect(queueRowOf(screen.getByText("/park-friends"))).not.toHaveClass("selected")
+  })
+
+  it("keeps a decided organization open while the refetched list still holds it", async () => {
+    let river = RIVER
+    apiMock.adminListOrgs.mockImplementation(() => Promise.resolve(listPage([river, PARK])))
+    mockOrgDetails(RIVER, PARK)
+    const { client } = renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("River Keepers")
+
+    river = makeOrg({ verifiedStatus: "rejected" })
+    await act(() => client.invalidateQueries({ queryKey: ["admin", "orgs"] }))
+
+    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledTimes(2))
+    await detailHeading("River Keepers")
+    expect(queueRowOf(screen.getByText("/river-keepers"))).toHaveClass("selected")
+  })
+
+  it("keeps a just-created organization selected while the cached All list lacks it", async () => {
+    const created = makeOrg({ id: "org-new", slug: "brand-new", name: "Brand New", verifiedStatus: "unverified" })
+    apiMock.adminListOrgs.mockImplementation((params: { verified?: string }) =>
+      Promise.resolve(params.verified === "pending" ? listPage([PARK]) : listPage([RIVER, PARK])),
+    )
+    apiMock.listAdminUsers.mockResolvedValue({
+      items: [userListItem({ id: "u-ana", name: "Ana Ruiz" })],
+      nextCursor: null,
+    })
+    apiMock.adminCreateOrg.mockResolvedValue(created)
+    mockOrgDetails(RIVER, PARK, created)
+    renderWithQuery(<OrgsPage focusId={null} />)
+    await detailHeading("River Keepers")
+    fireEvent.click(screen.getByRole("button", { name: /^Pending review/ }))
+    expect(await screen.findByRole("heading", { level: 3, name: "Verification queue" })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: /New organization/ }))
+    const dialog = screen.getByRole("dialog", { name: "New organization" })
+    await userEvent.type(within(dialog).getByLabelText("Name"), "Brand New")
+    await userEvent.click(await within(dialog).findByRole("button", { name: /Ana Ruiz/ }))
+    await userEvent.type(within(dialog).getByLabelText(/^Reason/), "Partner meeting")
+    await userEvent.click(within(dialog).getByRole("button", { name: /Create organization/ }))
+
+    expect(await screen.findByRole("heading", { level: 3, name: "Organizations" })).toBeInTheDocument()
+    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenLastCalledWith({}))
+    await detailHeading("Brand New")
+    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledTimes(4))
+    await detailHeading("Brand New")
+    expect(queueRowOf(screen.getByText("/river-keepers"))).not.toHaveClass("selected")
   })
 })

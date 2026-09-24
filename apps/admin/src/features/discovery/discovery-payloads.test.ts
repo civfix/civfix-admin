@@ -1,29 +1,40 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  afterContactsSaved,
   contactsPayload,
   jurisdictionFields,
   noteAndHandleFields,
   parseHandle,
   partialSaveMessage,
+  withContactEdit,
 } from "./discovery-payloads"
 
 describe("contacts payload", () => {
-  it("sends trimmed contacts and omits categories that were blank from the start", () => {
-    expect(contactsPayload({}, { trash: " trash@city.gov ", graffiti: "", hazard: "   " })).toEqual({
+  it("sends the trimmed contacts the operator edited", () => {
+    const current = { trash: " trash@city.gov ", graffiti: "g@city.gov", hazard: "h@city.gov" }
+    expect(contactsPayload({ trash: 1, hazard: 2 }, current)).toEqual({
       trash: "trash@city.gov",
+      hazard: "h@city.gov",
     })
   })
 
-  it("sends null for a category the operator emptied, so the server deletes it", () => {
-    expect(contactsPayload({ trash: "old@city.gov" }, { trash: "" })).toEqual({ trash: null })
-    expect(contactsPayload({ trash: "old@city.gov" }, { trash: "  " })).toEqual({ trash: null })
+  it("sends null for an edited category that is now empty, so the server deletes it", () => {
+    expect(contactsPayload({ trash: 1 }, { trash: "" })).toEqual({ trash: null })
+    expect(contactsPayload({ trash: 1 }, { trash: "  " })).toEqual({ trash: null })
   })
 
-  it("leaves a category that was blank at load out of the payload, so a contact added meanwhile survives", () => {
-    expect(contactsPayload({ trash: "old@city.gov" }, { trash: "old@city.gov", graffiti: "" })).toEqual({
-      trash: "old@city.gov",
-    })
+  it("leaves categories the operator did not edit out, so a contact changed meanwhile survives", () => {
+    expect(contactsPayload({}, { trash: "old@city.gov", graffiti: "" })).toEqual({})
+  })
+
+  it("counts every edit to a category", () => {
+    expect(withContactEdit(withContactEdit({}, "trash"), "trash")).toEqual({ trash: 2 })
+  })
+
+  it("keeps an edit made while the save was in flight marked for the next save", () => {
+    expect(afterContactsSaved({ trash: 2, graffiti: 1 }, { trash: 1, graffiti: 1 })).toEqual({ trash: 2 })
+    expect(afterContactsSaved({ trash: 1 }, { trash: 1 })).toEqual({})
   })
 })
 

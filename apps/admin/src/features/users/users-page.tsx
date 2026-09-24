@@ -204,10 +204,10 @@ function ProfileMessageRow({
         {removed ? <Icons.Trash size={14} /> : <Icons.MessageSquare size={14} />}
       </span>
       <span className="prow-body">
-        <span className="prow-title block">
+        <span className="prow-title">
           {removed && <span className="pill status-flag tight">Removed</span>} {m.text}
         </span>
-        <span className="prow-meta block">
+        <span className="prow-meta">
           {m.source && <span className="pill priority-low tight">{SOURCE_LABEL[m.source]}</span>} in{" "}
           {m.thread}
         </span>
@@ -497,7 +497,7 @@ function UserDetail({ userId }: { userId: string }) {
   }
 
   const onCopyId = () => {
-    const copyFailed = () => toast("Couldn't copy. Select the ID manually.")
+    const copyFailed = () => toast("Couldn't copy. Select the ID manually.", "error")
     // The Clipboard API exists only in a secure context; without it nothing is copied.
     if (!navigator.clipboard) {
       copyFailed()
@@ -769,22 +769,23 @@ export function UsersPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
-  // Only a new filter or search replaces a selection that is missing from the list. A refetch after a
-  // ban or suspend can drop the account from a status filter, and swapping in another account then
-  // would put that account's Ban button under the operator's pointer.
-  const reconciledFor = React.useRef(listKey)
+  // The selection rules every master-detail page follows: only the first load picks on the operator's
+  // behalf. A pick that a filter or search leaves out stays open, because the detail reads it by id. A
+  // pick that drops out of the same list after a refetch (a ban under the Active chip, say) clears, so
+  // the pane never jumps to another account's Ban button. Each decision waits for data fetched for the
+  // current params: a cached page that is refetching may predate the change that matters.
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!items.length) return
-    const listChanged = reconciledFor.current !== listKey
-    reconciledFor.current = listKey
-    if (!selId) {
-      if (!focusId) setSelId(items[0]!.id)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
       return
     }
-    if (listChanged && selId !== focusId && !items.some((x) => x.id === selId)) {
-      setSelId(items[0]!.id)
-    }
-  }, [items, selId, focusId, listKey])
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   return (
     <>

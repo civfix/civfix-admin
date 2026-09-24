@@ -360,7 +360,7 @@ function EventRow({
   )
 }
 
-function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (id: string) => void }) {
+function EventDetail({ eventId }: { eventId: string }) {
   const q = useEvent(eventId)
   const nav = useNav()
   const toast = useToast()
@@ -454,10 +454,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
     cancel.mutate(
       { id: event.id },
       {
-        onSuccess: () => {
-          toast(`${shortId(event.id)} · event cancelled`)
-          onCancelled(event.id)
-        },
+        onSuccess: () => toast(`${shortId(event.id)} · event cancelled`),
       },
     )
   }
@@ -868,24 +865,26 @@ export function EventsPage({ focusId }: SectionPageProps) {
   }
   const listCount = serverCounts ? serverCounts[filter] : items.length
 
-  // Row 0 is picked once, on the first load. A deep-linked or operator-picked event is never swapped
-  // for row 0 when it is not in the loaded page (the detail fetches it by id), and after an action
-  // clears the selection, picking again would put another event's live buttons under the cursor.
-  const autoPicked = React.useRef(false)
+  // Only the first load picks an event on the operator's behalf, and a deep-linked event is never
+  // replaced. A pick that a filter or search leaves out stays open (the detail reads it by id); a pick
+  // that drops out of the same list after a refetch (a cancel under the Upcoming chip) clears, so the
+  // pane never jumps to another event's live buttons. Decided only on data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
   React.useEffect(() => {
-    if (selId !== null) autoPicked.current = true
-    else if (!autoPicked.current && items.length) {
-      autoPicked.current = true
-      setSelId(items[0]!.id)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
+      return
     }
-  }, [items, selId])
-
-  const onCancelled = (id: string) => {
-    setSelId((cur) => (cur === id ? null : cur))
-  }
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   return (
     <>
@@ -974,7 +973,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <EventDetail key={selId} eventId={selId} onCancelled={onCancelled} />
+            <EventDetail key={selId} eventId={selId} />
           ) : (
             <EmptyState
               title="No event selected"

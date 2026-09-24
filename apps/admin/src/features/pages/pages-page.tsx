@@ -266,24 +266,28 @@ export function PagesPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
-  // Only the first load picks a page on the operator's behalf. A pick that later drops out of the
-  // list (a filter, a search, or an unpublish under the Published chip) clears instead, so the
-  // moderation buttons never land on a page nobody chose.
+  // Only the first load picks a page on the operator's behalf, and a deep-linked page is never
+  // replaced. A pick that a filter or search leaves out stays open, read by id; a pick that drops out of
+  // the same list after a refetch (an unpublish under the Published chip) clears, so the moderation
+  // buttons never land on a page nobody chose. Decided only on data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!listQuery.isSuccess) return
+    if (!listQuery.isSuccess || listQuery.isFetching) return
     if (selId === null) {
       if (autoPick && items.length) setSelId(items[0]!.cleanupId)
       return
     }
     setAutoPick(false)
-    if (selId !== focusId && !items.some((x) => x.cleanupId === selId)) setSelId(null)
-  }, [listQuery.isSuccess, items, selId, focusId, autoPick])
+    if (items.some((x) => x.cleanupId === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   const listed = items.find((x) => x.cleanupId === selId) ?? null
-  const linked = useAdminEventPage(
-    selId !== null && selId === focusId && listed === null && !listQuery.isPending ? selId : null,
-  )
-  const selected = listed ?? (linked.data ? pageRowFromDTO(linked.data) : null)
+  // The detail's preview reads the same key, so fetching before the list settles never doubles a request.
+  const byId = useAdminEventPage(listed === null ? selId : null)
+  const selected = listed ?? (byId.data ? pageRowFromDTO(byId.data) : null)
+  const byIdNoun = selId === focusId ? "the linked page" : "the page"
 
   return (
     <>
@@ -375,13 +379,13 @@ export function PagesPage({ focusId }: SectionPageProps) {
         <section className="card md-detail-card">
           {selected ? (
             <PageDetail key={selected.cleanupId} item={selected} />
-          ) : linked.isLoading ? (
-            <LoadingState label="Loading the linked page..." />
-          ) : linked.isError ? (
+          ) : byId.isLoading ? (
+            <LoadingState label={`Loading ${byIdNoun}...`} />
+          ) : byId.isError ? (
             <ErrorState
-              error={linked.error}
-              onRetry={() => linked.refetch()}
-              title="Could not load the linked page"
+              error={byId.error}
+              onRetry={() => byId.refetch()}
+              title={`Could not load ${byIdNoun}`}
             />
           ) : (
             <EmptyState

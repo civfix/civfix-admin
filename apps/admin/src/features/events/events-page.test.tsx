@@ -398,6 +398,34 @@ describe("EventsPage correctness and accessibility", () => {
     expect(within(detailCard()).queryByRole("heading", { name: PARK.title })).not.toBeInTheDocument()
   })
 
+  it("keeps a cancelled event open while the All list still holds it", async () => {
+    let cancelled = false
+    const beach = () => ({ ...BEACH, status: cancelled ? ("cancelled" as const) : BEACH.status })
+    apiMock.listAdminEvents.mockImplementation(async () => page([beach(), PARK]))
+    apiMock.getAdminEvent.mockImplementation(async ({ id }: { id: string }) =>
+      detail(id === BEACH.id ? beach() : PARK),
+    )
+    apiMock.cancelEvent.mockImplementation(async () => {
+      cancelled = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: BEACH.title })
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Cancel event/ }))
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Cancel event" }),
+    )
+
+    await waitFor(() =>
+      expect(within(detailCard()).getByRole("button", { name: /Cancel event/ })).toBeDisabled(),
+    )
+    expect(apiMock.listAdminEvents.mock.calls.length).toBeGreaterThan(1)
+    expect(within(detailCard()).getByRole("heading", { name: BEACH.title })).toBeInTheDocument()
+    expect(within(detailCard()).queryByText("No event selected")).not.toBeInTheDocument()
+  })
+
   it("shows why Cancel is blocked as visible text tied to the button", async () => {
     apiMock.listAdminEvents.mockResolvedValue(page([PARK]))
     mockDetails(PARK)

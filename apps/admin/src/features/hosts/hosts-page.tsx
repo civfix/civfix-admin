@@ -322,18 +322,24 @@ export function HostsPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
-  // Only the first load picks a host on the operator's behalf. A pick that later drops out of the
-  // list (a filter, a search, or a suspend under the Active chip) clears instead, so the action
-  // buttons never land on a host nobody chose.
+  // Only the first load picks a host on the operator's behalf, and a deep-linked host is never
+  // replaced. There is no single-host read, so a pick that a filter or search leaves out clears, and so
+  // does any host that drops out of the same list after a refetch (a suspend under the Active chip): the
+  // action buttons never land on a host nobody chose. Decided only on data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!listQuery.isSuccess) return
+    if (!listQuery.isSuccess || listQuery.isFetching) return
     if (selId === null) {
       if (autoPick && rows.length) setSelId(rows[0]!.host.id)
       return
     }
     setAutoPick(false)
-    if (selId !== focusId && !rows.some((r) => r.host.id === selId)) setSelId(null)
-  }, [listQuery.isSuccess, rows, selId, focusId, autoPick])
+    if (rows.some((r) => r.host.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (selId !== focusId || (seenIn.current?.id === selId && seenIn.current.list === listKey)) {
+      setSelId(null)
+    }
+  }, [listQuery.isSuccess, listQuery.isFetching, rows, selId, focusId, listKey, autoPick])
 
   const selected = rows.find((r) => r.host.id === selId) ?? null
   const missingLink =

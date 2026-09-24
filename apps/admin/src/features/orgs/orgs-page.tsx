@@ -322,25 +322,24 @@ export function OrgsPage({ focusId }: SectionPageProps) {
     if (focus.id) setSelId(focus.id)
     if (focus.tab) setTab(focus.tab)
   }, [focus])
+  // Only the first load picks an org on the operator's behalf; a deep-linked or just-created org is
+  // pinned like any other pick. A pick that a filter or search leaves out stays open (the detail reads it
+  // by id); a pick that drops out of the same list after a refetch (a verification decision under the
+  // Pending chip) clears, so the pane never jumps to another org's actions. Each decision waits for data
+  // fetched for the current params: a cached page that is refetching may not have the org created since.
+  const listKey = JSON.stringify(listParams)
+  const [autoPick, setAutoPick] = React.useState(focus.id === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!selId && !focus.id && items.length) setSelId(items[0]!.id)
-  }, [items, selId, focus.id])
-
-  // A filter or search the operator changes must not leave the detail on an org the new list omits,
-  // but a refetch of the same list (after a verification decision, say) keeps the decided org on
-  // screen rather than jumping to another org's actions. A deep-linked org is never replaced.
-  const reselectFor = React.useRef<typeof listParams | null>(null)
-  const initialParams = React.useRef(listParams)
-  React.useEffect(() => {
-    if (listParams !== initialParams.current) reselectFor.current = listParams
-  }, [listParams])
-  React.useEffect(() => {
-    if (reselectFor.current !== listParams || !listQuery.isSuccess) return
-    reselectFor.current = null
-    const first = items[0]
-    if (!first || !selId || selId === focus.id || items.some((o) => o.id === selId)) return
-    setSelId(first.id)
-  }, [items, listParams, listQuery.isSuccess, selId, focus.id])
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
+      return
+    }
+    setAutoPick(false)
+    if (items.some((o) => o.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   const pickFilter = (next: string) => {
     setFilter(next)

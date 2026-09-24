@@ -35,9 +35,9 @@ describe("selected jurisdiction", () => {
   const la = { geoid: "0644000" }
   const sf = { geoid: "0667000" }
 
-  it("shows the first row while nothing is selected", () => {
-    expect(pickSelected([la, sf], null, null)).toBe(la)
-    expect(pickSelected([], null, null)).toBeNull()
+  it("shows no row while nothing is selected, so a cleared pick never falls to another row", () => {
+    expect(pickSelected([la, sf], null, null)).toBeNull()
+    expect(pickSelected([la, sf], null, la)).toBeNull()
   })
 
   it("shows the selected row from the list", () => {

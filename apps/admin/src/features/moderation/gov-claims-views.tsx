@@ -129,13 +129,7 @@ function CheckRow({
   )
 }
 
-export function GovClaimDetail({
-  claimId,
-  onDecided,
-}: {
-  claimId: string
-  onDecided: (id: string) => void
-}) {
+export function GovClaimDetail({ claimId }: { claimId: string }) {
   const q = useGovClaim(claimId)
   const verifyCheck = useVerifyGovClaimCheck()
   const approve = useApproveGovClaim()
@@ -212,7 +206,6 @@ export function GovClaimDetail({
       {
         onSuccess: () => {
           toast(`${claim.name} approved · government role provisioned`)
-          onDecided(claim.id)
         },
       },
     )
@@ -234,7 +227,6 @@ export function GovClaimDetail({
       {
         onSuccess: () => {
           toast(`${claim.name} rejected`)
-          onDecided(claim.id)
         },
       },
     )

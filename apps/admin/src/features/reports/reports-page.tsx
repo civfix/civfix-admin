@@ -563,7 +563,7 @@ function ReportPhotoFace({
   )
 }
 
-function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (id: string) => void }) {
+function ReportDetail({ reportId }: { reportId: string }) {
   const q = useReport(reportId)
   const nav = useNav()
   const toast = useToast()
@@ -726,10 +726,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     remove.mutate(
       { id: report.id },
       {
-        onSuccess: () => {
-          toast(`${shortId(report.id)} · report removed`)
-          onRemoved(report.id)
-        },
+        onSuccess: () => toast(`${shortId(report.id)} · report removed`),
       },
     )
   }
@@ -1317,27 +1314,31 @@ export function ReportsPage({ focusId }: SectionPageProps) {
   }
   const listCount = serverCounts ? (serverCounts[FILTER_COUNT_KEY[filter]] ?? 0) : items.length
 
-  // Row 0 is picked once, on the first load. After an action clears the selection the list is still the
-  // pre-action page, so picking again would put another report's live buttons under the cursor.
-  const autoPicked = React.useRef(false)
+  // Only the first load picks a report on the operator's behalf, and a deep-linked report is never
+  // replaced. A pick that a filter or search leaves out stays open, pinned above the list and read by
+  // id; a pick that drops out of the same list after a refetch (a verdict under the Needs verification
+  // chip, a removal) clears, so the pane never jumps to another report's live buttons. Decided only on
+  // data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
   React.useEffect(() => {
-    if (selId !== null) autoPicked.current = true
-    else if (!autoPicked.current && items.length) {
-      autoPicked.current = true
-      setSelId(items[0]!.id)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
+      return
     }
-  }, [items, selId])
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   const selInList = selId !== null && items.some((x) => x.id === selId)
   const pinnedQuery = useReport(selInList ? null : selId)
   const pinned = selInList ? null : (pinnedQuery.data ?? null)
-
-  const onRemoved = (id: string) => {
-    setSelId((cur) => (cur === id ? null : cur))
-  }
 
   return (
     <>
@@ -1429,7 +1430,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <ReportDetail key={selId} reportId={selId} onRemoved={onRemoved} />
+            <ReportDetail key={selId} reportId={selId} />
           ) : (
             <EmptyState
               title="No report selected"

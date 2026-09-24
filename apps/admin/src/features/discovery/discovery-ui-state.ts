@@ -36,6 +36,6 @@ export function pickSelected<T extends { geoid: string }>(
   selId: string | null,
   lastSeen: T | null,
 ): T | null {
-  if (selId === null) return items[0] ?? null
+  if (selId === null) return null
   return items.find((x) => x.geoid === selId) ?? (lastSeen?.geoid === selId ? lastSeen : null)
 }

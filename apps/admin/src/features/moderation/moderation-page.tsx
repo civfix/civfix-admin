@@ -149,7 +149,7 @@ function signalKey(signals: readonly ModerationSignal[], index: number): string 
   return `${label}#${earlier}`
 }
 
-function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: (id: string) => void }) {
+function ModerationDetail({ itemId }: { itemId: string }) {
   const q = useModerationItem(itemId)
   const toast = useToast()
   const nav = useNav()
@@ -196,7 +196,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       {
         onSuccess: () => {
           toast(`${item.flag} · ${isUserReport ? "kept" : "approved"}`)
-          onResolved(item.id)
         },
       },
     )
@@ -220,7 +219,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       {
         onSuccess: () => {
           toast(`${item.flag} · removed`)
-          onResolved(item.id)
         },
       },
     )
@@ -237,7 +235,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       {
         onSuccess: () => {
           toast(`${item.flag} · held for review`)
-          onResolved(item.id)
         },
       },
     )
@@ -254,7 +251,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       {
         onSuccess: () => {
           toast(`${item.flag} · appeal ${decision === "uphold" ? "upheld" : "overturned"}`)
-          onResolved(item.id)
         },
       },
     )
@@ -549,26 +545,22 @@ function GovClaimsSection() {
     [listQuery.data],
   )
 
-  const reconciledFor = React.useRef(listKey)
-  const keepEmpty = React.useRef(false)
+  // Only the first load picks a claim on the operator's behalf. A pick that a filter or search leaves
+  // out stays open (the detail reads it by id); a pick that drops out of the same list after a refetch
+  // (a decision under the Pending chip) clears, so the pane never jumps to another claim's live Approve
+  // and Reject buttons. Decided only on data fetched for the current params.
+  const [autoPick, setAutoPick] = React.useState(true)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!items.length) return
-    const listChanged = reconciledFor.current !== listKey
-    reconciledFor.current = listKey
-    if (listChanged) keepEmpty.current = false
-    if (!selId) {
-      if (!keepEmpty.current) setSelId(items[0]!.id)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
       return
     }
-    if (listChanged && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
-  }, [items, selId, listKey])
-
-  // Until the refetch lands the list still shows the decided claim, so picking from it would put live
-  // Approve and Reject buttons on a claim the operator never chose.
-  const onDecided = (id: string) => {
-    keepEmpty.current = true
-    setSelId((cur) => (cur === id ? null : cur))
-  }
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   return (
     <>
@@ -642,7 +634,7 @@ function GovClaimsSection() {
 
         <section className="card md-detail-card">
           {selId ? (
-            <GovClaimDetail key={selId} claimId={selId} onDecided={onDecided} />
+            <GovClaimDetail key={selId} claimId={selId} />
           ) : (
             <EmptyState
               title="No claim selected"
@@ -677,30 +669,22 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
-  // A deep-linked item stays selected even when it is not on the loaded page; only a new filter or
-  // search replaces a selection that is missing from the list.
-  const reconciledFor = React.useRef(listKey)
-  const keepEmpty = React.useRef(false)
+  // Only the first load picks an item on the operator's behalf, and a deep-linked item is never
+  // replaced. A pick that a filter or search leaves out stays open (the detail reads it by id); a pick
+  // that drops out of the same list after a refetch (a decision resolves it) clears, so the pane never
+  // jumps to another item's live decision buttons. Decided only on data fetched for the current params.
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!items.length) return
-    const listChanged = reconciledFor.current !== listKey
-    reconciledFor.current = listKey
-    if (listChanged) keepEmpty.current = false
-    if (!selId) {
-      if (!focusId && !keepEmpty.current) setSelId(items[0]!.id)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
       return
     }
-    if (listChanged && selId !== focusId && !items.some((x) => x.id === selId)) {
-      setSelId(items[0]!.id)
-    }
-  }, [items, selId, focusId, listKey])
-
-  // Until the refetch lands the list still shows the resolved item, so picking from it would put live
-  // decision buttons on that item or on one the operator never chose.
-  const onResolved = (id: string) => {
-    keepEmpty.current = true
-    setSelId((cur) => (cur === id ? null : cur))
-  }
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   return (
     <>
@@ -778,7 +762,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <ModerationDetail key={selId} itemId={selId} onResolved={onResolved} />
+            <ModerationDetail key={selId} itemId={selId} />
           ) : (
             <EmptyState
               title="No item selected"

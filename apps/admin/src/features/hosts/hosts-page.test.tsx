@@ -360,6 +360,35 @@ describe("HostsPage detail pane", () => {
     expect(within(detail).queryByRole("button", { name: "Suspend messaging" })).not.toBeInTheDocument()
   })
 
+  it("clears a deep-linked host too once a suspend drops it from the list", async () => {
+    let suspended = false
+    apiMock.adminListHosts.mockImplementation(async () => page(suspended ? [cy] : [ada, cy]))
+    apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))
+    apiMock.adminSetHostMessagingSuspended.mockImplementation(async () => {
+      suspended = true
+      return {}
+    })
+    renderWithQuery(
+      <>
+        <HostsPage focusId={ada.host.id} />
+        <DialogHost />
+      </>,
+    )
+    expect(
+      await within(detailSection()).findByRole("heading", { name: "Ada Lovelace", level: 2 }),
+    ).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Suspend messaging" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Spamming attendees")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Suspend messaging" }))
+
+    await waitFor(() => expect(within(listSection()).queryByText("Ada Lovelace")).not.toBeInTheDocument())
+    const detail = detailSection()
+    expect(await within(detail).findByText("No host selected")).toBeInTheDocument()
+    expect(within(detail).queryByText("That host is not in this window")).not.toBeInTheDocument()
+  })
+
   it("suspends messaging with the typed reason", async () => {
     apiMock.adminListHosts.mockResolvedValue(page([ada]))
     apiMock.adminListBroadcasts.mockResolvedValue(broadcasts([]))

@@ -39,11 +39,13 @@ import {
   type JurisdictionSort,
 } from "@/features/discovery/discovery-ui-state"
 import {
+  afterContactsSaved,
   contactsPayload,
   jurisdictionFields,
   noteAndHandleFields,
   parseHandle,
-  partialSaveMessage,
+  withContactEdit,
+  type ContactEdits,
 } from "@/features/discovery/discovery-payloads"
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
 import { useForwardTemplateDefault } from "@/features/mail/use-mail"
@@ -277,14 +279,14 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   const saveContacts = useSaveJurisdictionContacts()
   const geometry = useJurisdictionGeometry(dto.geoid)
 
-  const [seedContacts] = React.useState<Record<string, string>>(() => {
+  const [contacts, setContacts] = React.useState<Record<string, string>>(() => {
     const seed: Record<string, string> = {}
     dto.contacts.forEach((c: DiscoveryContact) => {
       if (c.email) seed[c.category] = c.email
     })
     return seed
   })
-  const [contacts, setContacts] = React.useState<Record<string, string>>(seedContacts)
+  const [contactEdits, setContactEdits] = React.useState<ContactEdits>({})
   const [opNote, setOpNote] = React.useState("")
   const [defaultEmail, setDefaultEmail] = React.useState(dto.email ?? "")
   const [formUrl, setFormUrl] = React.useState(dto.form ?? "")
@@ -301,7 +303,12 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
       : { subject: DEFAULT_FORWARD_SUBJECT_TEMPLATE, body: DEFAULT_FORWARD_BODY_TEMPLATE }
 
   const counts = dto.perCategoryCounts
-  const setCat = (id: string, email: string) => setContacts((prev) => ({ ...prev, [id]: email }))
+  const setCat = (id: string, email: string) => {
+    setContacts((prev) => ({ ...prev, [id]: email }))
+    setContactEdits((prev) => withContactEdit(prev, id))
+  }
+  const contactsSaved = (sent: ContactEdits) =>
+    setContactEdits((prev) => afterContactsSaved(prev, sent))
   const hasDefault = defaultEmail.trim() !== ""
   const missingContacts = REPORT_TYPES.filter(
     (c) => routingCount(counts, c.id) > 0 && !contacts[c.id] && !hasDefault,
@@ -333,7 +340,8 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
   }
 
   const onSaveDraft = () => {
-    const contactFields = contactsPayload(seedContacts, contacts)
+    const sentEdits = contactEdits
+    const contactFields = contactsPayload(sentEdits, contacts)
     const jf = jurisdictionFields(defaultEmail, formUrl)
     const extras = noteAndHandleFields(opNote, parsedHandle.value, dto.handle)
     if (
@@ -346,7 +354,12 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     }
     patch.mutate(
       { geoid: dto.geoid, contacts: contactFields, ...jf, ...extras },
-      { onSuccess: () => toast(`Draft saved for ${dto.org}`) },
+      {
+        onSuccess: () => {
+          contactsSaved(sentEdits)
+          toast(`Draft saved for ${dto.org}`)
+        },
+      },
     )
   }
 
@@ -354,21 +367,22 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
     if (!canSave) return
     const extras = noteAndHandleFields(opNote, parsedHandle.value, dto.handle)
     const savesExtrasFirst = Object.keys(extras).length > 0
+    const sentEdits = contactEdits
     const saveAndRoute = () =>
       saveContacts.mutate(
         {
-          geoid: dto.geoid,
-          contacts: contactsPayload(seedContacts, contacts),
-          ...jurisdictionFields(defaultEmail, formUrl),
+          request: {
+            geoid: dto.geoid,
+            contacts: contactsPayload(sentEdits, contacts),
+            ...jurisdictionFields(defaultEmail, formUrl),
+          },
+          ...(savesExtrasFirst ? { savedFirst: extras } : {}),
         },
         {
-          onSuccess: () =>
-            toast(`Contacts saved for ${dto.org} · discovery task closed`),
-          onError: (err) =>
-            toast(
-              savesExtrasFirst ? partialSaveMessage(extras, errorMessage(err)) : errorMessage(err),
-              "error",
-            ),
+          onSuccess: () => {
+            contactsSaved(sentEdits)
+            toast(`Contacts saved for ${dto.org} · discovery task closed`)
+          },
         },
       )
     if (!savesExtrasFirst) {
@@ -822,9 +836,24 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (selected && selected !== lastSeen) setLastSeen(selected)
   }, [selected, lastSeen])
+  // Only the first load picks a jurisdiction on the operator's behalf, and a deep-linked one is never
+  // replaced. A pick that a filter or search leaves out stays open as it was last listed; a pick that
+  // drops out of the same list after a refetch (a Save & route under Needs mapping) clears, so the pane
+  // never shows a stale row or jumps to another jurisdiction's save buttons. Decided only on data
+  // fetched for the current params.
+  const listKey = JSON.stringify([serverFilter, serverSort, layer, debouncedQ])
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (selId === null && items[0]) setSelId(items[0].geoid)
-  }, [selId, items])
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items[0]) setSelId(items[0].geoid)
+      return
+    }
+    setAutoPick(false)
+    if (items.some((x) => x.geoid === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
   const selectionNotListed =
     selId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
 

@@ -16,7 +16,9 @@ import type {
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 import { queryKeys } from "@/lib/query"
+import { partialSaveMessage, type SavedExtras } from "@/features/discovery/discovery-payloads"
 
 /**
  * Data hooks for the Discovery / Jurisdictions section (enumeration 2.B). Reads use GET /admin/discovery
@@ -132,13 +134,22 @@ export function useSaveDiscoveryDraft() {
   })
 }
 
+export interface SaveContactsVariables {
+  request: SaveContactsRequest
+  /** The note / @handle a PATCH already saved just before this request, which a failure must mention. */
+  savedFirst?: SavedExtras
+}
+
 /** POST /admin/jurisdictions/:geoid/contacts - the core "Save contacts" action. */
 export function useSaveJurisdictionContacts() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: SaveContactsRequest) => api.saveJurisdictionContacts(input),
+    mutationFn: ({ request }: SaveContactsVariables) => api.saveJurisdictionContacts(request),
     onSuccess: () => invalidateDiscovery(qc),
-    meta: { errorToast: false },
+    meta: {
+      errorMessage: (error: unknown, { savedFirst }: SaveContactsVariables) =>
+        savedFirst ? partialSaveMessage(savedFirst, errorMessage(error)) : errorMessage(error),
+    },
   })
 }
 

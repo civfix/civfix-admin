@@ -416,6 +416,29 @@ describe("MailPage outreach", () => {
     expect(apiMock.getMailThread).not.toHaveBeenCalledWith({ id: "t-2" })
   })
 
+  it("clears a thread that drops out of the list after a refetch, without opening another", async () => {
+    mockChrome()
+    let replied = false
+    apiMock.listMail.mockImplementation(async () =>
+      mailPage(replied ? [GRAFFITI] : [POTHOLE, GRAFFITI]),
+    )
+    mockThreads(POTHOLE, GRAFFITI)
+    apiMock.setMailStatus.mockImplementation(async () => {
+      replied = true
+      return { ok: true }
+    })
+    renderWithQuery(<MailPage focusId={null} />)
+    await within(detailCard()).findByText("Body of Pothole on 5th Ave")
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: /Mark replied/ }))
+
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Pothole on 5th Ave")).not.toBeInTheDocument(),
+    )
+    expect(await within(detailCard()).findByText("No message selected")).toBeInTheDocument()
+    expect(apiMock.getMailThread).not.toHaveBeenCalledWith({ id: "t-2" })
+  })
+
   it("selects a row from the keyboard and marks the selected row current", async () => {
     mockChrome()
     apiMock.listMail.mockResolvedValue(mailPage([POTHOLE, GRAFFITI]))

@@ -288,7 +288,7 @@ function messageItem(over: Partial<UserMessageItemDTO> & { id: string; text: str
 }
 
 describe("UsersPage selection", () => {
-  it("keeps the acted-on account open when the refetched list no longer holds it", async () => {
+  it("clears the acted-on account when the refetched list no longer holds it, without opening another", async () => {
     let suspended = false
     apiMock.listAdminUsers.mockImplementation(async () => page(suspended ? [BEN] : [ANA, BEN]))
     apiMock.getAdminUser.mockImplementation(async ({ id }: { id: string }) =>
@@ -311,12 +311,40 @@ describe("UsersPage selection", () => {
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }))
 
     await waitFor(() => expect(within(accountsList()).queryByText("Ana Ruiz")).not.toBeInTheDocument())
-    expect(await within(detailCard()).findByRole("button", { name: /Reactivate/ })).toBeInTheDocument()
-    expect(within(detailCard()).getByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
+    expect(await within(detailCard()).findByText("No user selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: "Ben Okafor" })).not.toBeInTheDocument()
+    expect(rowOf("Ben Okafor")).not.toHaveAttribute("aria-current")
   })
 
-  it("selects the first row of the new list when a filter drops the selected account", async () => {
+  it("keeps the acted-on account open while the refetched list still holds it", async () => {
+    let suspended = false
+    const ana = () => ({ ...ANA, status: suspended ? ("suspended" as const) : ("active" as const) })
+    apiMock.listAdminUsers.mockImplementation(async () => page([ana(), BEN]))
+    apiMock.getAdminUser.mockImplementation(async ({ id }: { id: string }) =>
+      id === ANA.id ? detail(ana()) : detail(BEN),
+    )
+    apiMock.getUserReports.mockResolvedValue(NO_REPORTS)
+    apiMock.setUserStatus.mockImplementation(async () => {
+      suspended = true
+      return {}
+    })
+    renderWithQuery(
+      <>
+        <UsersPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: /Suspend/ }))
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }))
+
+    expect(await within(detailCard()).findByRole("button", { name: /Reactivate/ })).toBeInTheDocument()
+    expect(within(detailCard()).getByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
+    expect(rowOf("Ana Ruiz")).toHaveAttribute("aria-current", "true")
+  })
+
+  it("keeps the selected account open when a filter drops it from the list", async () => {
     apiMock.listAdminUsers.mockImplementation(async (params: { filter?: string }) =>
       page(params.filter === "suspended" ? [BEN] : [ANA, BEN]),
     )
@@ -326,7 +354,9 @@ describe("UsersPage selection", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Suspended/ }))
 
-    expect(await within(detailCard()).findByRole("heading", { name: "Ben Okafor" })).toBeInTheDocument()
+    await waitFor(() => expect(within(accountsList()).queryByText("Ana Ruiz")).not.toBeInTheDocument())
+    expect(within(detailCard()).getByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
+    expect(rowOf("Ben Okafor")).not.toHaveAttribute("aria-current")
   })
 
   it("selects a row from the keyboard and marks the selected row as current", async () => {
@@ -385,7 +415,7 @@ describe("UsersPage account detail", () => {
     expect(within(detailCard()).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument()
   })
 
-  it("says the copy failed when the clipboard is unavailable", async () => {
+  it("says the copy failed, in the error tone, when the clipboard is unavailable", async () => {
     resetShellAfterTest()
     const original = Object.getOwnPropertyDescriptor(window.navigator, "clipboard")
     Object.defineProperty(window.navigator, "clipboard", { configurable: true, get: () => undefined })
@@ -399,7 +429,12 @@ describe("UsersPage account detail", () => {
     await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
 
     fireEvent.click(within(detailCard()).getByRole("button", { name: /u-ana/ }))
-    await waitFor(() => expect(useUiStore.getState().toast?.text).toBe("Couldn't copy. Select the ID manually."))
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "Couldn't copy. Select the ID manually.",
+        tone: "error",
+      }),
+    )
   })
 
   it("exposes the activity tabs as a tablist that arrow keys move through", async () => {

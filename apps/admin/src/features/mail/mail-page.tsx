@@ -577,17 +577,34 @@ export function MailPage({ focusId }: SectionPageProps) {
     const listed = selId ? feedByKey.get(selId) : undefined
     if (listed) setSelItem(listed)
   }, [selId, feedByKey])
-  // A selection that leaves the list (a deep link past the first page, a filter change, an action
-  // that drops the row) stays open through its by-id reader rather than jumping to another row.
+  // Only a fresh load of a folder picks a message on the operator's behalf, and a deep-linked message
+  // is never replaced. A pick that a filter or search leaves out stays open through its by-id reader; a
+  // pick that drops out of the same list after a refetch clears, so the pane never jumps to another
+  // message. Decided only on data fetched for the current folder and filters.
+  const listKey = JSON.stringify([folder, box, q ?? null])
+  const [autoPick, setAutoPick] = React.useState(initial.id === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (selId === null && activeIds.length) setSelId(activeIds[0]!)
-  }, [selId, activeIds])
+    if (!activeListQuery.isSuccess || activeListQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && activeIds.length) setSelId(activeIds[0]!)
+      return
+    }
+    setAutoPick(false)
+    if (activeIds.includes(selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [activeListQuery.isSuccess, activeListQuery.isFetching, activeIds, selId, listKey, autoPick])
 
-  const switchFolder = (next: Folder) => {
-    if (next === folder) return
+  const openFresh = (next: Folder) => {
     setFolder(next)
     setBox("all")
     setSelId(null)
+    setAutoPick(true)
+  }
+
+  const switchFolder = (next: Folder) => {
+    if (next === folder) return
+    openFresh(next)
     setQuery("")
     setDebouncedQuery("")
   }
@@ -609,9 +626,7 @@ export function MailPage({ focusId }: SectionPageProps) {
     compose.mutate(input, {
       onSuccess: () => {
         setComposeOpen(false)
-        setFolder("outreach")
-        setBox("all")
-        setSelId(null)
+        openFresh("outreach")
         toast(`Message sent to ${input.to}`)
       },
     })

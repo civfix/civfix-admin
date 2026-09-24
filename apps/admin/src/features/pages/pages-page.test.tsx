@@ -13,6 +13,7 @@ import type * as ApiModule from "@/lib/api"
 import { useUiStore } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
 import { startFakeTimersWithUser } from "@/test/fake-timers"
+import { queueRowOf } from "@/test/panes"
 import { renderWithQuery } from "@/test/render"
 import { PagesPage } from "@/features/pages/pages-page"
 
@@ -360,27 +361,26 @@ describe("PagesPage moderation", () => {
     expect(screen.queryByRole("button", { name: "Unpublish" })).not.toBeInTheDocument()
   })
 
-  it("does not fetch a manually picked page on its own after a filter drops it from the list", async () => {
+  it("keeps a manually picked page open, read by id, after a filter drops it from the list", async () => {
     apiMock.adminListEventPages.mockImplementation(async (params: { status?: string }) =>
       listPage(params.status === "draft" ? [lakePage] : [echoPage, riverPage]),
     )
     apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
-      Promise.resolve(eventPage(id)),
+      Promise.resolve(
+        eventPage(id, id === RIVER_ID ? { slug: "river-day", seo: { title: "LA River Day", noindex: false } } : {}),
+      ),
     )
     renderWithQuery(<PagesPage focusId={null} />)
 
     await userEvent.click(await within(listPane()).findByText("LA River Day"))
     await screen.findByRole("heading", { level: 2, name: "LA River Day" })
-    await waitFor(() => expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: RIVER_ID }))
-    const riverReads = () =>
-      apiMock.adminGetEventPage.mock.calls.filter(([arg]) => (arg as { id: string }).id === RIVER_ID)
-        .length
-    const readsBefore = riverReads()
 
     await userEvent.click(screen.getByRole("button", { name: "Draft" }))
-    expect(await within(listPane()).findByText("Silver Lake Sweep")).toBeInTheDocument()
-    expect(riverReads()).toBe(readsBefore)
-    expect(await screen.findByText("No page selected")).toBeInTheDocument()
+    const lakeRow = await within(listPane()).findByText("Silver Lake Sweep")
+
+    expect(await screen.findByRole("heading", { level: 2, name: "LA River Day" })).toBeInTheDocument()
+    expect(queueRowOf(lakeRow)).not.toHaveAttribute("aria-current")
+    expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: RIVER_ID })
   })
 })
 

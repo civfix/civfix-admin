@@ -459,6 +459,28 @@ describe("ReportsPage correctness and accessibility", () => {
     expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
   })
 
+  it("clears a report that a verdict drops from the Needs verification list, without opening another", async () => {
+    let rejected = false
+    apiMock.listAdminReports.mockImplementation(async () => page(rejected ? [TAG] : [COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    apiMock.setReportVerdict.mockImplementation(async () => {
+      rejected = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+
+    await waitFor(() =>
+      expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument(),
+    )
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
+  })
+
   it("labels a selection that left the filter as selected, not linked", async () => {
     apiMock.listAdminReports.mockImplementation(async (params: { filter?: string }) =>
       params.filter === "completed" ? page([COUCH]) : page([COUCH, TAG]),

@@ -357,7 +357,7 @@ describe("DiscoveryPage", () => {
     expect(laRow).not.toHaveAttribute("aria-current")
   })
 
-  it("keeps a routed jurisdiction open when saving it drops it from the Needs mapping list", async () => {
+  it("clears a jurisdiction that saving drops from the Needs mapping list, without opening another", async () => {
     mockDetailQueries()
     apiMock.listJurisdictions.mockResolvedValue(page([LA, PASADENA]))
     apiMock.saveJurisdictionContacts.mockImplementation(async () => {
@@ -373,7 +373,8 @@ describe("DiscoveryPage", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: /^Los Angeles/ })).not.toBeInTheDocument(),
     )
-    expect(screen.getByRole("heading", { level: 2, name: "Los Angeles" })).toBeInTheDocument()
+    expect(await screen.findByText("No jurisdiction selected")).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Pasadena/ })).not.toHaveAttribute("aria-current")
   })
 
@@ -448,6 +449,34 @@ describe("DiscoveryPage saving", () => {
     expect(
       screen.getByText(/Clearing the default email or form URL here does not remove the saved one\./),
     ).toBeInTheDocument()
+  })
+
+  it("sends null for a contact saved earlier in this visit and then emptied", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA]))
+    apiMock.patchJurisdiction.mockResolvedValue({ ok: true })
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+    const trash = screen.getByRole("textbox", { name: `${categoryLabel("trash")} contact email` })
+
+    await userEvent.type(trash, "wrong@la.gov")
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
+    await waitFor(() =>
+      expect(apiMock.patchJurisdiction).toHaveBeenLastCalledWith({
+        geoid: "0644000",
+        contacts: { trash: "wrong@la.gov" },
+      }),
+    )
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save draft" })).toBeEnabled())
+
+    await userEvent.clear(trash)
+    await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
+
+    await waitFor(() => expect(apiMock.patchJurisdiction).toHaveBeenCalledTimes(2))
+    expect(apiMock.patchJurisdiction).toHaveBeenLastCalledWith({
+      geoid: "0644000",
+      contacts: { trash: null },
+    })
   })
 
   it("normalizes the @handle the way the server does before comparing it", async () => {
@@ -533,6 +562,40 @@ describe("DiscoveryPage saving", () => {
 
     await waitFor(() => expect(toasts).toHaveBeenCalled())
     expect(apiMock.patchJurisdiction).toHaveBeenCalledWith({ geoid: "0644000", notes: "Called the clerk" })
+    expect(toasts).toHaveBeenCalledTimes(1)
+    expect(toasts).toHaveBeenCalledWith(
+      "The note was saved, but the contacts were not: Contacts service down",
+      "error",
+    )
+  })
+
+  it("still says what was saved when Save & route fails after the operator moved to another jurisdiction", async () => {
+    const toasts = spyToasts()
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(page([LA, PASADENA]))
+    apiMock.patchJurisdiction.mockResolvedValue({ ok: true })
+    let rejectSave: (error: Error) => void = () => {}
+    apiMock.saveJurisdictionContacts.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectSave = reject
+      }),
+    )
+    renderWithQuery(<DiscoveryPage focusId={null} />, makeQueryClient())
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Note for the next operator" }),
+      "Called the clerk",
+    )
+    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
+    await waitFor(() => expect(apiMock.saveJurisdictionContacts).toHaveBeenCalled())
+
+    await userEvent.click(screen.getByRole("button", { name: /^Pasadena/ }))
+    await screen.findByRole("heading", { level: 2, name: "Pasadena" })
+    rejectSave(new Error("Contacts service down"))
+
+    await waitFor(() => expect(toasts).toHaveBeenCalled())
     expect(toasts).toHaveBeenCalledTimes(1)
     expect(toasts).toHaveBeenCalledWith(
       "The note was saved, but the contacts were not: Contacts service down",

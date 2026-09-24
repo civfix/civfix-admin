@@ -457,7 +457,7 @@ function StoreDrivenModerationPage() {
 }
 
 describe("ModerationPage selection after a decision", () => {
-  it("clears the selection after Keep instead of opening another item's actions", async () => {
+  it("clears the selection once Keep drops the item from the queue, never opening another item's actions", async () => {
     resetShellAfterTest()
     const refetch = deferred<ModerationListResponse>()
     apiMock.listModeration
@@ -477,15 +477,85 @@ describe("ModerationPage selection after a decision", () => {
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }))
 
     await waitFor(() => expect(apiMock.approveModeration).toHaveBeenCalledWith({ id: "mod-1" }))
-    await waitFor(() => expect(within(detailCard()).getByText("No item selected")).toBeInTheDocument())
-    expect(within(detailCard()).queryByRole("button", { name: "Keep" })).not.toBeInTheDocument()
+    expect(within(detailCard()).getByRole("heading", { name: "MOD-101" })).toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("button", { name: "Overturn" })).not.toBeInTheDocument()
 
     await act(async () => {
       refetch.resolve(modPage([APPEAL]))
     })
     await waitFor(() => expect(within(listCard("Queue")).queryByText("MOD-101")).not.toBeInTheDocument())
-    expect(within(detailCard()).getByText("No item selected")).toBeInTheDocument()
+    expect(await within(detailCard()).findByText("No item selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("button", { name: "Keep" })).not.toBeInTheDocument()
     expect(within(detailCard()).queryByRole("button", { name: "Overturn" })).not.toBeInTheDocument()
+  })
+
+  it("keeps a picked queue item open when a filter drops it from the list", async () => {
+    apiMock.listModeration.mockImplementation(async (params: { filter?: string }) =>
+      modPage(params.filter === "appeal" ? [APPEAL] : [COMMENT_REPORT, APPEAL]),
+    )
+    mockModDetails(COMMENT_REPORT, APPEAL)
+    renderWithQuery(<ModerationPage focusId={null} />)
+    await within(detailCard()).findByRole("heading", { name: "MOD-101" })
+
+    await userEvent.click(screen.getByRole("button", { name: "Appeal" }))
+
+    await waitFor(() => expect(within(listCard("Queue")).queryByText("MOD-101")).not.toBeInTheDocument())
+    expect(within(detailCard()).getByRole("heading", { name: "MOD-101" })).toBeInTheDocument()
+    expect(rowIn(listCard("Queue"), "MOD-202")).not.toHaveAttribute("aria-current")
+  })
+
+  it("keeps a picked claim open when a filter drops it from the list", async () => {
+    apiMock.listModeration.mockResolvedValue(modPage([]))
+    apiMock.listGovClaims.mockImplementation(async (params: { filter?: string }) =>
+      claimPage(params.filter === "approved" ? [NGUYEN] : [RIVERA, NGUYEN]),
+    )
+    mockClaimDetails(RIVERA, NGUYEN)
+    renderWithQuery(<ModerationPage focusId={null} />)
+    await openGovClaims()
+    await within(detailCard()).findByRole("heading", { name: "Maya Rivera" })
+
+    await userEvent.click(screen.getByRole("button", { name: "Approved" }))
+
+    await waitFor(() =>
+      expect(within(listCard("Gov claims")).queryByText("Maya Rivera")).not.toBeInTheDocument(),
+    )
+    expect(within(detailCard()).getByRole("heading", { name: "Maya Rivera" })).toBeInTheDocument()
+    expect(rowIn(listCard("Gov claims"), "Tom Nguyen")).not.toHaveAttribute("aria-current")
+  })
+
+  it("keeps a decided claim open while the All list still holds it", async () => {
+    let rejected = false
+    const rivera = () => ({ ...RIVERA, status: rejected ? ("rejected" as const) : RIVERA.status })
+    apiMock.listModeration.mockResolvedValue(modPage([]))
+    apiMock.listGovClaims.mockImplementation(async () => claimPage([rivera(), NGUYEN]))
+    apiMock.getGovClaim.mockImplementation(async ({ id }: { id: string }) =>
+      id === "gc-1" ? rivera() : NGUYEN,
+    )
+    apiMock.rejectGovClaim.mockImplementation(async () => {
+      rejected = true
+      return {}
+    })
+    renderWithQuery(
+      <>
+        <ModerationPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await openGovClaims()
+    await userEvent.click(screen.getByRole("button", { name: "All" }))
+    await waitFor(() => expect(apiMock.listGovClaims).toHaveBeenLastCalledWith({}))
+    await within(detailCard()).findByRole("heading", { name: "Maya Rivera" })
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: "Reject" }))
+    const dialog = await screen.findByRole("dialog")
+    await userEvent.type(within(dialog).getByRole("textbox"), "Not in the directory")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Reject claim" }))
+
+    await waitFor(() =>
+      expect(within(detailCard()).getByRole("button", { name: "Reject" })).toBeDisabled(),
+    )
+    expect(within(detailCard()).getByRole("heading", { name: "Maya Rivera" })).toBeInTheDocument()
+    expect(rowIn(listCard("Gov claims"), "Maya Rivera")).toHaveAttribute("aria-current", "true")
   })
 
   it("words Keep the same way in the button, the dialog and the toast", async () => {
@@ -525,7 +595,7 @@ describe("ModerationPage selection after a decision", () => {
     ).toBeInTheDocument()
   })
 
-  it("clears the selection after a gov claim decision instead of opening another claim", async () => {
+  it("clears the selection once a gov claim decision drops the claim from the list, never opening another", async () => {
     const refetch = deferred<GovClaimListResponse>()
     const SECOND = claim({ id: "gc-3", name: "Lee Park" })
     apiMock.listModeration.mockResolvedValue(modPage([]))
@@ -548,14 +618,16 @@ describe("ModerationPage selection after a decision", () => {
     await userEvent.type(within(dialog).getByRole("textbox"), "Not in the directory")
     await userEvent.click(within(dialog).getByRole("button", { name: "Reject claim" }))
 
-    await waitFor(() => expect(within(detailCard()).getByText("No claim selected")).toBeInTheDocument())
+    await waitFor(() => expect(apiMock.rejectGovClaim).toHaveBeenCalled())
+    expect(within(detailCard()).queryByRole("heading", { name: "Lee Park" })).not.toBeInTheDocument()
     await act(async () => {
       refetch.resolve(claimPage([SECOND]))
     })
     await waitFor(() =>
       expect(within(listCard("Gov claims")).queryByText("Maya Rivera")).not.toBeInTheDocument(),
     )
-    expect(within(detailCard()).getByText("No claim selected")).toBeInTheDocument()
+    expect(await within(detailCard()).findByText("No claim selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("heading", { name: "Lee Park" })).not.toBeInTheDocument()
   })
 
   it("drops the deep link when the operator switches sections, so Queue opens its first item again", async () => {
