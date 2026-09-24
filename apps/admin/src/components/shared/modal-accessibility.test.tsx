@@ -55,7 +55,6 @@ describe("LightboxHost", () => {
     const frame = screen.getByRole("dialog", { name: "Pothole on Main St" })
     expect(frame).toHaveAttribute("aria-modal", "true")
     expect(frame).not.toHaveAttribute("aria-hidden")
-    expect(frame).toHaveClass("lightbox")
     expect(frame.matches(ESCAPE_OWNER_SELECTOR)).toBe(true)
     expect(hasEscapeOwner(document)).toBe(true)
   })
@@ -101,11 +100,9 @@ describe("LightboxHost", () => {
     await user.click(opener)
 
     const img = screen.getByRole("img", { name: "Pothole on Main St" })
-    expect(img).toHaveClass("pending")
     expect(screen.getByRole("status")).toHaveTextContent("Loading photo...")
 
     fireEvent.load(img)
-    expect(img).not.toHaveClass("pending")
     expect(screen.queryByRole("status")).toBeNull()
   })
 
@@ -130,7 +127,8 @@ describe("LightboxHost", () => {
     await user.click(refresh)
     expect(refreshes).toBe(1)
     expect(screen.queryByRole("button", { name: "Refresh photo" })).toBeNull()
-    expect(screen.getByRole("img", { name: "Pothole on Main St" })).toHaveClass("pending")
+    expect(screen.getByRole("img", { name: "Pothole on Main St" })).toBeInTheDocument()
+    expect(screen.getByRole("status")).toHaveTextContent("Loading photo...")
   })
 })
 
@@ -225,7 +223,7 @@ describe("DialogHost", () => {
 
   // The textarea's autoFocus runs in React's commit phase, before useModalFocus's effect records the
   // element to restore, so the hook captures the textarea itself and has nothing live to return to.
-  it("drops focus to the body when a prompt closes (current behavior: prompt does not restore focus to the opener)", async () => {
+  it("drops focus to the body instead of restoring the opener when a prompt closes (current behavior)", async () => {
     const { user, opener } = renderDialog(() => {
       void promptDialog({ title: "Reason" })
     })

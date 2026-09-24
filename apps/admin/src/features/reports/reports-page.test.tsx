@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { detailCard } from "@/test/panes"
 import { ReportsPage } from "@/features/reports/reports-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -22,7 +23,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
 vi.mock("@/components/map/leaflet-map", () => ({
   LeafletMap: () => <div data-testid="leaflet-map" />,
 }))
-
 
 function listItem(over: Partial<AdminReportListItemDTO> & { id: string; title: string }) {
   return {
@@ -98,10 +98,6 @@ function mockDetails(...items: AdminReportListItemDTO[]) {
 
 function listCard() {
   return screen.getByRole("heading", { level: 3, name: "Reports" }).closest("section") as HTMLElement
-}
-
-function detailCard() {
-  return document.querySelector(".md-detail-card") as HTMLElement
 }
 
 describe("ReportsPage", () => {

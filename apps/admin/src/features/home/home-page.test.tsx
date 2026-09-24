@@ -20,7 +20,7 @@ import { HomePage } from "@/features/home/home-page"
 // the environment before the page module loads.
 const COMMIT = vi.hoisted(() => {
   const sha = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
-  process.env.NEXT_PUBLIC_COMMIT_SHA = sha
+  vi.stubEnv("NEXT_PUBLIC_COMMIT_SHA", sha)
   return sha
 })
 
@@ -248,6 +248,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllEnvs()
 })
 
 describe("HomePage", () => {

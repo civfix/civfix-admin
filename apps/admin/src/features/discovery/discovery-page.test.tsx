@@ -23,7 +23,6 @@ vi.mock("@/components/map/boundary-map", () => ({
   BoundaryMap: () => <div data-testid="boundary-map" />,
 }))
 
-
 const DAY_MS = 24 * 60 * 60 * 1000
 
 function jurisdiction(overrides: Partial<JurisdictionDirectoryDTO> = {}): JurisdictionDirectoryDTO {
@@ -276,7 +275,6 @@ describe("DiscoveryPage", () => {
     await waitFor(() =>
       expect(listCalls()).toContainEqual({ filter: "all", sort: "reports", layer: "county", limit: 50 }),
     )
-    // The needs-mapping chip count follows the type filter too.
     await waitFor(() =>
       expect(listCalls()).toContainEqual({
         filter: "needs_mapping",
@@ -318,7 +316,7 @@ describe("DiscoveryPage", () => {
     expect(listCalls()[0]).toEqual({ filter: "needs_mapping", sort: "oldest", limit: 50 })
   })
 
-  it("holds an empty detail pane when the focused jurisdiction is not in the loaded page", async () => {
+  it("holds an empty detail pane when the focused jurisdiction is not in the loaded page (current behavior)", async () => {
     mockDetailQueries()
     apiMock.listJurisdictions.mockResolvedValue(page([LA]))
     renderWithQuery(<DiscoveryPage focusId="9999999" />)

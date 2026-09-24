@@ -28,6 +28,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 afterEach(() => {
   useUiStore.setState({ toast: null })
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 const ANALYTICS_METHODS = [
@@ -447,8 +448,15 @@ describe("AnalyticsPage", () => {
       blobs.push(blob)
       return "blob:analytics"
     })
-    Object.defineProperty(URL, "createObjectURL", { configurable: true, writable: true, value: createObjectURL })
-    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, writable: true, value: vi.fn() })
+    const revokeObjectURL = vi.fn()
+    // jsdom implements neither static, so there is nothing on the real URL for vi.spyOn to wrap.
+    vi.stubGlobal(
+      "URL",
+      class extends URL {
+        static override createObjectURL = createObjectURL
+        static override revokeObjectURL = revokeObjectURL
+      },
+    )
     const downloads: string[] = []
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       downloads.push(this.download)
@@ -481,5 +489,6 @@ describe("AnalyticsPage", () => {
       ].join("\n"),
     )
     expect(await screen.findByText("Analytics exported · civfix-analytics.csv")).toBeInTheDocument()
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith("blob:analytics"))
   })
 })

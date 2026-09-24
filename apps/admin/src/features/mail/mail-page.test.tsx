@@ -15,13 +15,13 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { detailCard, listCard } from "@/test/panes"
 import { MailPage } from "@/features/mail/mail-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
-
 
 const TS = "2026-09-20T15:00:00.000Z"
 
@@ -145,14 +145,6 @@ function mockChrome({ inbox = inboxPage([]) }: { inbox?: InboxListResponse } = {
     updatedAt: null,
   } satisfies GetForwardTemplateDefaultResponse)
   apiMock.listInbox.mockResolvedValue(inbox)
-}
-
-function listCard() {
-  return document.querySelector(".md-list") as HTMLElement
-}
-
-function detailCard() {
-  return document.querySelector(".md-detail-card") as HTMLElement
 }
 
 describe("MailPage outreach", () => {
@@ -312,7 +304,7 @@ describe("MailPage outreach", () => {
     expect(within(detailCard()).queryByText("Body of Pothole on 5th Ave")).not.toBeInTheDocument()
   })
 
-  it("replaces a deep-linked thread focusId that is not on the first page with the first row (auto-select override)", async () => {
+  it("replaces a deep-linked thread focusId that is not on the first page with the first row (current behavior)", async () => {
     const OLD = thread({ id: "t-9", subject: "Old thread" })
     mockChrome()
     apiMock.listMail.mockResolvedValue(mailPage([POTHOLE, GRAFFITI]))

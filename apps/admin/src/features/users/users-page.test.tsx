@@ -11,13 +11,13 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { detailCard } from "@/test/panes"
 import { UsersPage } from "@/features/users/users-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
-
 
 function listItem(over: Partial<AdminUserListItemDTO> & { id: string; name: string }) {
   return {
@@ -89,10 +89,6 @@ function mockDetails(...users: AdminUserListItemDTO[]) {
 
 function accountsList() {
   return screen.getByRole("heading", { name: "Accounts" }).closest("section") as HTMLElement
-}
-
-function detailCard() {
-  return document.querySelector(".md-detail-card") as HTMLElement
 }
 
 describe("UsersPage", () => {
@@ -234,7 +230,7 @@ describe("UsersPage", () => {
     expect(within(detailCard()).queryByRole("heading", { name: "Ana Ruiz" })).not.toBeInTheDocument()
   })
 
-  it("replaces a deep-linked focusId that is not on the first page with the first row (auto-select override)", async () => {
+  it("replaces a deep-linked focusId that is not on the first page with the first row (current behavior)", async () => {
     const CARA = listItem({ id: "u-cara", name: "Cara Lind" })
     apiMock.listAdminUsers.mockResolvedValue(page([ANA, BEN]))
     mockDetails(ANA, BEN, CARA)

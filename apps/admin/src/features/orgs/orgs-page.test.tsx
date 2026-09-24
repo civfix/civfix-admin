@@ -11,13 +11,13 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { queueRowOf } from "@/test/panes"
 import { OrgsPage } from "@/features/orgs/orgs-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
-
 
 const OWNER = { id: "u-owner", name: "Rosa Park", handle: "@rosa", joined: "2025-01-01" }
 
@@ -125,14 +125,14 @@ describe("OrgsPage list states", () => {
     mockOrgDetails(RIVER, PARK)
     renderWithQuery(<OrgsPage focusId={null} />)
 
-    const riverRow = (await screen.findByText("/river-keepers")).closest(".qrow") as HTMLElement
+    const riverRow = queueRowOf(await screen.findByText("/river-keepers"))
     expect(riverRow).toHaveTextContent("River Keepers")
     expect(riverRow).toHaveTextContent("3 members")
     expect(riverRow).toHaveTextContent("1 event")
     expect(riverRow).toHaveTextContent("Rosa Park")
     expect(riverRow).toHaveTextContent("Verified")
 
-    const parkRow = screen.getByText("/park-friends").closest(".qrow") as HTMLElement
+    const parkRow = queueRowOf(screen.getByText("/park-friends"))
     expect(parkRow).toHaveTextContent("Park Friends")
     expect(parkRow).toHaveTextContent("1 member")
     expect(parkRow).toHaveTextContent("0 events")
@@ -315,7 +315,7 @@ describe("OrgsPage deep links and detail tabs", () => {
     expect(apiMock.adminGetOrg).toHaveBeenCalledWith({ id: "org-far" })
     expect(apiMock.adminGetOrg).not.toHaveBeenCalledWith({ id: "org-1" })
     expect(screen.queryByText("/far-away")).not.toBeInTheDocument()
-    expect(screen.getByText("/river-keepers").closest(".qrow")).not.toHaveClass("selected")
+    expect(queueRowOf(screen.getByText("/river-keepers"))).not.toHaveClass("selected")
   })
 
   it("an unknown tab in the focusId falls back to the Profile tab", async () => {

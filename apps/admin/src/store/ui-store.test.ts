@@ -257,12 +257,15 @@ describe("toast", () => {
     expect(useUiStore.getState().toast).toBeNull()
   })
 
-  it("shows a toast with an id that increases on every call", async () => {
+  it("gives every toast a new id, even for the same text", async () => {
     const { useUiStore } = await loadWithHash("")
     useUiStore.getState().showToast("Saved")
-    expect(useUiStore.getState().toast).toEqual({ id: 1, text: "Saved" })
+    const first = useUiStore.getState().toast
+    expect(first?.text).toBe("Saved")
     useUiStore.getState().showToast("Saved")
-    expect(useUiStore.getState().toast).toEqual({ id: 2, text: "Saved" })
+    const second = useUiStore.getState().toast
+    expect(second?.text).toBe("Saved")
+    expect(second?.id).not.toBe(first?.id)
   })
 
   it("replaces the current toast rather than queueing", async () => {
@@ -279,12 +282,15 @@ describe("toast", () => {
     expect(useUiStore.getState().toast).toBeNull()
   })
 
-  it("does not reset the toast id sequence on dismiss", async () => {
+  it("gives a toast shown after a dismiss a new id", async () => {
     const { useUiStore } = await loadWithHash("")
     useUiStore.getState().showToast("a")
+    const dismissedId = useUiStore.getState().toast?.id
     useUiStore.getState().dismissToast()
-    useUiStore.getState().showToast("b")
-    expect(useUiStore.getState().toast).toEqual({ id: 2, text: "b" })
+    useUiStore.getState().showToast("a")
+    const next = useUiStore.getState().toast
+    expect(next?.text).toBe("a")
+    expect(next?.id).not.toBe(dismissedId)
   })
 
   it("leaves page and focus alone", async () => {

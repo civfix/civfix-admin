@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { detailCard } from "@/test/panes"
 import { EventsPage } from "@/features/events/events-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -21,7 +22,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
 vi.mock("@/components/map/leaflet-map", () => ({
   LeafletMap: () => <div data-testid="leaflet-map" />,
 }))
-
 
 function listItem(over: Partial<AdminEventListItemDTO> & { id: string; title: string }) {
   return {
@@ -83,10 +83,6 @@ function mockDetails(...events: AdminEventListItemDTO[]) {
 
 function listCard() {
   return screen.getByRole("heading", { level: 3, name: "Events" }).closest("section") as HTMLElement
-}
-
-function detailCard() {
-  return document.querySelector(".md-detail-card") as HTMLElement
 }
 
 describe("EventsPage", () => {
@@ -226,7 +222,7 @@ describe("EventsPage", () => {
     expect(within(detailCard()).queryByRole("heading", { name: "Beach sweep" })).not.toBeInTheDocument()
   })
 
-  it("replaces a deep-linked focusId that is not on the first page with the first row (auto-select override)", async () => {
+  it("replaces a deep-linked focusId that is not on the first page with the first row (current behavior)", async () => {
     const OTHER = listItem({ id: "cccc3333-0000-4000-8000-000000000003", title: "Creek haul" })
     apiMock.listAdminEvents.mockResolvedValue(page([BEACH, PARK]))
     mockDetails(BEACH, PARK, OTHER)

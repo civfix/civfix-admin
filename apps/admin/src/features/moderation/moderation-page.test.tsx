@@ -12,13 +12,13 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { detailCard } from "@/test/panes"
 import { ModerationPage } from "@/features/moderation/moderation-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
-
 
 function modItem(over: Partial<ModerationListItemDTO> & { id: string; flag: string }) {
   return {
@@ -136,10 +136,6 @@ function mockClaimDetails(...claims: GovClaimDTO[]) {
 
 function listCard(heading: string) {
   return screen.getByRole("heading", { level: 3, name: heading }).closest("section") as HTMLElement
-}
-
-function detailCard() {
-  return document.querySelector(".md-detail-card") as HTMLElement
 }
 
 async function openGovClaims() {
@@ -275,7 +271,7 @@ describe("ModerationPage queue", () => {
     expect(within(detailCard()).queryByRole("heading", { name: "MOD-101" })).not.toBeInTheDocument()
   })
 
-  it("replaces a deep-linked focusId that is not on the first page with the first row (auto-select override)", async () => {
+  it("replaces a deep-linked focusId that is not on the first page with the first row (current behavior)", async () => {
     const OTHER = modItem({ id: "mod-9", flag: "MOD-909" })
     apiMock.listModeration.mockResolvedValue(modPage([COMMENT_REPORT, APPEAL]))
     mockModDetails(COMMENT_REPORT, APPEAL, OTHER)

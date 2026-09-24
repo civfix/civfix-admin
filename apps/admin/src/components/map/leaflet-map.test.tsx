@@ -93,7 +93,7 @@ describe("LeafletMap", () => {
     expect(tip).toBeNull()
   })
 
-  it("renders markup in a pin title (current behavior: tooltip string is parsed as HTML)", () => {
+  it("parses a pin title in the tooltip as HTML markup (current behavior)", () => {
     const pin: MapPin = { id: "h", lat: 34, lng: -118, tip: "<b>x</b>", place: "<i>y</i>" }
     const { container } = render(<LeafletMap pins={[pin]} />)
 

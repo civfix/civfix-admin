@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type {
   AdminBroadcastListItemDTO,
@@ -6,21 +6,18 @@ import type {
   AdminHostListItemDTO,
   AdminHostListResponse,
 } from "@civfix/shared"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { DialogHost } from "@/components/shared/dialog"
 import type * as ApiModule from "@/lib/api"
 import { HostsPage } from "@/features/hosts/hosts-page"
 import { apiMock } from "@/test/api-mock"
+import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
-})
-
-afterEach(() => {
-  vi.useRealTimers()
 })
 
 function actor(id: string, name: string, handle: string) {
@@ -240,6 +237,8 @@ describe("HostsPage detail pane", () => {
     apiMock.adminListBroadcasts.mockResolvedValue(
       broadcasts([broadcast({ id: "b-1", cleanupId: "ev-9", eventTitle: "Beach day" })]),
     )
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {})
+    onTestFinished(() => scrollTo.mockRestore())
     renderWithQuery(<HostsPage focusId={null} />)
 
     const links = await within(detailSection()).findAllByRole("button", { name: "Beach day" })
@@ -249,6 +248,7 @@ describe("HostsPage detail pane", () => {
       await userEvent.click(link)
       expect(window.location.hash).toBe("#/events/ev-9")
     }
+    expect(scrollTo).toHaveBeenCalledTimes(2)
   })
 
   it("suspends messaging with the typed reason", async () => {
@@ -304,21 +304,21 @@ describe("HostsPage filters, search and paging", () => {
   })
 
   it("debounces the search into a trimmed q param", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true })
     apiMock.adminListHosts.mockResolvedValue(page([]))
     renderWithQuery(<HostsPage focusId={null} />)
     await screen.findByText("No hosts here")
+    const user = startFakeTimersWithUser()
 
-    fireEvent.change(screen.getByPlaceholderText(/Search host name or handle/), {
-      target: { value: "  ada " },
+    await user.type(screen.getByPlaceholderText(/Search host name or handle/), "  ada ")
+    await act(async () => {
+      vi.advanceTimersByTime(249)
     })
-    vi.advanceTimersByTime(100)
-    expect(apiMock.adminListHosts).not.toHaveBeenCalledWith(expect.objectContaining({ q: "ada" }))
+    expect(apiMock.adminListHosts).not.toHaveBeenCalledWith(expect.objectContaining({ q: expect.any(String) }))
 
-    vi.advanceTimersByTime(200)
-    await waitFor(() =>
-      expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({ q: "ada", windowDays: 30 }),
-    )
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({ q: "ada", windowDays: 30 })
   })
 
   it("loads the next page of hosts with the cursor", async () => {

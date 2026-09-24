@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import type {
@@ -9,6 +9,7 @@ import type {
 
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
+import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
 import { PagesPage } from "@/features/pages/pages-page"
 
@@ -16,7 +17,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
-
 
 const ECHO_ID = "11111111-1111-4111-8111-111111111111"
 const RIVER_ID = "22222222-2222-4222-8222-222222222222"
@@ -286,17 +286,21 @@ describe("PagesPage paging, filters and search", () => {
     apiMock.adminListEventPages.mockResolvedValue(listPage([]))
     renderWithQuery(<PagesPage focusId={null} />)
     await screen.findByText("No pages loaded")
+    const user = startFakeTimersWithUser()
 
-    await userEvent.type(screen.getByPlaceholderText(/Search slug or title/), "  echo ")
-
-    await waitFor(() =>
-      expect(apiMock.adminListEventPages).toHaveBeenLastCalledWith({
-        status: "published",
-        q: "echo",
-      }),
+    await user.type(screen.getByPlaceholderText(/Search slug or title/), "  echo ")
+    await act(async () => {
+      vi.advanceTimersByTime(249)
+    })
+    expect(apiMock.adminListEventPages).not.toHaveBeenCalledWith(
+      expect.objectContaining({ q: expect.any(String) }),
     )
-    // Debounced: the keystrokes before the pause never reach the API.
-    expect(apiMock.adminListEventPages).not.toHaveBeenCalledWith({ status: "published", q: "e" })
+
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(apiMock.adminListEventPages).toHaveBeenLastCalledWith({ status: "published", q: "echo" })
+    expect(apiMock.adminListEventPages).toHaveBeenCalledWith(expect.objectContaining({ q: expect.any(String) }))
   })
 })
 

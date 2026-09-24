@@ -12,10 +12,10 @@ import { useAuthStore } from "@/store/auth-store"
 import { useAdminLogout, useOperatorBootstrap, useOperatorSession } from "./use-admin-auth"
 
 // The real client binds window.fetch when @/lib/api first evaluates, so the stub must exist before
-// that import for getApiClient() to route through it.
+// that import for getApiClient() to route through it; the bound mock outlives the afterEach unstub.
 const { fetchMock } = vi.hoisted(() => {
   const fetchMock = vi.fn<typeof fetch>()
-  globalThis.fetch = fetchMock
+  vi.stubGlobal("fetch", fetchMock)
   return { fetchMock }
 })
 
