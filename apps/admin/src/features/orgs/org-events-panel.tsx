@@ -5,6 +5,7 @@ import type { AdminOrgDTO, AdminOrgEventListResponse, AdminOrgEventWhen } from "
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { LoadMoreButton } from "@/components/shared/section-list"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState, FilterChips } from "@/components/shared/page-primitives"
 import { eventKindView } from "@/lib/event-kind"
@@ -117,16 +118,7 @@ export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
               {items.map((item) => (
                 <OrgEventRow key={item.id} item={item} onOpen={() => nav("events", item.id)} />
               ))}
-              {q.hasNextPage && (
-                <button
-                  type="button"
-                  className="btn load-more"
-                  disabled={q.isFetchingNextPage}
-                  onClick={() => void q.fetchNextPage()}
-                >
-                  {q.isFetchingNextPage ? "Loading…" : "Load more"}
-                </button>
-              )}
+              <LoadMoreButton query={q} className="load-more" />
             </>
           )}
         </div>

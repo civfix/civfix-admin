@@ -5,6 +5,7 @@ import type { AdminOrgDTO, AdminOrgMemberDTO, OrganizationMemberRole } from "@ci
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { LoadMoreButton } from "@/components/shared/section-list"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState } from "@/components/shared/page-primitives"
@@ -62,16 +63,7 @@ function RosterBody({ org, roster: { q, members, ownerName } }: { org: AdminOrgD
       {members.map((m) => (
         <MemberRow key={m.user.id} org={org} member={m} ownerName={ownerName} />
       ))}
-      {q.hasNextPage && (
-        <button
-          type="button"
-          className="btn load-more"
-          disabled={q.isFetchingNextPage}
-          onClick={() => void q.fetchNextPage()}
-        >
-          {q.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
-      )}
+      <LoadMoreButton query={q} className="load-more" />
     </>
   )
 }

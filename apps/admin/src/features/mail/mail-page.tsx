@@ -11,6 +11,7 @@ import {
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, type FilterOption } from "@/components/shared/page-primitives"
+import { SearchBox } from "@/components/shared/section-list"
 import { INBOX_FEED_FILTER_ORDER } from "@/features/inbox/inbox-feed"
 import { ComposeModal, type ComposeInput } from "@/features/mail/compose-modal"
 import { ForwardTemplateModal } from "@/features/mail/forward-template-modal"
@@ -91,16 +92,12 @@ function MailToolbar({
         onChange={(value) => onBoxChange(value as MailBox)}
       />
       <div className="toolbar-spacer" />
-      <div className="searchbox">
-        <Icons.Search size={14} />
-        <input
-          type="text"
-          aria-label="Search mail"
-          placeholder={outreach ? "Search org, subject, sender…" : "Search sender, subject, org…"}
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-        />
-      </div>
+      <SearchBox
+        label="Search mail"
+        placeholder={outreach ? "Search org, subject, sender…" : "Search sender, subject, org…"}
+        value={query}
+        onChange={onQueryChange}
+      />
     </div>
   )
 }

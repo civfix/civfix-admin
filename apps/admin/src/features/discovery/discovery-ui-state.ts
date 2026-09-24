@@ -1,5 +1,6 @@
 import type { JurisdictionLayer, JurisdictionListQuery } from "@civfix/shared"
 
+import { resolveSelected } from "@/hooks/use-selection"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 
 export type JurisdictionFilter = "all" | "attention" | "clear"
@@ -40,8 +41,7 @@ export function pickSelected<T extends { geoid: string }>(
   selId: string | null,
   lastSeen: T | null,
 ): T | null {
-  if (selId === null) return null
-  return items.find((x) => x.geoid === selId) ?? (lastSeen?.geoid === selId ? lastSeen : null)
+  return resolveSelected(items, selId, lastSeen, (item) => item.geoid)
 }
 
 export type DirectoryQuery = Pick<JurisdictionListQuery, "q" | "filter" | "layer" | "sort">

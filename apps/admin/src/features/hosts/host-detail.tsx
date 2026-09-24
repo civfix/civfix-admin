@@ -6,6 +6,7 @@ import type { AdminBroadcastListItemDTO, AdminHostListItemDTO } from "@civfix/sh
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { LoadMoreButton } from "@/components/shared/section-list"
 import { promptDialog } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
 import { flatPages } from "@/lib/infinite"
@@ -106,16 +107,7 @@ function BroadcastLogSection({
         ) : (
           <>
             <BroadcastLog items={broadcasts} />
-            {logQuery.hasNextPage && (
-              <button
-                type="button"
-                className="btn load-more"
-                disabled={logQuery.isFetchingNextPage}
-                onClick={() => void logQuery.fetchNextPage()}
-              >
-                {logQuery.isFetchingNextPage ? "Loading…" : "Load more broadcasts"}
-              </button>
-            )}
+            <LoadMoreButton query={logQuery} className="load-more" label="Load more broadcasts" />
           </>
         )}
       </div>

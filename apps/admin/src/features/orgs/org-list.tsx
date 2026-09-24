@@ -5,7 +5,7 @@ import type { AdminOrgDTO } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState } from "@/components/shared/page-primitives"
-import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { ListStates, LoadMoreButton } from "@/components/shared/section-list"
 import { formatDate } from "@/lib/dates"
 import { orgStatusView } from "@/lib/org-status"
 import { OrgLogo } from "@/features/orgs/org-logo"
@@ -87,12 +87,8 @@ export function OrgList({
   selId: string | null
   onSelect: (id: string) => void
 }) {
-  if (listQuery.isLoading) return <LoadingState label="Loading organizations..." />
-  if (listQuery.isError) {
-    return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
-  }
   return (
-    <>
+    <ListStates query={listQuery} loadingLabel="Loading organizations...">
       {items.length === 0 ? (
         <EmptyState
           title={pendingView ? "Queue is clear" : "No organizations"}
@@ -108,16 +104,7 @@ export function OrgList({
           <OrgRow key={o.id} org={o} selected={selId === o.id} onClick={() => onSelect(o.id)} />
         ))
       )}
-      {listQuery.hasNextPage && (
-        <button
-          type="button"
-          className="btn load-more"
-          disabled={listQuery.isFetchingNextPage}
-          onClick={() => void listQuery.fetchNextPage()}
-        >
-          {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
-      )}
-    </>
+      <LoadMoreButton query={listQuery} className="load-more" />
+    </ListStates>
   )
 }

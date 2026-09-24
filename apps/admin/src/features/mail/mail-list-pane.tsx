@@ -10,21 +10,17 @@ import {
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
-import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import {
+  ListCard,
+  ListStates,
+  LoadMoreButton,
+  type ListLoadState,
+  type NextPageState,
+} from "@/components/shared/section-list"
 import { INBOX_EMPTY_COPY, feedKey } from "@/features/inbox/inbox-feed"
 import { InboxRow } from "@/features/inbox/inbox-views"
 import { outreachBoxLabel, type MailBox } from "@/features/mail/mail-page-state"
 import { MailRow } from "@/features/mail/mail-row"
-
-interface ListQueryState {
-  isLoading: boolean
-  isError: boolean
-  error: unknown
-  refetch: () => unknown
-  hasNextPage: boolean
-  isFetchingNextPage: boolean
-  fetchNextPage: () => unknown
-}
 
 interface MailListPaneProps {
   outreach: boolean
@@ -32,7 +28,7 @@ interface MailListPaneProps {
   feedFilter: InboxFeedFilter
   searchTerm: string | undefined
   stats: MailStatsResponse | undefined
-  listQuery: ListQueryState
+  listQuery: ListLoadState & NextPageState
   activeCount: number
   mailItems: MailThreadListItemDTO[]
   feedItems: InboxFeedItemDTO[]
@@ -88,30 +84,16 @@ function ListRows({
 
 function ListBody(props: MailListPaneProps) {
   const { outreach, feedFilter, searchTerm, listQuery, activeCount } = props
-  if (listQuery.isLoading) {
-    return <LoadingState label={outreach ? "Loading mail..." : "Loading inbox..."} />
-  }
-  if (listQuery.isError) {
-    return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
-  }
-  if (activeCount === 0) {
-    return <EmptyList outreach={outreach} feedFilter={feedFilter} searching={!!searchTerm} />
-  }
   return (
-    <>
+    <ListStates
+      query={listQuery}
+      loadingLabel={outreach ? "Loading mail..." : "Loading inbox..."}
+      isEmpty={activeCount === 0}
+      empty={<EmptyList outreach={outreach} feedFilter={feedFilter} searching={!!searchTerm} />}
+    >
       <ListRows {...props} />
-      {listQuery.hasNextPage && (
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
-          disabled={listQuery.isFetchingNextPage}
-          onClick={() => listQuery.fetchNextPage()}
-        >
-          {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
-      )}
-    </>
+      <LoadMoreButton query={listQuery} className="list-load-more" />
+    </ListStates>
   )
 }
 
@@ -124,15 +106,11 @@ export function MailListPane(props: MailListPaneProps) {
       : `${activeCount}${listQuery.hasNextPage ? "+" : ""}`
 
   return (
-    <section className="card md-list">
-      <div className="card-head">
-        <h3>{outreach ? outreachBoxLabel(box) : INBOX_FEED_FILTER_LABELS[feedFilter]}</h3>
-        <div className="spacer" />
-        <span className="meta">{countLabel}</span>
-      </div>
-      <div className="queue-list">
-        <ListBody {...props} />
-      </div>
-    </section>
+    <ListCard
+      title={outreach ? outreachBoxLabel(box) : INBOX_FEED_FILTER_LABELS[feedFilter]}
+      meta={countLabel}
+    >
+      <ListBody {...props} />
+    </ListCard>
   )
 }

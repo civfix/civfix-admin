@@ -5,14 +5,14 @@ import type { JurisdictionDirectoryDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
-import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
+import { useSelection } from "@/hooks/use-selection"
 import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
   directoryCounts,
   countDisplay,
   effectiveJurisdictionSort,
   initialDirectoryState,
-  pickSelected,
   toDirectoryQuery,
   type CountDisplay,
   type JurisdictionFilter,
@@ -55,50 +55,7 @@ function useDirectoryFilters(focusId: string | null) {
   return { filter, setFilter, layer, setLayer, sort, setSort, query, setQuery, debouncedQuery }
 }
 
-// Only the first load picks a jurisdiction on the operator's behalf, and a deep-linked one is never
-// replaced. A pick that a filter or search leaves out stays open as it was last listed; a pick that
-// drops out of the same list after a refetch (a Save & route under Needs mapping) clears, so the pane
-// never shows a stale row or jumps to another jurisdiction's save buttons. Decided only on data
-// fetched for the current params.
-function useJurisdictionSelection({
-  focusId,
-  items,
-  listQuery,
-  listKey,
-}: {
-  focusId: string | null
-  items: JurisdictionDirectoryDTO[]
-  listQuery: DirectoryList
-  listKey: string
-}) {
-  const [selectedId, setSelectedId] = React.useState<string | null>(focusId)
-  const [lastSeen, setLastSeen] = React.useState<JurisdictionDirectoryDTO | null>(null)
-  React.useEffect(() => {
-    if (focusId) setSelectedId(focusId)
-  }, [focusId])
-
-  const selected = pickSelected(items, selectedId, lastSeen)
-  React.useEffect(() => {
-    if (selected && selected !== lastSeen) setLastSeen(selected)
-  }, [selected, lastSeen])
-
-  const [autoPick, setAutoPick] = React.useState(focusId === null)
-  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
-  React.useEffect(() => {
-    if (!listQuery.isSuccess || listQuery.isFetching) return
-    if (selectedId === null) {
-      if (autoPick && items[0]) setSelectedId(items[0].geoid)
-      return
-    }
-    setAutoPick(false)
-    if (items.some((x) => x.geoid === selectedId)) seenIn.current = { id: selectedId, list: listKey }
-    else if (seenIn.current?.id === selectedId && seenIn.current.list === listKey) setSelectedId(null)
-  }, [listQuery.isSuccess, listQuery.isFetching, items, selectedId, listKey, autoPick])
-
-  const notListed =
-    selectedId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
-  return { selectedId, setSelectedId, selected, notListed }
-}
+const geoidOf = (item: JurisdictionDirectoryDTO) => item.geoid
 
 function DirectoryToolbar({
   filters,
@@ -120,16 +77,12 @@ function DirectoryToolbar({
         onChange={(v) => setFilter(v as JurisdictionFilter)}
       />
       <div className="toolbar-spacer" />
-      <div className="searchbox">
-        <Icons.Search size={14} />
-        <input
-          type="text"
-          aria-label="Search jurisdictions"
-          placeholder="Search place or GEOID…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+      <SearchBox
+        label="Search jurisdictions"
+        placeholder="Search place or GEOID…"
+        value={query}
+        onChange={setQuery}
+      />
       <div className="sortbox">
         <span className="sortbox-label">Type</span>
         <select
@@ -175,21 +128,19 @@ function DirectoryListBody({
   onSelect: (geoid: string) => void
   showOldest: boolean
 }) {
-  if (listQuery.isLoading) return <LoadingState label="Loading jurisdictions…" />
-  if (listQuery.isError) {
-    return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
-  }
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="Nothing matches"
-        sub="Try a different filter or search."
-        icon={<Icons.Search size={20} />}
-      />
-    )
-  }
   return (
-    <>
+    <ListStates
+      query={listQuery}
+      loadingLabel="Loading jurisdictions…"
+      isEmpty={items.length === 0}
+      empty={
+        <EmptyState
+          title="Nothing matches"
+          sub="Try a different filter or search."
+          icon={<Icons.Search size={20} />}
+        />
+      }
+    >
       {items.map((item) => (
         <JurisdictionRow
           key={item.geoid}
@@ -199,18 +150,8 @@ function DirectoryListBody({
           showOldest={showOldest}
         />
       ))}
-      {listQuery.hasNextPage && (
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
-          disabled={listQuery.isFetchingNextPage}
-          onClick={() => listQuery.fetchNextPage()}
-        >
-          {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
-      )}
-    </>
+      <LoadMoreButton query={listQuery} className="list-load-more" />
+    </ListStates>
   )
 }
 
@@ -275,12 +216,17 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     loadedCount: items.length,
   })
 
-  const selection = useJurisdictionSelection({
+  // There is no by-id read here, so a pick that a filter or search leaves out stays open as last listed.
+  const { selectedId, setSelectedId, selectedItem: selected } = useSelection({
     focusId,
+    list: listQuery,
     items,
-    listQuery,
+    getId: geoidOf,
     listKey: JSON.stringify([listParams.filter, listParams.sort, layer, debouncedQuery]),
+    keepLastSeen: true,
   })
+  const notListed =
+    selectedId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
 
   return (
     <>
@@ -297,32 +243,26 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
       <DirectoryToolbar filters={filters} chips={counts.chips} />
 
       <div className="master-detail">
-        <section className="card md-list">
-          <div className="card-head">
-            <h3>
+        <ListCard
+          title={
+            <>
               {typeof counts.header === "number" ? counts.header.toLocaleString() : counts.header}{" "}
               {counts.header === 1 ? "jurisdiction" : "jurisdictions"}
-            </h3>
-            <div className="spacer" />
-            <span className="meta">click a row →</span>
-          </div>
-          <div className="queue-list">
-            <DirectoryListBody
-              listQuery={listQuery}
-              items={items}
-              selectedGeoid={selection.selected?.geoid}
-              onSelect={selection.setSelectedId}
-              showOldest={filter === "attention"}
-            />
-          </div>
-        </section>
+            </>
+          }
+          meta="click a row →"
+        >
+          <DirectoryListBody
+            listQuery={listQuery}
+            items={items}
+            selectedGeoid={selected?.geoid}
+            onSelect={setSelectedId}
+            showOldest={filter === "attention"}
+          />
+        </ListCard>
 
         <section className="card md-detail-card">
-          <SelectedJurisdiction
-            selected={selection.selected}
-            selectedId={selection.selectedId}
-            notListed={selection.notListed}
-          />
+          <SelectedJurisdiction selected={selected} selectedId={selectedId} notListed={notListed} />
         </section>
       </div>
     </>
