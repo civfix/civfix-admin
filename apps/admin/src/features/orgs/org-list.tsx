@@ -9,7 +9,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { formatDate } from "@/lib/dates"
 import { orgStatusView } from "@/lib/org-status"
 import { OrgLogo } from "@/features/orgs/org-logo"
-import type { useOrgsInfinite } from "@/features/orgs/use-orgs"
+import type { useOrgListInfinite } from "@/features/orgs/use-orgs"
 
 function plural(count: number, one: string, many: string): string {
   return `${count.toLocaleString()} ${count === 1 ? one : many}`
@@ -81,7 +81,7 @@ export function OrgList({
   selId,
   onSelect,
 }: {
-  listQuery: ReturnType<typeof useOrgsInfinite>
+  listQuery: ReturnType<typeof useOrgListInfinite>
   items: AdminOrgDTO[]
   pendingView: boolean
   selId: string | null

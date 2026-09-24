@@ -2,13 +2,13 @@
 
 import type { AdminReportDTO } from "@civfix/shared"
 
-import { getReporterProfileId } from "@/features/reports/reporter-navigation"
+import { toReporterProfileId } from "@/features/reports/reporter-navigation"
 import { initials } from "@/features/reports/person-name"
 import { useNav } from "@/store/ui-store"
 
 export function ReporterCard({ reporter }: { reporter: AdminReportDTO["reporter"] }) {
   const nav = useNav()
-  const reporterProfileId = getReporterProfileId(reporter.id)
+  const reporterProfileId = toReporterProfileId(reporter.id)
   return (
     <div className="sub">
       <div className="sub-head">Reporter</div>

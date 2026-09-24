@@ -1,6 +1,11 @@
 "use client"
 
-import { MutationCache, QueryClient } from "@tanstack/react-query"
+import {
+  MutationCache,
+  QueryClient,
+  type InvalidateQueryFilters,
+  type QueryKey,
+} from "@tanstack/react-query"
 import {
   ErrorCode,
   type AdminBroadcastListQuery,
@@ -230,4 +235,27 @@ export const queryKeys = {
     all: ["admin", "audit"] as const,
     list: (params?: AuditListQuery) => ["admin", "audit", "list", params ?? null] as const,
   },
+}
+
+type Invalidation = QueryKey | InvalidateQueryFilters | null
+
+function isQueryKey(target: QueryKey | InvalidateQueryFilters): target is QueryKey {
+  return Array.isArray(target)
+}
+
+/**
+ * Invalidates each target in order (a null entry is skipped) and settles once every refetch has, so
+ * a mutation that returns or awaits it stays pending until the screens it changed show fresh data.
+ */
+export function invalidateKeys(
+  qc: QueryClient,
+  targets: readonly Invalidation[],
+): Promise<unknown> {
+  return Promise.all(
+    targets.map((target) =>
+      target === null
+        ? null
+        : qc.invalidateQueries(isQueryKey(target) ? { queryKey: target } : target),
+    ),
+  )
 }

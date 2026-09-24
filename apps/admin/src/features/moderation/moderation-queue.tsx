@@ -8,6 +8,7 @@ import { FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useDebounced } from "@/hooks/use-debounced"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import { ModerationDetail } from "@/features/moderation/moderation-detail"
 import { ModerationRowMemo } from "@/features/moderation/moderation-row"
 import { useModerationListInfinite } from "@/features/moderation/use-moderation"
@@ -86,7 +87,7 @@ export function ModerationQueueSection({ focusId }: SectionPageProps) {
   const listKey = JSON.stringify(listParams)
   const listQuery = useModerationListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
 

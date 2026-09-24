@@ -6,6 +6,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query"
 import type {
   AdminEventListQuery,
@@ -19,7 +20,8 @@ import type {
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 import { shortId } from "@/features/events/event-id"
 import { pluralize } from "@/features/reports/plural"
@@ -36,16 +38,11 @@ export function useEventList(params: AdminEventListQuery) {
 }
 
 export function useEventListInfinite(params: AdminEventListQuery) {
-  return useInfiniteQuery<AdminEventListResponse>({
-    queryKey: queryKeys.events.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listAdminEvents({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.events.list(params), params, (input) =>
+      api.listAdminEvents(input),
+    ),
+  )
 }
 
 function eventQuery(id: string) {
@@ -60,14 +57,14 @@ export function useEvent(id: string | null) {
 }
 
 // Profiles, org event tabs and signup pages all render an event's status, turnout and flag.
-function invalidateEvents(qc: ReturnType<typeof useQueryClient>, id: string) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
-    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
+function invalidateEvents(qc: QueryClient, id: string) {
+  return invalidateKeys(qc, [
+    queryKeys.events.detail(id),
+    queryKeys.events.all,
+    queryKeys.home.all,
+    queryKeys.users.all,
+    queryKeys.orgs.all,
+    queryKeys.pages.all,
   ])
 }
 

@@ -8,6 +8,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useDebounced } from "@/hooks/use-debounced"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import {
   PAGE_FILTERS,
   pageListParams,
@@ -16,7 +17,7 @@ import {
 } from "@/features/pages/pages-filters"
 import { PageDetail } from "@/features/pages/page-detail"
 import { PageListPane } from "@/features/pages/page-list-pane"
-import { useAdminEventPage, useEventPagesInfinite } from "@/features/pages/use-pages"
+import { useEventPage, useEventPageListInfinite } from "@/features/pages/use-pages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const PAGE_FILTER_LABEL: Record<PageFilter, string> = {
@@ -35,7 +36,7 @@ const FILTER_OPTIONS = PAGE_FILTERS.map((value) => ({ value, label: PAGE_FILTER_
 // buttons never land on a page nobody chose. Decided only on data fetched for the current params.
 function usePageSelection(
   focusId: string | null,
-  listQuery: ReturnType<typeof useEventPagesInfinite>,
+  listQuery: ReturnType<typeof useEventPageListInfinite>,
   items: AdminEventPageListItemDTO[],
   listKey: string,
 ) {
@@ -66,7 +67,7 @@ function PageDetailPane({
   pageNoun,
 }: {
   selected: AdminEventPageListItemDTO | null
-  pageQuery: ReturnType<typeof useAdminEventPage>
+  pageQuery: ReturnType<typeof useEventPage>
   pageNoun: string
 }) {
   if (selected) return <PageDetail key={selected.cleanupId} item={selected} />
@@ -98,16 +99,16 @@ export function PagesPage({ focusId }: SectionPageProps) {
     () => pageListParams(filter, debouncedQuery),
     [filter, debouncedQuery],
   )
-  const listQuery = useEventPagesInfinite(listParams)
+  const listQuery = useEventPageListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
   const [selectedId, setSelectedId] = usePageSelection(focusId, listQuery, items, JSON.stringify(listParams))
 
   const listed = items.find((item) => item.cleanupId === selectedId) ?? null
   // The detail's preview reads the same key, so fetching before the list settles never doubles a request.
-  const pageQuery = useAdminEventPage(listed === null ? selectedId : null)
+  const pageQuery = useEventPage(listed === null ? selectedId : null)
   const selected = listed ?? (pageQuery.data ? pageRowFromDTO(pageQuery.data) : null)
   const pageNoun = selectedId === focusId ? "the linked page" : "the page"
 

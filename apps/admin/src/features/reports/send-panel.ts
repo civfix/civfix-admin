@@ -2,7 +2,7 @@ import type { AdminReportDTO } from "@civfix/shared"
 
 import { msgWhen } from "@/features/reports/report-chat"
 import {
-  routeActionFor,
+  routeActionView,
   routeSendLabel,
   type RoutableReport,
   type RouteAction,
@@ -39,7 +39,7 @@ function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string
 // A local approve outranks the server verdict until the refetch lands, so the panel never offers a
 // second approve (or blocks a reject) on a verdict the operator just changed.
 export function sendPanelView(report: SendPanelReport, approvedLocally: boolean): SendPanelView {
-  const routeAction = routeActionFor(report)
+  const routeAction = routeActionView(report)
   const verdictApproved = report.verificationVerdict === "approved" || approvedLocally
   const approvesOnSend = routeAction.kind === "send" && !verdictApproved
   return {

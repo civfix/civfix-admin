@@ -1,6 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query"
 import type {
   ApproveModerationRequest,
   AppealModerationRequest,
@@ -13,7 +19,8 @@ import type {
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 
 export function useModerationList(params: ModerationListQuery) {
   return useQuery<ModerationListResponse>({
@@ -23,16 +30,11 @@ export function useModerationList(params: ModerationListQuery) {
 }
 
 export function useModerationListInfinite(params: ModerationListQuery) {
-  return useInfiniteQuery<ModerationListResponse>({
-    queryKey: queryKeys.moderation.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listModeration({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.moderation.list(params), params, (input) =>
+      api.listModeration(input),
+    ),
+  )
 }
 
 export function useModerationItem(id: string | null) {
@@ -45,15 +47,15 @@ export function useModerationItem(id: string | null) {
 
 // A decision can take down a report, a chat message, media or a whole cleanup (and its signup page) and
 // changes the subject's strikes and status, so every section that shows those refreshes too.
-function invalidateModeration(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  return Promise.all([
-    id ? qc.invalidateQueries({ queryKey: queryKeys.moderation.detail(id) }) : null,
-    qc.invalidateQueries({ queryKey: queryKeys.moderation.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+function invalidateModeration(qc: QueryClient, id?: string) {
+  return invalidateKeys(qc, [
+    id ? queryKeys.moderation.detail(id) : null,
+    queryKeys.moderation.all,
+    queryKeys.reports.all,
+    queryKeys.events.all,
+    queryKeys.pages.all,
+    queryKeys.users.all,
+    queryKeys.home.all,
   ])
 }
 

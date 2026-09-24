@@ -16,7 +16,7 @@ export interface RowMenuPosition {
   right: number
 }
 
-function menuPositionFor(rect: DOMRect): RowMenuPosition {
+function menuPosition(rect: DOMRect): RowMenuPosition {
   const right = Math.max(MENU_VIEWPORT_MARGIN_PX, window.innerWidth - rect.right)
   const flipUp = rect.bottom + MENU_EST_HEIGHT_PX > window.innerHeight
   return flipUp
@@ -45,7 +45,7 @@ export function useRowMenu() {
   const openMenu = () => {
     const rect = triggerRef.current?.getBoundingClientRect()
     if (!rect) return
-    setPosition(menuPositionFor(rect))
+    setPosition(menuPosition(rect))
   }
   const close = React.useCallback((returnFocus: boolean) => {
     setPosition(null)

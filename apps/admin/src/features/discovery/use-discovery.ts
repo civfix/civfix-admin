@@ -6,6 +6,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query"
 import type {
   AddNoteRequest,
@@ -13,7 +14,6 @@ import type {
   DiscoveryListResponse,
   FlagDiscoveryRequest,
   GetDiscoveryTaskResponse,
-  JurisdictionDirectoryResponse,
   JurisdictionGeometryResponse,
   PatchJurisdictionRequest,
   SaveContactsRequest,
@@ -22,7 +22,8 @@ import type {
 
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 import { MINUTE_MS } from "@/lib/timing"
 import { partialSaveMessage, type SavedExtras } from "@/features/discovery/discovery-payloads"
 import type { DirectoryQuery } from "@/features/discovery/discovery-ui-state"
@@ -51,18 +52,14 @@ const GEOMETRY_STALE_MS = 5 * MINUTE_MS
  * Search, filter and sort run in Postgres and the list pages by cursor, so the operator can reach all
  * ~28k jurisdictions, federal land included. `total` and `facets` ride on the first page only.
  */
-export function useJurisdictionDirectory(params: DirectoryQuery) {
-  return useInfiniteQuery<JurisdictionDirectoryResponse>({
-    queryKey: queryKeys.jurisdictions.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listJurisdictions({
-        ...params,
-        limit: DIRECTORY_PAGE_SIZE,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+export function useJurisdictionListInfinite(params: DirectoryQuery) {
+  return useInfiniteQuery(
+    infiniteListOptions(
+      queryKeys.jurisdictions.list(params),
+      { ...params, limit: DIRECTORY_PAGE_SIZE },
+      (input) => api.listJurisdictions(input),
+    ),
+  )
 }
 
 /**
@@ -82,16 +79,17 @@ export function useJurisdictionGeometry(geoid: string | null) {
 const BOUNDARY_KEY = queryKeys.jurisdictions.geometry("").slice(0, -1)
 
 /** The home aggregates count saved contacts and flags, so every discovery write refreshes them too. */
-function invalidateDiscovery(qc: ReturnType<typeof useQueryClient>) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.discovery.all }),
+function invalidateDiscovery(qc: QueryClient, id?: string) {
+  return invalidateKeys(qc, [
+    id ? queryKeys.discovery.detail(id) : null,
+    queryKeys.discovery.all,
     // No discovery write changes a boundary, and refetching the polygon would hold every save's
     // pending state on the largest payload in the section.
-    qc.invalidateQueries({
+    {
       queryKey: queryKeys.jurisdictions.all,
       predicate: (query) => !partialMatchKey(query.queryKey, BOUNDARY_KEY),
-    }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+    },
+    queryKeys.home.all,
   ])
 }
 
@@ -99,11 +97,7 @@ export function useAddDiscoveryNote() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: AddNoteRequest) => api.addDiscoveryNote(input),
-    onSuccess: (_res, { id }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) }),
-        invalidateDiscovery(qc),
-      ]),
+    onSuccess: (_res, { id }) => invalidateDiscovery(qc, id),
   })
 }
 
@@ -111,11 +105,7 @@ export function useFlagDiscovery() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: FlagDiscoveryRequest) => api.flagDiscovery(input),
-    onSuccess: (_res, { id }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) }),
-        invalidateDiscovery(qc),
-      ]),
+    onSuccess: (_res, { id }) => invalidateDiscovery(qc, id),
   })
 }
 
@@ -123,11 +113,7 @@ export function useSaveDiscoveryDraft() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SaveDraftRequest) => api.saveDiscoveryDraft(input),
-    onSuccess: (_res, { id }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) }),
-        invalidateDiscovery(qc),
-      ]),
+    onSuccess: (_res, { id }) => invalidateDiscovery(qc, id),
   })
 }
 

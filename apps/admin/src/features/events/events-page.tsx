@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { useDebounced } from "@/hooks/use-debounced"
 import { EVENT_STATUS_VIEW } from "@/lib/event-status"
+import { flatPages } from "@/lib/infinite"
 import { EventDetail } from "@/features/events/event-detail"
 import { EventListPane } from "@/features/events/event-list-pane"
 import { useEventListInfinite } from "@/features/events/use-events"
@@ -48,7 +49,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
   }
   const listQuery = useEventListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
 

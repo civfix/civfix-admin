@@ -7,18 +7,19 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { flatPages } from "@/lib/infinite"
 import { ChatMessageRow, ChatSystemRow } from "@/features/reports/report-chat-rows"
 import { sortChatOldestFirst } from "@/features/reports/report-chat"
 import { SubmitShortcutHint, SUBMIT_KEYSHORTCUTS } from "@/features/reports/submit-shortcut"
 import {
   useRemoveReportMessage,
-  useReportChatHistory,
+  useReportChatListInfinite,
   useSendReportMessage,
 } from "@/features/reports/use-reports"
 
 const CHAT_COMPOSER_ROWS = 3
 
-type ChatQuery = ReturnType<typeof useReportChatHistory>
+type ChatQuery = ReturnType<typeof useReportChatListInfinite>
 
 function ChatThread({
   reportId,
@@ -149,11 +150,11 @@ export function ReportDiscussion({
   cityDept: string
   hasCityContact: boolean
 }) {
-  const chatQuery = useReportChatHistory(reportId)
+  const chatQuery = useReportChatListInfinite(reportId)
 
   // Oldest first, matching the order neighbors see in the chat.
   const items = React.useMemo(
-    () => sortChatOldestFirst(chatQuery.data?.pages.flatMap((p) => p.items) ?? []),
+    () => sortChatOldestFirst(flatPages(chatQuery.data)),
     [chatQuery.data],
   )
 

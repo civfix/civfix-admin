@@ -7,9 +7,9 @@ import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { HostRow } from "@/features/hosts/host-row"
 import { HOST_ACTIVITY_WINDOW_DAYS } from "@/features/hosts/host-window"
-import type { useAdminHostsInfinite } from "@/features/hosts/use-hosts"
+import type { useHostListInfinite } from "@/features/hosts/use-hosts"
 
-type HostListQuery = ReturnType<typeof useAdminHostsInfinite>
+type HostListQuery = ReturnType<typeof useHostListInfinite>
 
 export function HostListPane({
   listQuery,

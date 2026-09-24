@@ -7,7 +7,7 @@ import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { categoryCssVar, categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
-import { getReporterProfileId } from "@/features/reports/reporter-navigation"
+import { toReporterProfileId } from "@/features/reports/reporter-navigation"
 import { firstName } from "@/features/reports/person-name"
 import { pluralize } from "@/features/reports/plural"
 import { shortId } from "@/features/reports/report-id"
@@ -44,7 +44,7 @@ function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
 
 function ReporterName({ reporter }: { reporter: AdminReportListItemDTO["reporter"] }) {
   const nav = useNav()
-  const reporterId = getReporterProfileId(reporter.id)
+  const reporterId = toReporterProfileId(reporter.id)
   if (!reporterId) return <span>{firstName(reporter.name)}</span>
   return (
     <button

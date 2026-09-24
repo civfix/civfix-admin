@@ -6,9 +6,9 @@ import { Icons } from "@/components/icons"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import {
   GOV_CHECKS,
-  govClaimApproveBlockedFor,
+  govClaimApproveBlockedMessage,
   govClaimApproveConfirmBody,
-  govClaimDecisionBlockedFor,
+  govClaimDecisionBlockedMessage,
 } from "@/features/moderation/gov-claim-presentation"
 import type { useApproveGovClaim, useRejectGovClaim } from "@/features/moderation/use-gov-claims"
 
@@ -50,8 +50,8 @@ export function GovClaimDecisionBar({
   busy: boolean
   onDecided: (id: string) => void
 }) {
-  const decisionBlocked = govClaimDecisionBlockedFor(claim.status)
-  const approveBlocked = govClaimApproveBlockedFor(claim)
+  const decisionBlocked = govClaimDecisionBlockedMessage(claim.status)
+  const approveBlocked = govClaimApproveBlockedMessage(claim)
 
   const onApprove = async () => {
     if (approveBlocked !== null) return

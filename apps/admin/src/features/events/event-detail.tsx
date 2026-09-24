@@ -8,7 +8,7 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
-import { cancelBlockedFor, eventStatusView } from "@/lib/event-status"
+import { cancelBlockedMessage, eventStatusView } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { EventAttendeeMessages, useAttendeeUpdate } from "@/features/events/event-attendee-messages"
 import { shortId } from "@/features/events/event-id"
@@ -182,7 +182,7 @@ function EventModerateBar({
 }) {
   const { flagMutation, cancelMutation } = moderation
   const cancelBlockedId = React.useId()
-  const cancelBlockedReason = cancelBlockedFor(event.status)
+  const cancelBlockedReason = cancelBlockedMessage(event.status)
 
   const onCancel = async () => {
     const ok = await confirmDialog({

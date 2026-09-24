@@ -9,7 +9,7 @@ import { renderWithQuery } from "@/test/render"
 import { DialogHost } from "@/components/shared/dialog"
 import { MembersPanel } from "@/features/orgs/members-panel"
 import { OWNER, SAM, makeOrg, member } from "@/features/orgs/test-fixtures"
-import { useAdminOrg } from "@/features/orgs/use-orgs"
+import { useOrg } from "@/features/orgs/use-orgs"
 import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -97,7 +97,7 @@ describe("MembersPanel row actions", () => {
       return { ok: true }
     })
     function OrgDetailObserver() {
-      useAdminOrg(org.id)
+      useOrg(org.id)
       return null
     }
     renderWithQuery(

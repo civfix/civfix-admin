@@ -9,7 +9,7 @@ import { makeTestQueryClient } from "@/test/render"
 import { API_BASE_URL, getApiClient } from "@/lib/api"
 import type * as ApiModule from "@/lib/api"
 import { useAuthStore } from "@/store/auth-store"
-import { useAdminLogout, useOperatorBootstrap, useOperatorSession } from "./use-admin-auth"
+import { useOperatorLogout, useOperatorBootstrap, useOperatorSession } from "./use-admin-auth"
 
 // The real client binds window.fetch when @/lib/api first evaluates, so the stub must exist before
 // that import for getApiClient() to route through it; the bound mock outlives the afterEach unstub.
@@ -282,7 +282,7 @@ describe("useOperatorBootstrap: Access exchange", () => {
   })
 })
 
-describe("useAdminLogout", () => {
+describe("useOperatorLogout", () => {
   let assign: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -292,7 +292,7 @@ describe("useAdminLogout", () => {
   })
 
   async function logout(client: QueryClient): Promise<void> {
-    const { result } = renderHook(() => useAdminLogout(), { wrapper: wrapperFor(client) })
+    const { result } = renderHook(() => useOperatorLogout(), { wrapper: wrapperFor(client) })
     await act(async () => {
       await result.current()
     })
@@ -328,7 +328,7 @@ describe("useAdminLogout", () => {
         resolveLogout = resolve
       }),
     )
-    const { result } = renderHook(() => useAdminLogout(), { wrapper: wrapperFor(makeTestQueryClient()) })
+    const { result } = renderHook(() => useOperatorLogout(), { wrapper: wrapperFor(makeTestQueryClient()) })
     let pending: Promise<void> = Promise.resolve()
     act(() => {
       pending = result.current()

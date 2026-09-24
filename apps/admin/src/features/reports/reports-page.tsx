@@ -8,6 +8,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { ReportDetail } from "@/features/reports/report-detail"
 import { ReportListPane } from "@/features/reports/report-list-pane"
 import { useDebounced } from "@/hooks/use-debounced"
+import { flatPages } from "@/lib/infinite"
 import { useReport, useReportListInfinite } from "@/features/reports/use-reports"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -55,7 +56,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
   }
   const listQuery = useReportListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
 

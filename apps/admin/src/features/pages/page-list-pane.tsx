@@ -6,9 +6,9 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { PageRow } from "@/features/pages/page-row"
-import type { useEventPagesInfinite } from "@/features/pages/use-pages"
+import type { useEventPageListInfinite } from "@/features/pages/use-pages"
 
-type PageListQuery = ReturnType<typeof useEventPagesInfinite>
+type PageListQuery = ReturnType<typeof useEventPageListInfinite>
 
 export function PageListPane({
   listQuery,

@@ -1,15 +1,18 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query"
 import type {
   AdminAddOrgMemberRequest,
   AdminCreateOrgRequest,
   AdminGetMediaResponse,
-  AdminOrgEventListResponse,
   AdminOrgEventWhen,
   AdminOrgListQuery,
-  AdminOrgListResponse,
-  AdminOrgMemberListResponse,
   AdminRemoveOrgMemberRequest,
   AdminSetOrgMemberRoleRequest,
   AdminSetOrgSuspendedRequest,
@@ -20,7 +23,8 @@ import type {
 
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 import { EVIDENCE_URL_MAX_CACHE_MS, evidenceStaleTime } from "@/features/orgs/evidence-cache"
 import {
   fieldErrorsFromError,
@@ -32,20 +36,13 @@ import { ORG_ROLE_LABEL } from "@/features/orgs/org-members"
 import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 
 /** Page one carries the chip `counts`. */
-export function useOrgsInfinite(params: AdminOrgListQuery) {
-  return useInfiniteQuery<AdminOrgListResponse>({
-    queryKey: queryKeys.orgs.list(params),
-    queryFn: ({ pageParam }) =>
-      api.adminListOrgs({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+export function useOrgListInfinite(params: AdminOrgListQuery) {
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.orgs.list(params), params, (input) => api.adminListOrgs(input)),
+  )
 }
 
-export function useAdminOrg(id: string | null) {
+export function useOrg(id: string | null) {
   return useQuery<GetAdminOrgResponse>({
     queryKey: queryKeys.orgs.detail(id ?? ""),
     queryFn: () => api.adminGetOrg({ id: id as string }),
@@ -53,31 +50,24 @@ export function useAdminOrg(id: string | null) {
   })
 }
 
-export function useOrgMembersInfinite(id: string | null) {
-  return useInfiniteQuery<AdminOrgMemberListResponse>({
-    queryKey: queryKeys.orgs.members(id ?? ""),
-    queryFn: ({ pageParam }) =>
-      api.adminListOrgMembers({
-        id: id as string,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+export function useOrgMemberListInfinite(id: string | null) {
+  return useInfiniteQuery({
+    ...infiniteListOptions(
+      queryKeys.orgs.members(id ?? ""),
+      { id: id as string },
+      (input) => api.adminListOrgMembers(input),
+    ),
     enabled: !!id,
   })
 }
 
-export function useOrgEventsInfinite(id: string | null, when: AdminOrgEventWhen) {
-  return useInfiniteQuery<AdminOrgEventListResponse>({
-    queryKey: queryKeys.orgs.events(id ?? "", { when }),
-    queryFn: ({ pageParam }) =>
-      api.adminListOrgEvents({
-        id: id as string,
-        when,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+export function useOrgEventListInfinite(id: string | null, when: AdminOrgEventWhen) {
+  return useInfiniteQuery({
+    ...infiniteListOptions(
+      queryKeys.orgs.events(id ?? "", { when }),
+      { id: id as string, when },
+      (input) => api.adminListOrgEvents(input),
+    ),
     enabled: !!id,
   })
 }
@@ -92,34 +82,26 @@ export function useOrgVerificationDocument(mediaId: string | null) {
   })
 }
 
-type Qc = ReturnType<typeof useQueryClient>
-
-function invalidateOrgLists(qc: Qc) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+function invalidateOrg(qc: QueryClient, id?: string) {
+  return invalidateKeys(qc, [
+    id ? queryKeys.orgs.detail(id) : null,
+    queryKeys.orgs.all,
+    queryKeys.audit.all,
   ])
 }
 
-function invalidateOrg(qc: Qc, id: string) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) }),
-    invalidateOrgLists(qc),
-  ])
-}
-
-function storeOrgAndInvalidate(qc: Qc, id: string, org: GetAdminOrgResponse) {
+function storeOrgAndInvalidate(qc: QueryClient, id: string, org: GetAdminOrgResponse) {
   qc.setQueryData(queryKeys.orgs.detail(id), org)
   return invalidateOrg(qc, id)
 }
 
-function invalidateOrgMembers(qc: Qc, id: string) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.orgs.members(id) }),
-    qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) }),
-    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+function invalidateOrgMembers(qc: QueryClient, id: string) {
+  return invalidateKeys(qc, [
+    queryKeys.orgs.members(id),
+    queryKeys.orgs.detail(id),
+    queryKeys.orgs.all,
+    queryKeys.users.all,
+    queryKeys.audit.all,
   ])
 }
 
@@ -152,7 +134,7 @@ export function useCreateOrg() {
     mutationFn: (input: AdminCreateOrgRequest) => api.adminCreateOrg(input),
     onSuccess: (org) => {
       qc.setQueryData(queryKeys.orgs.detail(org.id), org)
-      return invalidateOrgLists(qc)
+      return invalidateOrg(qc)
     },
     meta: {
       errorMessage: (error: unknown, request: AdminCreateOrgRequest) =>

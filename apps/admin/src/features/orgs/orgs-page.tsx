@@ -5,6 +5,7 @@ import * as React from "react"
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { useDebounced } from "@/hooks/use-debounced"
+import { flatPages } from "@/lib/infinite"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 import { OrgDetail } from "@/features/orgs/org-detail"
 import { OrgList } from "@/features/orgs/org-list"
@@ -17,7 +18,7 @@ import {
   type OrgFilter,
 } from "@/features/orgs/orgs-filters"
 import { parseOrgFocus, type OrgDetailTab } from "@/features/orgs/org-focus"
-import { useOrgsInfinite } from "@/features/orgs/use-orgs"
+import { useOrgListInfinite } from "@/features/orgs/use-orgs"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 /**
@@ -38,7 +39,7 @@ function useListSelection({
   selId: string | null
   setSelId: (id: string | null) => void
   initialAutoPick: boolean
-  listQuery: ReturnType<typeof useOrgsInfinite>
+  listQuery: ReturnType<typeof useOrgListInfinite>
   items: { id: string }[]
   listKey: string
 }) {
@@ -69,9 +70,9 @@ export function OrgsPage({ focusId }: SectionPageProps) {
     () => orgListParams(filter, debouncedQuery),
     [filter, debouncedQuery],
   )
-  const listQuery = useOrgsInfinite(listParams)
+  const listQuery = useOrgListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
   const counts = listQuery.data?.pages[0]?.counts

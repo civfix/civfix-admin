@@ -5,14 +5,14 @@ import { EMPTY_VALUE } from "@/lib/empty-value"
 export type JurisdictionFilter = "all" | "attention" | "clear"
 export type JurisdictionSort = "pop" | "reports" | "oldest"
 
-export function getJurisdictionSort(
+export function effectiveJurisdictionSort(
   filter: JurisdictionFilter,
   selectedSort: JurisdictionSort,
 ): JurisdictionSort {
   return filter === "attention" ? "oldest" : selectedSort
 }
 
-export function getCountDisplay({
+export function countDisplay({
   count,
   isLoading,
   isError,
@@ -65,13 +65,13 @@ export function toDirectoryQuery(
 ): DirectoryQuery {
   return {
     filter: SERVER_FILTER[filter],
-    sort: SERVER_SORT[getJurisdictionSort(filter, sort)],
+    sort: SERVER_SORT[effectiveJurisdictionSort(filter, sort)],
     ...(layer !== "all" ? { layer } : {}),
     ...(q ? { q } : {}),
   }
 }
 
-export type CountDisplay = ReturnType<typeof getCountDisplay>
+export type CountDisplay = ReturnType<typeof countDisplay>
 
 export function directoryCounts({
   filter,
@@ -88,7 +88,7 @@ export function directoryCounts({
   list: { isLoading: boolean; isError: boolean }
   loadedCount: number
 }): { chips: Record<JurisdictionFilter, CountDisplay>; header: CountDisplay } {
-  const listCount = (count: number | null) => getCountDisplay({ count, ...list })
+  const listCount = (count: number | null) => countDisplay({ count, ...list })
   const allTotal = facets ? facets.routed + facets.unrouted : filter === "all" ? total : null
   const listedTotal = filter === "clear" ? facets?.routed : total
   return {

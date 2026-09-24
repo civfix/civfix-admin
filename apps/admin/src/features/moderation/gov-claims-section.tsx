@@ -8,6 +8,7 @@ import { FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useDebounced } from "@/hooks/use-debounced"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import { GovClaimDetail, GovClaimRow } from "@/features/moderation/gov-claims-views"
 import { useGovClaimListInfinite } from "@/features/moderation/use-gov-claims"
 
@@ -79,7 +80,7 @@ export function GovClaimsSection() {
   const listKey = JSON.stringify(listParams)
   const listQuery = useGovClaimListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
 

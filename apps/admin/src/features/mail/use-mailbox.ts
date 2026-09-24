@@ -6,7 +6,7 @@ import type { InboxFeedItemDTO } from "@civfix/shared"
 import { feedKey, resolveFeedSelection } from "@/features/inbox/inbox-feed"
 import { useInboxFeedInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import {
-  feedFilterOf,
+  mailboxFeedFilter,
   inboxFeedParams,
   mailListParams,
   parseFocus,
@@ -15,6 +15,7 @@ import {
 } from "@/features/mail/mail-page-state"
 import { useMailListInfinite, useMarkMailRead } from "@/features/mail/use-mail"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 
 function useMailSearch() {
   const [query, setQuery] = React.useState("")
@@ -38,11 +39,11 @@ function useMailboxLists(folder: Folder, box: MailBox, searchTerm: string | unde
   const inboxFeedQuery = useInboxFeedInfinite(inboxFeedParams(folder, box, searchTerm))
 
   const mailItems = React.useMemo(
-    () => mailListQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(mailListQuery.data),
     [mailListQuery.data],
   )
   const feedItems = React.useMemo(
-    () => inboxFeedQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(inboxFeedQuery.data),
     [inboxFeedQuery.data],
   )
   const feedByKey = React.useMemo(
@@ -203,7 +204,7 @@ export function useMailbox(focusId: string | null) {
     outreach,
     box,
     setBox,
-    feedFilter: feedFilterOf(box),
+    feedFilter: mailboxFeedFilter(box),
     search,
     lists,
     selectedId,

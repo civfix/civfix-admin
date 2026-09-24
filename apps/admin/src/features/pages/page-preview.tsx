@@ -7,7 +7,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { pageBlockViews, type PageBlockView } from "@/features/pages/page-blocks"
 import { publicPagePath } from "@/features/pages/page-path"
-import { useAdminEventPage } from "@/features/pages/use-pages"
+import { useEventPage } from "@/features/pages/use-pages"
 
 function PageBlockCard({ block }: { block: PageBlockView }) {
   return (
@@ -38,7 +38,7 @@ function PageBlockCard({ block }: { block: PageBlockView }) {
 }
 
 export function PagePreview({ cleanupId, title }: { cleanupId: string; title: string }) {
-  const pageQuery = useAdminEventPage(cleanupId)
+  const pageQuery = useEventPage(cleanupId)
   const blocks = React.useMemo(() => pageBlockViews(pageQuery.data?.blocks ?? []), [pageQuery.data])
 
   if (pageQuery.isLoading) return <LoadingState label="Loading page content..." />

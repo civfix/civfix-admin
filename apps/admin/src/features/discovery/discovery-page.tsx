@@ -6,11 +6,11 @@ import type { JurisdictionDirectoryDTO } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { useJurisdictionDirectory } from "@/features/discovery/use-discovery"
+import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
   directoryCounts,
-  getCountDisplay,
-  getJurisdictionSort,
+  countDisplay,
+  effectiveJurisdictionSort,
   initialDirectoryState,
   pickSelected,
   toDirectoryQuery,
@@ -27,9 +27,10 @@ import {
 } from "@/features/discovery/jurisdiction-view"
 import { UnmappedDetail } from "@/features/discovery/unmapped-detail"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-type DirectoryList = ReturnType<typeof useJurisdictionDirectory>
+type DirectoryList = ReturnType<typeof useJurisdictionListInfinite>
 
 function useDirectoryFilters(focusId: string | null) {
   const [initial] = React.useState(() => initialDirectoryState(focusId))
@@ -147,7 +148,7 @@ function DirectoryToolbar({
       <div className="sortbox">
         <span className="sortbox-label">Sort</span>
         <select
-          value={getJurisdictionSort(filter, sort)}
+          value={effectiveJurisdictionSort(filter, sort)}
           disabled={filter === "attention"}
           onChange={(e) => setSort(e.target.value as JurisdictionSort)}
           aria-label="Sort jurisdictions"
@@ -251,13 +252,13 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const filters = useDirectoryFilters(focusId)
   const { filter, layer, sort, debouncedQuery } = filters
   const listParams = toDirectoryQuery(filter, sort, layer, debouncedQuery)
-  const listQuery = useJurisdictionDirectory(listParams)
-  const needsMappingQuery = useJurisdictionDirectory(
+  const listQuery = useJurisdictionListInfinite(listParams)
+  const needsMappingQuery = useJurisdictionListInfinite(
     toDirectoryQuery("attention", sort, layer, debouncedQuery),
   )
 
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
   const firstPage = listQuery.data?.pages[0]
@@ -265,7 +266,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     filter,
     total: firstPage?.total ?? null,
     facets: firstPage?.facets ?? null,
-    needsMapping: getCountDisplay({
+    needsMapping: countDisplay({
       count: needsMappingQuery.data?.pages[0]?.total ?? null,
       isLoading: needsMappingQuery.isLoading,
       isError: needsMappingQuery.isError,

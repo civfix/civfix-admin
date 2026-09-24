@@ -16,7 +16,7 @@ export type RoutableReport = Pick<AdminReportDTO, "geoid" | "city" | "outreach">
 
 const SENT_OUTREACH_STATUSES: readonly ReportOutreachStatus[] = ["sent", "delivered", "replied"]
 
-export function routeActionFor(report: RoutableReport): RouteAction {
+export function routeActionView(report: RoutableReport): RouteAction {
   const routedAt = report.outreach.routedAt
   if (!report.city.contact) {
     return { kind: report.geoid === null ? "no_jurisdiction" : "no_contact", routedAt }

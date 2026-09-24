@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { useDebounced } from "@/hooks/use-debounced"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import { HostDetail } from "@/features/hosts/host-detail"
 import { HostListPane } from "@/features/hosts/host-list-pane"
 import {
@@ -17,7 +18,7 @@ import {
   type HostActivityWindow,
   type HostFilter,
 } from "@/features/hosts/host-window"
-import { useAdminHostsInfinite } from "@/features/hosts/use-hosts"
+import { useHostListInfinite } from "@/features/hosts/use-hosts"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const FILTER_LABEL: Record<HostFilter, string> = {
@@ -34,7 +35,7 @@ const FILTER_OPTIONS = HOST_FILTERS.map((value) => ({ value, label: FILTER_LABEL
 // action buttons never land on a host nobody chose. Decided only on data fetched for the current params.
 function useHostSelection(
   focusId: string | null,
-  listQuery: ReturnType<typeof useAdminHostsInfinite>,
+  listQuery: ReturnType<typeof useHostListInfinite>,
   rows: AdminHostListItemDTO[],
   listKey: string,
 ) {
@@ -101,9 +102,9 @@ export function HostsPage({ focusId }: SectionPageProps) {
     () => hostListParams(filter, debouncedQuery),
     [filter, debouncedQuery],
   )
-  const listQuery = useAdminHostsInfinite(listParams)
+  const listQuery = useHostListInfinite(listParams)
   const rows = React.useMemo(
-    () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
   const [selectedId, setSelectedId] = useHostSelection(focusId, listQuery, rows, JSON.stringify(listParams))

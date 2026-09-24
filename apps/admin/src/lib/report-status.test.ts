@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   isReportStatus,
-  reportBucketOf,
+  reportBucket,
   reportNeedsAttention,
   reportStatusView,
 } from "./report-status"
@@ -16,10 +16,10 @@ describe("report status buckets", () => {
   })
 
   it("buckets an unknown status as awaiting action", () => {
-    expect(reportBucketOf("published")).toBe("submitted")
-    expect(reportBucketOf("in_progress")).toBe("in_progress")
-    expect(reportBucketOf("resolved")).toBe("completed")
-    expect(reportBucketOf("upcoming")).toBe("submitted")
+    expect(reportBucket("published")).toBe("submitted")
+    expect(reportBucket("in_progress")).toBe("in_progress")
+    expect(reportBucket("resolved")).toBe("completed")
+    expect(reportBucket("upcoming")).toBe("submitted")
   })
 
   it("needs attention for flagged pins and the awaiting-action bucket only", () => {

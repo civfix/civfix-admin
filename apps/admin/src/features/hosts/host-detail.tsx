@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
+import { flatPages } from "@/lib/infinite"
 import { BroadcastLog } from "@/features/hosts/broadcast-log"
 import {
   eventsFromBroadcasts,
@@ -15,10 +16,10 @@ import {
   type HostActivityWindow,
   type HostEventRef,
 } from "@/features/hosts/host-window"
-import { useAdminBroadcastsInfinite, useSetHostMessagingSuspended } from "@/features/hosts/use-hosts"
+import { useBroadcastListInfinite, useSetHostMessagingSuspended } from "@/features/hosts/use-hosts"
 import { useNav } from "@/store/ui-store"
 
-type BroadcastLogQuery = ReturnType<typeof useAdminBroadcastsInfinite>
+type BroadcastLogQuery = ReturnType<typeof useBroadcastListInfinite>
 
 function HostDetailHead({ row }: { row: AdminHostListItemDTO }) {
   const suspended = row.messagingSuspended
@@ -252,9 +253,9 @@ export function HostDetail({
     () => hostBroadcastParams(row.host.id, activityWindow),
     [row.host.id, activityWindow],
   )
-  const logQuery = useAdminBroadcastsInfinite(logParams)
+  const logQuery = useBroadcastListInfinite(logParams)
   const broadcasts = React.useMemo(
-    () => logQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => flatPages(logQuery.data),
     [logQuery.data],
   )
   const events = React.useMemo(() => eventsFromBroadcasts(broadcasts), [broadcasts])

@@ -9,6 +9,7 @@ import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDate } from "@/lib/dates"
+import { flatPages } from "@/lib/infinite"
 import {
   ORG_ROLE_LABEL,
   ORG_ROLE_PILL,
@@ -19,7 +20,7 @@ import {
 import { FieldError, ReasonField, fieldErrorId } from "@/features/orgs/org-form-fields"
 import {
   useAddOrgMember,
-  useOrgMembersInfinite,
+  useOrgMemberListInfinite,
   useRemoveOrgMember,
   useSetOrgMemberRole,
 } from "@/features/orgs/use-orgs"
@@ -34,8 +35,8 @@ const PERSON_FIELD_ID = "org-add-person"
 const PERSON_LABEL_ID = "org-add-person-label"
 
 function useRoster(org: AdminOrgDTO) {
-  const q = useOrgMembersInfinite(org.id)
-  const members = React.useMemo(() => q.data?.pages.flatMap((p) => p.items) ?? [], [q.data])
+  const q = useOrgMemberListInfinite(org.id)
+  const members = React.useMemo(() => flatPages(q.data), [q.data])
   const ownerName = members.find((m) => m.role === "owner")?.user.name ?? org.owner?.name ?? null
   return { q, members, ownerName }
 }

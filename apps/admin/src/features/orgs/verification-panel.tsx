@@ -20,13 +20,13 @@ import {
   kindLabel,
 } from "@/features/orgs/org-facts"
 import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verification"
-import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
+import { useOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
 import { useNav } from "@/store/ui-store"
 
 type OrgVerification = NonNullable<AdminOrgDTO["verification"]>
 
 export function VerificationPanel({ orgId }: { orgId: string }) {
-  const q = useAdminOrg(orgId)
+  const q = useOrg(orgId)
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />
   if (q.isError && !q.data) {

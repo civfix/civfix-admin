@@ -16,7 +16,7 @@ import { menuFocusIndex } from "@/features/orgs/org-members"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 import { ProfilePanel } from "@/features/orgs/profile-panel"
-import { useAdminOrg, useSetOrgSuspended } from "@/features/orgs/use-orgs"
+import { useOrg, useSetOrgSuspended } from "@/features/orgs/use-orgs"
 import { VerificationPanel } from "@/features/orgs/verification-panel"
 
 const TAB_LABEL: Record<OrgDetailTab, string> = {
@@ -228,7 +228,7 @@ export function OrgDetail({
   tab: OrgDetailTab
   onTab: (t: OrgDetailTab) => void
 }) {
-  const q = useAdminOrg(orgId)
+  const q = useOrg(orgId)
   const tabIds = React.useId()
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />

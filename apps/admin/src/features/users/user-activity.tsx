@@ -7,11 +7,12 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
+import { flatPages } from "@/lib/infinite"
 import {
   useRemoveUserMessage,
-  useUserEvents,
-  useUserMessages,
-  useUserReports,
+  useUserEventListInfinite,
+  useUserMessageListInfinite,
+  useUserReportListInfinite,
 } from "@/features/users/use-users"
 import {
   ProfileEventRow,
@@ -60,7 +61,7 @@ function ActivityList<T>({
 }) {
   if (query.isLoading) return <LoadingState label={loadingLabel} />
   if (query.isError) return <ErrorState error={query.error} onRetry={() => query.refetch()} />
-  const items = query.data?.pages.flatMap((p) => p.items) ?? []
+  const items = flatPages(query.data)
   if (!items.length) return <EmptyState title={empty.title} sub={empty.sub} icon={empty.icon} />
   return (
     <>
@@ -72,9 +73,9 @@ function ActivityList<T>({
 
 export function UserActivity({ userId, tab }: { userId: string; tab: ProfileTab }) {
   const nav = useNav()
-  const reports = useUserReports(tab === "reports" ? userId : null)
-  const events = useUserEvents(tab === "events" ? userId : null)
-  const messages = useUserMessages(tab === "messages" ? userId : null)
+  const reports = useUserReportListInfinite(tab === "reports" ? userId : null)
+  const events = useUserEventListInfinite(tab === "events" ? userId : null)
+  const messages = useUserMessageListInfinite(tab === "messages" ? userId : null)
   const removeMessage = useRemoveUserMessage()
 
   const onRemoveMessage = async (message: UserMessageItemDTO) => {

@@ -10,6 +10,7 @@ import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 import { useDebounced } from "@/hooks/use-debounced"
 import { reportStatusView } from "@/lib/report-status"
+import { flatPages } from "@/lib/infinite"
 import { useReportListInfinite } from "@/features/reports/use-reports"
 
 type ReportListQuery = ReturnType<typeof useReportListInfinite>
@@ -122,7 +123,7 @@ export function LinkReportsPicker({
   )
   const candidates = React.useMemo<AdminReportListItemDTO[]>(
     () =>
-      (listQuery.data?.pages.flatMap((p) => p.items) ?? []).filter((r) => !excludeIds.has(r.id)),
+      flatPages(listQuery.data).filter((r) => !excludeIds.has(r.id)),
     [listQuery.data, excludeIds],
   )
 

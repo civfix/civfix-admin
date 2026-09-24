@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { useDebounced } from "@/hooks/use-debounced"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import { useUserListInfinite } from "@/features/users/use-users"
 import { UserDetail } from "@/features/users/user-detail"
 import { UserListPane } from "@/features/users/user-list-pane"
@@ -40,7 +41,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
   const listKey = JSON.stringify(listParams)
   const listQuery = useUserListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
 
