@@ -7,8 +7,8 @@ type ContactDraft = Readonly<Partial<Record<string, string>>>
 /** Per category, how many edits the operator has made since that contact was last saved. */
 export type ContactEdits = Readonly<Partial<Record<string, number>>>
 
-// Only the categories the operator edited since the last save go out, so a Save never overwrites or
-// deletes a contact another operator changed meanwhile. The server deletes a category contact only on an
+// Save draft sends only the categories the operator edited since the last save, so it never overwrites
+// or deletes a contact another operator changed meanwhile. The server deletes a category contact only on an
 // explicit null, so an edited category that is now empty is sent as null, whatever it held at load.
 export function contactsPayload(
   edits: ContactEdits,
@@ -18,6 +18,21 @@ export function contactsPayload(
   for (const category of REPORT_CATEGORIES) {
     if (!edits[category]) continue
     out[category] = current[category]?.trim() || null
+  }
+  return out
+}
+
+// Save & route confirms the routing set the operator sees, and the server checks only the request body
+// for a routable contact, so every contact shown goes out, not just the edited ones.
+export function routingContactsPayload(
+  edits: ContactEdits,
+  current: ContactDraft,
+): Partial<Record<ReportCategory, string | null>> {
+  const out: Partial<Record<ReportCategory, string | null>> = {}
+  for (const category of REPORT_CATEGORIES) {
+    const email = current[category]?.trim()
+    if (email) out[category] = email
+    else if (edits[category]) out[category] = null
   }
   return out
 }

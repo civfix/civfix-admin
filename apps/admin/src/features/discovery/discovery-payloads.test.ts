@@ -7,6 +7,7 @@ import {
   noteAndHandleFields,
   parseHandle,
   partialSaveMessage,
+  routingContactsPayload,
   withContactEdit,
 } from "./discovery-payloads"
 
@@ -26,6 +27,16 @@ describe("contacts payload", () => {
 
   it("leaves categories the operator did not edit out, so a contact changed meanwhile survives", () => {
     expect(contactsPayload({}, { trash: "old@city.gov", graffiti: "" })).toEqual({})
+  })
+
+  it("routes with every contact shown, edited or not, plus null for an edited category now empty", () => {
+    const current = { trash: " trash@city.gov ", graffiti: "", hazard: "h@city.gov", dumping: "" }
+    expect(routingContactsPayload({ hazard: 1, graffiti: 1 }, current)).toEqual({
+      trash: "trash@city.gov",
+      hazard: "h@city.gov",
+      graffiti: null,
+    })
+    expect(routingContactsPayload({}, { trash: "old@city.gov" })).toEqual({ trash: "old@city.gov" })
   })
 
   it("counts every edit to a category", () => {

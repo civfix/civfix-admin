@@ -479,6 +479,52 @@ describe("DiscoveryPage saving", () => {
     })
   })
 
+  it("routes with every contact the form shows, including ones saved before this visit", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(
+      page([jurisdiction({ contacts: [{ category: "trash", email: "trash@la.gov" }] })]),
+    )
+    apiMock.saveJurisdictionContacts.mockResolvedValue({ ok: true })
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
+
+    await waitFor(() =>
+      expect(apiMock.saveJurisdictionContacts).toHaveBeenCalledWith({
+        geoid: "0644000",
+        contacts: { trash: "trash@la.gov" },
+      }),
+    )
+  })
+
+  it("routes with the shown contacts plus null for one the operator emptied", async () => {
+    mockDetailQueries()
+    apiMock.listJurisdictions.mockResolvedValue(
+      page([
+        jurisdiction({
+          contacts: [
+            { category: "trash", email: "trash@la.gov" },
+            { category: "graffiti", email: "old@la.gov" },
+          ],
+        }),
+      ]),
+    )
+    apiMock.saveJurisdictionContacts.mockResolvedValue({ ok: true })
+    renderWithQuery(<DiscoveryPage focusId={null} />)
+    await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
+
+    await userEvent.clear(screen.getByDisplayValue("old@la.gov"))
+    await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
+
+    await waitFor(() =>
+      expect(apiMock.saveJurisdictionContacts).toHaveBeenCalledWith({
+        geoid: "0644000",
+        contacts: { trash: "trash@la.gov", graffiti: null },
+      }),
+    )
+  })
+
   it("normalizes the @handle the way the server does before comparing it", async () => {
     mockDetailQueries()
     apiMock.listJurisdictions.mockResolvedValue(page([jurisdiction({ handle: "la" })]))

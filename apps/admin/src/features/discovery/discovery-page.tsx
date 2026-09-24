@@ -44,6 +44,7 @@ import {
   jurisdictionFields,
   noteAndHandleFields,
   parseHandle,
+  routingContactsPayload,
   withContactEdit,
   type ContactEdits,
 } from "@/features/discovery/discovery-payloads"
@@ -373,7 +374,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         {
           request: {
             geoid: dto.geoid,
-            contacts: contactsPayload(sentEdits, contacts),
+            contacts: routingContactsPayload(sentEdits, contacts),
             ...jurisdictionFields(defaultEmail, formUrl),
           },
           ...(savesExtrasFirst ? { savedFirst: extras } : {}),
