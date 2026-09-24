@@ -114,6 +114,7 @@ describe("UsersPage with a status this build does not know", () => {
     const card = detailCard()
     expect(await within(card).findByText("River Keepers")).toBeInTheDocument()
     const pill = within(card).getByText("steward")
-    expect(pill).not.toHaveClass("undefined")
+    expect(pill).toBeVisible()
+    expect(pill).toHaveClass("pill", "priority-low")
   })
 })

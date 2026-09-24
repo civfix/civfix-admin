@@ -1,28 +1,16 @@
 "use client"
 
-import type { OrgVerificationKind, OrgVerificationStatus } from "@civfix/shared"
+import type { OrgVerificationKind } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
+import { orgStatusView } from "@/lib/org-status"
 import { EvidenceList } from "@/features/orgs/evidence-list"
 import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
 import { useNav, useToast } from "@/store/ui-store"
-
-export const ORG_STATUS_VIEW: Record<OrgVerificationStatus, { label: string; cls: string }> = {
-  unverified: { label: "Unverified", cls: "priority-low" },
-  pending: { label: "Pending review", cls: "status-progress" },
-  verified: { label: "Verified", cls: "status-ok" },
-  rejected: { label: "Rejected", cls: "status-flag" },
-}
-
-// The shared client passes enum values it does not know through, so a status added server-side
-// must render as its raw value instead of crashing the org views.
-export function orgStatusView(status: string): { label: string; cls: string } {
-  return ORG_STATUS_VIEW[status as OrgVerificationStatus] ?? { label: status, cls: "priority-low" }
-}
 
 export const ORG_KIND_LABEL: Record<OrgVerificationKind, string> = {
   nonprofit: "Nonprofit",

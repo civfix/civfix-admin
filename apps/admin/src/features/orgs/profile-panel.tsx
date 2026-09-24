@@ -12,6 +12,7 @@ import { Icons } from "@/components/icons"
 import { promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
+import { orgStatusView } from "@/lib/org-status"
 import {
   SOCIAL_PLATFORMS as PROFILE_SOCIALS,
   buildUpdateRequest,
@@ -26,7 +27,7 @@ import {
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { toastUnlessShownInline, useUpdateOrg } from "@/features/orgs/use-orgs"
-import { ORG_KIND_LABEL, orgStatusView } from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
 import { useNav, useToast } from "@/store/ui-store"
 
 /** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
