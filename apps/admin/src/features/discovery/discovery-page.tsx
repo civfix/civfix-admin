@@ -58,7 +58,6 @@ const BoundaryMap = dynamic(
 import { useToast } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 const LAYER_LABEL: Record<JurisdictionLayer, string> = {
   place: "City",
   county: "County",
@@ -78,7 +77,6 @@ function fmtRouted(iso: string | null): string {
 
 const HOUR_MS = 60 * 60 * 1000
 
-/** Compact relative age ("just now", "5h", "3d", "2w", "4mo", "1y") for the oldest waiting report. */
 function fmtAge(iso: string | null): string {
   if (!iso) return "—"
   const then = new Date(iso).getTime()
@@ -98,7 +96,6 @@ function fmtAge(iso: string | null): string {
   return `${Math.floor(days / 365)}y`
 }
 
-/** Overdue once the oldest waiting report is older than ~24h. */
 function isOverdue(iso: string | null): boolean {
   if (!iso) return false
   const then = new Date(iso).getTime()
@@ -433,7 +430,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
 
       <div className="rep-grid">
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">Jurisdiction</div>
             <div className="sub-body" style={{ padding: 10 }}>
@@ -467,7 +463,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Notes &amp; history</div>
             <div className="sub-body">
@@ -485,7 +480,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
 
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">Discussion @handle</div>
             <div className="sub-body">
@@ -517,7 +511,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">Default contact</div>
             <div className="sub-body">
@@ -549,7 +542,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           </div>
 
-          { }
           <div className="sub">
             <div className="sub-head">
               Routing contacts
@@ -639,7 +631,6 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
       </div>
 
-      { }
       <div className="rep-actions">
         <span className="rep-actions-label">
           {filledCount} of {REPORT_TYPES.length} contacts set

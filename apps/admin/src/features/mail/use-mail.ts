@@ -30,7 +30,6 @@ import { PUBLISH_TOAST } from "@/features/mail/mail-presentation"
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
-
 export function useMailList(params: MailListQuery) {
   return useQuery<MailListResponse>({
     queryKey: queryKeys.mail.page(params),

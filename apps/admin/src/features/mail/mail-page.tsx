@@ -56,7 +56,6 @@ import { useNav, useToast } from "@/store/ui-store"
 import { errorMessage } from "@/lib/error-messages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 type Folder = "outreach" | "inbox"
 
 const FOLDERS: readonly Folder[] = ["outreach", "inbox"]
@@ -720,7 +719,6 @@ export function MailPage({ focusId }: SectionPageProps) {
         </button>
       </PageHead>
 
-      { }
       <div
         className="mailbox-switch"
         role="radiogroup"
