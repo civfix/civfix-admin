@@ -1,9 +1,10 @@
-import { isSafeHttpsUrl } from "@civfix/shared"
-
-// Stored org and claim links are operator-clickable, so they must also clear the shared safe-link
-// gate (no IP literal, punycode, userinfo or overlong url); anything else is shown as plain text.
 export function isHttpsUrl(value: string | null | undefined): value is string {
-  return isWebUrl(value) && isSafeHttpsUrl(value)
+  if (value === null || value === undefined) return false
+  try {
+    return new URL(value).protocol === "https:"
+  } catch {
+    return false
+  }
 }
 
 /**
