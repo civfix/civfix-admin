@@ -43,6 +43,7 @@ export function pickSelected<T extends { geoid: string }>(
   if (selId === null) return null
   return items.find((x) => x.geoid === selId) ?? (lastSeen?.geoid === selId ? lastSeen : null)
 }
+
 export type DirectoryQuery = Pick<JurisdictionListQuery, "q" | "filter" | "layer" | "sort">
 
 const SERVER_FILTER: Record<JurisdictionFilter, NonNullable<JurisdictionListQuery["filter"]>> = {

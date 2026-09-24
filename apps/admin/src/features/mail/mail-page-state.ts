@@ -14,7 +14,6 @@ export const FOLDERS: readonly Folder[] = ["outreach", "inbox"]
 
 export type OutreachBox = "all" | "in" | "out" | "attn"
 
-/** The chip picked in the toolbar: an outreach box in Outreach, a feed filter in the Inbox. */
 export type MailBox = OutreachBox | InboxFeedFilter
 
 export const OUTREACH_BOXES: readonly { value: OutreachBox; label: string }[] = [
