@@ -2661,8 +2661,8 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
    hover affordance. The UUID itself stays mono + selectable. */
 button.pm-copy { background: none; border: 0; margin: 0; padding: 0; cursor: pointer; font: inherit; }
 button.pm-copy .mono { font-size: 11.5px; user-select: text; }
-button.pm-copy:hover { color: var(--ink-1); }
-button.pm-copy:hover .mono { color: var(--ink-1); }
+button.pm-copy:hover { color: var(--ink); }
+button.pm-copy:hover .mono { color: var(--ink); }
 
 .profile-tabs {
   display: flex; gap: 4px;
