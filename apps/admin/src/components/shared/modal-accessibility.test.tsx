@@ -19,6 +19,19 @@ function Opener({ onOpen }: { onOpen: () => void }) {
   )
 }
 
+function backdropOf(dialog: HTMLElement): HTMLElement {
+  return dialog.parentElement!
+}
+
+// A drag that starts on a control inside the modal (a text selection, typically) and ends over the
+// backdrop dispatches its click on the backdrop, their nearest common ancestor.
+function pressInsideReleaseOnBackdrop(inside: HTMLElement, dialog: HTMLElement): void {
+  const backdrop = backdropOf(dialog)
+  fireEvent.mouseDown(inside)
+  fireEvent.mouseUp(backdrop)
+  fireEvent.click(backdrop)
+}
+
 afterEach(() => {
   // The hosts are backed by module-level zustand stores; close anything a test left open.
   if (document.querySelector('[role="dialog"]')) fireEvent.keyDown(window, { key: "Escape" })
@@ -104,6 +117,23 @@ describe("LightboxHost", () => {
 
     fireEvent.load(img)
     expect(screen.queryByRole("status")).toBeNull()
+  })
+
+  it("closes on a click on the backdrop", async () => {
+    const { user, opener } = renderLightbox()
+    await user.click(opener)
+
+    await user.click(backdropOf(screen.getByRole("dialog")))
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("stays open when a press that started inside the frame is released over the backdrop", async () => {
+    const { user, opener } = renderLightbox()
+    await user.click(opener)
+    const frame = screen.getByRole("dialog")
+
+    pressInsideReleaseOnBackdrop(screen.getByRole("img", { name: "Pothole on Main St" }), frame)
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
   })
 
   it("replaces a photo that fails to load with an explicit Refresh photo outcome", async () => {
@@ -219,6 +249,126 @@ describe("DialogHost", () => {
     await user.click(screen.getByRole("button", { name: "Save" }))
     await expect(result).resolves.toBe("spam")
     expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("cancels, not confirms, when Enter is pressed on the initially focused Close button", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Remove report?", confirmLabel: "Remove" })
+    })
+    await user.click(opener)
+    expect(screen.getByRole("button", { name: "Close" })).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+    await expect(result).resolves.toBe(false)
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("puts initial focus on Cancel for a danger confirm and cancels on Enter", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Ban user?", confirmLabel: "Ban", danger: true })
+    })
+    await user.click(opener)
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+    await expect(result).resolves.toBe(false)
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(opener).toHaveFocus()
+  })
+
+  it("cancels when Enter is pressed after tabbing to Cancel", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Remove report?", confirmLabel: "Remove" })
+    })
+    await user.click(opener)
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+    await expect(result).resolves.toBe(false)
+  })
+
+  it("confirms when Enter is pressed on the focused confirm button", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Ban user?", confirmLabel: "Ban", danger: true })
+    })
+    await user.click(opener)
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Ban" })).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+    await expect(result).resolves.toBe(true)
+  })
+
+  it("still confirms on Enter from a target that has no activation of its own", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Remove report?" })
+    })
+    await user.click(opener)
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter" })
+    await expect(result).resolves.toBe(true)
+  })
+
+  it("ignores an auto-repeated Enter so a held key cannot confirm the dialog it just opened", async () => {
+    const { user, opener } = renderDialog(() => {
+      void confirmDialog({ title: "Remove report?" })
+    })
+    await user.click(opener)
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter", repeat: true })
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("adds a newline on Enter in the prompt field and submits on Ctrl+Enter or Cmd+Enter", async () => {
+    let result: Promise<string | null> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = promptDialog({ title: "Reason", confirmLabel: "Save" })
+    })
+    await user.click(opener)
+    const field = screen.getByRole("textbox")
+
+    await user.type(field, "spam{Enter}bot")
+    expect(field).toHaveValue("spam\nbot")
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+
+    await user.keyboard("{Control>}{Enter}{/Control}")
+    await expect(result).resolves.toBe("spam\nbot")
+
+    await user.click(opener)
+    await user.type(screen.getByRole("textbox"), "again")
+    await user.keyboard("{Meta>}{Enter}{/Meta}")
+    await expect(result).resolves.toBe("again")
+  })
+
+  it("cancels a prompt on a click on the backdrop", async () => {
+    let result: Promise<string | null> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = promptDialog({ title: "Reason" })
+    })
+    await user.click(opener)
+
+    await user.click(backdropOf(screen.getByRole("dialog")))
+    await expect(result).resolves.toBeNull()
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("keeps a prompt and its typed reason when a text selection is released over the backdrop", async () => {
+    const { user, opener } = renderDialog(() => {
+      void promptDialog({ title: "Reason" })
+    })
+    await user.click(opener)
+    const field = screen.getByRole("textbox")
+    await user.type(field, "duplicate of an open report")
+
+    pressInsideReleaseOnBackdrop(field, screen.getByRole("dialog"))
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByRole("textbox")).toHaveValue("duplicate of an open report")
   })
 
   // The textarea's autoFocus runs in React's commit phase, before useModalFocus's effect records the
