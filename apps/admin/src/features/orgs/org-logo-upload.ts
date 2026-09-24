@@ -1,15 +1,15 @@
 import { MAX_IMAGE_BYTES, type CreateMediaUploadRequest } from "@civfix/shared"
 import type { ApiClient } from "@civfix/shared/client"
 
+import { BYTES_PER_MB } from "@/lib/bytes"
 import { errorMessage } from "@/lib/error-messages"
+import { SECOND_MS } from "@/lib/timing"
 
 const ORG_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const
 export const ORG_LOGO_ACCEPT = ORG_LOGO_MIME_TYPES.join(",")
 export const MAX_ORG_LOGO_BYTES = MAX_IMAGE_BYTES
 export const ORG_LOGO_PUT_BASE_TIMEOUT_MS = 120_000
 const ORG_LOGO_MIN_BYTES_PER_SEC = 64_000
-const MS_PER_SECOND = 1000
-const BYTES_PER_MB = 1024 * 1024
 
 export const MAX_ORG_LOGO_LABEL = `${Math.round(MAX_ORG_LOGO_BYTES / BYTES_PER_MB)} MB`
 
@@ -25,7 +25,7 @@ interface PreparedLogo {
 }
 
 export function logoPutTimeoutMs(byteSize: number): number {
-  return Math.max(ORG_LOGO_PUT_BASE_TIMEOUT_MS, (byteSize / ORG_LOGO_MIN_BYTES_PER_SEC) * MS_PER_SECOND)
+  return Math.max(ORG_LOGO_PUT_BASE_TIMEOUT_MS, (byteSize / ORG_LOGO_MIN_BYTES_PER_SEC) * SECOND_MS)
 }
 
 export function logoContentType(type: string): string {

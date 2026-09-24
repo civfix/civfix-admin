@@ -35,4 +35,8 @@ describe("report status buckets", () => {
   it("labels the awaiting-action bucket Needs verification", () => {
     expect(reportStatusView("published").label).toBe("Needs verification")
   })
+
+  it("reads an Object.prototype key as awaiting action, not as a status", () => {
+    expect(reportStatusView("constructor").label).toBe("Needs verification")
+  })
 })

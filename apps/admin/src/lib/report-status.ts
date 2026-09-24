@@ -53,6 +53,7 @@ export function reportNeedsAttention(status: string, flagged: boolean): boolean 
   return flagged || (isReportStatus(status) && REPORT_STATUS_BUCKET[status] === "submitted")
 }
 
+// Takes any string because the home map's pin status also spans event statuses.
 export function reportStatusView(status: string): ReportStatusView {
   return BUCKET_VIEW[reportBucketOf(status)]
 }
