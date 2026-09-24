@@ -84,6 +84,8 @@ describe("MailReader attachments", () => {
     const unsafe = screen.getByText("invoice.html")
     expect(detailCard()).toContainElement(unsafe)
     expect(unsafe.closest("a")).toBeNull()
+    expect(unsafe).toHaveTextContent("link unavailable")
+    expect(photo).not.toHaveTextContent("link unavailable")
     expect(document.querySelector('a[href^="javascript:"]')).toBeNull()
   })
 })

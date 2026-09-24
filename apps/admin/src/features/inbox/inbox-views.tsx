@@ -12,11 +12,11 @@ import {
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { replyOriginLabel } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
-import { isWebUrl } from "@/lib/external-url"
 import { useToast } from "@/store/ui-store"
 
 
@@ -130,33 +130,7 @@ export function InboxReader({ id }: { id: string }) {
           </div>
         </div>
 
-        {sel.attachments.length > 0 && (
-          <div className="mail-attachments">
-            {sel.attachments.map((att) => (
-              isWebUrl(att.key) ? (
-                <a
-                  key={att.key}
-                  className="btn sm"
-                  href={att.key}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Icons.ExternalLink size={13} /> {att.filename}
-                  <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                    {(att.size / 1024).toFixed(0)}k
-                  </span>
-                </a>
-              ) : (
-                <span key={att.key} title="Link unavailable">
-                  {att.filename}
-                  <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                    {(att.size / 1024).toFixed(0)}k
-                  </span>
-                </span>
-              )
-            ))}
-          </div>
-        )}
+        <AttachmentList attachments={sel.attachments} />
       </div>
 
       <div className="mail-reader-foot">
