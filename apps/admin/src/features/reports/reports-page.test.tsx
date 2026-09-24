@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type {
   AdminReportDTO,
@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
+import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
 import { detailCard } from "@/test/panes"
 import { ReportsPage } from "@/features/reports/reports-page"
@@ -232,13 +233,15 @@ describe("ReportsPage", () => {
     renderWithQuery(<ReportsPage focusId={null} />)
     await screen.findByText("Couch dumped on sidewalk")
 
-    await userEvent.type(screen.getByPlaceholderText("Search title, place, reporter…"), " couch ")
-    await waitFor(() =>
-      expect(apiMock.listAdminReports).toHaveBeenLastCalledWith({
-        filter: "needs_verification",
-        q: "couch",
-      }),
-    )
+    const user = startFakeTimersWithUser()
+    await user.type(screen.getByPlaceholderText("Search title, place, reporter…"), " couch ")
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
+    expect(apiMock.listAdminReports).toHaveBeenLastCalledWith({
+      filter: "needs_verification",
+      q: "couch",
+    })
   })
 
   it("shows Load more when a cursor is returned and fetches the next page with it", async () => {

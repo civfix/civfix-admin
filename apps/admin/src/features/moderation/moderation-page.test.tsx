@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type {
   GovClaimDTO,
@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
+import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
 import { detailCard } from "@/test/panes"
 import { ModerationPage } from "@/features/moderation/moderation-page"
@@ -244,8 +245,12 @@ describe("ModerationPage queue", () => {
     renderWithQuery(<ModerationPage focusId={null} />)
     await screen.findByText("MOD-101")
 
-    await userEvent.type(screen.getByPlaceholderText("Search flag, reporter, reason…"), " spam ")
-    await waitFor(() => expect(apiMock.listModeration).toHaveBeenLastCalledWith({ q: "spam" }))
+    const user = startFakeTimersWithUser()
+    await user.type(screen.getByPlaceholderText("Search flag, reporter, reason…"), " spam ")
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
+    expect(apiMock.listModeration).toHaveBeenLastCalledWith({ q: "spam" })
   })
 
   it("shows Load more when a cursor is returned and fetches the next page with it", async () => {
@@ -325,8 +330,8 @@ describe("ModerationPage gov claims", () => {
     renderWithQuery(<ModerationPage focusId={null} />)
     await openGovClaims()
 
-    await screen.findByText("Maya Rivera")
     const list = listCard("Gov claims")
+    await within(list).findByText("Maya Rivera")
     expect(within(list).getByText("City of Oakland")).toBeInTheDocument()
     expect(within(list).getByText("Public Works Director")).toBeInTheDocument()
     expect(within(list).getAllByText("1 of 3 checks verified")).toHaveLength(2)
@@ -370,7 +375,7 @@ describe("ModerationPage gov claims", () => {
     mockClaimDetails(RIVERA)
     renderWithQuery(<ModerationPage focusId={null} />)
     await openGovClaims()
-    await screen.findByText("City of Oakland")
+    await within(listCard("Gov claims")).findByText("City of Oakland")
 
     await userEvent.click(screen.getByRole("button", { name: "Approved" }))
     await waitFor(() =>
@@ -387,12 +392,14 @@ describe("ModerationPage gov claims", () => {
     mockClaimDetails(RIVERA)
     renderWithQuery(<ModerationPage focusId={null} />)
     await openGovClaims()
-    await screen.findByText("City of Oakland")
+    await within(listCard("Gov claims")).findByText("City of Oakland")
 
-    await userEvent.type(screen.getByPlaceholderText("Search name or organization…"), " maya ")
-    await waitFor(() =>
-      expect(apiMock.listGovClaims).toHaveBeenLastCalledWith({ filter: "pending", q: "maya" }),
-    )
+    const user = startFakeTimersWithUser()
+    await user.type(screen.getByPlaceholderText("Search name or organization…"), " maya ")
+    await act(async () => {
+      vi.advanceTimersByTime(250)
+    })
+    expect(apiMock.listGovClaims).toHaveBeenLastCalledWith({ filter: "pending", q: "maya" })
   })
 
   it("shows Load more when a cursor is returned and fetches the next page with it", async () => {
@@ -403,7 +410,7 @@ describe("ModerationPage gov claims", () => {
     mockClaimDetails(RIVERA, NGUYEN)
     renderWithQuery(<ModerationPage focusId={null} />)
     await openGovClaims()
-    await screen.findByText("City of Oakland")
+    await within(listCard("Gov claims")).findByText("City of Oakland")
 
     await userEvent.click(screen.getByRole("button", { name: "Load more" }))
 

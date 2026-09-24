@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from "vitest"
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
-import { queueRowOf } from "@/test/panes"
+import { detailCard, queueRowOf } from "@/test/panes"
 import { OrgsPage } from "@/features/orgs/orgs-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -79,7 +79,7 @@ function mockOrgDetails(...orgs: AdminOrgDTO[]) {
 }
 
 async function detailHeading(name: string) {
-  return screen.findByRole("heading", { level: 2, name })
+  return within(detailCard()).findByRole("heading", { level: 2, name })
 }
 
 describe("OrgsPage list states", () => {
