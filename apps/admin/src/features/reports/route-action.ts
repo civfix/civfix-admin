@@ -1,6 +1,6 @@
-import type { AdminReportDTO } from "@civfix/shared"
+import type { AdminReportDTO, ReportOutreachStatus } from "@civfix/shared"
 
-export type RouteActionKind =
+type RouteActionKind =
   | "send"
   | "resend"
   | "already_sent"
@@ -14,7 +14,7 @@ export interface RouteAction {
 
 export type RoutableReport = Pick<AdminReportDTO, "geoid" | "city" | "outreach">
 
-const SENT_OUTREACH_STATUSES: readonly string[] = ["sent", "delivered", "replied"]
+const SENT_OUTREACH_STATUSES: readonly ReportOutreachStatus[] = ["sent", "delivered", "replied"]
 
 export function routeActionFor(report: RoutableReport): RouteAction {
   const routedAt = report.outreach.routedAt
