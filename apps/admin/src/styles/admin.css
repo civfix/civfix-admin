@@ -1,7 +1,3 @@
-/* =========================================================================
-   PinIt Admin Dashboard - Operations
-   Linear-density x PinIt's warm cream paper. Responsive desktop -> mobile.
-   ========================================================================= */
 @import url('./colors-and-type.css');
 
 * { box-sizing: border-box; }
@@ -32,7 +28,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   padding: var(--gutter) clamp(22px, 2.4vw, 56px) 72px;
 }
 
-/* Page header */
 .page-head {
   display: flex;
   align-items: flex-start;
@@ -70,9 +65,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   font-feature-settings: "tnum" 1;
 }
 
-/* ---------------------------------------------------------
-   Card primitive
-   --------------------------------------------------------- */
 .card {
   background: var(--card);
   border-radius: var(--card-radius);
@@ -128,9 +120,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .card .card-head .head-action svg { width: 12px; height: 12px; flex-shrink: 0; }
 .card .card-head .head-action:hover { background: var(--paper-2); color: var(--ink); }
 
-/* ---------------------------------------------------------
-   Status strip
-   --------------------------------------------------------- */
 .statusstrip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -205,9 +194,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   }
 }
 
-/* ---------------------------------------------------------
-   Live US activity
-   --------------------------------------------------------- */
 .live-map-card { min-height: 360px; }
 .live-map {
   position: relative;
@@ -222,7 +208,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   background: var(--paper-2);
 }
 
-/* Leaflet tooltip override -> on-brand */
 .pi-map-tip.leaflet-tooltip {
   background: var(--ink);
   color: var(--fg-on-color);
@@ -249,7 +234,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .leaflet-bar a:hover { background: var(--paper-2) !important; }
 
-/* Legend + active card overlays */
 .live-map .map-legend {
   position: absolute;
   bottom: 10px; left: 12px;
@@ -280,7 +264,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .live-map .map-legend .pin-needs { background: #E5564B; }
 .live-map .map-legend .pin-events { background: var(--sun-600); }
 
-/* Map markers - report-type glyph kept, only color changes */
 .pi-pin2-wrap { background: none; border: none; }
 .pi-pin2 { display: block; filter: drop-shadow(0 2px 3px rgba(26,23,20,0.3)); transition: transform 120ms var(--ease-out); }
 .pi-pin2 svg { display: block; }
@@ -320,9 +303,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .map-active-card .mac-sub .sep { color: var(--ink-4); }
 .card-head .ha-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 
-/* ---------------------------------------------------------
-   Queue tabs + rows
-   --------------------------------------------------------- */
 .queue-list { display: flex; flex-direction: column; }
 .qrow {
   display: grid;
@@ -462,7 +442,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .qrow:hover .row-arrow { opacity: 1; transform: translateX(2px); color: var(--ink-3); }
 .qrow.selected .row-arrow { opacity: 1; color: var(--bloom); }
 
-/* Pills */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -495,9 +474,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   text-transform: uppercase;
 }
 
-/* ---------------------------------------------------------
-   Buttons
-   --------------------------------------------------------- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -570,9 +546,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   color: var(--ink-3);
 }
 
-/* ---------------------------------------------------------
-   Slide-over task panel
-   --------------------------------------------------------- */
 .panel-overlay {
   position: fixed;
   inset: 0;
@@ -683,7 +656,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .panel-foot .spacer { flex: 1; }
 
-/* Sub sections inside panel */
 .sub {
   background: var(--card);
   border: 1px solid var(--border-soft);
@@ -709,7 +681,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .sub > .sub-body { padding: 14px; }
 
-/* Mini map in panel */
 .mini-map {
   height: 140px;
   background:
@@ -745,7 +716,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   white-space: nowrap;
 }
 
-/* Fields */
 .field {
   display: flex;
   flex-direction: column;
@@ -798,7 +768,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   overflow-wrap: anywhere;
 }
 
-/* -- Per-report-type routing contacts --------------------- */
 .ccat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
@@ -866,7 +835,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   padding: 8px 0;
 }
 
-/* Toast */
 .toast-wrap {
   position: fixed;
   bottom: 22px;
@@ -913,14 +881,10 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   cursor: pointer;
 }
 
-/* Util */
 .mono { font-feature-settings: "tnum" 1; }
 .muted { color: var(--ink-3); }
 .row-flex { display: flex; align-items: center; gap: 8px; }
 
-/* =========================================================
-   Pages: toolbar, filters, search
-   ========================================================= */
 .toolbar {
   display: flex;
   align-items: center;
@@ -1013,7 +977,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .sortbox select:focus { border-color: var(--bloom); box-shadow: var(--ring); }
 
-/* Empty state */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1036,7 +999,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .empty-title { font-weight: 700; font-size: 15px; color: var(--ink); }
 .empty-sub { font-size: 13px; color: var(--ink-3); margin-top: 4px; max-width: 36ch; }
 
-/* Master-detail layout */
 .master-detail {
   display: grid;
   grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
@@ -1051,7 +1013,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   .md-list { position: static; max-height: none; }
 }
 
-/* Generic table */
 .table { display: flex; flex-direction: column; }
 /* Horizontal scroll container for grid "tables" on narrow viewports: the table keeps a sane
    minimum width and the WRAPPER scrolls, so the page itself never scrolls sideways. */
@@ -1087,10 +1048,8 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .trow .td-strong { font-weight: 700; color: var(--ink); }
 .trow.jt { grid-template-columns: 2fr 0.6fr 0.8fr; }
 
-/* card padding helper */
 .card-pad { padding: 16px; }
 
-/* User context block (in moderation + users) */
 .user-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .user-head > div { flex: 1; min-width: 0; }
 .user-av {
@@ -1103,12 +1062,8 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   font-weight: 700;
   font-size: 13px;
   flex-shrink: 0;
-  /* Per-seed brand color is set inline (matching the shared Avatar's solid fill, NOT a single hardcoded
-     gradient). When the user has a real photo this is an <img> rendered at the same size, cover-cropped. */
   overflow: hidden;
 }
-/* The real-photo variant: same circle, the uploaded/provider avatar fills it (center-cover) so admin
-   shows the IDENTICAL photo as web/mobile. object-fit keeps the aspect ratio inside the round clip. */
 img.user-av { object-fit: cover; background: var(--paper-2); }
 .user-av.lg { width: 48px; height: 48px; font-size: 16px; }
 .user-name { font-weight: 700; font-size: 14px; color: var(--ink); }
@@ -1143,9 +1098,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   flex-wrap: wrap;
 }
 
-/* =========================================================
-   Reports detail
-   ========================================================= */
 .rep-detail, .user-detail, .mail-reader { display: flex; flex-direction: column; height: 100%; }
 .rep-head {
   display: flex;
@@ -1233,7 +1185,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   border: 1px solid var(--border-soft);
 }
 
-/* Timeline */
 .rep-timeline { display: flex; flex-direction: column; }
 .rep-tl-row { display: flex; gap: 10px; padding: 7px 0; position: relative; }
 .rep-tl-row:not(:last-child)::before {
@@ -1256,7 +1207,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .rep-tl-text b { color: var(--ink); font-weight: 700; }
 .rep-tl-when { font-size: 10.5px; color: var(--ink-4); font-family: var(--font-mono); margin-top: 1px; }
 
-/* Routed city block */
 .rep-city { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .rep-city-ico {
   width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
@@ -1274,7 +1224,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .rep-city-contact .mono { font-size: 11.5px; }
 .rep-city-contact.warn { background: var(--sun-50); border-color: color-mix(in oklab, var(--sun) 26%, transparent); color: var(--sun-700); font-weight: 600; }
 
-/* Follow-up composer */
 .rep-to { display: flex; gap: 6px; margin-bottom: 8px; }
 .rep-followup {
   width: 100%; resize: vertical; min-height: 64px; margin-bottom: 8px;
@@ -1291,7 +1240,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 }
 .rep-actions-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); margin-right: 2px; }
 
-/* -- Events ----------------------------------------------- */
 .evt-row-ico {
   width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -1330,7 +1278,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .evt-msg-text { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink); line-height: 1.4; }
 .evt-post-hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
 
-/* -- Report discussion (public comment thread; distinct from the Activity timeline) -- */
 .dsc-list { display: flex; flex-direction: column; gap: 10px; }
 .dsc-msg {
   display: flex; gap: 10px;
@@ -1372,15 +1319,11 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 }
 .dsc-reaction.mine { background: var(--bloom-50); color: var(--bloom-700); border-color: color-mix(in oklab, var(--bloom) 20%, transparent); }
 
-/* Operator composer under the report chat (same treatment as the Mail reply composer). */
 .dsc-composer { border-top: 1px solid var(--border-soft); padding: 12px 14px 14px; }
 .dsc-composer-foot { display: flex; align-items: center; gap: 8px; }
 .dsc-composer-foot .hint { font-size: 11px; color: var(--ink-3); min-width: 0; }
 .dsc-composer-foot .spacer { flex: 1; min-width: 4px; }
 
-/* Linked reports/events galleries (event<->report linking). A vertical list of clickable cards: a
-   thumb/glyph, a title, a status/kind sub-row, and an address/organizer line. Used on both the event
-   detail ("Linked reports") and the report detail ("Linked events"). */
 .evt-linked-list { display: flex; flex-direction: column; gap: 8px; }
 .evt-linked-card,
 .evt-pick-row {
@@ -1404,8 +1347,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .evt-linked-cat { font-weight: 600; }
 .evt-linked-addr { font-size: 11px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* A linked-report row: the deep-link card plus a trailing operator unlink control (a card is a
-   <button>, so the remove control is a sibling, never nested). The card flexes; the control is fixed. */
+/* The card is a <button>, so the unlink control is its sibling, never nested inside it. */
 .evt-linked-row { display: flex; align-items: stretch; gap: 8px; }
 .evt-linked-row .evt-linked-card { flex: 1; min-width: 0; }
 .evt-linked-unlink {
@@ -1419,8 +1361,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .evt-linked-unlink:hover { border-color: var(--danger); background: var(--paper); color: var(--danger); }
 .evt-linked-unlink:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* "Link reports" picker (uses the shared .modal shell). A scrollable, multi-select list of candidate
-   reports with a search box; each row is a checkbox-styled toggle matching the card aesthetic. */
 .evt-pick-search { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 10px; border: 1px solid var(--border); color: var(--ink-3); }
 .evt-pick-search input { flex: 1; border: none; outline: none; background: none; font-family: var(--font-body); font-size: 13.5px; color: var(--ink); }
 .evt-pick-list { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
@@ -1454,7 +1394,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .udh-badges { display: flex; gap: 6px; flex-wrap: wrap; }
 .user-detail .user-meta-rows { margin-left: 16px; margin-right: 16px; }
 
-/* -- User profile: info + reports/events/messages -------- */
 .profile-meta {
   display: flex; flex-wrap: wrap; gap: 6px 18px;
   padding: 0 16px 14px;
@@ -1462,8 +1401,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 }
 .pm-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
 .pm-item svg { color: var(--ink-3); flex-shrink: 0; }
-/* Copyable account-UUID meta row: a button reset to match the sibling .pm-item spans, with a subtle
-   hover affordance. The UUID itself stays mono + selectable. */
+/* A <button> reset to look like the sibling .pm-item spans; the UUID stays selectable. */
 button.pm-copy { background: none; border: 0; margin: 0; padding: 0; cursor: pointer; font: inherit; }
 button.pm-copy .mono { font-size: 11.5px; user-select: text; }
 button.pm-copy:hover { color: var(--ink); }
@@ -1494,8 +1432,7 @@ button.pm-copy:hover .mono { color: var(--ink); }
   flex-shrink: 0;
 }
 .profile-tab.on .profile-tab-n { color: var(--ink-2); }
-/* Tabs share the strip evenly and may shrink; on phones the count sits under the label so three
-   tabs ("Messages 10141") still fit a 375px card. */
+/* On phones the count sits under the label so three tabs ("Messages 10141") still fit a 375px card. */
 @media (max-width: 480px) {
   .profile-tab { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 12px; }
 }
@@ -1520,13 +1457,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .prow-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .prow-age, .slr-age { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 
-/* =========================================================
-   Mail page
-   ========================================================= */
 .mail-strip { margin-bottom: 0; }
 
-/* Mailbox folder switch (Outreach | Inbox): the unified Mail screen's primary control. A segmented
-   toggle, visually distinct from the contextual filter chips it sits beside in the toolbar. */
 .mailbox-switch {
   display: inline-flex;
   gap: 3px;
@@ -1565,7 +1497,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .mbx.active .mbx-c { color: var(--sky-700); }
 
-/* Inbox attachment links (the reader's download row). */
 .mail-attachments { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
 .mail-row {
@@ -1635,7 +1566,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-withheld-note .btn { flex-shrink: 0; margin-left: auto; }
 .mail-reader-foot { padding: 14px 18px; border-top: 1px solid var(--border-soft); display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Mail thread bubbles */
 .mail-thread { display: flex; flex-direction: column; gap: 12px; }
 .mail-msg {
   border: 1px solid var(--border-soft);
@@ -1654,7 +1584,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-msg-delivery { flex-shrink: 0; }
 .mail-msg .hint { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
 
-/* Mail reply composer */
 .mail-composer { border-top: 1px solid var(--border-soft); padding: 12px 16px 14px; }
 .mail-reply-input {
   width: 100%;
@@ -1674,7 +1603,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-reply-to { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .mail-composer-foot .spacer { flex: 1; min-width: 4px; }
 
-/* Modal (compose) */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 200;
   background: rgba(26, 23, 20, 0.42);
@@ -1815,9 +1743,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .dialog-foot { justify-content: flex-end; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
-/* =========================================================
-   Analytics
-   ========================================================= */
 /* min(100%, 150px) keeps the auto-fit floor from exceeding the strip itself on a 375px phone. */
 .kpi-strip { margin-bottom: 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
 @media (max-width: 880px) {
@@ -1842,7 +1767,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   gap: 10px;
   height: 180px;
 }
-/* min-width: 0 lets columns shrink below their label width (8 months × "September" used to push
+/* min-width: 0 lets columns shrink below their label width (8 months x "September" used to push
    the chart past the card on phones); labels truncate instead. */
 .barchart-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
 .barchart-bar-wrap { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
@@ -1885,7 +1810,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .funnel-track { height: 8px; background: var(--paper-2); border-radius: 999px; overflow: hidden; }
 .funnel-fill { height: 100%; border-radius: 999px; }
 
-/* Mapping coverage */
 .coverage { display: flex; flex-direction: column; gap: 12px; }
 .coverage-num { display: flex; align-items: baseline; gap: 9px; }
 .coverage-pct {
@@ -1902,7 +1826,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .coverage-legend .cl-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
 .coverage-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* Cleanup events summary */
 .events-summary { display: flex; gap: 28px; margin-bottom: 16px; flex-wrap: wrap; }
 .es-stat { display: flex; flex-direction: column; gap: 2px; }
 .es-num {
@@ -1913,7 +1836,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .es-lbl { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
 
-/* Contributors table */
 .trow.ct { grid-template-columns: 2fr 0.7fr 0.8fr; }
 .contrib-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .contrib-av {
@@ -1925,9 +1847,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .contrib-text { display: flex; flex-direction: column; min-width: 0; }
 .contrib-city { font-size: 11px; color: var(--ink-3); }
 
-/* =========================================================
-   FLAT SHELL - no global top bar, no sidebar
-   ========================================================= */
 /* overflow-x: clip is a last-line guard against sideways page scroll (a stray nowrap in a future
    panel); the real fixes are min-width:0 / overflow-wrap on the components themselves. `clip`
    (not hidden) so the sticky back bar keeps working. */
@@ -1951,7 +1870,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .main-home .bt-analytics .stile-num { font-size: 32px; }
 .main-home .bt-analytics .hub-spark { height: 30px; }
 
-/* Hue helpers - every section owns a brand color */
 .hue-bloom { --hue: var(--bloom); --hue-50: var(--bloom-50); --hue-700: var(--bloom-700); }
 .hue-lilac { --hue: var(--lilac); --hue-50: var(--lilac-50); --hue-700: var(--lilac-600); }
 .hue-sky   { --hue: var(--sky);   --hue-50: var(--sky-50);   --hue-700: var(--sky-700); }
@@ -1959,7 +1877,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .hue-moss  { --hue: var(--moss);  --hue-50: var(--moss-50);  --hue-700: var(--moss-700); }
 .hue-slate { --hue: var(--ink-3); --hue-50: var(--paper-2); --hue-700: var(--ink-2); }
 
-/* -- Back bar (section pages) ----------------------------- */
 .backbar {
   position: sticky;
   top: 0;
@@ -2026,12 +1943,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   .backbar-here { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
-/* =========================================================
-   DASHBOARD HUB
-   ========================================================= */
 .hub { display: flex; flex-direction: column; gap: 20px; }
 
-/* -- Spark ------------------------------------------------ */
 .hub-spark { display: flex; align-items: flex-end; gap: 3px; height: 38px; width: 116px; flex-shrink: 0; }
 .hub-spark-bar {
   flex: 1; min-width: 3px;
@@ -2041,7 +1954,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .hub-spark-bar.now { background: var(--sh); }
 
-/* -- Peek glyphs (shared) --------------------------------- */
 .peek-pin { width: 30px; height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .peek-ico, .stile-ico { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--hue-50); color: var(--hue-700); }
 .peek-dir { width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -2054,10 +1966,9 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   background: linear-gradient(135deg, var(--ink-3), var(--ink-4));
 }
 
-/* -- Layout A: Bento -------------------------------------- */
 .hub-bento {
   display: grid;
-  /* 15 cols (= 3 × 5) so the tall map (9) + a feature tile (6) fill a row, and the bottom row holds FIVE
+  /* 15 cols (= 3 x 5) so the tall map (9) + a feature tile (6) fill a row, and the bottom row holds FIVE
      equal span-3 tiles (moderation + mail + users + reports + events) on one line. */
   grid-template-columns: repeat(15, 1fr);
   gap: var(--gutter);
@@ -2065,10 +1976,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .bt-cell { min-width: 0; display: flex; }
 .bt-cell > .stile, .bt-cell > .card { width: 100%; }
-/* Map cell drives the bento's overall height. Now that the aux cards are gone the hub should sit
-   within a desktop viewport (1280x800 / 1440x900) without scrolling; the map scales down on shorter
-   screens via clamp (40vh) rather than forcing the tall 384px and pushing content past the fold.
-   Tune the 300/40vh/384 stops if the fold still clips on a given viewport. */
+/* The map cell sets the bento's height; the clamp keeps the hub inside a 1280x800 fold. */
 .bt-map { grid-column: span 9; grid-row: span 2; min-height: clamp(300px, 40vh, 384px); }
 .bt-map .card { height: 100%; }
 .bt-discovery { grid-column: span 6; }
@@ -2084,12 +1992,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   .hub-bento { grid-template-columns: 1fr; }
   .bt-cell { grid-column: 1 / -1 !important; }
 }
-/* Desktop: the bento is NOT locked to the viewport height. An earlier fit-to-viewport lock
-   (height: 100dvh + overflow: hidden + 1fr rows) silently cut off the fourth row (host platform
-   launcher) on 13"/14" laptops and forced tiles to scroll inside themselves. Rows now size to their
-   content; the map cell stretches to match the discovery + analytics tiles beside it (grid-row:
-   span 2 + min-height clamp above) so the composition still reads as a bento, and the page scrolls
-   naturally when the whole board is taller than the viewport. */
+/* Desktop rows size to their content rather than locking to the viewport height: a 100dvh lock cut
+   off the fourth row (host launcher) on 13"/14" laptops and made tiles scroll inside themselves. */
 @media (min-width: 1101px) {
   .main-home { padding-top: 14px; padding-bottom: 24px; }
   /* Tighten the analytics tile a touch so it lines up with the discovery tile at 1280 wide. */
@@ -2097,7 +2001,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   .main-home .bt-analytics .stile-metricgrid { margin-top: 8px; row-gap: 8px; }
 }
 
-/* -- Section tile ----------------------------------------- */
 .stile {
   background: var(--card);
   border: 1px solid var(--border-soft);
@@ -2110,7 +2013,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   position: relative;
   overflow: hidden;
   min-width: 0;
-  /* Tiles are grid cells of very different widths (span 3 ≈ 230px at 1280, span 6 ≈ 480px), so
+  /* Tiles are grid cells of very different widths (span 3 ~ 230px at 1280, span 6 ~ 480px), so
      their internal layout responds to the TILE width via container queries, not the viewport. */
   container-type: inline-size;
   container-name: stile;
@@ -2141,9 +2044,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em;
   flex-shrink: 0; white-space: nowrap;
 }
-/* The headcount ("11460 reports flagged") is the flexible part of the head: it takes the remaining
-   width, right-aligned, and WRAPS onto a second line instead of clipping mid-word when the tile is
-   narrow (the old margin-left:auto + nowrap pair overflowed every span-3 tile at 1280 wide). */
+/* The headcount ("11460 reports flagged") takes the remaining width and wraps onto a second line
+   instead of clipping mid-word in a narrow tile. */
 .stile-headcount {
   flex: 1 1 auto; min-width: 0;
   text-align: right;
@@ -2185,7 +2087,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .stile-metric .hub-spark { flex: 0 1 116px; min-width: 56px; }
 .stile-blurb { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; margin: 0; text-wrap: pretty; }
 
-/* Analytics tile - mini stat grid + category bars */
 .stile-metricgrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2210,7 +2111,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .smg-delta { display: inline-flex; align-items: center; gap: 1px; font-size: 10px; font-weight: 700; color: var(--moss-700); }
 .smg-k { font-size: 10.5px; color: var(--ink-3); font-weight: 600; margin-top: 2px; }
 
-/* In-card entry list */
 .stile-list { display: flex; flex-direction: column; }
 .slr {
   display: flex; align-items: center; gap: 9px;
@@ -2248,7 +2148,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .stile-foot.opens:hover { background-color: var(--hue-50); }
 .stile-foot.opens:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-/* The "… and N more" hint yields to the CTA: it truncates with an ellipsis (the full count is one
+/* The "... and N more" hint yields to the CTA: it truncates with an ellipsis (the full count is one
    click away) instead of pushing the CTA out of the tile. */
 .stile-moreinline { font-size: 11.5px; font-weight: 600; color: var(--ink-3); white-space: nowrap; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .spacer-flex { flex: 1; min-width: 0; }
@@ -2266,7 +2166,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .stile-foot.opens:hover .stile-cta { opacity: 1; transform: translateX(2px); }
 .stile:hover .stile-cta { opacity: 1; transform: translateX(2px); }
 
-/* -- Layout B: Triage ------------------------------------- */
 .launch-row {
   display: flex; align-items: center; gap: 11px;
   padding: 11px 14px;
@@ -2291,14 +2190,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .launch-sub.tone-ok { color: var(--moss-700); }
 .launch-row > svg:last-child { color: var(--ink-4); flex-shrink: 0; }
 
-/* =========================================================
-   Cross-entity clickability affordances (A1)
-   NOTE to following agents: keep new CSS in its own block below this one.
-   - .lnk-inline : a nested inline link inside an otherwise-clickable row (reporter/organizer/author
-     names, mail header links). Must stopPropagation on click so it doesn't also trigger row-select.
-   - .row-link   : a whole row/panel that navigates on click (profile activity rows, moderation
-     similar items + user-context panel).
-   ========================================================= */
 .lnk-inline {
   color: inherit;
   cursor: pointer;
@@ -2336,12 +2227,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   color: var(--sky-700);
 }
 
-/* =========================================================
-   Need-mapping oldest-age column + forward-email template editor (A2)
-   Appended after the A1 clickability block; do not merge into it.
-   ========================================================= */
-
-/* Oldest-waiting-report age chip in the "Need mapping" directory view. */
 .juris-age {
   display: inline-flex;
   align-items: center;
@@ -2354,7 +2239,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   font-weight: 700;
 }
 
-/* Forward-template editor modal: variable palette, fields, issues, and the rendered preview. */
 .tpl-legend {
   display: flex;
   flex-wrap: wrap;
@@ -2418,4 +2302,3 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   flex-wrap: wrap;
 }
 .tpl-state .spacer { flex: 1; min-width: 4px; }
-

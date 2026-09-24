@@ -1,73 +1,49 @@
-/* =========================================================================
-   PinIt - Colors & Type Foundations
-   Civics mapping app - Playful, sleek, intuitive
-
-   Ported from the design system (ds/colors_and_type.css). This file owns the
-   warm-paper CSS custom properties and the semantic type styles for the admin
-   dashboard. The Google Fonts CDN @import from the prototype is intentionally
-   dropped: fonts load through next/font (Bricolage Grotesque / Manrope /
-   JetBrains Mono) in the root layout, exposed as --font-display-next /
-   --font-body-next / --font-mono-next. ASCII only.
-   ========================================================================= */
-
 :root {
-  /* ====================================================================
-     COLOR - Brand
-     ==================================================================== */
-  /* Pastel-but-saturated. Each color has a -50 (tint, surfaces) and -600 (ink-on-color hover). */
-
-  --bloom-50:  #FFEDE9;   /* coral wash, alert surfaces */
+  --bloom-50:  #FFEDE9;
   --bloom-100: #FFD5CD;
-  --bloom:     #FF7A6B;   /* PRIMARY - pins, CTAs, "report" */
+  --bloom:     #FF7A6B;
   --bloom-600: #E55F50;
   --bloom-700: #B8463A;
 
-  --moss-50:   #E8F3E8;   /* clean / community */
+  --moss-50:   #E8F3E8;
   --moss-300:  #9BCF9B;
-  --moss:      #6FB36F;   /* SUCCESS - cleanups, completed */
+  --moss:      #6FB36F;
   --moss-600:  #4F9551;
   --moss-700:  #347338;
 
-  --sun-50:    #FFF6DA;   /* highlight / cleanup events */
+  --sun-50:    #FFF6DA;
   --sun:       #FFCB47;
   --sun-600:   #E5AE1C;
   --sun-700:   #A77B0A;
 
-  --sky-50:    #E6F2FB;   /* info / map water */
+  --sky-50:    #E6F2FB;
   --sky:       #6FB1DC;
   --sky-700:   #2A6996;
 
-  --lilac-50:  #F0EBFB;   /* secondary accent */
+  --lilac-50:  #F0EBFB;
   --lilac:     #9C82DE;
   --lilac-600: #7657C2;
 
-  /* ====================================================================
-     COLOR - Neutrals (warm)
-     ==================================================================== */
-  --paper:    #FBF7F0;   /* base canvas - warm cream */
-  --paper-2:  #F4EFE6;   /* sunken surface */
-  --card:     #FFFFFF;   /* elevated card */
+  --paper:    #FBF7F0;
+  --paper-2:  #F4EFE6;
+  --card:     #FFFFFF;
 
-  --ink:      #1A1714;   /* primary text */
-  --ink-2:    #4A453F;   /* secondary text */
-  --ink-3:    #8A8378;   /* tertiary / placeholder */
-  --ink-4:    #C9C2B5;   /* hairlines, disabled */
+  --ink:      #1A1714;
+  --ink-2:    #4A453F;
+  --ink-3:    #8A8378;
+  --ink-4:    #C9C2B5;
 
-  /* ====================================================================
-     COLOR - Semantic
-     ==================================================================== */
   --fg-1: var(--ink);
   --fg-3: var(--ink-3);
   --fg-on-color: #FFFFFF;
 
   --bg-1: var(--paper);
 
-  --border-soft: rgba(26, 23, 20, 0.06);   /* hairline on cards */
+  --border-soft: rgba(26, 23, 20, 0.06);
   --border:      rgba(26, 23, 20, 0.10);
 
   --danger:   var(--bloom-600);
 
-  /* Map / category colors - used for pin types */
   /* These mirror tokens.color.category plus tokens.color.cleanup (light scheme) in @civfix/shared -
      keep the two identical. */
   --cat-trash:      #776C60;
@@ -79,38 +55,30 @@
   --cat-other:      #8D8577;
   --cat-cleanup:    #D9A21B;
 
-  /* ====================================================================
-     TYPOGRAPHY - Families
-     The font NAMES are supplied by next/font via the --font-*-next variables set
-     on <html> (see src/app/layout.tsx). We alias them here with the same
-     fallbacks the prototype used so every .font-display/.mono rule resolves
-     identically.
-     ==================================================================== */
+  /* next/font sets the --font-*-next names on <html> (src/app/layout.tsx); these stacks add the
+     fallbacks. */
   --font-display: var(--font-display-next), 'Bricolage Grotesque', 'Bricolage', ui-sans-serif, system-ui, sans-serif;
   --font-body:    var(--font-body-next), 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono:    var(--font-mono-next), 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Type scale - built on 1.25 (major third), tightened at small end */
-  --fs-12: 0.75rem;     /* 12 - micro labels, badges */
-  --fs-14: 0.875rem;    /* 14 - UI body small */
-  --fs-16: 1rem;        /* 16 - base body */
-  --fs-20: 1.25rem;     /* 20 - h5 */
-  --fs-24: 1.5rem;      /* 24 - h4 */
-  --fs-30: 1.875rem;    /* 30 - h3 */
-  --fs-38: 2.375rem;    /* 38 - h2 */
-  --fs-48: 3rem;        /* 48 - h1 */
+  --fs-12: 0.75rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-30: 1.875rem;
+  --fs-38: 2.375rem;
+  --fs-48: 3rem;
 
   --lh-tight: 1.05;
   --lh-snug:  1.2;
   --lh-base:  1.45;
 
-  --tracking-tight: -0.02em;   /* display */
-  --tracking-snug:  -0.01em;   /* headlines */
-  --tracking-wide:   0.06em;   /* eyebrows, all-caps labels */
+  --tracking-tight: -0.02em;
+  --tracking-snug:  -0.01em;
+  --tracking-wide:   0.06em;
 
-  /* ====================================================================
-     SHAPE & SPACE
-     ==================================================================== */
   --space-2: 8px;
   --space-3: 12px;
 
@@ -124,10 +92,7 @@
   --row-pad-y: 11px;
   --row-pad-x: 14px;
 
-  /* ====================================================================
-     ELEVATION - Layered, warm-tinted shadows
-     Soft + crisp pair gives the "lifted paper" feel without looking webby.
-     ==================================================================== */
+  /* Each shadow pairs a crisp edge with a soft blur for the "lifted paper" look. */
   --shadow-1: 0 1px 0 rgba(26,23,20,0.04),
               0 1px 2px rgba(26,23,20,0.05);
 
@@ -143,23 +108,14 @@
               0 12px 20px rgba(26,23,20,0.08),
               0 32px 56px -16px rgba(26,23,20,0.18);
 
-  /* Inset highlight for floating elements - gives the soft "candy" sheen */
   --sheen-top: inset 0 1px 0 rgba(255,255,255,0.6);
 
-  /* Focus ring - colored, not blue-default */
+  /* Focus ring: deliberately bloom-colored, not the browser's default blue. */
   --ring: 0 0 0 3px rgba(255,122,107,0.30);
 
-  /* ====================================================================
-     MOTION
-     ==================================================================== */
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);     /* default UI */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* press release / pin drop */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
-/* =========================================================================
-   SEMANTIC TYPE STYLES
-   Apply directly to elements OR use as utility class.
-   ========================================================================= */
 
 html, body {
   font-family: var(--font-body);
