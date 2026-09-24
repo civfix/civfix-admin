@@ -1952,12 +1952,12 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .main-home .bt-analytics .hub-spark { height: 30px; }
 
 /* Hue helpers - every section owns a brand color */
-.hue-bloom { --hue: var(--bloom); --hue-50: var(--bloom-50); --hue-600: var(--bloom-600); --hue-700: var(--bloom-700); }
-.hue-lilac { --hue: var(--lilac); --hue-50: var(--lilac-50); --hue-600: var(--lilac-600); --hue-700: var(--lilac-600); }
-.hue-sky   { --hue: var(--sky);   --hue-50: var(--sky-50);   --hue-600: var(--sky-600);   --hue-700: var(--sky-700); }
-.hue-sun   { --hue: var(--sun);   --hue-50: var(--sun-50);   --hue-600: var(--sun-600);   --hue-700: var(--sun-700); }
-.hue-moss  { --hue: var(--moss);  --hue-50: var(--moss-50);  --hue-600: var(--moss-600);  --hue-700: var(--moss-700); }
-.hue-slate { --hue: var(--ink-3); --hue-50: var(--paper-2); --hue-600: var(--ink-2); --hue-700: var(--ink-2); }
+.hue-bloom { --hue: var(--bloom); --hue-50: var(--bloom-50); --hue-700: var(--bloom-700); }
+.hue-lilac { --hue: var(--lilac); --hue-50: var(--lilac-50); --hue-700: var(--lilac-600); }
+.hue-sky   { --hue: var(--sky);   --hue-50: var(--sky-50);   --hue-700: var(--sky-700); }
+.hue-sun   { --hue: var(--sun);   --hue-50: var(--sun-50);   --hue-700: var(--sun-700); }
+.hue-moss  { --hue: var(--moss);  --hue-50: var(--moss-50);  --hue-700: var(--moss-700); }
+.hue-slate { --hue: var(--ink-3); --hue-50: var(--paper-2); --hue-700: var(--ink-2); }
 
 /* -- Back bar (section pages) ----------------------------- */
 .backbar {
