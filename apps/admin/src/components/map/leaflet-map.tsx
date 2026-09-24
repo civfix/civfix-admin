@@ -7,6 +7,7 @@ import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation
 import { withCartoKey } from "@/lib/carto"
 import { CATEGORY_GLYPHS } from "@/lib/category"
 
+// Leaflet rather than community-web's MapLibre seam: a deliberate choice for this internal tool.
 // Leaflet touches window at import, so this module must be loaded through next/dynamic with ssr:false.
 
 export interface MapPin {
