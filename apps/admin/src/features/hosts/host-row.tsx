@@ -1,19 +1,20 @@
 "use client"
 
+import * as React from "react"
 import type { AdminHostListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { formatDateTime } from "@/lib/dates"
 
-export function HostRow({
+export const HostRow = React.memo(function HostRow({
   row,
   selected,
-  onClick,
+  onSelect,
 }: {
   row: AdminHostListItemDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
 }) {
   return (
     <div
@@ -21,11 +22,11 @@ export function HostRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(row.host.id)}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(row.host.id)
       }}
     >
       <div className="leading">
@@ -62,4 +63,4 @@ export function HostRow({
       </div>
     </div>
   )
-}
+})

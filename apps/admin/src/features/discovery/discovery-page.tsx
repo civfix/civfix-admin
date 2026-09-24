@@ -146,7 +146,7 @@ function DirectoryListBody({
           key={item.geoid}
           item={item}
           selected={selectedGeoid === item.geoid}
-          onClick={() => onSelect(item.geoid)}
+          onSelect={onSelect}
           showOldest={showOldest}
         />
       ))}

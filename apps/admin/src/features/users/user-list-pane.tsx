@@ -34,7 +34,7 @@ export function UserListPane({
         }
       >
         {items.map((u) => (
-          <UserRow key={u.id} user={u} selected={selectedId === u.id} onClick={() => onSelect(u.id)} />
+          <UserRow key={u.id} user={u} selected={selectedId === u.id} onSelect={onSelect} />
         ))}
         <LoadMoreButton query={listQuery} className="list-load-more" />
       </ListStates>

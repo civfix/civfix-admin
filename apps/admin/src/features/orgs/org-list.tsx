@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import type { AdminOrgDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -15,14 +16,14 @@ function plural(count: number, one: string, many: string): string {
   return `${count.toLocaleString()} ${count === 1 ? one : many}`
 }
 
-function OrgRow({
+const OrgRow = React.memo(function OrgRow({
   org,
   selected,
-  onClick,
+  onSelect,
 }: {
   org: AdminOrgDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
 }) {
   const view = orgStatusView(org.verifiedStatus)
   const suspended = !!org.suspendedAt
@@ -33,11 +34,11 @@ function OrgRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(org.id)}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(org.id)
       }}
     >
       <div className="leading">
@@ -72,7 +73,7 @@ function OrgRow({
       </div>
     </div>
   )
-}
+})
 
 export function OrgList({
   listQuery,
@@ -101,7 +102,7 @@ export function OrgList({
         />
       ) : (
         items.map((o) => (
-          <OrgRow key={o.id} org={o} selected={selId === o.id} onClick={() => onSelect(o.id)} />
+          <OrgRow key={o.id} org={o} selected={selId === o.id} onSelect={onSelect} />
         ))
       )}
       <LoadMoreButton query={listQuery} className="load-more" />

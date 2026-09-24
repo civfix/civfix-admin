@@ -86,8 +86,8 @@ export function useMailbox(focusId: string | null) {
   const search = useMailSearch()
   const outreach = folder === "outreach"
 
-  const markRead = useMarkMailRead()
-  const setInboxStatus = useSetInboxStatus({ quiet: true })
+  const { mutate: markRead } = useMarkMailRead()
+  const { mutate: setInboxStatus } = useSetInboxStatus({ quiet: true })
   const lists = useMailboxLists(folder, box, search.searchTerm)
   const { mailItems, feedByKey } = lists
   // Opening an unread message reads it, so the Unread or Needs attention chip would otherwise close it.
@@ -127,7 +127,8 @@ export function useMailbox(focusId: string | null) {
     search.clear()
   }
 
-  const select = (id: string) => {
+  // Stable across keystrokes and picks, so the memoized list rows skip re-rendering.
+  const select = React.useCallback((id: string) => {
     setSelectedId(id)
     readOnOpen.current = null
     const readFailed = {
@@ -139,15 +140,15 @@ export function useMailbox(focusId: string | null) {
       const row = mailItems.find((t) => t.id === id)
       if (!row?.unread) return
       readOnOpen.current = id
-      markRead.mutate({ id }, readFailed)
+      markRead({ id }, readFailed)
       return
     }
     const item = feedByKey.get(id)
     if (!item?.unread) return
     readOnOpen.current = id
-    if (item.source === "email") setInboxStatus.mutate({ id: item.id, status: "read" }, readFailed)
-    else markRead.mutate({ id: item.threadId }, readFailed)
-  }
+    if (item.source === "email") setInboxStatus({ id: item.id, status: "read" }, readFailed)
+    else markRead({ id: item.threadId }, readFailed)
+  }, [setSelectedId, readOnOpen, outreach, mailItems, feedByKey, markRead, setInboxStatus])
 
   return {
     folder,

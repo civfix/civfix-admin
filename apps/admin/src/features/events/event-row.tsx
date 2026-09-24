@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import type { AdminEventListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -26,14 +27,14 @@ function OrganizerLink({ organizer }: { organizer: AdminEventListItemDTO["organi
   )
 }
 
-export function EventRow({
+export const EventRow = React.memo(function EventRow({
   item,
   selected,
-  onClick,
+  onSelect,
 }: {
   item: AdminEventListItemDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
 }) {
   const kindView = eventKindView(item.eventKind)
   const KindIcon = kindView.icon
@@ -44,12 +45,12 @@ export function EventRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(item.id)}
       onKeyDown={(e) => {
         // A key pressed on the nested organizer link bubbles here; it must stay that link's activation.
         if (e.target !== e.currentTarget || !isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(item.id)
       }}
     >
       <div className="leading">
@@ -88,4 +89,4 @@ export function EventRow({
       </div>
     </div>
   )
-}
+})

@@ -45,7 +45,7 @@ export function HostListPane({
               key={row.host.id}
               row={row}
               selected={selectedId === row.host.id}
-              onClick={() => onSelect(row.host.id)}
+              onSelect={onSelect}
             />
           ))
         )}

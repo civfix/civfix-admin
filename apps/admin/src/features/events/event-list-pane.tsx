@@ -36,7 +36,7 @@ export function EventListPane({
         }
       >
         {items.map((e) => (
-          <EventRow key={e.id} item={e} selected={selId === e.id} onClick={() => onSelect(e.id)} />
+          <EventRow key={e.id} item={e} selected={selId === e.id} onSelect={onSelect} />
         ))}
         <LoadMoreButton query={listQuery} className="list-load-more" />
       </ListStates>

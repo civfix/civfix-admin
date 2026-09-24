@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import {
   INBOX_FEED_FILTER_LABELS,
   type InboxFeedFilter,
@@ -62,6 +63,18 @@ function EmptyList({
   )
 }
 
+const FeedRow = React.memo(function FeedRow({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: InboxFeedItemDTO
+  selected: boolean
+  onSelect: (key: string) => void
+}) {
+  return <InboxRow item={item} selected={selected} onClick={() => onSelect(feedKey(item))} />
+})
+
 function ListRows({
   outreach,
   mailItems,
@@ -71,13 +84,13 @@ function ListRows({
 }: Pick<MailListPaneProps, "outreach" | "mailItems" | "feedItems" | "selectedId" | "onSelect">) {
   if (outreach) {
     return mailItems.map((t) => (
-      <MailRow key={t.id} item={t} selected={selectedId === t.id} onClick={() => onSelect(t.id)} />
+      <MailRow key={t.id} item={t} selected={selectedId === t.id} onSelect={onSelect} />
     ))
   }
   return feedItems.map((item) => {
     const key = feedKey(item)
     return (
-      <InboxRow key={key} item={item} selected={selectedId === key} onClick={() => onSelect(key)} />
+      <FeedRow key={key} item={item} selected={selectedId === key} onSelect={onSelect} />
     )
   })
 }

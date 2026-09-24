@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { MAIL_STATUS_LABELS, relativeAgo, type MailThreadListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -12,14 +13,14 @@ function rowCorrespondent(item: MailThreadListItemDTO): string {
   return item.dir === "in" ? item.from || "(no sender)" : item.to || "(no recipient)"
 }
 
-export function MailRow({
+export const MailRow = React.memo(function MailRow({
   item,
   selected,
-  onClick,
+  onSelect,
 }: {
   item: MailThreadListItemDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
 }) {
   return (
     <div
@@ -27,11 +28,11 @@ export function MailRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(item.id)}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(item.id)
       }}
     >
       <span className={`mail-dir ${item.dir}`}>
@@ -52,4 +53,4 @@ export function MailRow({
       </span>
     </div>
   )
-}
+})

@@ -1,6 +1,6 @@
 "use client"
 
-import type * as React from "react"
+import * as React from "react"
 import type { JurisdictionDirectoryDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -82,22 +82,22 @@ function RowAge({
   return <span className="age">{formatMonthDay(item.lastRouted)}</span>
 }
 
-export function JurisdictionRow({
+export const JurisdictionRow = React.memo(function JurisdictionRow({
   item,
   selected,
-  onClick,
+  onSelect,
   showOldest = false,
 }: {
   item: JurisdictionDirectoryDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
   showOldest?: boolean
 }) {
   const unmapped = item.geoid === UNMAPPED_GEOID
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isKeyboardActivationKey(event.key)) return
     event.preventDefault()
-    onClick()
+    onSelect(item.geoid)
   }
 
   return (
@@ -106,7 +106,7 @@ export function JurisdictionRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(item.geoid)}
       onKeyDown={onKeyDown}
     >
       <div className="leading has-pin" title={unmapped ? "Unmapped" : LAYER_LABEL[item.layer]}>
@@ -144,4 +144,4 @@ export function JurisdictionRow({
       </div>
     </div>
   )
-}
+})

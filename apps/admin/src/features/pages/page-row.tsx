@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import type { AdminEventPageListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -8,14 +9,14 @@ import { formatDateTime } from "@/lib/dates"
 import { pageStatusView, VISIBILITY_LABEL } from "@/features/pages/page-labels"
 import { publicPagePath } from "@/features/pages/page-path"
 
-export function PageRow({
+export const PageRow = React.memo(function PageRow({
   item,
   selected,
-  onClick,
+  onSelect,
 }: {
   item: AdminEventPageListItemDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
 }) {
   const view = pageStatusView(item.status)
   return (
@@ -24,11 +25,11 @@ export function PageRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(item.cleanupId)}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(item.cleanupId)
       }}
     >
       <div className="leading">
@@ -70,4 +71,4 @@ export function PageRow({
       </div>
     </div>
   )
-}
+})

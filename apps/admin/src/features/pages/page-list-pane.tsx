@@ -44,7 +44,7 @@ export function PageListPane({
               key={page.cleanupId}
               item={page}
               selected={selectedId === page.cleanupId}
-              onClick={() => onSelect(page.cleanupId)}
+              onSelect={onSelect}
             />
           ))
         )}
