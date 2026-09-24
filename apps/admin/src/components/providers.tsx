@@ -5,6 +5,7 @@ import { QueryClientProvider, type QueryClient } from "@tanstack/react-query"
 
 import { makeQueryClient } from "@/lib/query"
 import { AuthHydrator } from "@/components/auth/auth-hydrator"
+import { ErrorBoundary } from "@/components/shell/error-boundary"
 import { OperatorLogin } from "@/features/auth/operator-login"
 import { useOperatorSession } from "@/hooks/use-admin-auth"
 
@@ -23,8 +24,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={clientRef.current}>
-      <AuthHydrator />
-      <AuthGate>{children}</AuthGate>
+      <ErrorBoundary>
+        <AuthHydrator />
+        <AuthGate>{children}</AuthGate>
+      </ErrorBoundary>
     </QueryClientProvider>
   )
 }
