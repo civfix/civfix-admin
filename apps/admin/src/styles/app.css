@@ -258,8 +258,7 @@
 .pay-note svg,
 .bcast-note svg { flex-shrink: 0; margin-top: 2px; }
 .pay-note.tone-alert { color: var(--bloom-700); }
-.statcell.tone-alert .statcell-num,
-.statcell.tone-alert .statcell-label { color: var(--bloom-700); }
+.statcell.tone-alert .statcell-num { color: var(--bloom-700); }
 
 /* -- Organization evidence ------------------------------------------------ */
 .org-evidence-list { display: flex; flex-direction: column; gap: 8px; }
@@ -319,7 +318,8 @@
 
 /* -- Host messaging ------------------------------------------------------- */
 .bcast-log { display: flex; flex-direction: column; gap: 9px; }
-.bcast-row {
+.bcast-row,
+.pg-block {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
   padding: 9px 11px;
@@ -361,11 +361,6 @@
 .pg-seo-desc { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
 .pg-seo-meta { font-size: 11px; color: var(--ink-4); margin-top: 3px; }
 .pg-blocks { display: flex; flex-direction: column; gap: 8px; }
-.pg-block {
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: 9px 11px;
-}
 .pg-block-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .pg-block-kind {
   font-size: 10.5px;
@@ -473,9 +468,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 11.5px; font-weight: 600; color: var(--bloom-700);
 }
-.field .lbl { display: flex; align-items: center; gap: 4px; }
 .field .lbl .counter { margin-left: auto; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ink-4); font-size: 10.5px; }
-.field .hint { display: flex; align-items: flex-start; gap: 4px; line-height: 1.45; overflow-wrap: anywhere; }
 .field .hint svg { flex-shrink: 0; margin-top: 2px; }
 .field .hint.tone-warn { color: var(--sun-700); }
 .field input:disabled, .field textarea:disabled, .field select:disabled { background: var(--paper-2); color: var(--ink-3); }

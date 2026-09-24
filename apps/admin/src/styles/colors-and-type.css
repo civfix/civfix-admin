@@ -157,6 +157,14 @@
   --radius-pill: 999px;
   --radius-pin: 50% 50% 50% 6px;  /* signature pin teardrop */
 
+  --sidebar-w: 220px;
+  --sidebar-w-collapsed: 56px;
+  --topbar-h: 52px;
+  --gutter: 16px;
+  --card-radius: 12px;
+  --row-pad-y: 11px;
+  --row-pad-x: 14px;
+
   /* ====================================================================
      ELEVATION - Layered, warm-tinted shadows
      Soft + crisp pair gives the "lifted paper" feel without looking webby.

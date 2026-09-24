@@ -5,8 +5,7 @@
 @import url('./colors-and-type.css');
 
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-html, body { min-height: 100%; }
+html, body { margin: 0; padding: 0; min-height: 100%; }
 /* Always reserve the vertical scrollbar gutter so the document never re-centers .main when a page's
    height crosses the viewport (e.g. switching the Mail folder Outreach -> Inbox drops the
    deliverability strip): without this the scrollbar appears/disappears and the centered content jumps a
@@ -14,11 +13,7 @@ html, body { min-height: 100%; }
 html { scrollbar-gutter: stable; }
 
 body {
-  font-family: var(--font-body);
   font-size: var(--fs-14);
-  color: var(--ink);
-  background: var(--paper);
-  -webkit-font-smoothing: antialiased;
   font-feature-settings: "ss01" 1, "cv11" 1;
 }
 
@@ -26,26 +21,15 @@ button { font-family: inherit; cursor: pointer; }
 button:focus-visible { outline: none; box-shadow: var(--ring); }
 :focus-visible { outline: none; }
 
-/* -- Design knobs ---------------------------------------- */
-:root {
-  --sidebar-w: 220px;
-  --sidebar-w-collapsed: 56px;
-  --topbar-h: 52px;
-  --gutter: 16px;
-  --card-radius: 12px;
-  --row-pad-y: 11px;
-  --row-pad-x: 14px;
-}
-
-/* ---------------------------------------------------------
-   Main work area
-   --------------------------------------------------------- */
 .main {
-  padding: var(--gutter);
   display: flex;
   flex-direction: column;
   gap: var(--gutter);
   min-width: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--gutter) clamp(22px, 2.4vw, 56px) 72px;
 }
 
 /* Page header */
@@ -330,7 +314,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .map-active-card .mac-pin.is-routed { background: #8A8378; }
 .map-active-card .mac-pin.is-needs { background: #E5564B; }
 .map-active-card .mac-pin.is-event { background: #E5AE1C; }
-.map-active-card .mac-pin img { width: 100%; height: 100%; object-fit: contain; }
 .map-active-card .mac-body { min-width: 0; flex: 1; }
 .map-active-card .mac-title { font-weight: 700; font-size: 13px; color: var(--ink); }
 .map-active-card .mac-sub { font-size: 11.5px; color: var(--ink-3); display: flex; gap: 5px; align-items: center; margin-top: 1px; }
@@ -350,6 +333,7 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   cursor: pointer;
   transition: background 100ms var(--ease-out);
   align-items: center;
+  position: relative;
 }
 .qrow:last-child { border-bottom: none; }
 .qrow:hover { background: var(--paper-2); }
@@ -357,17 +341,14 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 .qrow.selected {
   background: linear-gradient(90deg, color-mix(in oklab, var(--bloom) 8%, transparent) 0%, transparent 100%);
 }
-.qrow.selected::before {
+.qrow.selected::before,
+.mail-row.selected::before {
   content: "";
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 2.5px;
   background: var(--bloom);
 }
-.qrow {
-  position: relative;
-}
-
 .qrow .leading {
   width: 32px; height: 32px;
   display: flex;
@@ -384,10 +365,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   border-radius: 8px;
   padding: 3px;
 }
-.qrow .leading.has-pin img {
-  width: 100%; height: 100%;
-  object-fit: contain;
-}
 .qrow .leading.has-thumb {
   position: relative;
   background: var(--paper-2);
@@ -401,11 +378,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   left: 0; right: 0; bottom: 0;
   height: 3px;
   background: var(--cat, transparent);
-}
-.qrow .leading.has-thumb img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 .qrow .body { min-width: 0; }
@@ -782,6 +754,9 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .field:last-child { margin-bottom: 0; }
 .field .lbl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -812,7 +787,16 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   box-shadow: var(--ring);
 }
 .field textarea { resize: vertical; min-height: 56px; }
-.field .hint { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+.field .hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-3);
+  margin-top: 1px;
+  overflow-wrap: anywhere;
+}
 
 /* -- Per-report-type routing contacts --------------------- */
 .ccat-grid {
@@ -833,7 +817,6 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 .ccat-cell-head { display: flex; align-items: center; gap: 8px; }
 .ccat-pin { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.ccat-pin img { width: 100%; height: 100%; object-fit: contain; }
 .ccat-label { font-weight: 700; font-size: 12.5px; color: var(--ink); letter-spacing: -0.005em; }
 .sub-caption { font-size: 11px; color: var(--ink-3); line-height: 1.4; margin-top: -2px; overflow-wrap: anywhere; }
 .ccat-count {
@@ -931,7 +914,7 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
 }
 
 /* Util */
-.mono { font-family: var(--font-mono); font-feature-settings: "tnum" 1; }
+.mono { font-feature-settings: "tnum" 1; }
 .muted { color: var(--ink-3); }
 .row-flex { display: flex; align-items: center; gap: 8px; }
 
@@ -1156,15 +1139,14 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   gap: 8px;
   padding: 14px 16px;
   border-top: 1px solid var(--border-soft);
-  margin-top: 14px;
+  margin-top: 0;
   flex-wrap: wrap;
 }
-.user-actions { margin-top: 0; }
 
 /* =========================================================
    Reports detail
    ========================================================= */
-.rep-detail { display: flex; flex-direction: column; height: 100%; }
+.rep-detail, .user-detail, .mail-reader { display: flex; flex-direction: column; height: 100%; }
 .rep-head {
   display: flex;
   align-items: center;
@@ -1172,7 +1154,12 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   padding: 16px 16px 12px;
 }
 .rep-head-pin { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.rep-head-pin img { width: 100%; height: 100%; object-fit: contain; }
+.map-active-card .mac-pin img,
+.qrow .leading.has-pin img,
+.ccat-pin img,
+.rep-head-pin img,
+.prow-pin img,
+.peek-pin img { width: 100%; height: 100%; object-fit: contain; }
 .rep-head-text { flex: 1; min-width: 0; }
 .rep-head-text .crumb {
   font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.05em;
@@ -1259,7 +1246,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   background: var(--paper-2); color: var(--ink-3);
   border: 1px solid var(--border-soft); position: relative; z-index: 1;
 }
-.rep-tl-row.kind-confirm .rep-tl-ico { background: var(--moss-50); color: var(--moss-700); border-color: color-mix(in oklab, var(--moss) 20%, transparent); }
+.rep-tl-row.kind-confirm .rep-tl-ico,
 .rep-tl-row.kind-done .rep-tl-ico { background: var(--moss-50); color: var(--moss-700); border-color: color-mix(in oklab, var(--moss) 20%, transparent); }
 .rep-tl-row.kind-warn .rep-tl-ico { background: var(--sun-50); color: var(--sun-700); border-color: color-mix(in oklab, var(--sun) 26%, transparent); }
 .rep-tl-row.kind-followup .rep-tl-ico { background: var(--sky-50); color: var(--sky-700); border-color: color-mix(in oklab, var(--sky) 20%, transparent); }
@@ -1374,6 +1361,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   display: flex; align-items: center; justify-content: center;
   background: var(--paper); border: 1px solid var(--border-soft); color: var(--ink-4);
 }
+.qrow .leading.has-thumb img,
 .dsc-msg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dsc-msg-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .dsc-msg-reactions { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
@@ -1394,7 +1382,8 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
    thumb/glyph, a title, a status/kind sub-row, and an address/organizer line. Used on both the event
    detail ("Linked reports") and the report detail ("Linked events"). */
 .evt-linked-list { display: flex; flex-direction: column; gap: 8px; }
-.evt-linked-card {
+.evt-linked-card,
+.evt-pick-row {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   padding: 8px 10px; border-radius: 10px; cursor: pointer;
   background: var(--paper-2); border: 1px solid var(--border-soft);
@@ -1408,9 +1397,9 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 }
 .evt-linked-thumb.hue-sun { background: var(--sun-50, #FFF6DC); color: var(--sun-700); border-color: transparent; }
 .evt-linked-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.evt-linked-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.evt-linked-title { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.evt-linked-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
+.evt-linked-body, .evt-pick-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.evt-linked-title, .evt-pick-title { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evt-linked-sub, .evt-pick-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
 .evt-linked-sub .sep { color: var(--ink-4); }
 .evt-linked-cat { font-weight: 600; }
 .evt-linked-addr { font-size: 11px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1435,12 +1424,6 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .evt-pick-search { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 10px; border: 1px solid var(--border); color: var(--ink-3); }
 .evt-pick-search input { flex: 1; border: none; outline: none; background: none; font-family: var(--font-body); font-size: 13.5px; color: var(--ink); }
 .evt-pick-list { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
-.evt-pick-row {
-  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
-  padding: 8px 10px; border-radius: 10px; cursor: pointer;
-  background: var(--paper-2); border: 1px solid var(--border-soft);
-  transition: border-color 120ms var(--ease-out), background 120ms var(--ease-out);
-}
 .evt-pick-row:hover { border-color: var(--border); background: var(--paper); }
 .evt-pick-row.on { border-color: var(--sky); background: var(--paper); }
 .evt-pick-check {
@@ -1449,12 +1432,8 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
   border: 1.5px solid var(--border); color: transparent; background: var(--paper);
 }
 .evt-pick-row.on .evt-pick-check { border-color: var(--sky); background: var(--sky); color: #fff; }
-.evt-pick-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-.evt-pick-title { font-size: 13px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.evt-pick-sub { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-3); flex-wrap: wrap; }
 .evt-pick-sub .sep { color: var(--ink-4); }
 
-.user-detail { display: flex; flex-direction: column; height: 100%; }
 .user-detail-head {
   display: flex;
   align-items: center;
@@ -1497,27 +1476,26 @@ button.pm-copy:hover .mono { color: var(--ink); }
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   padding: 3px;
+  min-width: 0;
 }
 .profile-tab {
   flex: 1;
+  min-width: 0;
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   font-size: 12.5px; font-weight: 700; color: var(--ink-3);
   padding: 7px 10px; border-radius: 7px;
   transition: background 120ms var(--ease-out), color 120ms var(--ease-out);
 }
 .profile-tab:hover { color: var(--ink); }
-.profile-tab.on { background: #fff; color: var(--ink); box-shadow: var(--shadow-1); }
 .profile-tab-n {
   font-family: var(--font-mono); font-size: 11px; font-weight: 700;
   color: var(--ink-3); background: color-mix(in oklab, var(--ink) 7%, transparent);
   padding: 0 6px; border-radius: 999px; font-feature-settings: "tnum" 1;
+  flex-shrink: 0;
 }
 .profile-tab.on .profile-tab-n { color: var(--ink-2); }
 /* Tabs share the strip evenly and may shrink; on phones the count sits under the label so three
    tabs ("Messages 10141") still fit a 375px card. */
-.profile-tabs { min-width: 0; }
-.profile-tab { min-width: 0; }
-.profile-tab-n { flex-shrink: 0; }
 @media (max-width: 480px) {
   .profile-tab { flex-direction: column; gap: 3px; padding: 6px 4px; font-size: 12px; }
 }
@@ -1532,7 +1510,6 @@ button.pm-copy:hover .mono { color: var(--ink); }
 .prow-main { display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0; text-align: left; }
 button.prow-main { color: inherit; font: inherit; background: none; border: 0; padding: 0; }
 .prow-pin { width: 26px; height: 26px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.prow-pin img { width: 100%; height: 100%; object-fit: contain; }
 .prow-ico {
   width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -1541,7 +1518,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .prow-body { flex: 1; min-width: 0; }
 .prow-title { font-weight: 600; font-size: 13px; color: var(--ink); line-height: 1.35; text-wrap: pretty; }
 .prow-meta { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.prow-age { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
+.prow-age, .slr-age { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 
 /* =========================================================
    Mail page
@@ -1578,7 +1555,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .mbx svg { width: 13px; height: 13px; flex-shrink: 0; }
 .mbx:hover { color: var(--ink); }
-.mbx.active { background: #fff; color: var(--ink); box-shadow: var(--shadow-1); }
+.profile-tab.on, .mbx.active { background: #fff; color: var(--ink); box-shadow: var(--shadow-1); }
 .mbx-c {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1605,9 +1582,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-row:last-child { border-bottom: none; }
 .mail-row:hover { background: var(--paper-2); }
 .mail-row.selected { background: var(--bloom-50); }
-.mail-row.selected::before {
-  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2.5px; background: var(--bloom);
-}
 .mail-dir {
   width: 26px; height: 26px;
   border-radius: 7px;
@@ -1632,7 +1606,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .mail-preview { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mail-status-pill { align-self: center; }
 
-.mail-reader { display: flex; flex-direction: column; height: 100%; }
 .mail-reader-head { padding: 16px 18px 14px; border-bottom: 1px solid var(--border-soft); }
 .mail-reader-subj {
   font-family: var(--font-display);
@@ -1739,7 +1712,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .modal-head .closebtn:hover { background: var(--paper-2); color: var(--ink); }
 .modal-body { padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .compose-field { display: flex; flex-direction: column; gap: 5px; }
-.compose-field label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
+.compose-field label, .dialog-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
 .compose-field input, .compose-field textarea {
   width: 100%;
   border: 1px solid var(--border);
@@ -1825,7 +1798,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .dialog-modal { max-width: 460px; }
 .dialog-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .dialog-text { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
-.dialog-label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); }
 .dialog-input {
   width: 100%;
   border: 1px solid var(--border);
@@ -1953,14 +1925,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .contrib-text { display: flex; flex-direction: column; min-width: 0; }
 .contrib-city { font-size: 11px; color: var(--ink-3); }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
 /* =========================================================
    FLAT SHELL - no global top bar, no sidebar
    ========================================================= */
@@ -1968,13 +1932,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
    panel); the real fixes are min-width:0 / overflow-wrap on the components themselves. `clip`
    (not hidden) so the sticky back bar keeps working. */
 .shell-flat { min-height: 100vh; background: var(--paper); overflow-x: clip; }
-.main {
-  max-width: 1600px;
-  margin: 0 auto;
-  width: 100%;
-  padding: var(--gutter) clamp(22px, 2.4vw, 56px) 72px;
-  gap: var(--gutter);
-}
 @media (max-width: 640px) { .main { padding: var(--gutter) 14px 56px; } }
 
 /* Home dashboard fills a tall viewport but grows + scrolls naturally when content doesn't fit, so the
@@ -2017,6 +1974,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-soft);
+  min-width: 0;
 }
 @media (max-width: 640px) { .backbar { margin-left: -14px; margin-right: -14px; padding: 0 14px; } }
 .backbar-btn {
@@ -2031,6 +1989,8 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   color: var(--ink-2);
   font-weight: 600;
   font-size: 13px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out);
 }
 .backbar-btn:hover { background: var(--paper-2); border-color: var(--border); color: var(--ink); }
@@ -2044,6 +2004,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   font-size: 15px;
   letter-spacing: -0.012em;
   color: var(--ink);
+  min-width: 0;
 }
 .backbar-ico {
   width: 25px; height: 25px;
@@ -2055,9 +2016,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .backbar .spacer { flex: 1; }
 /* Back bar never overflows: the section name + operator name truncate, the buttons never shrink,
    and on phones the button labels collapse to their icons. */
-.backbar { min-width: 0; }
-.backbar-btn { flex-shrink: 0; white-space: nowrap; }
-.backbar-here { min-width: 0; }
 .backbar-here > .backbar-ico { flex-shrink: 0; }
 .backbar > .meta { min-width: 0; max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--ink-3); }
 @media (max-width: 560px) {
@@ -2085,8 +2043,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 
 /* -- Peek glyphs (shared) --------------------------------- */
 .peek-pin { width: 30px; height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.peek-pin img { width: 100%; height: 100%; object-fit: contain; }
-.peek-ico { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--hue-50); color: var(--hue-700); }
+.peek-ico, .stile-ico { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--hue-50); color: var(--hue-700); }
 .peek-dir { width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .peek-dir.in { background: var(--sky-50); color: var(--sky-700); }
 .peek-dir.out { background: var(--moss-50); color: var(--moss-700); }
@@ -2180,11 +2137,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
   font: inherit; text-align: left;
 }
 .stile-head:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-.stile-ico {
-  width: 28px; height: 28px; border-radius: 8px;
-  background: var(--hue-50); color: var(--hue-700);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
 .stile-label {
   font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em;
   flex-shrink: 0; white-space: nowrap;
@@ -2285,7 +2237,6 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .slr-body { display: block; flex: 1; min-width: 0; }
 .slr-title { display: block; font-weight: 700; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.005em; }
 .slr-meta { display: block; font-size: 11px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-.slr-age { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3); font-weight: 600; flex-shrink: 0; white-space: nowrap; }
 .slr-arr { color: var(--ink-4); flex-shrink: 0; display: flex; opacity: 0; transition: opacity 240ms ease, transform 240ms cubic-bezier(0.25, 0.8, 0.3, 1); transform: translateX(-4px); }
 .slr:hover .slr-arr { opacity: 1; transform: none; color: var(--hue-700); }
 .stile-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border-soft); }
