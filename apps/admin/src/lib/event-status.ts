@@ -15,7 +15,7 @@ export function eventStatusView(status: EventStatus): { cls: string; label: stri
     : { cls: "priority-low", label: status }
 }
 
-export function cancelBlockedFor(status: EventStatus): string | null {
+export function cancelBlockedMessage(status: EventStatus): string | null {
   if (status === "completed") return "This event has already ended and can't be cancelled."
   if (status === "cancelled") return "This event is already cancelled."
   return null

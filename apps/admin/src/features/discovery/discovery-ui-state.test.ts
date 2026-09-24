@@ -2,23 +2,23 @@ import { describe, expect, it } from "vitest"
 
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
-  getCountDisplay,
-  getJurisdictionSort,
+  countDisplay,
+  effectiveJurisdictionSort,
   initialDirectoryState,
   pickSelected,
 } from "./discovery-ui-state"
 
 describe("Jurisdictions UI state", () => {
   it("always uses oldest sort for the Needs mapping filter", () => {
-    expect(getJurisdictionSort("attention", "pop")).toBe("oldest")
-    expect(getJurisdictionSort("attention", "reports")).toBe("oldest")
-    expect(getJurisdictionSort("attention", "oldest")).toBe("oldest")
+    expect(effectiveJurisdictionSort("attention", "pop")).toBe("oldest")
+    expect(effectiveJurisdictionSort("attention", "reports")).toBe("oldest")
+    expect(effectiveJurisdictionSort("attention", "oldest")).toBe("oldest")
   })
 
   it("shows loading and unavailable count labels instead of false zeroes", () => {
-    expect(getCountDisplay({ count: null, isLoading: true, isError: false })).toBe("Loading…")
-    expect(getCountDisplay({ count: null, isLoading: false, isError: true })).toBe(EMPTY_VALUE)
-    expect(getCountDisplay({ count: 0, isLoading: false, isError: false })).toBe(0)
+    expect(countDisplay({ count: null, isLoading: true, isError: false })).toBe("Loading…")
+    expect(countDisplay({ count: null, isLoading: false, isError: true })).toBe(EMPTY_VALUE)
+    expect(countDisplay({ count: 0, isLoading: false, isError: false })).toBe(0)
   })
 })
 

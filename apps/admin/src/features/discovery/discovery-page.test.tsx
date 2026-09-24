@@ -172,14 +172,14 @@ describe("DiscoveryPage", () => {
     expect(laRow).toHaveTextContent("City")
     expect(laRow).toHaveTextContent("Needs contact")
     expect(laRow).toHaveTextContent("0644000")
-    expect(laRow).toHaveTextContent("3899k pop")
+    expect(laRow).toHaveTextContent("3.9M pop")
     expect(laRow).toHaveTextContent("4 waiting")
     expect(laRow).toHaveTextContent("City limits")
     expect(laRow).toHaveTextContent("3d")
 
     const pasadenaRow = screen.getByRole("button", { name: /^Pasadena/ })
     expect(pasadenaRow).toHaveTextContent("Routed")
-    expect(pasadenaRow).toHaveTextContent("139k pop")
+    expect(pasadenaRow).toHaveTextContent("138.7K pop")
 
     expect(chip(/^Needs mapping/)).toHaveTextContent("2")
     expect(chip(/^Routed/)).toHaveTextContent("12")

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { getReporterProfileId } from "./reporter-navigation"
+import { toReporterProfileId } from "./reporter-navigation"
 
-describe("getReporterProfileId", () => {
+describe("toReporterProfileId", () => {
   it("returns no destination for anonymous ids and preserves actual user ids", () => {
-    expect(getReporterProfileId(null)).toBeNull()
-    expect(getReporterProfileId("")).toBeNull()
-    expect(getReporterProfileId("   ")).toBeNull()
-    expect(getReporterProfileId("USER-1")).toBe("USER-1")
+    expect(toReporterProfileId(null)).toBeNull()
+    expect(toReporterProfileId("")).toBeNull()
+    expect(toReporterProfileId("   ")).toBeNull()
+    expect(toReporterProfileId("USER-1")).toBe("USER-1")
   })
 })

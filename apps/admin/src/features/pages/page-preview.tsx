@@ -7,7 +7,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { pageBlockViews, type PageBlockView } from "@/features/pages/page-blocks"
 import { publicPagePath } from "@/features/pages/page-path"
-import { useAdminEventPage } from "@/features/pages/use-pages"
+import { useEventPage } from "@/features/pages/use-pages"
 
 function PageBlockCard({ block }: { block: PageBlockView }) {
   return (
@@ -19,7 +19,6 @@ function PageBlockCard({ block }: { block: PageBlockView }) {
       {block.lines.length > 0 && (
         <div className="pg-block-body">
           {block.lines.map((line, index) => (
-            // eslint-disable-next-line react/no-array-index-key
             <p key={index}>{line}</p>
           ))}
         </div>
@@ -38,7 +37,7 @@ function PageBlockCard({ block }: { block: PageBlockView }) {
 }
 
 export function PagePreview({ cleanupId, title }: { cleanupId: string; title: string }) {
-  const pageQuery = useAdminEventPage(cleanupId)
+  const pageQuery = useEventPage(cleanupId)
   const blocks = React.useMemo(() => pageBlockViews(pageQuery.data?.blocks ?? []), [pageQuery.data])
 
   if (pageQuery.isLoading) return <LoadingState label="Loading page content..." />
@@ -57,7 +56,6 @@ export function PagePreview({ cleanupId, title }: { cleanupId: string; title: st
   return (
     <div className="pg-preview">
       {page.coverUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
         <img className="pg-cover" src={page.coverUrl} alt="" />
       )}
       <div>

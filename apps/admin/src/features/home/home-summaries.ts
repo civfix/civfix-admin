@@ -3,18 +3,18 @@ import type { HomeSummaryResponse } from "@civfix/shared"
 
 import type { Hue } from "@/features/analytics/analytics-charts"
 import {
-  getMailPreviewPresentation,
-  getModerationPreviewPresentation,
+  mailPreviewView,
+  moderationPreviewView,
 } from "@/features/home/home-preview-presentation"
 import type { PageId } from "@/store/ui-store"
 
-export interface SectionStat {
+interface SectionStat {
   k: string
   v: ReactNode
   tone?: "warn" | "alert" | null
 }
 
-export interface SectionMetric {
+interface SectionMetric {
   k: string
   v: ReactNode
 }
@@ -139,7 +139,7 @@ export function mailSection(
 ): SectionSummary {
   const needsAction = data?.mail.needsAction ?? 0
   const inboxUnread = data?.inboxUnread
-  const presentation = base.lead === null ? NO_COUNT : getMailPreviewPresentation(base.lead)
+  const presentation = base.lead === null ? NO_COUNT : mailPreviewView(base.lead)
   return {
     ...base,
     lead: presentation.lead,
@@ -157,7 +157,7 @@ export function mailSection(
 }
 
 export function moderationPresentation(data: HomeSummaryResponse | undefined) {
-  return data ? getModerationPreviewPresentation(data.moderationQueue) : NO_COUNT
+  return data ? moderationPreviewView(data.moderationQueue) : NO_COUNT
 }
 
 export function moderationSection(lead: number | null, unit: string): SectionSummary {

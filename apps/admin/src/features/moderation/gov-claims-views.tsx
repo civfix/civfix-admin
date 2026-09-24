@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import type { GovClaimDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -21,7 +22,7 @@ import {
   useVerifyGovClaimCheck,
 } from "@/features/moderation/use-gov-claims"
 
-export function GovClaimRow({
+export const GovClaimRow = React.memo(function GovClaimRow({
   item,
   selected,
   onSelect,
@@ -66,7 +67,7 @@ export function GovClaimRow({
       </div>
     </div>
   )
-}
+})
 
 // Called by the detail pane rather than its cards: one busy flag spans the check toggles and the
 // decision buttons, and a decision's per-call onSuccess fires only while this hook stays mounted.

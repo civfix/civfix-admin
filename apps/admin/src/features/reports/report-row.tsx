@@ -6,11 +6,10 @@ import { REPORT_CATEGORY_LABELS, type AdminReportListItemDTO } from "@civfix/sha
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { categoryCssVar, categoryPinSrc } from "@/lib/category"
+import { firstName, shortRef } from "@/lib/display"
 import { reportStatusView } from "@/lib/report-status"
-import { getReporterProfileId } from "@/features/reports/reporter-navigation"
-import { firstName } from "@/features/reports/person-name"
+import { toReporterProfileId } from "@/features/reports/reporter-navigation"
 import { pluralize } from "@/features/reports/plural"
-import { shortId } from "@/features/reports/report-id"
 import { useNav } from "@/store/ui-store"
 
 function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
@@ -26,7 +25,6 @@ function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
       title={categoryLabel}
     >
       {thumb ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumb}
           alt=""
@@ -35,7 +33,6 @@ function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
           onError={() => setBrokenThumb(thumb)}
         />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={categoryPinSrc(item.category)} alt="" loading="lazy" decoding="async" />
       )}
     </div>
@@ -44,7 +41,7 @@ function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
 
 function ReporterName({ reporter }: { reporter: AdminReportListItemDTO["reporter"] }) {
   const nav = useNav()
-  const reporterId = getReporterProfileId(reporter.id)
+  const reporterId = toReporterProfileId(reporter.id)
   if (!reporterId) return <span>{firstName(reporter.name)}</span>
   return (
     <button
@@ -95,7 +92,7 @@ export const ReportRow = React.memo(function ReportRow({
             </span>
           )}
           <span className="ident" title={item.id}>
-            {shortId(item.id)}
+            {shortRef(item.id)}
           </span>
         </div>
         <div className="sub">

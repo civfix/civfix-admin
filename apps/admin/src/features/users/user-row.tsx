@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import type { AdminUserListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -8,14 +9,14 @@ import { EMPTY_VALUE } from "@/lib/empty-value"
 import { UserAvatar } from "@/features/users/user-avatar"
 import { isMissing, userStatusView } from "@/features/users/user-display"
 
-export function UserRow({
+export const UserRow = React.memo(function UserRow({
   user,
   selected,
-  onClick,
+  onSelect,
 }: {
   user: AdminUserListItemDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
 }) {
   const statusView = userStatusView(user.status)
   return (
@@ -24,11 +25,11 @@ export function UserRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(user.id)}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(user.id)
       }}
     >
       <UserAvatar user={user} />
@@ -68,4 +69,4 @@ export function UserRow({
       </div>
     </div>
   )
-}
+})

@@ -1,8 +1,9 @@
-import type {
-  JurisdictionDirectoryDTO,
-  JurisdictionLayer,
-  PerCategoryCounts,
-  ReportCategory,
+import {
+  relativeAgo,
+  type JurisdictionDirectoryDTO,
+  type JurisdictionLayer,
+  type PerCategoryCounts,
+  type ReportCategory,
 } from "@civfix/shared"
 
 import { REPORT_CATEGORIES, categoryLabel, categoryPinSrc, categoryReportTypes } from "@/lib/category"
@@ -43,9 +44,6 @@ const SHOW_WEEKS_FROM_DAYS = 14
 const SHOW_MONTHS_FROM_WEEKS = 8
 const OVERDUE_AFTER_MS = DAY_MS
 
-const THOUSAND = 1000
-const WHOLE_THOUSANDS_FROM = 10_000
-
 export function routingCount(counts: PerCategoryCounts, id: ReportCategory): number {
   return counts[id] ?? 0
 }
@@ -67,24 +65,9 @@ export function needsAttention(dto: JurisdictionDirectoryDTO): boolean {
   return dto.reportsWaiting > 0 && dto.method === "none"
 }
 
-export function formatRoutedDate(iso: string | null): string {
-  if (!iso) return EMPTY_VALUE
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return EMPTY_VALUE
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
-
-export function formatWaitingAge(iso: string | null, now = Date.now()): string {
-  if (!iso) return EMPTY_VALUE
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return EMPTY_VALUE
-  const elapsed = now - then
-  if (elapsed < MINUTE_MS) return "just now"
-  const minutes = Math.floor(elapsed / MINUTE_MS)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(elapsed / HOUR_MS)
-  if (hours < 24) return `${hours}h`
-  const days = Math.floor(elapsed / DAY_MS)
+// Reports can wait months, so past a week this keeps counting in days, then weeks, months and years
+// where the shared compact age would switch to an ever-growing week count.
+function longWaitingAge(days: number): string {
   if (days < SHOW_WEEKS_FROM_DAYS) return `${days}d`
   const weeks = Math.floor(days / DAYS_PER_WEEK)
   if (weeks < SHOW_MONTHS_FROM_WEEKS) return `${weeks}w`
@@ -93,16 +76,17 @@ export function formatWaitingAge(iso: string | null, now = Date.now()): string {
   return `${Math.floor(days / DAYS_PER_YEAR)}y`
 }
 
+export function formatWaitingAge(iso: string | null, now = Date.now()): string {
+  if (!iso || Number.isNaN(Date.parse(iso))) return EMPTY_VALUE
+  return relativeAgo(iso, now, {
+    justNow: "just now",
+    absoluteFallback: (date) => longWaitingAge(Math.floor((now - date.getTime()) / DAY_MS)),
+  })
+}
+
 export function isOverdue(iso: string | null, now = Date.now()): boolean {
   if (!iso) return false
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return false
   return now - then > OVERDUE_AFTER_MS
-}
-
-export function formatPopulation(population: number): string {
-  if (population >= THOUSAND) {
-    return (population / THOUSAND).toFixed(population >= WHOLE_THOUSANDS_FROM ? 0 : 1) + "k"
-  }
-  return String(population)
 }

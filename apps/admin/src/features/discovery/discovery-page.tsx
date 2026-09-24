@@ -5,14 +5,15 @@ import type { JurisdictionDirectoryDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
-import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { useJurisdictionDirectory } from "@/features/discovery/use-discovery"
+import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
+import { useNow } from "@/hooks/use-now"
+import { useSelection } from "@/hooks/use-selection"
+import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
   directoryCounts,
-  getCountDisplay,
-  getJurisdictionSort,
+  countDisplay,
+  effectiveJurisdictionSort,
   initialDirectoryState,
-  pickSelected,
   toDirectoryQuery,
   type CountDisplay,
   type JurisdictionFilter,
@@ -27,9 +28,10 @@ import {
 } from "@/features/discovery/jurisdiction-view"
 import { UnmappedDetail } from "@/features/discovery/unmapped-detail"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { flatPages } from "@/lib/infinite"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-type DirectoryList = ReturnType<typeof useJurisdictionDirectory>
+type DirectoryList = ReturnType<typeof useJurisdictionListInfinite>
 
 function useDirectoryFilters(focusId: string | null) {
   const [initial] = React.useState(() => initialDirectoryState(focusId))
@@ -54,50 +56,7 @@ function useDirectoryFilters(focusId: string | null) {
   return { filter, setFilter, layer, setLayer, sort, setSort, query, setQuery, debouncedQuery }
 }
 
-// Only the first load picks a jurisdiction on the operator's behalf, and a deep-linked one is never
-// replaced. A pick that a filter or search leaves out stays open as it was last listed; a pick that
-// drops out of the same list after a refetch (a Save & route under Needs mapping) clears, so the pane
-// never shows a stale row or jumps to another jurisdiction's save buttons. Decided only on data
-// fetched for the current params.
-function useJurisdictionSelection({
-  focusId,
-  items,
-  listQuery,
-  listKey,
-}: {
-  focusId: string | null
-  items: JurisdictionDirectoryDTO[]
-  listQuery: DirectoryList
-  listKey: string
-}) {
-  const [selectedId, setSelectedId] = React.useState<string | null>(focusId)
-  const [lastSeen, setLastSeen] = React.useState<JurisdictionDirectoryDTO | null>(null)
-  React.useEffect(() => {
-    if (focusId) setSelectedId(focusId)
-  }, [focusId])
-
-  const selected = pickSelected(items, selectedId, lastSeen)
-  React.useEffect(() => {
-    if (selected && selected !== lastSeen) setLastSeen(selected)
-  }, [selected, lastSeen])
-
-  const [autoPick, setAutoPick] = React.useState(focusId === null)
-  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
-  React.useEffect(() => {
-    if (!listQuery.isSuccess || listQuery.isFetching) return
-    if (selectedId === null) {
-      if (autoPick && items[0]) setSelectedId(items[0].geoid)
-      return
-    }
-    setAutoPick(false)
-    if (items.some((x) => x.geoid === selectedId)) seenIn.current = { id: selectedId, list: listKey }
-    else if (seenIn.current?.id === selectedId && seenIn.current.list === listKey) setSelectedId(null)
-  }, [listQuery.isSuccess, listQuery.isFetching, items, selectedId, listKey, autoPick])
-
-  const notListed =
-    selectedId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
-  return { selectedId, setSelectedId, selected, notListed }
-}
+const geoidOf = (item: JurisdictionDirectoryDTO) => item.geoid
 
 function DirectoryToolbar({
   filters,
@@ -119,16 +78,12 @@ function DirectoryToolbar({
         onChange={(v) => setFilter(v as JurisdictionFilter)}
       />
       <div className="toolbar-spacer" />
-      <div className="searchbox">
-        <Icons.Search size={14} />
-        <input
-          type="text"
-          aria-label="Search jurisdictions"
-          placeholder="Search place or GEOID…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
+      <SearchBox
+        label="Search jurisdictions"
+        placeholder="Search place or GEOID…"
+        value={query}
+        onChange={setQuery}
+      />
       <div className="sortbox">
         <span className="sortbox-label">Type</span>
         <select
@@ -147,7 +102,7 @@ function DirectoryToolbar({
       <div className="sortbox">
         <span className="sortbox-label">Sort</span>
         <select
-          value={getJurisdictionSort(filter, sort)}
+          value={effectiveJurisdictionSort(filter, sort)}
           disabled={filter === "attention"}
           onChange={(e) => setSort(e.target.value as JurisdictionSort)}
           aria-label="Sort jurisdictions"
@@ -174,42 +129,32 @@ function DirectoryListBody({
   onSelect: (geoid: string) => void
   showOldest: boolean
 }) {
-  if (listQuery.isLoading) return <LoadingState label="Loading jurisdictions…" />
-  if (listQuery.isError) {
-    return <ErrorState error={listQuery.error} onRetry={() => listQuery.refetch()} />
-  }
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        title="Nothing matches"
-        sub="Try a different filter or search."
-        icon={<Icons.Search size={20} />}
-      />
-    )
-  }
+  const now = useNow()
   return (
-    <>
+    <ListStates
+      query={listQuery}
+      loadingLabel="Loading jurisdictions…"
+      isEmpty={items.length === 0}
+      empty={
+        <EmptyState
+          title="Nothing matches"
+          sub="Try a different filter or search."
+          icon={<Icons.Search size={20} />}
+        />
+      }
+    >
       {items.map((item) => (
         <JurisdictionRow
           key={item.geoid}
           item={item}
           selected={selectedGeoid === item.geoid}
-          onClick={() => onSelect(item.geoid)}
+          onSelect={onSelect}
+          now={now}
           showOldest={showOldest}
         />
       ))}
-      {listQuery.hasNextPage && (
-        <button
-          type="button"
-          className="btn"
-          style={{ width: "calc(100% - 20px)", margin: "8px 10px" }}
-          disabled={listQuery.isFetchingNextPage}
-          onClick={() => listQuery.fetchNextPage()}
-        >
-          {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
-      )}
-    </>
+      <LoadMoreButton query={listQuery} className="list-load-more" />
+    </ListStates>
   )
 }
 
@@ -251,13 +196,13 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   const filters = useDirectoryFilters(focusId)
   const { filter, layer, sort, debouncedQuery } = filters
   const listParams = toDirectoryQuery(filter, sort, layer, debouncedQuery)
-  const listQuery = useJurisdictionDirectory(listParams)
-  const needsMappingQuery = useJurisdictionDirectory(
+  const listQuery = useJurisdictionListInfinite(listParams)
+  const needsMappingQuery = useJurisdictionListInfinite(
     toDirectoryQuery("attention", sort, layer, debouncedQuery),
   )
 
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
   const firstPage = listQuery.data?.pages[0]
@@ -265,7 +210,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     filter,
     total: firstPage?.total ?? null,
     facets: firstPage?.facets ?? null,
-    needsMapping: getCountDisplay({
+    needsMapping: countDisplay({
       count: needsMappingQuery.data?.pages[0]?.total ?? null,
       isLoading: needsMappingQuery.isLoading,
       isError: needsMappingQuery.isError,
@@ -274,12 +219,17 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     loadedCount: items.length,
   })
 
-  const selection = useJurisdictionSelection({
+  // There is no by-id read here, so a pick that a filter or search leaves out stays open as last listed.
+  const { selectedId, setSelectedId, selectedItem: selected } = useSelection({
     focusId,
+    list: listQuery,
     items,
-    listQuery,
+    getId: geoidOf,
     listKey: JSON.stringify([listParams.filter, listParams.sort, layer, debouncedQuery]),
+    keepLastSeen: true,
   })
+  const notListed =
+    selectedId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
 
   return (
     <>
@@ -296,32 +246,26 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
       <DirectoryToolbar filters={filters} chips={counts.chips} />
 
       <div className="master-detail">
-        <section className="card md-list">
-          <div className="card-head">
-            <h3>
+        <ListCard
+          title={
+            <>
               {typeof counts.header === "number" ? counts.header.toLocaleString() : counts.header}{" "}
               {counts.header === 1 ? "jurisdiction" : "jurisdictions"}
-            </h3>
-            <div className="spacer" />
-            <span className="meta">click a row →</span>
-          </div>
-          <div className="queue-list">
-            <DirectoryListBody
-              listQuery={listQuery}
-              items={items}
-              selectedGeoid={selection.selected?.geoid}
-              onSelect={selection.setSelectedId}
-              showOldest={filter === "attention"}
-            />
-          </div>
-        </section>
+            </>
+          }
+          meta="click a row →"
+        >
+          <DirectoryListBody
+            listQuery={listQuery}
+            items={items}
+            selectedGeoid={selected?.geoid}
+            onSelect={setSelectedId}
+            showOldest={filter === "attention"}
+          />
+        </ListCard>
 
         <section className="card md-detail-card">
-          <SelectedJurisdiction
-            selected={selection.selected}
-            selectedId={selection.selectedId}
-            notListed={selection.notListed}
-          />
+          <SelectedJurisdiction selected={selected} selectedId={selectedId} notListed={notListed} />
         </section>
       </div>
     </>

@@ -4,7 +4,7 @@ import * as React from "react"
 import { RouteReportRequestSchema, type AdminReportDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { msgWhen } from "@/features/reports/report-chat"
+import { formatPreciseDateTime } from "@/lib/dates"
 import type { SendPanelView } from "@/features/reports/send-panel"
 import {
   reportVerdictActions,
@@ -35,7 +35,7 @@ function ReporterVerification({ report }: { report: AdminReportDTO }) {
         <>
           <span className="rep-loc-sep">·</span>
           <span className="rep-loc-item">
-            <Icons.Clock size={13} /> {msgWhen(report.verifiedAt)}
+            <Icons.Clock size={13} /> {formatPreciseDateTime(report.verifiedAt)}
           </span>
         </>
       )}

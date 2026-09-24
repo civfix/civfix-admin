@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { isNotFound } from "@/lib/api"
+import { formatDate } from "@/lib/dates"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { menuFocusIndex } from "@/features/orgs/org-members"
 import { useUser } from "@/features/users/use-users"
@@ -22,12 +23,6 @@ const PROFILE_TABS: readonly { id: ProfileTab; label: string }[] = [
   { id: "events", label: "Events" },
   { id: "messages", label: "Messages" },
 ]
-
-function formatJoinDate(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
-}
 
 function tabCount(user: AdminUserDTO, tab: ProfileTab): number {
   if (tab === "reports") return user.reports
@@ -98,7 +93,7 @@ function UserProfileMeta({ user }: { user: AdminUserDTO }) {
       </span>
       <span className="pm-item">
         <Icons.Calendar size={13} /> Joined{" "}
-        {isMissing(user.joined) ? "unknown" : formatJoinDate(user.joined)}
+        {isMissing(user.joined) ? "unknown" : formatDate(user.joined)}
       </span>
       {!isMissing(user.city) && (
         <span className="pm-item">

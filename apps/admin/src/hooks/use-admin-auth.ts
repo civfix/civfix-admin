@@ -105,7 +105,7 @@ export function useOperatorBootstrap(): () => Promise<BootstrapOutcome> {
  * cookie. The status turns signing-out first so the gate shows neither the dashboard nor the
  * session-error screen while the request and navigation run.
  */
-export function useAdminLogout(): () => Promise<void> {
+export function useOperatorLogout(): () => Promise<void> {
   const setStatus = useAuthStore((s) => s.setStatus)
   const clear = useAuthStore((s) => s.clear)
   const queryClient = useQueryClient()

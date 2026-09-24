@@ -1,34 +1,35 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query"
 import type {
   ApproveGovClaimRequest,
   GetGovClaimResponse,
   GovClaimDTO,
   GovClaimListQuery,
-  GovClaimListResponse,
   RejectGovClaimRequest,
   VerifyCheckRequest,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 import {
   govCheckLabel,
   govClaimApproveErrorMessage,
 } from "@/features/moderation/gov-claim-presentation"
 
 export function useGovClaimListInfinite(params: GovClaimListQuery) {
-  return useInfiniteQuery<GovClaimListResponse>({
-    queryKey: queryKeys.govClaims.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listGovClaims({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.govClaims.list(params), params, (input) =>
+      api.listGovClaims(input),
+    ),
+  )
 }
 
 export function useGovClaim(id: string | null) {
@@ -39,11 +40,8 @@ export function useGovClaim(id: string | null) {
   })
 }
 
-function invalidateGovClaims(qc: ReturnType<typeof useQueryClient>, id: string) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.govClaims.detail(id) }),
-    qc.invalidateQueries({ queryKey: queryKeys.govClaims.all }),
-  ])
+function invalidateGovClaims(qc: QueryClient, id: string) {
+  return invalidateKeys(qc, [queryKeys.govClaims.detail(id), queryKeys.govClaims.all])
 }
 
 export function useVerifyGovClaimCheck() {

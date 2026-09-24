@@ -99,7 +99,9 @@ describe("LiveMap active card", () => {
     await tap(user, "report-r1")
     expect(screen.getByText("Tagged wall")).toBeInTheDocument()
 
-    act(() => client.setQueryData(queryKeys.home.map, { pins: [reportPin({ title: "Wall repainted" })] }))
+    act(() => {
+      client.setQueryData(queryKeys.home.map, { pins: [reportPin({ title: "Wall repainted" })] })
+    })
     expect(await screen.findByText("Wall repainted")).toBeInTheDocument()
     expect(screen.queryByText("Tagged wall")).toBeNull()
   })
@@ -108,7 +110,9 @@ describe("LiveMap active card", () => {
     const { user, client } = await renderMap([reportPin(), eventPin()])
     await tap(user, "report-r1")
 
-    act(() => client.setQueryData(queryKeys.home.map, { pins: [eventPin()] }))
+    act(() => {
+      client.setQueryData(queryKeys.home.map, { pins: [eventPin()] })
+    })
     await waitFor(() => expect(screen.queryByText("Tagged wall")).toBeNull())
     expect(screen.queryByRole("button", { name: /Open report/ })).toBeNull()
   })

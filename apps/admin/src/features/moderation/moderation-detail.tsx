@@ -15,7 +15,7 @@ import {
   SignalsCard,
   SimilarItemsCard,
 } from "@/features/moderation/moderation-evidence-cards"
-import { getModerationDestination } from "@/features/moderation/moderation-navigation"
+import { moderationDestination } from "@/features/moderation/moderation-navigation"
 import { UserContextCard } from "@/features/moderation/moderation-user-context"
 import { kindIcon, moderationKindLabel, priorityView } from "@/features/moderation/moderation-views"
 import { useModerationItem } from "@/features/moderation/use-moderation"
@@ -59,7 +59,7 @@ function ModerationHead({ item }: { item: ModerationItemDTO }) {
 
 function ReportedSubjectCard({ item }: { item: ModerationItemDTO }) {
   const nav = useNav()
-  const destination = getModerationDestination(item.destinationKind, item.destinationId)
+  const destination = moderationDestination(item.destinationKind, item.destinationId)
   return (
     <div className="sub">
       <div className="sub-head">Report</div>

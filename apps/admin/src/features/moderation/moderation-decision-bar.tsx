@@ -29,7 +29,7 @@ export function useModerationDecisions() {
 
 type ModerationDecisions = ReturnType<typeof useModerationDecisions>
 
-function approveVerbFor(item: Pick<ModerationItemDTO, "kind">): string {
+function approveVerbLabel(item: Pick<ModerationItemDTO, "kind">): string {
   return item.kind === "user_report" ? "Keep" : "Approve"
 }
 
@@ -49,7 +49,7 @@ export function ModerationDecisionBar({
   onResolved: (id: string) => void
 }) {
   const { approve, remove, hold, appeal, busy } = decisions
-  const approveVerb = approveVerbFor(item)
+  const approveVerb = approveVerbLabel(item)
   const clearOnSuccess = { onSuccess: () => onResolved(item.id) }
 
   const onApprove = () =>

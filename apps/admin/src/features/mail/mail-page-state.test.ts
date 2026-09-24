@@ -7,6 +7,7 @@ import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   correspondent,
   inboxFeedParams,
+  inboxFocusId,
   mailListParams,
   outreachBoxLabel,
   outreachParams,
@@ -63,6 +64,11 @@ describe("parseFocus", () => {
 
   it("treats any other focus as an outreach thread id", () => {
     expect(parseFocus("t1")).toEqual({ folder: "outreach", id: "t1" })
+  })
+
+  it("reads back the focus id built for an inbox email", () => {
+    expect(inboxFocusId("abc")).toBe("inbox:abc")
+    expect(parseFocus(inboxFocusId("abc"))).toEqual({ folder: "inbox", id: "email:abc" })
   })
 })
 

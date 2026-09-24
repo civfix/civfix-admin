@@ -44,7 +44,7 @@ describe("sendPanelView", () => {
     expect(view.routeAction.kind).toBe("already_sent")
     expect(view.approvesOnSend).toBe(false)
     expect(view.canApproveHere).toBe(true)
-    expect(view.routeLabel).toBe("Already sent · 9/22/2026, 10:00:00 AM")
+    expect(view.routeLabel).toBe("Already sent · Sep 22, 2026, 10:00:00 AM")
     expect(view.routeBlocked).toBe("This report was already sent. Resend it from the Mail thread.")
   })
 

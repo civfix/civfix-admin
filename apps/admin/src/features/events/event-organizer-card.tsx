@@ -2,7 +2,7 @@
 
 import type { AdminEventDTO } from "@civfix/shared"
 
-import { initials } from "@/features/reports/person-name"
+import { initials } from "@/lib/display"
 import { useNav } from "@/store/ui-store"
 
 // The server sends "-" when the organizer's join date is unknown.

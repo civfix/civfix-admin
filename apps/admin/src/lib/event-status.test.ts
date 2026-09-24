@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/shared"
 
-import { cancelBlockedFor, EVENT_STATUS_VIEW, eventStatusView } from "./event-status"
+import { cancelBlockedMessage, EVENT_STATUS_VIEW, eventStatusView } from "./event-status"
 
 describe("event status pills", () => {
   it("renders every label from the shared contract map rather than a local fork", () => {
@@ -33,17 +33,17 @@ describe("event status pills", () => {
 
 describe("cancel availability", () => {
   it("blocks cancelling an event the clock has already ended, matching the API's 409", () => {
-    expect(cancelBlockedFor("completed")).toBe(
+    expect(cancelBlockedMessage("completed")).toBe(
       "This event has already ended and can't be cancelled.",
     )
   })
 
   it("blocks cancelling an event that is already cancelled", () => {
-    expect(cancelBlockedFor("cancelled")).toBe("This event is already cancelled.")
+    expect(cancelBlockedMessage("cancelled")).toBe("This event is already cancelled.")
   })
 
   it("allows cancelling while the event is still upcoming or running", () => {
-    expect(cancelBlockedFor("upcoming")).toBeNull()
-    expect(cancelBlockedFor("in_progress")).toBeNull()
+    expect(cancelBlockedMessage("upcoming")).toBeNull()
+    expect(cancelBlockedMessage("in_progress")).toBeNull()
   })
 })

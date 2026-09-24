@@ -5,11 +5,13 @@ import type { AdminOrgDTO, AdminOrgEventListResponse, AdminOrgEventWhen } from "
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { LoadMoreButton } from "@/components/shared/section-list"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState, FilterChips } from "@/components/shared/page-primitives"
 import { eventKindView } from "@/lib/event-kind"
 import { eventStatusView } from "@/lib/event-status"
-import { useOrgEventsInfinite } from "@/features/orgs/use-orgs"
+import { flatPages } from "@/lib/infinite"
+import { useOrgEventListInfinite } from "@/features/orgs/use-orgs"
 import { useNav } from "@/store/ui-store"
 
 const WHEN_OPTIONS: { value: AdminOrgEventWhen; label: string }[] = [
@@ -73,9 +75,9 @@ function OrgEventRow({ item, onOpen }: { item: OrgEventItem; onOpen: () => void 
 
 export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
   const [when, setWhen] = React.useState<AdminOrgEventWhen>("upcoming")
-  const q = useOrgEventsInfinite(org.id, when)
+  const q = useOrgEventListInfinite(org.id, when)
   const nav = useNav()
-  const items = React.useMemo(() => q.data?.pages.flatMap((p) => p.items) ?? [], [q.data])
+  const items = React.useMemo(() => flatPages(q.data), [q.data])
 
   return (
     <div className="org-panel">
@@ -116,16 +118,7 @@ export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
               {items.map((item) => (
                 <OrgEventRow key={item.id} item={item} onOpen={() => nav("events", item.id)} />
               ))}
-              {q.hasNextPage && (
-                <button
-                  type="button"
-                  className="btn load-more"
-                  disabled={q.isFetchingNextPage}
-                  onClick={() => void q.fetchNextPage()}
-                >
-                  {q.isFetchingNextPage ? "Loading…" : "Load more"}
-                </button>
-              )}
+              <LoadMoreButton query={q} className="load-more" />
             </>
           )}
         </div>

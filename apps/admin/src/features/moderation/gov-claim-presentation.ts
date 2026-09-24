@@ -65,14 +65,14 @@ export function verifyCheckRequest(
  * Why approve / reject are unavailable, or null when the claim can still be decided. The API refuses a
  * decision on a claim that is no longer pending (409), so the buttons say so rather than failing.
  */
-export function govClaimDecisionBlockedFor(status: GovClaimStatus): string | null {
+export function govClaimDecisionBlockedMessage(status: GovClaimStatus): string | null {
   if (status === "approved") return "This claim was already approved."
   if (status === "rejected") return "This claim was already rejected."
   return null
 }
 
-export function govClaimApproveBlockedFor(claim: GovClaimDTO): string | null {
-  const lifecycle = govClaimDecisionBlockedFor(claim.status)
+export function govClaimApproveBlockedMessage(claim: GovClaimDTO): string | null {
+  const lifecycle = govClaimDecisionBlockedMessage(claim.status)
   if (lifecycle !== null) return lifecycle
   if (claim.contactEmail.trim() === "") {
     return "This claim has no contact email, so there is no account to grant government access to."

@@ -8,7 +8,7 @@ import { isWebUrl } from "@/lib/external-url"
 
 // An attachment key comes from mail the platform received, so only an http(s) url becomes a link;
 // any other scheme (javascript:, data:) or a bare storage key renders inert.
-export function AttachmentChip({ attachment }: { attachment: MailAttachment }) {
+function AttachmentChip({ attachment }: { attachment: MailAttachment }) {
   if (!isWebUrl(attachment.key)) {
     return (
       <span className="btn sm attachment-chip unlinked">

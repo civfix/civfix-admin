@@ -1,6 +1,6 @@
 type UserMessageDestination = { page: "events" | "reports"; id: string }
 
-export function getUserMessageDestination(input: {
+export function userMessageDestination(input: {
   source?: string | null
   sourceId: string | null
 }): UserMessageDestination | null {

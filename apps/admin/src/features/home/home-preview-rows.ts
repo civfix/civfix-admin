@@ -14,6 +14,8 @@ import {
 
 import { Icons, type IconComponent } from "@/components/icons"
 import type { Hue } from "@/features/analytics/analytics-charts"
+import { inboxFocusId } from "@/features/mail/mail-page-state"
+import { formatCompactCount } from "@/lib/display"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { reportStatusView } from "@/lib/report-status"
 
@@ -30,17 +32,8 @@ export interface PeekItem {
   focusId: string
 }
 
-const POPULATION_FORMAT = new Intl.NumberFormat("en", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-})
-
-function compactPopulation(population: number): string {
-  return population > 0 ? POPULATION_FORMAT.format(population) : ""
-}
-
 export function discoveryRow(task: DiscoveryTaskDTO): PeekItem {
-  const population = compactPopulation(task.pop)
+  const population = task.pop > 0 ? formatCompactCount(task.pop) : ""
   return {
     kind: "pin",
     cat: task.category,
@@ -93,7 +86,7 @@ function inboxRow(email: InboundEmailListItemDTO): PeekItem {
     title: email.from || email.recipient,
     meta: email.subject || "(no subject)",
     age: relativeAgo(email.ts),
-    focusId: `inbox:${email.id}`,
+    focusId: inboxFocusId(email.id),
   }
 }
 

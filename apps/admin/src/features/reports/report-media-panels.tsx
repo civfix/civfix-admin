@@ -35,11 +35,9 @@ function ReportPhotoFace({
   return (
     <>
       {photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" decoding="async" />
       ) : (
         <span className="rep-photo-pin" style={{ background: categoryCssVar(category) }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={pin} alt="" />
         </span>
       )}

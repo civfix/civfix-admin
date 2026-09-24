@@ -45,7 +45,7 @@ export function isReportStatus(status: string): status is AdminReportStatus {
 }
 
 // A status from a newer server reads as awaiting action rather than crashing or passing as Completed.
-export function reportBucketOf(status: string): ReportBucket {
+export function reportBucket(status: string): ReportBucket {
   return isReportStatus(status) ? REPORT_STATUS_BUCKET[status] : "submitted"
 }
 
@@ -55,5 +55,5 @@ export function reportNeedsAttention(status: string, flagged: boolean): boolean 
 
 // Takes any string because the home map's pin status also spans event statuses.
 export function reportStatusView(status: string): ReportStatusView {
-  return BUCKET_VIEW[reportBucketOf(status)]
+  return BUCKET_VIEW[reportBucket(status)]
 }

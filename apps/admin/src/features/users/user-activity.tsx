@@ -5,13 +5,14 @@ import type { UserMessageItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
-import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { ListStates, LoadMoreButton } from "@/components/shared/section-list"
 import { promptDialog } from "@/components/shared/dialog"
+import { flatPages } from "@/lib/infinite"
 import {
   useRemoveUserMessage,
-  useUserEvents,
-  useUserMessages,
-  useUserReports,
+  useUserEventListInfinite,
+  useUserMessageListInfinite,
+  useUserReportListInfinite,
 } from "@/features/users/use-users"
 import {
   ProfileEventRow,
@@ -33,20 +34,6 @@ interface ActivityQuery<T> {
   fetchNextPage: () => unknown
 }
 
-function LoadMore({ query }: { query: ActivityQuery<unknown> }) {
-  if (!query.hasNextPage) return null
-  return (
-    <button
-      type="button"
-      className="btn load-more"
-      disabled={query.isFetchingNextPage}
-      onClick={() => void query.fetchNextPage()}
-    >
-      {query.isFetchingNextPage ? "Loading…" : "Load more"}
-    </button>
-  )
-}
-
 function ActivityList<T>({
   query,
   loadingLabel,
@@ -58,23 +45,25 @@ function ActivityList<T>({
   empty: { title: string; sub: string; icon: React.ReactNode }
   renderItem: (item: T) => React.ReactNode
 }) {
-  if (query.isLoading) return <LoadingState label={loadingLabel} />
-  if (query.isError) return <ErrorState error={query.error} onRetry={() => query.refetch()} />
-  const items = query.data?.pages.flatMap((p) => p.items) ?? []
-  if (!items.length) return <EmptyState title={empty.title} sub={empty.sub} icon={empty.icon} />
+  const items = flatPages(query.data)
   return (
-    <>
+    <ListStates
+      query={query}
+      loadingLabel={loadingLabel}
+      isEmpty={!items.length}
+      empty={<EmptyState title={empty.title} sub={empty.sub} icon={empty.icon} />}
+    >
       {items.map(renderItem)}
-      <LoadMore query={query} />
-    </>
+      <LoadMoreButton query={query} className="load-more" />
+    </ListStates>
   )
 }
 
 export function UserActivity({ userId, tab }: { userId: string; tab: ProfileTab }) {
   const nav = useNav()
-  const reports = useUserReports(tab === "reports" ? userId : null)
-  const events = useUserEvents(tab === "events" ? userId : null)
-  const messages = useUserMessages(tab === "messages" ? userId : null)
+  const reports = useUserReportListInfinite(tab === "reports" ? userId : null)
+  const events = useUserEventListInfinite(tab === "events" ? userId : null)
+  const messages = useUserMessageListInfinite(tab === "messages" ? userId : null)
   const removeMessage = useRemoveUserMessage()
 
   const onRemoveMessage = async (message: UserMessageItemDTO) => {

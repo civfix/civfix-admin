@@ -29,7 +29,7 @@ export function outreachBoxLabel(box: MailBox): string {
   return OUTREACH_BOXES.find((b) => b.value === box)?.label ?? "All"
 }
 
-export function feedFilterOf(box: MailBox): InboxFeedFilter {
+export function mailboxFeedFilter(box: MailBox): InboxFeedFilter {
   return isInboxFeedFilter(box) ? box : "all"
 }
 
@@ -48,7 +48,11 @@ export function mailListParams(folder: Folder, box: MailBox, q: string | undefin
 }
 
 export function inboxFeedParams(folder: Folder, box: MailBox, q: string | undefined): InboxFeedQuery {
-  return folder === "inbox" ? { filter: feedFilterOf(box), q } : { filter: "all" }
+  return folder === "inbox" ? { filter: mailboxFeedFilter(box), q } : { filter: "all" }
+}
+
+export function inboxFocusId(emailId: string): string {
+  return `${INBOX_FOCUS_PREFIX}${emailId}`
 }
 
 export function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {

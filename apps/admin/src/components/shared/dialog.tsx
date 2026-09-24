@@ -69,6 +69,16 @@ export function promptDialog(
   })
 }
 
+const REASON_LABEL = "Reason (required)"
+
+export async function promptReason(
+  opts: Omit<PromptRequest, "kind" | "resolve" | "label" | "required">,
+): Promise<string | null> {
+  const reason = await promptDialog({ ...opts, label: REASON_LABEL, required: true })
+  const trimmed = reason?.trim() ?? ""
+  return trimmed === "" ? null : trimmed
+}
+
 const PROMPT_FIELD_ROWS = 3
 
 const NATIVE_ENTER_TAGS = new Set(["BUTTON", "A", "SELECT"])

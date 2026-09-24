@@ -4,9 +4,8 @@ import * as React from "react"
 import L from "leaflet"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { withCartoKey } from "@/lib/carto"
+import { addCartoBasemap, setCartoTint, useLeafletMap, type CartoTint } from "@/components/map/leaflet-base"
 import { CATEGORY_GLYPHS } from "@/lib/category"
-import { MAP_SETTLE_MS } from "@/lib/timing"
 
 // Leaflet rather than community-web's MapLibre seam: a deliberate choice for this internal tool.
 // Leaflet touches window at import, so this module must be loaded through next/dynamic with ssr:false.
@@ -27,35 +26,10 @@ export interface MapPin {
   place?: string
 }
 
-const MAP_TILES = {
-  voyager: {
-    url: withCartoKey("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"),
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
-  },
-  positron: {
-    url: withCartoKey("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"),
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
-  },
-} as const
-
-export type MapTint = keyof typeof MAP_TILES
+export type MapTint = CartoTint
 
 const MAP_HOME = { center: [39.5, -98.35] as [number, number], zoom: 4 }
 const BASEMAP_MAX_ZOOM = 20
-
-function addBasemap(map: L.Map, tint: MapTint): L.TileLayer {
-  const tiles = MAP_TILES[tint] ?? MAP_TILES.voyager
-  return L.tileLayer(tiles.url, {
-    attribution: tiles.attribution,
-    subdomains: tiles.subdomains,
-    maxZoom: BASEMAP_MAX_ZOOM,
-    detectRetina: true,
-  }).addTo(map)
-}
 
 const PIN_VIEWBOX_WIDTH = 64
 const PIN_VIEWBOX_HEIGHT = 76
@@ -257,7 +231,6 @@ export function LeafletMap({
   onPinTap,
 }: LeafletMapProps) {
   const elRef = React.useRef<HTMLDivElement | null>(null)
-  const mapRef = React.useRef<L.Map | null>(null)
   const tileRef = React.useRef<L.TileLayer | null>(null)
   const markersRef = React.useRef<Record<string, L.Marker>>({})
   const renderRef = React.useRef<Record<string, RenderedMarker>>({})
@@ -267,56 +240,43 @@ export function LeafletMap({
   const onPinTapRef = React.useRef(onPinTap)
   onPinTapRef.current = onPinTap
 
-  React.useEffect(() => {
-    if (!elRef.current || mapRef.current) return
-    const map = L.map(elRef.current, {
-      center,
-      zoom,
-      zoomControl: false,
-      attributionControl: true,
-      dragging: interactive,
-      scrollWheelZoom: interactive,
-      doubleClickZoom: interactive,
-      touchZoom: interactive,
-      boxZoom: false,
-      keyboard: false,
-      // No `tap`: the legacy option is a no-op in modern Leaflet and gone from @types/leaflet.
-    })
-    mapRef.current = map
-
-    tileRef.current = addBasemap(map, tint)
-
-    if (interactive) {
-      L.control.zoom({ position: "topright" }).addTo(map)
-    }
-
-    const resizeObserver = new ResizeObserver(() => map.invalidateSize())
-    resizeObserver.observe(elRef.current)
-    const settleTimer = setTimeout(() => map.invalidateSize(), MAP_SETTLE_MS)
-
-    return () => {
-      resizeObserver.disconnect()
-      clearTimeout(settleTimer)
-      map.remove()
-      mapRef.current = null
+  const mapRef = useLeafletMap(
+    elRef,
+    (container) => {
+      const map = L.map(container, {
+        center,
+        zoom,
+        zoomControl: false,
+        attributionControl: true,
+        dragging: interactive,
+        scrollWheelZoom: interactive,
+        doubleClickZoom: interactive,
+        touchZoom: interactive,
+        boxZoom: false,
+        keyboard: false,
+        // No `tap`: the legacy option is a no-op in modern Leaflet and gone from @types/leaflet.
+      })
+      tileRef.current = addCartoBasemap(map, { tint, maxZoom: BASEMAP_MAX_ZOOM })
+      if (interactive) {
+        L.control.zoom({ position: "topright" }).addTo(map)
+      }
+      return map
+    },
+    () => {
+      tileRef.current = null
       markersRef.current = {}
       renderRef.current = {}
       pinsRef.current = {}
-    }
-    // Created once; the effects below apply later prop changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    },
+  )
 
   const [centerLat, centerLng] = center
   React.useEffect(() => {
     mapRef.current?.setView([centerLat, centerLng], zoom)
-  }, [centerLat, centerLng, zoom])
+  }, [mapRef, centerLat, centerLng, zoom])
 
   React.useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    if (tileRef.current) tileRef.current.remove()
-    tileRef.current = addBasemap(map, tint)
+    if (tileRef.current) setCartoTint(tileRef.current, tint)
   }, [tint])
 
   React.useEffect(() => {
@@ -330,7 +290,7 @@ export function LeafletMap({
       latestPins: pinsRef.current,
       onTap: (pin) => onPinTapRef.current?.(pin),
     })
-  }, [pins, activeId, interactive])
+  }, [mapRef, pins, activeId, interactive])
 
   return <div ref={elRef} className="pi-map-canvas" />
 }

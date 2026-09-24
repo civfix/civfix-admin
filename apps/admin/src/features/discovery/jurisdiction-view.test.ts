@@ -5,7 +5,6 @@ import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   LAYER_LABEL,
   dominantCategory,
-  formatPopulation,
   formatWaitingAge,
   isOverdue,
 } from "./jurisdiction-view"
@@ -40,12 +39,6 @@ describe("jurisdiction row formatting", () => {
     expect(isOverdue(ago(DAY - MINUTE), NOW)).toBe(false)
     expect(isOverdue(ago(DAY + MINUTE), NOW)).toBe(true)
     expect(isOverdue(null, NOW)).toBe(false)
-  })
-
-  it("compacts populations", () => {
-    expect(formatPopulation(950)).toBe("950")
-    expect(formatPopulation(1_250)).toBe("1.3k")
-    expect(formatPopulation(138_699)).toBe("139k")
   })
 
   it("picks the category with the most waiting reports", () => {

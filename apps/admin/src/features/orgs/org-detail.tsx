@@ -5,7 +5,7 @@ import type { AdminOrgDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { promptDialog } from "@/components/shared/dialog"
+import { promptReason } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
 import { orgStatusView } from "@/lib/org-status"
 import { MembersPanel } from "@/features/orgs/members-panel"
@@ -16,7 +16,7 @@ import { menuFocusIndex } from "@/features/orgs/org-members"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
 import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 import { ProfilePanel } from "@/features/orgs/profile-panel"
-import { useAdminOrg, useSetOrgSuspended } from "@/features/orgs/use-orgs"
+import { useOrg, useSetOrgSuspended } from "@/features/orgs/use-orgs"
 import { VerificationPanel } from "@/features/orgs/verification-panel"
 
 const TAB_LABEL: Record<OrgDetailTab, string> = {
@@ -37,24 +37,22 @@ function SuspendButton({ org }: { org: AdminOrgDTO }) {
     busy.current = true
     let reason: string | null
     try {
-      reason = await promptDialog({
+      reason = await promptReason({
         title: suspended ? `Restore ${org.name}?` : `Suspend ${org.name}?`,
         body: suspended
           ? "Lifting the suspension restores exactly what was there: verification, members and profile settings are untouched. The reason is written to the audit log."
           : "A suspended organization keeps its data and members, but every write under its name (events, broadcasts, invites) is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
-        label: "Reason (required)",
         placeholder: suspended
           ? "Resolved after the org replaced its contact…"
           : "Repeated broadcast abuse reports; pending review with the org…",
         confirmLabel: suspended ? "Restore organization" : "Suspend organization",
-        required: true,
         danger: !suspended,
       })
     } finally {
       busy.current = false
     }
-    if (reason === null || reason.trim() === "") return
-    suspend.mutate({ id: org.id, suspended: !suspended, reason: reason.trim() })
+    if (reason === null) return
+    suspend.mutate({ id: org.id, suspended: !suspended, reason })
   }
 
   return (
@@ -228,7 +226,7 @@ export function OrgDetail({
   tab: OrgDetailTab
   onTab: (t: OrgDetailTab) => void
 }) {
-  const q = useAdminOrg(orgId)
+  const q = useOrg(orgId)
   const tabIds = React.useId()
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />

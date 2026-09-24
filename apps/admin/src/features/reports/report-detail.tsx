@@ -13,11 +13,11 @@ import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { categoryPinSrc } from "@/lib/category"
+import { shortRef } from "@/lib/display"
 import { reportStatusView } from "@/lib/report-status"
 import { ReportActivity } from "@/features/reports/report-activity"
 import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
 import { ReportDiscussion } from "@/features/reports/report-discussion"
-import { shortId } from "@/features/reports/report-id"
 import { ReportLinkedEvents } from "@/features/reports/report-linked-events"
 import { reportMediaView } from "@/features/reports/report-media"
 import { ReportLocation, ReportPhotos } from "@/features/reports/report-media-panels"
@@ -39,13 +39,12 @@ function ReportHead({ report, outreach }: { report: AdminReportDTO; outreach: Ou
   return (
     <div className="rep-head">
       <span className="rep-head-pin">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={categoryPinSrc(report.category)} alt="" />
       </span>
       <div className="rep-head-text">
         <div className="crumb" title={report.id}>
           <span className="mono" style={{ color: "var(--ink-3)" }}>
-            {report.referenceCode ?? shortId(report.id)}
+            {report.referenceCode ?? shortRef(report.id)}
           </span>{" "}
           · {REPORT_CATEGORY_LABELS[report.category]} · {report.place}
         </div>

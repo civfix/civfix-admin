@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { MutationObserver, type QueryClient } from "@tanstack/react-query"
+import { MutationObserver, QueryObserver, type QueryClient } from "@tanstack/react-query"
 import { AppError, ErrorCode } from "@civfix/shared"
 
-import { makeQueryClient, queryKeys } from "./query"
+import { invalidateKeys, makeQueryClient, queryKeys } from "./query"
 import { useUiStore } from "@/store/ui-store"
 
 function foreignAppError(code: ErrorCode, message: string): Error {
@@ -392,5 +392,63 @@ describe("page vs list keys", () => {
       const { all, page, list } = queryKeys[domain]
       for (const key of [page(params), list(params)]) expect(key.slice(0, all.length)).toEqual(all)
     }
+  })
+})
+
+describe("invalidateKeys", () => {
+  async function watched(client: QueryClient, queryKey: readonly unknown[]) {
+    const queryFn = vi.fn(async () => ({ ok: true }))
+    const observer = new QueryObserver(client, { queryKey, queryFn })
+    const unsubscribe = observer.subscribe(() => undefined)
+    await vi.waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(observer.getCurrentResult().isSuccess).toBe(true))
+    queryFn.mockClear()
+    return { queryFn, unsubscribe }
+  }
+
+  it("refetches a query once when a broader key in the batch also matches it", async () => {
+    const client = makeQueryClient()
+    const detail = await watched(client, queryKeys.events.detail("e1"))
+    const list = await watched(client, queryKeys.events.list({}))
+
+    await invalidateKeys(client, [queryKeys.events.detail("e1"), queryKeys.events.all, null])
+
+    expect(detail.queryFn).toHaveBeenCalledTimes(1)
+    expect(list.queryFn).toHaveBeenCalledTimes(1)
+    detail.unsubscribe()
+    list.unsubscribe()
+  })
+
+  it("refetches a query once when the same key is listed twice", async () => {
+    const client = makeQueryClient()
+    const stats = await watched(client, queryKeys.mail.stats)
+
+    await invalidateKeys(client, [queryKeys.mail.stats, queryKeys.mail.stats])
+
+    expect(stats.queryFn).toHaveBeenCalledTimes(1)
+    stats.unsubscribe()
+  })
+
+  it("never skips a key with object params, whose matching is not transitive", async () => {
+    const client = makeQueryClient()
+    const flagged = await watched(client, queryKeys.events.list({ filter: "flagged" }))
+
+    await invalidateKeys(client, [
+      queryKeys.events.list({ filter: undefined }),
+      queryKeys.events.list({}),
+    ])
+
+    expect(flagged.queryFn).toHaveBeenCalledTimes(1)
+    flagged.unsubscribe()
+  })
+
+  it("still invalidates a key that no other key in the batch covers", async () => {
+    const client = makeQueryClient()
+    const detail = await watched(client, queryKeys.reports.detail("r1"))
+
+    await invalidateKeys(client, [queryKeys.reports.detail("r1"), queryKeys.events.all])
+
+    expect(detail.queryFn).toHaveBeenCalledTimes(1)
+    detail.unsubscribe()
   })
 })

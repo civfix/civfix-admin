@@ -6,8 +6,10 @@ import type { AdminBroadcastListItemDTO, AdminHostListItemDTO } from "@civfix/sh
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { promptDialog } from "@/components/shared/dialog"
+import { LoadMoreButton } from "@/components/shared/section-list"
+import { promptReason } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
+import { flatPages } from "@/lib/infinite"
 import { BroadcastLog } from "@/features/hosts/broadcast-log"
 import {
   eventsFromBroadcasts,
@@ -15,10 +17,10 @@ import {
   type HostActivityWindow,
   type HostEventRef,
 } from "@/features/hosts/host-window"
-import { useAdminBroadcastsInfinite, useSetHostMessagingSuspended } from "@/features/hosts/use-hosts"
+import { useBroadcastListInfinite, useSetHostMessagingSuspended } from "@/features/hosts/use-hosts"
 import { useNav } from "@/store/ui-store"
 
-type BroadcastLogQuery = ReturnType<typeof useAdminBroadcastsInfinite>
+type BroadcastLogQuery = ReturnType<typeof useBroadcastListInfinite>
 
 function HostDetailHead({ row }: { row: AdminHostListItemDTO }) {
   const suspended = row.messagingSuspended
@@ -105,16 +107,7 @@ function BroadcastLogSection({
         ) : (
           <>
             <BroadcastLog items={broadcasts} />
-            {logQuery.hasNextPage && (
-              <button
-                type="button"
-                className="btn load-more"
-                disabled={logQuery.isFetchingNextPage}
-                onClick={() => void logQuery.fetchNextPage()}
-              >
-                {logQuery.isFetchingNextPage ? "Loading…" : "Load more broadcasts"}
-              </button>
-            )}
+            <LoadMoreButton query={logQuery} className="load-more" label="Load more broadcasts" />
           </>
         )}
       </div>
@@ -195,24 +188,22 @@ function HostMessagingActions({ row }: { row: AdminHostListItemDTO }) {
 
   const onToggleSuspended = async () => {
     const next = !suspended
-    const reason = await promptDialog({
+    const reason = await promptReason({
       title: next
         ? `Suspend messaging for ${row.host.name}?`
         : `Restore messaging for ${row.host.name}?`,
       body: next
         ? "Every broadcast this host composes, schedules or sends is refused until messaging is restored. In-flight sends stop mid-chunk. The reason is written to the audit log."
         : "The host can compose and send broadcasts again, subject to the normal caps. The reason is written to the audit log.",
-      label: "Reason (required)",
       placeholder: next
         ? "Repeated off-topic broadcasts to event attendees…"
         : "Reviewed with the host; the pattern has stopped…",
       confirmLabel: next ? "Suspend messaging" : "Restore messaging",
-      required: true,
       danger: next,
     })
-    if (reason === null || reason.trim() === "") return
+    if (reason === null) return
     suspend.mutate({
-      request: { id: row.host.id, suspended: next, reason: reason.trim() },
+      request: { id: row.host.id, suspended: next, reason },
       hostName: row.host.name,
     })
   }
@@ -252,9 +243,9 @@ export function HostDetail({
     () => hostBroadcastParams(row.host.id, activityWindow),
     [row.host.id, activityWindow],
   )
-  const logQuery = useAdminBroadcastsInfinite(logParams)
+  const logQuery = useBroadcastListInfinite(logParams)
   const broadcasts = React.useMemo(
-    () => logQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => flatPages(logQuery.data),
     [logQuery.data],
   )
   const events = React.useMemo(() => eventsFromBroadcasts(broadcasts), [broadcasts])

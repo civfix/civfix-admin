@@ -14,7 +14,7 @@ import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation
 import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { isMissing, type NavFn } from "@/features/users/user-display"
-import { getUserMessageDestination } from "./profile-activity-navigation"
+import { userMessageDestination } from "./profile-activity-navigation"
 
 const SOURCE_LABEL: Record<NonNullable<UserMessageItemDTO["source"]>, string> = {
   chat: "Cleanup chat",
@@ -51,7 +51,6 @@ export function ProfileReportRow({ report, nav }: { report: UserReportItemDTO; n
       onKeyDown={onActivationKey(open)}
     >
       <span className="prow-pin" title={REPORT_CATEGORY_LABELS[report.category]}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={categoryPinSrc(report.category)} alt="" />
       </span>
       <div className="prow-body">
@@ -113,7 +112,7 @@ export function ProfileMessageRow({
 }) {
   const removed = !!message.deletedAt
   const source = message.source
-  const destination = getUserMessageDestination(message)
+  const destination = userMessageDestination(message)
   const open = destination ? () => nav(destination.page, destination.id) : undefined
   const content = (
     <>

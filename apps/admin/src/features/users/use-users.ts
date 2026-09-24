@@ -6,6 +6,8 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
+  type QueryKey,
 } from "@tanstack/react-query"
 import type {
   AdminUserListQuery,
@@ -15,13 +17,11 @@ import type {
   RemoveUserMessageRequest,
   SetUserReportVerifiedRequest,
   SetUserStatusRequest,
-  UserEventsResponse,
-  UserMessagesResponse,
-  UserReportsResponse,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions, type CursorPage } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 
 /**
  * One flat page of users (home preview, the org user picker). Keyed under `users.page`, not
@@ -37,16 +37,9 @@ export function useUserList(params: AdminUserListQuery, opts: { keepPreviousData
 }
 
 export function useUserListInfinite(params: AdminUserListQuery) {
-  return useInfiniteQuery<AdminUserListResponse>({
-    queryKey: queryKeys.users.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listAdminUsers({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.users.list(params), params, (input) => api.listAdminUsers(input)),
+  )
 }
 
 export function useUser(id: string | null) {
@@ -59,45 +52,43 @@ export function useUser(id: string | null) {
 
 // A profile tab's badge counts everything the user has, so each tab pages through the whole history
 // rather than stopping at the API's first page.
-function useUserSubList<T extends { nextCursor?: string | null }>(
-  queryKey: readonly unknown[],
+function useUserSubListInfinite<TKey extends QueryKey, TPage extends CursorPage>(
+  queryKey: TKey,
   id: string | null,
-  fetchPage: (input: { id: string; cursor?: string }) => Promise<T>,
+  fetchPage: (input: { id: string; cursor?: string }) => Promise<TPage>,
 ) {
-  return useInfiniteQuery<T>({
-    queryKey,
-    queryFn: ({ pageParam }) =>
-      fetchPage({ id: id as string, ...(typeof pageParam === "string" ? { cursor: pageParam } : {}) }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  return useInfiniteQuery({
+    ...infiniteListOptions(queryKey, { id: id as string }, fetchPage),
     enabled: !!id,
   })
 }
 
-export function useUserReports(id: string | null) {
-  return useUserSubList<UserReportsResponse>(queryKeys.users.reports(id ?? ""), id, (input) =>
-    api.getUserReports(input),
+export function useUserReportListInfinite(id: string | null) {
+  return useUserSubListInfinite(
+    queryKeys.users.reports(id ?? ""),
+    id,
+    (input) => api.getUserReports(input),
   )
 }
 
-export function useUserEvents(id: string | null) {
-  return useUserSubList<UserEventsResponse>(queryKeys.users.events(id ?? ""), id, (input) =>
-    api.getUserEvents(input),
+export function useUserEventListInfinite(id: string | null) {
+  return useUserSubListInfinite(
+    queryKeys.users.events(id ?? ""),
+    id,
+    (input) => api.getUserEvents(input),
   )
 }
 
-export function useUserMessages(id: string | null) {
-  return useUserSubList<UserMessagesResponse>(queryKeys.users.messages(id ?? ""), id, (input) =>
-    api.getUserMessages(input),
+export function useUserMessageListInfinite(id: string | null) {
+  return useUserSubListInfinite(
+    queryKeys.users.messages(id ?? ""),
+    id,
+    (input) => api.getUserMessages(input),
   )
 }
 
-function invalidateUsers(qc: ReturnType<typeof useQueryClient>, id: string) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) }),
-    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
-  ])
+function invalidateUsers(qc: QueryClient, id: string) {
+  return invalidateKeys(qc, [queryKeys.users.detail(id), queryKeys.users.all, queryKeys.home.all])
 }
 
 export interface FlagUserVariables {
@@ -165,11 +156,7 @@ export function useRemoveUserMessage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: RemoveUserMessageRequest) => api.removeUserMessage(input),
-    onSuccess: (_res, { id }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.users.messages(id) }),
-        invalidateUsers(qc, id),
-      ]),
+    onSuccess: (_res, { id }) => invalidateUsers(qc, id),
     meta: { successMessage: () => "Message removed" },
   })
 }

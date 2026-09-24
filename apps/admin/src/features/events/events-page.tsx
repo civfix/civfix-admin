@@ -5,8 +5,11 @@ import type { AdminEventCounts } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
+import { SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
+import { idOf, useSelection } from "@/hooks/use-selection"
 import { EVENT_STATUS_VIEW } from "@/lib/event-status"
+import { flatPages } from "@/lib/infinite"
 import { EventDetail } from "@/features/events/event-detail"
 import { EventListPane } from "@/features/events/event-list-pane"
 import { useEventListInfinite } from "@/features/events/use-events"
@@ -39,7 +42,6 @@ function filterOptions(counts: AdminEventCounts) {
 export function EventsPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<EventFilter>("all")
   const [query, setQuery] = React.useState("")
-  const [selId, setSelId] = React.useState<string | null>(focusId)
 
   const debouncedQuery = useDebounced(query)
   const listParams = {
@@ -48,7 +50,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
   }
   const listQuery = useEventListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
 
@@ -56,26 +58,13 @@ export function EventsPage({ focusId }: SectionPageProps) {
   const counts = serverCounts ?? EMPTY_COUNTS
   const listCount = serverCounts ? serverCounts[filter] : items.length
 
-  // Only the first load picks an event on the operator's behalf, and a deep-linked event is never
-  // replaced. A pick that a filter or search leaves out stays open (the detail reads it by id); a pick
-  // that drops out of the same list after a refetch (a cancel under the Upcoming chip) clears, so the
-  // pane never jumps to another event's live buttons. Decided only on data fetched for the current params.
-  const listKey = JSON.stringify(listParams)
-  const [autoPick, setAutoPick] = React.useState(focusId === null)
-  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
-  React.useEffect(() => {
-    if (focusId) setSelId(focusId)
-  }, [focusId])
-  React.useEffect(() => {
-    if (!listQuery.isSuccess || listQuery.isFetching) return
-    if (selId === null) {
-      if (autoPick && items.length) setSelId(items[0]!.id)
-      return
-    }
-    setAutoPick(false)
-    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
-    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
-  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
+  const { selectedId: selId, setSelectedId: setSelId } = useSelection({
+    focusId,
+    list: listQuery,
+    items,
+    getId: idOf,
+    listKey: JSON.stringify(listParams),
+  })
 
   return (
     <>
@@ -96,16 +85,12 @@ export function EventsPage({ focusId }: SectionPageProps) {
           onChange={(v) => setFilter(v as EventFilter)}
         />
         <div className="toolbar-spacer" />
-        <div className="searchbox">
-          <Icons.Search size={14} />
-          <input
-            type="text"
-            placeholder="Search title, place, organizer…"
-            aria-label="Search events"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <SearchBox
+          label="Search events"
+          placeholder="Search title, place, organizer…"
+          value={query}
+          onChange={setQuery}
+        />
       </div>
 
       <div className="master-detail">

@@ -5,9 +5,11 @@ import type { AdminEventPageListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
+import { SearchBox } from "@/components/shared/section-list"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { useDebounced } from "@/hooks/use-debounced"
-import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
+import { useSelection } from "@/hooks/use-selection"
+import { flatPages } from "@/lib/infinite"
 import {
   PAGE_FILTERS,
   pageListParams,
@@ -16,7 +18,7 @@ import {
 } from "@/features/pages/pages-filters"
 import { PageDetail } from "@/features/pages/page-detail"
 import { PageListPane } from "@/features/pages/page-list-pane"
-import { useAdminEventPage, useEventPagesInfinite } from "@/features/pages/use-pages"
+import { useEventPage, useEventPageListInfinite } from "@/features/pages/use-pages"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const PAGE_FILTER_LABEL: Record<PageFilter, string> = {
@@ -29,36 +31,7 @@ const PAGE_FILTER_LABEL: Record<PageFilter, string> = {
 
 const FILTER_OPTIONS = PAGE_FILTERS.map((value) => ({ value, label: PAGE_FILTER_LABEL[value] }))
 
-// Only the first load picks a page on the operator's behalf, and a deep-linked page is never
-// replaced. A pick that a filter or search leaves out stays open, read by id; a pick that drops out of
-// the same list after a refetch (an unpublish under the Published chip) clears, so the moderation
-// buttons never land on a page nobody chose. Decided only on data fetched for the current params.
-function usePageSelection(
-  focusId: string | null,
-  listQuery: ReturnType<typeof useEventPagesInfinite>,
-  items: AdminEventPageListItemDTO[],
-  listKey: string,
-) {
-  const [selectedId, setSelectedId] = React.useState<string | null>(focusId)
-  const [autoPick, setAutoPick] = React.useState(focusId === null)
-
-  React.useEffect(() => {
-    if (focusId) setSelectedId(focusId)
-  }, [focusId])
-  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
-  React.useEffect(() => {
-    if (!listQuery.isSuccess || listQuery.isFetching) return
-    if (selectedId === null) {
-      if (autoPick && items.length) setSelectedId(items[0]!.cleanupId)
-      return
-    }
-    setAutoPick(false)
-    if (items.some((item) => item.cleanupId === selectedId)) seenIn.current = { id: selectedId, list: listKey }
-    else if (seenIn.current?.id === selectedId && seenIn.current.list === listKey) setSelectedId(null)
-  }, [listQuery.isSuccess, listQuery.isFetching, items, selectedId, listKey, autoPick])
-
-  return [selectedId, setSelectedId] as const
-}
+const pageId = (item: AdminEventPageListItemDTO) => item.cleanupId
 
 function PageDetailPane({
   selected,
@@ -66,7 +39,7 @@ function PageDetailPane({
   pageNoun,
 }: {
   selected: AdminEventPageListItemDTO | null
-  pageQuery: ReturnType<typeof useAdminEventPage>
+  pageQuery: ReturnType<typeof useEventPage>
   pageNoun: string
 }) {
   if (selected) return <PageDetail key={selected.cleanupId} item={selected} />
@@ -93,21 +66,26 @@ export function PagesPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<PageFilter>("published")
   const [query, setQuery] = React.useState("")
 
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
   const listParams = React.useMemo(
     () => pageListParams(filter, debouncedQuery),
     [filter, debouncedQuery],
   )
-  const listQuery = useEventPagesInfinite(listParams)
+  const listQuery = useEventPageListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
-  const [selectedId, setSelectedId] = usePageSelection(focusId, listQuery, items, JSON.stringify(listParams))
+  const { selectedId, setSelectedId, selectedItem: listed } = useSelection({
+    focusId,
+    list: listQuery,
+    items,
+    getId: pageId,
+    listKey: JSON.stringify(listParams),
+  })
 
-  const listed = items.find((item) => item.cleanupId === selectedId) ?? null
   // The detail's preview reads the same key, so fetching before the list settles never doubles a request.
-  const pageQuery = useAdminEventPage(listed === null ? selectedId : null)
+  const pageQuery = useEventPage(listed === null ? selectedId : null)
   const selected = listed ?? (pageQuery.data ? pageRowFromDTO(pageQuery.data) : null)
   const pageNoun = selectedId === focusId ? "the linked page" : "the page"
 
@@ -130,16 +108,12 @@ export function PagesPage({ focusId }: SectionPageProps) {
           onChange={(value) => setFilter(value as PageFilter)}
         />
         <div className="toolbar-spacer" />
-        <div className="searchbox">
-          <Icons.Search size={14} />
-          <input
-            type="text"
-            aria-label="Search signup pages"
-            placeholder="Search slug or title…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <SearchBox
+          label="Search signup pages"
+          placeholder="Search slug or title…"
+          value={query}
+          onChange={setQuery}
+        />
       </div>
 
       <div className="master-detail">

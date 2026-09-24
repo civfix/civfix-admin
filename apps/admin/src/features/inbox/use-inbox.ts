@@ -1,11 +1,11 @@
 "use client"
 
 import {
-  infiniteQueryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query"
 import type {
   GetInboxMessageResponse,
@@ -17,7 +17,8 @@ import type {
 
 import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 
 export function useInboxList(params: InboxListQuery) {
   return useQuery<InboxListResponse>({
@@ -27,29 +28,15 @@ export function useInboxList(params: InboxListQuery) {
 }
 
 export function useInboxListInfinite(params: InboxListQuery) {
-  return useInfiniteQuery<InboxListResponse>({
-    queryKey: queryKeys.inbox.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listInbox({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.inbox.list(params), params, (input) => api.listInbox(input)),
+  )
 }
 
 export function inboxFeedQueryOptions(params: InboxFeedQuery) {
-  return infiniteQueryOptions({
-    queryKey: queryKeys.inbox.feed(params),
-    queryFn: ({ pageParam }) =>
-      api.listInboxFeed({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return infiniteListOptions(queryKeys.inbox.feed(params), params, (input) =>
+    api.listInboxFeed(input),
+  )
 }
 
 export function useInboxFeedInfinite(params: InboxFeedQuery) {
@@ -65,11 +52,11 @@ export function useInboxMessage(id: string | null) {
   })
 }
 
-function invalidateInbox(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  return Promise.all([
-    id ? qc.invalidateQueries({ queryKey: queryKeys.inbox.detail(id) }) : null,
-    qc.invalidateQueries({ queryKey: queryKeys.inbox.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+function invalidateInbox(qc: QueryClient, id?: string) {
+  return invalidateKeys(qc, [
+    id ? queryKeys.inbox.detail(id) : null,
+    queryKeys.inbox.all,
+    queryKeys.home.all,
   ])
 }
 

@@ -8,10 +8,10 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
-import { cancelBlockedFor, eventStatusView } from "@/lib/event-status"
+import { shortRef } from "@/lib/display"
+import { cancelBlockedMessage, eventStatusView } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
 import { EventAttendeeMessages, useAttendeeUpdate } from "@/features/events/event-attendee-messages"
-import { shortId } from "@/features/events/event-id"
 import { EventLinkedReports } from "@/features/events/event-linked-reports"
 import { EventOrganizerCard } from "@/features/events/event-organizer-card"
 import { EventTurnoutCard, useOutcomeDraft } from "@/features/events/event-turnout-card"
@@ -57,7 +57,7 @@ function EventHead({ event }: { event: AdminEventDTO }) {
       </span>
       <div className="rep-head-text">
         <div className="crumb" title={event.id}>
-          {shortId(event.id)} · {eventKindView(event.eventKind).label}
+          {shortRef(event.id)} · {eventKindView(event.eventKind).label}
         </div>
         <h2>{event.title}</h2>
       </div>
@@ -157,7 +157,6 @@ function EventActivity({ timeline }: { timeline: EventTimelineItem[] }) {
         ) : (
           <div className="rep-timeline">
             {timeline.map((t, i) => (
-              // eslint-disable-next-line react/no-array-index-key
               <TimelineRow key={i} item={t} />
             ))}
           </div>
@@ -182,7 +181,7 @@ function EventModerateBar({
 }) {
   const { flagMutation, cancelMutation } = moderation
   const cancelBlockedId = React.useId()
-  const cancelBlockedReason = cancelBlockedFor(event.status)
+  const cancelBlockedReason = cancelBlockedMessage(event.status)
 
   const onCancel = async () => {
     const ok = await confirmDialog({

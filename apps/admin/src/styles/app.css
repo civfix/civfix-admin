@@ -333,6 +333,10 @@
   width: calc(100% - 2 * var(--space-3));
   margin: var(--space-2) var(--space-3);
 }
+.btn.list-load-more {
+  width: calc(100% - 20px);
+  margin: var(--space-2) 10px;
+}
 .qrow.static { cursor: default; }
 .qrow.static:hover { background: transparent; }
 

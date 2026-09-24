@@ -4,7 +4,10 @@ import * as React from "react"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
+import { ListCard, SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
+import { idOf, useSelection } from "@/hooks/use-selection"
+import { flatPages } from "@/lib/infinite"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 import { OrgDetail } from "@/features/orgs/org-detail"
 import { OrgList } from "@/features/orgs/org-list"
@@ -17,50 +20,13 @@ import {
   type OrgFilter,
 } from "@/features/orgs/orgs-filters"
 import { parseOrgFocus, type OrgDetailTab } from "@/features/orgs/org-focus"
-import { useOrgsInfinite } from "@/features/orgs/use-orgs"
+import { useOrgListInfinite } from "@/features/orgs/use-orgs"
 import type { SectionPageProps } from "@/components/shell/page-registry"
-
-/**
- * Only the first load picks an org on the operator's behalf; a deep-linked or just-created org is
- * pinned like any other pick. A pick that a filter or search leaves out stays open (the detail reads it
- * by id); a pick that drops out of the same list after a refetch (a verification decision under the
- * Pending chip) clears, so the pane never jumps to another org's actions. Each decision waits for data
- * fetched for the current params: a cached page that is refetching may not have the org created since.
- */
-function useListSelection({
-  selId,
-  setSelId,
-  initialAutoPick,
-  listQuery,
-  items,
-  listKey,
-}: {
-  selId: string | null
-  setSelId: (id: string | null) => void
-  initialAutoPick: boolean
-  listQuery: ReturnType<typeof useOrgsInfinite>
-  items: { id: string }[]
-  listKey: string
-}) {
-  const [autoPick, setAutoPick] = React.useState(initialAutoPick)
-  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
-  React.useEffect(() => {
-    if (!listQuery.isSuccess || listQuery.isFetching) return
-    if (selId === null) {
-      if (autoPick && items.length) setSelId(items[0]!.id)
-      return
-    }
-    setAutoPick(false)
-    if (items.some((o) => o.id === selId)) seenIn.current = { id: selId, list: listKey }
-    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
-  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick, setSelId])
-}
 
 export function OrgsPage({ focusId }: SectionPageProps) {
   const focus = React.useMemo(() => parseOrgFocus(focusId), [focusId])
   const [filter, setFilter] = React.useState<OrgFilter>("all")
   const [query, setQuery] = React.useState("")
-  const [selId, setSelId] = React.useState<string | null>(focus.id)
   const [tab, setTab] = React.useState<OrgDetailTab>(focus.tab ?? "profile")
   const [creating, setCreating] = React.useState(false)
 
@@ -69,9 +35,9 @@ export function OrgsPage({ focusId }: SectionPageProps) {
     () => orgListParams(filter, debouncedQuery),
     [filter, debouncedQuery],
   )
-  const listQuery = useOrgsInfinite(listParams)
+  const listQuery = useOrgListInfinite(listParams)
   const items = React.useMemo(
-    () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    () => flatPages(listQuery.data),
     [listQuery.data],
   )
   const counts = listQuery.data?.pages[0]?.counts
@@ -79,18 +45,20 @@ export function OrgsPage({ focusId }: SectionPageProps) {
   const filterTotal = orgFilterCount(counts, filter)
   const pendingView = filter === "pending"
 
+  // A just-created org is pinned like any other pick. The focus also carries a tab, so a deep link to
+  // the same org with another tab must still re-select it.
+  const { selectedId: selId, setSelectedId: setSelId } = useSelection({
+    focusId: focus.id,
+    syncFocus: false,
+    list: listQuery,
+    items,
+    getId: idOf,
+    listKey: JSON.stringify(listParams),
+  })
   React.useEffect(() => {
     if (focus.id) setSelId(focus.id)
     if (focus.tab) setTab(focus.tab)
-  }, [focus])
-  useListSelection({
-    selId,
-    setSelId,
-    initialAutoPick: focus.id === null,
-    listQuery,
-    items,
-    listKey: JSON.stringify(listParams),
-  })
+  }, [focus, setSelId])
 
   const pickFilter = (next: string) => {
     if (!isOrgFilter(next)) return
@@ -127,38 +95,32 @@ export function OrgsPage({ focusId }: SectionPageProps) {
           onChange={pickFilter}
         />
         <div className="toolbar-spacer" />
-        <div className="searchbox">
-          <Icons.Search size={14} />
-          <input
-            type="text"
-            aria-label="Search organizations"
-            placeholder="Search name or slug…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </div>
+        <SearchBox
+          label="Search organizations"
+          placeholder="Search name or slug…"
+          value={query}
+          onChange={setQuery}
+        />
       </div>
 
       <div className="master-detail">
-        <section className="card md-list">
-          <div className="card-head">
-            <h3>{pendingView ? "Verification queue" : "Organizations"}</h3>
-            <div className="spacer" />
-            <span className="meta">
+        <ListCard
+          title={pendingView ? "Verification queue" : "Organizations"}
+          meta={
+            <>
               {items.length}
               {filterTotal !== undefined ? ` of ${filterTotal}` : ""}
-            </span>
-          </div>
-          <div className="queue-list">
-            <OrgList
-              listQuery={listQuery}
-              items={items}
-              pendingView={pendingView}
-              selId={selId}
-              onSelect={setSelId}
-            />
-          </div>
-        </section>
+            </>
+          }
+        >
+          <OrgList
+            listQuery={listQuery}
+            items={items}
+            pendingView={pendingView}
+            selId={selId}
+            onSelect={setSelId}
+          />
+        </ListCard>
 
         <section className="card md-detail-card">
           {selId ? (

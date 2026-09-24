@@ -1,6 +1,6 @@
 "use client"
 
-import type * as React from "react"
+import * as React from "react"
 import type { JurisdictionDirectoryDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
@@ -9,19 +9,18 @@ import {
   LAYER_LABEL,
   UNMAPPED_GEOID,
   dominantCategory,
-  formatPopulation,
-  formatRoutedDate,
   formatWaitingAge,
   isOverdue,
 } from "@/features/discovery/jurisdiction-view"
 import { RoutingStatusPill } from "@/features/discovery/routing-status-pill"
 import { categoryPinSrc } from "@/lib/category"
+import { formatMonthDay } from "@/lib/dates"
+import { formatCompactCount } from "@/lib/display"
 
 function MappedLeading({ item }: { item: JurisdictionDirectoryDTO }) {
   const dominant = dominantCategory(item.perCategoryCounts)
   const pin = dominant ? categoryPinSrc(dominant) : null
   if (!pin) return <Icons.Layers size={16} />
-  // eslint-disable-next-line @next/next/no-img-element
   return <img src={pin} alt="" />
 }
 
@@ -43,7 +42,7 @@ function MappedBadges({ item }: { item: JurisdictionDirectoryDTO }) {
 function MappedSub({ item }: { item: JurisdictionDirectoryDTO }) {
   return (
     <>
-      <span className="strong">{formatPopulation(item.population)} pop</span>
+      <span className="strong">{formatCompactCount(item.population)} pop</span>
       <span className="sep">·</span>
       <span>{item.reportsWaiting} waiting</span>
       <span className="sep">·</span>
@@ -52,15 +51,15 @@ function MappedSub({ item }: { item: JurisdictionDirectoryDTO }) {
   )
 }
 
-function WaitingAge({ oldestReportAt }: { oldestReportAt: string | null }) {
-  const overdue = isOverdue(oldestReportAt)
+function WaitingAge({ oldestReportAt, now }: { oldestReportAt: string | null; now: number }) {
+  const overdue = isOverdue(oldestReportAt, now)
   return (
     <span
       className={`age juris-age ${overdue ? "overdue" : ""}`}
       title={oldestReportAt ? "Oldest waiting report" : "No waiting reports"}
     >
       {overdue && <Icons.AlertTriangle size={10} />}
-      {formatWaitingAge(oldestReportAt)}
+      {formatWaitingAge(oldestReportAt, now)}
     </span>
   )
 }
@@ -69,35 +68,39 @@ function RowAge({
   item,
   unmapped,
   showOldest,
+  now,
 }: {
   item: JurisdictionDirectoryDTO
   unmapped: boolean
   showOldest: boolean
+  now: number
 }) {
   if (showOldest) {
     if (unmapped && !item.oldestReportAt) return null
-    return <WaitingAge oldestReportAt={item.oldestReportAt} />
+    return <WaitingAge oldestReportAt={item.oldestReportAt} now={now} />
   }
   if (unmapped) return null
-  return <span className="age">{formatRoutedDate(item.lastRouted)}</span>
+  return <span className="age">{formatMonthDay(item.lastRouted)}</span>
 }
 
-export function JurisdictionRow({
+export const JurisdictionRow = React.memo(function JurisdictionRow({
   item,
   selected,
-  onClick,
+  onSelect,
+  now,
   showOldest = false,
 }: {
   item: JurisdictionDirectoryDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
+  now: number
   showOldest?: boolean
 }) {
   const unmapped = item.geoid === UNMAPPED_GEOID
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isKeyboardActivationKey(event.key)) return
     event.preventDefault()
-    onClick()
+    onSelect(item.geoid)
   }
 
   return (
@@ -106,7 +109,7 @@ export function JurisdictionRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(item.geoid)}
       onKeyDown={onKeyDown}
     >
       <div className="leading has-pin" title={unmapped ? "Unmapped" : LAYER_LABEL[item.layer]}>
@@ -137,11 +140,11 @@ export function JurisdictionRow({
         </div>
       </div>
       <div className="trailing">
-        <RowAge item={item} unmapped={unmapped} showOldest={showOldest} />
+        <RowAge item={item} unmapped={unmapped} showOldest={showOldest} now={now} />
         <span className="row-arrow">
           <Icons.ChevronRight size={14} />
         </span>
       </div>
     </div>
   )
-}
+})

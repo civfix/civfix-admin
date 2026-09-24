@@ -9,7 +9,7 @@ import {
 } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { promptDialog } from "@/components/shared/dialog"
+import { promptReason } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
@@ -163,21 +163,19 @@ function useProfileEditor(org: AdminOrgDTO, onDone: () => void) {
     busy.current = true
     let reason: string | null
     try {
-      reason = await promptDialog({
+      reason = await promptReason({
         title: `Save changes to ${org.name}?`,
         body: slugChanged
           ? `The slug changes from /${baseline.slug} to /${nextSlug}. Existing links, QR codes and signup pages that use the old slug stop working. The reason is written to the audit log.`
           : "The change is visible on the public page immediately. The reason is written to the audit log.",
-        label: "Reason (required)",
         placeholder: "Corrected the website at the org's request…",
         confirmLabel: "Save changes",
-        required: true,
         danger: slugChanged,
       })
     } finally {
       busy.current = false
     }
-    if (reason === null || reason.trim() === "") return
+    if (reason === null) return
     const body = buildUpdateRequest(baseline, draft, reason)
     if (!body) {
       onDone()

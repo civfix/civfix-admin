@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { barHeightPcts, barValueLabel, sparkHeightPcts } from "./chart-geometry"
+import { barHeightPcts, sparkHeightPcts } from "./chart-geometry"
 
 describe("bar chart geometry", () => {
   it("scales every bar against the tallest one", () => {
@@ -13,12 +13,6 @@ describe("bar chart geometry", () => {
 
   it("returns no heights for an empty series", () => {
     expect(barHeightPcts([])).toEqual([])
-  })
-
-  it("abbreviates values from one thousand up", () => {
-    expect(barValueLabel(999)).toBe("999")
-    expect(barValueLabel(1000)).toBe("1.0k")
-    expect(barValueLabel(1540)).toBe("1.5k")
   })
 })
 

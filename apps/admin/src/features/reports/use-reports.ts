@@ -7,6 +7,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query"
 import {
   ADMIN_REPORT_STATUS_LABELS,
@@ -14,7 +15,6 @@ import {
   type AdminReportListQuery,
   type AdminReportListResponse,
   type AdminSendReportMessageRequest,
-  type ChatHistoryResponse,
   type FlagReportRequest,
   type GetAdminReportResponse,
   type RemoveReportRequest,
@@ -25,12 +25,13 @@ import {
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { shortRef } from "@/lib/display"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
-import { shortId } from "@/features/reports/report-id"
 
 function reportMessage(id: string, text: string): string {
-  return `${shortId(id)} · ${text}`
+  return `${shortRef(id)} · ${text}`
 }
 
 export function useReportList(params: AdminReportListQuery) {
@@ -44,15 +45,10 @@ export function useReportListInfinite(
   params: AdminReportListQuery,
   opts: { keepPreviousData?: boolean } = {},
 ) {
-  return useInfiniteQuery<AdminReportListResponse>({
-    queryKey: queryKeys.reports.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listAdminReports({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  return useInfiniteQuery({
+    ...infiniteListOptions(queryKeys.reports.list(params), params, (input) =>
+      api.listAdminReports(input),
+    ),
     ...(opts.keepPreviousData ? { placeholderData: keepPreviousData } : {}),
   })
 }
@@ -71,19 +67,19 @@ export function useReport(id: string | null) {
 export function useRefreshReportMedia(id: string): () => void {
   const qc = useQueryClient()
   return () => {
-    qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
+    void qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
   }
 }
 
 // Profiles, event detail and the moderation queue all render a report's status and flag.
-function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
-  return Promise.all([
-    qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) }),
-    qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.moderation.all }),
+function invalidateReports(qc: QueryClient, id: string) {
+  return invalidateKeys(qc, [
+    queryKeys.reports.detail(id),
+    queryKeys.reports.all,
+    queryKeys.home.all,
+    queryKeys.users.all,
+    queryKeys.events.all,
+    queryKeys.moderation.all,
   ])
 }
 
@@ -178,17 +174,14 @@ const REPORT_CHAT_LIMIT = 50
 // Read through the admin plane so it resolves against admin.civfix.org like every other operator read.
 // Pages run newest first; each `nextCursor` asks for the window before it, so older messages stay
 // reachable for moderation.
-export function useReportChatHistory(id: string | null) {
-  return useInfiniteQuery<ChatHistoryResponse>({
-    queryKey: queryKeys.reports.chat(id ?? ""),
-    queryFn: ({ pageParam }) =>
-      api.adminReportMessages({
-        id: id as string,
-        limit: REPORT_CHAT_LIMIT,
-        ...(typeof pageParam === "string" ? { before: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+export function useReportChatListInfinite(id: string | null) {
+  return useInfiniteQuery({
+    ...infiniteListOptions(
+      queryKeys.reports.chat(id ?? ""),
+      { id: id as string, limit: REPORT_CHAT_LIMIT },
+      ({ cursor, ...input }) =>
+        api.adminReportMessages({ ...input, ...(cursor !== undefined ? { before: cursor } : {}) }),
+    ),
     enabled: !!id,
   })
 }
@@ -198,10 +191,7 @@ export function useSendReportMessage() {
   return useMutation({
     mutationFn: (input: AdminSendReportMessageRequest) => api.adminSendReportMessage(input),
     onSuccess: (_res, { id }) =>
-      Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) }),
-        qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) }),
-      ]),
+      invalidateKeys(qc, [queryKeys.reports.chat(id), queryKeys.reports.detail(id)]),
     meta: { successMessage: () => "Message posted to the report chat" },
   })
 }

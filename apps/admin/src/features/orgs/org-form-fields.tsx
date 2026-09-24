@@ -54,7 +54,7 @@ export function fieldHintId(fieldId: string): string {
  * The `aria-invalid` / `aria-describedby` pair for a control: described by its error when there is
  * one, else by whichever hints are on screen, so no reference ever points at an unrendered node.
  */
-export function fieldA11y(
+function fieldA11y(
   fieldId: string,
   error: string | null | undefined,
   hintIds: readonly string[] = [],
@@ -170,7 +170,6 @@ function LogoField({
       </label>
       <div className="org-logo-field">
         {draft.logoPreviewUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img className="org-logo lg" src={draft.logoPreviewUrl} alt="" />
         ) : (
           <span className="org-logo lg hue-sky">{monogram(draft.name)}</span>

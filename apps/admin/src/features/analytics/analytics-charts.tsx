@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from "react"
 
-import { barHeightPcts, barValueLabel, sparkHeightPcts } from "@/features/analytics/chart-geometry"
+import { barHeightPcts, sparkHeightPcts } from "@/features/analytics/chart-geometry"
+import { formatCompactCount } from "@/lib/display"
 
 // Class names and DOM match the `.barchart*` and `.hub-spark*` rules in admin.css.
 
@@ -14,14 +15,13 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
   return (
     <div className="barchart">
       {values.map((v, i) => (
-        // eslint-disable-next-line react/no-array-index-key
         <div key={i} className="barchart-col">
           <div className="barchart-bar-wrap">
             <div
               className={`barchart-bar ${i === values.length - 1 ? "now" : ""}`}
               style={{ height: `${heights[i]}%` }}
             >
-              <span className="barchart-val">{barValueLabel(v)}</span>
+              <span className="barchart-val">{formatCompactCount(v)}</span>
             </div>
           </div>
           {labels && <div className="barchart-label">{labels[i]}</div>}
@@ -45,7 +45,6 @@ export function Spark({
     <div className={`hub-spark hue-${hue}`} role="img" aria-label={label}>
       {heights.map((height, i) => (
         <span
-          // eslint-disable-next-line react/no-array-index-key
           key={i}
           className={`hub-spark-bar ${i === heights.length - 1 ? "now" : ""}`}
           style={

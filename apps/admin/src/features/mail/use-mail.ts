@@ -6,6 +6,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query"
 import type {
   ComposeRequest,
@@ -28,7 +29,8 @@ import type {
 import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { PUBLISH_TOAST } from "@/features/mail/mail-presentation"
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 
 export function useMailList(params: MailListQuery) {
   return useQuery<MailListResponse>({
@@ -38,16 +40,9 @@ export function useMailList(params: MailListQuery) {
 }
 
 export function useMailListInfinite(params: MailListQuery) {
-  return useInfiniteQuery<MailListResponse>({
-    queryKey: queryKeys.mail.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listMail({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.mail.list(params), params, (input) => api.listMail(input)),
+  )
 }
 
 export function useMailThread(id: string | null) {
@@ -69,13 +64,13 @@ export function useMailStats() {
   })
 }
 
-export function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  return Promise.all([
-    id ? qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) }) : null,
-    qc.invalidateQueries({ queryKey: queryKeys.mail.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.mail.stats }),
-    qc.invalidateQueries({ queryKey: queryKeys.inbox.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+export function invalidateMail(qc: QueryClient, id?: string) {
+  return invalidateKeys(qc, [
+    id ? queryKeys.mail.detail(id) : null,
+    queryKeys.mail.all,
+    queryKeys.mail.stats,
+    queryKeys.inbox.all,
+    queryKeys.home.all,
   ])
 }
 
@@ -134,7 +129,7 @@ export function useResendMail() {
   })
 }
 
-export function publishMailReplyOptions(qc: ReturnType<typeof useQueryClient>) {
+export function publishMailReplyOptions(qc: QueryClient) {
   return mutationOptions({
     mutationFn: (input: PublishMailReplyRequest) => api.publishMailReply(input),
     onSuccess: (_res, { id }) =>

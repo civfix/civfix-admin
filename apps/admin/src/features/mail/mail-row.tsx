@@ -1,24 +1,28 @@
 "use client"
 
+import * as React from "react"
 import { MAIL_STATUS_LABELS, relativeAgo, type MailThreadListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
+import { formatPreciseDateTime } from "@/lib/dates"
+import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 
 function rowCorrespondent(item: MailThreadListItemDTO): string {
   if (item.org) return item.org
   return item.dir === "in" ? item.from || "(no sender)" : item.to || "(no recipient)"
 }
 
-export function MailRow({
+export const MailRow = React.memo(function MailRow({
   item,
   selected,
-  onClick,
+  onSelect,
+  now,
 }: {
   item: MailThreadListItemDTO
   selected: boolean
-  onClick: () => void
+  onSelect: (id: string) => void
+  now: number
 }) {
   return (
     <div
@@ -26,11 +30,11 @@ export function MailRow({
       role="button"
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
-      onClick={onClick}
+      onClick={() => onSelect(item.id)}
       onKeyDown={(e) => {
         if (!isKeyboardActivationKey(e.key)) return
         e.preventDefault()
-        onClick()
+        onSelect(item.id)
       }}
     >
       <span className={`mail-dir ${item.dir}`}>
@@ -39,8 +43,8 @@ export function MailRow({
       <div className="mail-row-body">
         <div className="mail-row-top">
           <span className="mail-from">{rowCorrespondent(item)}</span>
-          <span className="mail-ts mono" title={tsTitle(item.ts)}>
-            {relativeAgo(item.ts)}
+          <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
+            {relativeAgo(item.ts, now)}
           </span>
         </div>
         <div className="mail-subject">{item.subject || "(no subject)"}</div>
@@ -51,4 +55,4 @@ export function MailRow({
       </span>
     </div>
   )
-}
+})

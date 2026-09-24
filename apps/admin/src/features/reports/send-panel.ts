@@ -1,8 +1,8 @@
 import type { AdminReportDTO } from "@civfix/shared"
 
-import { msgWhen } from "@/features/reports/report-chat"
+import { formatPreciseDateTime } from "@/lib/dates"
 import {
-  routeActionFor,
+  routeActionView,
   routeSendLabel,
   type RoutableReport,
   type RouteAction,
@@ -30,7 +30,7 @@ export interface SendPanelView {
 
 function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string {
   if (action.kind === "already_sent") {
-    return action.routedAt ? `Already sent · ${msgWhen(action.routedAt)}` : "Already sent"
+    return action.routedAt ? `Already sent · ${formatPreciseDateTime(action.routedAt)}` : "Already sent"
   }
   if (action.kind === "resend") return "Send again to jurisdiction"
   return routeSendLabel(verdictApproved)
@@ -39,7 +39,7 @@ function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string
 // A local approve outranks the server verdict until the refetch lands, so the panel never offers a
 // second approve (or blocks a reject) on a verdict the operator just changed.
 export function sendPanelView(report: SendPanelReport, approvedLocally: boolean): SendPanelView {
-  const routeAction = routeActionFor(report)
+  const routeAction = routeActionView(report)
   const verdictApproved = report.verificationVerdict === "approved" || approvedLocally
   const approvesOnSend = routeAction.kind === "send" && !verdictApproved
   return {
