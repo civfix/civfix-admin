@@ -17,16 +17,25 @@ function approveBody(sendAttempted: boolean): string {
     .join(" ")
 }
 
-export function useReportVerdictActions(
-  report: AdminReportDTO,
-  approvesOnSend: boolean,
-  onApprovedChange: (approved: boolean) => void,
-) {
+export function useReportVerdictControls() {
   const toast = useToast()
   const routeMutation = useRouteReport()
   const verdictMutation = useSetReportVerdict()
   const [routeOpen, setRouteOpen] = React.useState(false)
   const [routeNote, setRouteNote] = React.useState("")
+  return { toast, routeMutation, verdictMutation, routeOpen, setRouteOpen, routeNote, setRouteNote }
+}
+
+export type ReportVerdictControls = ReturnType<typeof useReportVerdictControls>
+
+export function reportVerdictActions(
+  controls: ReportVerdictControls,
+  report: AdminReportDTO,
+  approvesOnSend: boolean,
+  onApprovedChange: (approved: boolean) => void,
+) {
+  const { toast, routeMutation, verdictMutation, routeOpen, setRouteOpen, routeNote, setRouteNote } =
+    controls
   const sendAttempted = report.outreach.routedAt !== null
 
   const openRoute = () => {

@@ -10,13 +10,19 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { cancelBlockedFor, eventStatusView } from "@/lib/event-status"
 import { eventKindView, EVENT_KIND_PIN_KIND } from "@/lib/event-kind"
-import { EventAttendeeMessages } from "@/features/events/event-attendee-messages"
+import { EventAttendeeMessages, useAttendeeUpdate } from "@/features/events/event-attendee-messages"
 import { shortId } from "@/features/events/event-id"
 import { EventLinkedReports } from "@/features/events/event-linked-reports"
 import { EventOrganizerCard } from "@/features/events/event-organizer-card"
-import { EventTurnoutCard } from "@/features/events/event-turnout-card"
+import { EventTurnoutCard, useOutcomeDraft } from "@/features/events/event-turnout-card"
 import { LinkReportsPicker } from "@/features/events/link-reports-picker"
-import { useCancelEvent, useEvent, useFlagEvent, useLinkReports } from "@/features/events/use-events"
+import {
+  useCancelEvent,
+  useEvent,
+  useFlagEvent,
+  useLinkReports,
+  useUnlinkReport,
+} from "@/features/events/use-events"
 
 const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m) => m.LeafletMap), {
   ssr: false,
@@ -161,9 +167,20 @@ function EventActivity({ timeline }: { timeline: EventTimelineItem[] }) {
   )
 }
 
-function EventModerateBar({ event }: { event: AdminEventDTO }) {
+function useEventModeration() {
   const flagMutation = useFlagEvent()
   const cancelMutation = useCancelEvent()
+  return { flagMutation, cancelMutation }
+}
+
+function EventModerateBar({
+  event,
+  moderation,
+}: {
+  event: AdminEventDTO
+  moderation: ReturnType<typeof useEventModeration>
+}) {
+  const { flagMutation, cancelMutation } = moderation
   const cancelBlockedId = React.useId()
   const cancelBlockedReason = cancelBlockedFor(event.status)
 
@@ -211,7 +228,13 @@ function EventModerateBar({ event }: { event: AdminEventDTO }) {
 
 export function EventDetail({ eventId }: { eventId: string }) {
   const eventQuery = useEvent(eventId)
+  // Drafts and mutations live above the loading and error returns: a failed detail refetch must not
+  // clear a typed update or re-enable a button whose request is still in flight.
+  const moderation = useEventModeration()
+  const update = useAttendeeUpdate()
+  const outcome = useOutcomeDraft()
   const linkReports = useLinkReports()
+  const unlinkMutation = useUnlinkReport()
   const [pickerOpen, setPickerOpen] = React.useState(false)
 
   if (eventQuery.isLoading) return <LoadingState label="Loading event..." />
@@ -248,19 +271,20 @@ export function EventDetail({ eventId }: { eventId: string }) {
             <EventLinkedReports
               event={event}
               linking={linkReports.isPending}
+              unlinkMutation={unlinkMutation}
               onOpenPicker={() => setPickerOpen(true)}
             />
           )}
         </div>
 
         <div className="rep-col">
-          <EventTurnoutCard event={event} />
+          <EventTurnoutCard event={event} outcome={outcome} />
           <EventOrganizerCard organizer={event.organizer} />
-          <EventAttendeeMessages event={event} />
+          <EventAttendeeMessages event={event} update={update} />
         </div>
       </div>
 
-      <EventModerateBar event={event} />
+      <EventModerateBar event={event} moderation={moderation} />
 
       {pickerOpen && isCleanup && (
         <LinkReportsPicker

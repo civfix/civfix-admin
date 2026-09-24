@@ -93,15 +93,22 @@ export function RoutedToCard({ report, outreach }: { report: AdminReportDTO; out
   )
 }
 
+export function useCityFollowup() {
+  const followupMutation = useSendReportFollowup()
+  const [followupDraft, setFollowupDraft] = React.useState("")
+  return { followupMutation, followupDraft, setFollowupDraft }
+}
+
 export function CityMessageCard({
   report,
   followupBlocked,
+  followup,
 }: {
   report: AdminReportDTO
   followupBlocked: string | null
+  followup: ReturnType<typeof useCityFollowup>
 }) {
-  const followupMutation = useSendReportFollowup()
-  const [followupDraft, setFollowupDraft] = React.useState("")
+  const { followupMutation, followupDraft, setFollowupDraft } = followup
   const followupBlockedId = React.useId()
   const canSend = followupBlocked === null
   const hasDraft = !!followupDraft.trim()

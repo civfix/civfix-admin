@@ -168,7 +168,6 @@ function TabBadge({ org, tab }: { org: AdminOrgDTO; tab: OrgDetailTab }) {
   return null
 }
 
-/** Roving-focus tablist: arrows move selection and focus together, wrapping at either end. */
 function OrgDetailTabs({
   org,
   tab,

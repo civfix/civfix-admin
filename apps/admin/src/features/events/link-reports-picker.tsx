@@ -12,8 +12,6 @@ import { useDebounced } from "@/hooks/use-debounced"
 import { reportStatusView } from "@/lib/report-status"
 import { useReportListInfinite } from "@/features/reports/use-reports"
 
-const SEARCH_DEBOUNCE_MS = 250
-
 type ReportListQuery = ReturnType<typeof useReportListInfinite>
 
 function emptyPickerHint(searching: boolean, hasMore: boolean): string {
@@ -103,7 +101,7 @@ export function LinkReportsPicker({
   onLink: (reportIds: string[]) => void
 }) {
   const [query, setQuery] = React.useState("")
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS).trim()
+  const debouncedQuery = useDebounced(query).trim()
   const [picked, setPicked] = React.useState<Set<string>>(() => new Set())
   const modalRef = useModalFocus<HTMLDivElement>(true)
   const searchRef = React.useRef<HTMLInputElement>(null)

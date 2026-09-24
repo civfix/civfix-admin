@@ -20,8 +20,6 @@ import { parseOrgFocus, type OrgDetailTab } from "@/features/orgs/org-focus"
 import { useOrgsInfinite } from "@/features/orgs/use-orgs"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-const SEARCH_DEBOUNCE_MS = 250
-
 /**
  * Only the first load picks an org on the operator's behalf; a deep-linked or just-created org is
  * pinned like any other pick. A pick that a filter or search leaves out stays open (the detail reads it
@@ -66,7 +64,7 @@ export function OrgsPage({ focusId }: SectionPageProps) {
   const [tab, setTab] = React.useState<OrgDetailTab>(focus.tab ?? "profile")
   const [creating, setCreating] = React.useState(false)
 
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
   const listParams = React.useMemo(
     () => orgListParams(filter, debouncedQuery),
     [filter, debouncedQuery],

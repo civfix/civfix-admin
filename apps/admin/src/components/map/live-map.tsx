@@ -24,7 +24,6 @@ function pinTitle(p: HomeMapPin): string {
 }
 
 interface LivePin extends MapPin {
-  /** The pin's display title, also its tooltip. */
   tip: string
   refType: HomeMapPin["refType"]
   refId: string

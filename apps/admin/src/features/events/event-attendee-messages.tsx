@@ -29,9 +29,20 @@ function SentMessages({ messages }: { messages: AdminEventDTO["messages"] }) {
   )
 }
 
-export function EventAttendeeMessages({ event }: { event: AdminEventDTO }) {
+export function useAttendeeUpdate() {
   const postMutation = usePostEventMessage()
   const [updateDraft, setUpdateDraft] = React.useState("")
+  return { postMutation, updateDraft, setUpdateDraft }
+}
+
+export function EventAttendeeMessages({
+  event,
+  update,
+}: {
+  event: AdminEventDTO
+  update: ReturnType<typeof useAttendeeUpdate>
+}) {
+  const { postMutation, updateDraft, setUpdateDraft } = update
   const noAttendees = event.attendees === 0
   const blocked = noAttendees || !updateDraft.trim()
 
