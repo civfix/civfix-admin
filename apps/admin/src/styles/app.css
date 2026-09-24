@@ -159,7 +159,7 @@
    or errored, the state renders here as one clean full-width card instead of being squeezed into a
    single stat cell of the grid. Mirrors the strip's card footprint (border + radius + shadow). */
 .strip-state {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-soft);
   border-radius: var(--card-radius);
   box-shadow: var(--shadow-1);
@@ -478,7 +478,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   display: flex; align-items: center; gap: 0;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: #fff;
+  background: var(--card);
   overflow: hidden;
   transition: border-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
 }
@@ -526,7 +526,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .user-pick-results {
   border: 1px solid var(--border-soft);
   border-radius: 9px;
-  background: #fff;
+  background: var(--card);
   max-height: 224px;
   overflow-y: auto;
   list-style: none;
@@ -578,7 +578,7 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   position: fixed;
   z-index: 80;
   min-width: 200px;
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border-soft);
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(26, 23, 20, 0.16);
