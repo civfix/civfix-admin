@@ -41,12 +41,9 @@ export function OperatorLogin() {
         {notAuthorized ? (
           <>
             <h1 className="op-login-title">Not authorized</h1>
-            <p className="op-login-sub">
+            <p role="alert" className="op-login-sub">
               You signed in with Cloudflare Access, but this account is not authorized for the operator
               dashboard. Ask an administrator to add your email to the operator allowlist.
-            </p>
-            <p role="alert" className="op-login-error">
-              This account is not authorized for the operator dashboard.
             </p>
           </>
         ) : (

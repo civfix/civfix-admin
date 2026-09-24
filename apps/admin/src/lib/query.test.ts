@@ -53,14 +53,20 @@ describe("makeQueryClient query defaults", () => {
     expect(retry(0, foreignAppError(ErrorCode.NOT_FOUND, "missing"))).toBe(false)
   })
 
-  it.each([ErrorCode.INTERNAL, ErrorCode.CONFLICT, ErrorCode.RATE_LIMITED])(
-    "retries %s while failureCount is below 2",
+  it("retries INTERNAL while failureCount is below 2", () => {
+    const retry = retryOf(makeQueryClient())
+    expect(retry(0, new AppError(ErrorCode.INTERNAL, "x"))).toBe(true)
+    expect(retry(1, new AppError(ErrorCode.INTERNAL, "x"))).toBe(true)
+    expect(retry(2, new AppError(ErrorCode.INTERNAL, "x"))).toBe(false)
+    expect(retry(3, new AppError(ErrorCode.INTERNAL, "x"))).toBe(false)
+  })
+
+  it.each([ErrorCode.RATE_LIMITED, ErrorCode.CONFLICT])(
+    "never retries %s, which a retry would only repeat or amplify",
     (code) => {
       const retry = retryOf(makeQueryClient())
-      expect(retry(0, new AppError(code, "x"))).toBe(true)
-      expect(retry(1, new AppError(code, "x"))).toBe(true)
-      expect(retry(2, new AppError(code, "x"))).toBe(false)
-      expect(retry(3, new AppError(code, "x"))).toBe(false)
+      expect(retry(0, new AppError(code, "x"))).toBe(false)
+      expect(retry(1, foreignAppError(code, "x"))).toBe(false)
     },
   )
 
@@ -76,9 +82,9 @@ describe("makeQueryClient mutation defaults", () => {
     expect(makeQueryClient().getDefaultOptions().mutations?.retry).toBe(false)
   })
 
-  it("toasts the server message of a failed mutation", async () => {
+  it("toasts the server message of a failed mutation in the error tone", async () => {
     await failMutation(makeQueryClient(), new AppError(ErrorCode.CONFLICT, "Slug already taken"))
-    expect(useUiStore.getState().toast?.text).toBe("Slug already taken")
+    expect(useUiStore.getState().toast).toMatchObject({ text: "Slug already taken", tone: "error" })
   })
 
   it("toasts the message of a foreign AppError", async () => {
@@ -91,9 +97,16 @@ describe("makeQueryClient mutation defaults", () => {
     expect(useUiStore.getState().toast?.text).toBe("Something went wrong. Please try again.")
   })
 
-  it("toasts \"Unknown error\" rather than the fallback for a non-error rejection (current behavior)", async () => {
+  it("toasts the generic copy for a non-error rejection", async () => {
     await failMutation(makeQueryClient(), "boom")
-    expect(useUiStore.getState().toast?.text).toBe("Unknown error")
+    expect(useUiStore.getState().toast?.text).toBe("Something went wrong. Please try again.")
+  })
+
+  it("toasts the connection copy, not the browser's fetch text, when the request never reached the server", async () => {
+    await failMutation(makeQueryClient(), new TypeError("Failed to fetch"))
+    expect(useUiStore.getState().toast?.text).toBe(
+      "Could not reach the server. Check your connection and try again.",
+    )
   })
 
   it("does not toast a successful mutation", async () => {
@@ -102,7 +115,7 @@ describe("makeQueryClient mutation defaults", () => {
     expect(useUiStore.getState().toast).toBeNull()
   })
 
-  it("does not toast when the mutation sets its own onError, which replaces the default", async () => {
+  it("still toasts when the mutation sets its own onError, and runs that handler too", async () => {
     const seen: unknown[] = []
     const observer = new MutationObserver(makeQueryClient(), {
       mutationFn: () => Promise.reject(new AppError(ErrorCode.CONFLICT, "own handler")),
@@ -112,6 +125,15 @@ describe("makeQueryClient mutation defaults", () => {
     })
     await observer.mutate().catch(() => undefined)
     expect(seen).toHaveLength(1)
+    expect(useUiStore.getState().toast?.text).toBe("own handler")
+  })
+
+  it("does not toast a mutation that shows its error inline", async () => {
+    const observer = new MutationObserver(makeQueryClient(), {
+      mutationFn: () => Promise.reject(new AppError(ErrorCode.CONFLICT, "shown by the form")),
+      meta: { errorToast: false },
+    })
+    await observer.mutate().catch(() => undefined)
     expect(useUiStore.getState().toast).toBeNull()
   })
 })
@@ -204,11 +226,15 @@ describe("queryKeys param factories", () => {
     ["reports.list", queryKeys.reports.list, ["admin", "reports", "list"]],
     ["reports.page", queryKeys.reports.page, ["admin", "reports", "page"]],
     ["events.list", queryKeys.events.list, ["admin", "events", "list"]],
+    ["events.page", queryKeys.events.page, ["admin", "events", "page"]],
     ["users.list", queryKeys.users.list, ["admin", "users", "list"]],
     ["users.page", queryKeys.users.page, ["admin", "users", "page"]],
     ["mail.list", queryKeys.mail.list, ["admin", "mail", "list"]],
+    ["mail.page", queryKeys.mail.page, ["admin", "mail", "page"]],
     ["inbox.list", queryKeys.inbox.list, ["admin", "inbox", "list"]],
+    ["inbox.page", queryKeys.inbox.page, ["admin", "inbox", "page"]],
     ["moderation.list", queryKeys.moderation.list, ["admin", "moderation", "list"]],
+    ["moderation.page", queryKeys.moderation.page, ["admin", "moderation", "page"]],
     ["govClaims.list", queryKeys.govClaims.list, ["admin", "gov-claims", "list"]],
     ["orgs.list", queryKeys.orgs.list, ["admin", "orgs", "list"]],
     ["hosts.list", queryKeys.hosts.list, ["admin", "hosts", "list"]],
@@ -221,9 +247,12 @@ describe("queryKeys param factories", () => {
     expect(factory(undefined)).toEqual([...prefix, null])
   })
 
-  it("normalizes a null param to null and keeps other falsy params (current behavior)", () => {
+  it("normalizes a null param to null and keeps other falsy params, which the param types now reject", () => {
+    // @ts-expect-error null is not a list query
     expect(queryKeys.reports.list(null)).toEqual(["admin", "reports", "list", null])
+    // @ts-expect-error 0 is not a list query
     expect(queryKeys.reports.list(0)).toEqual(["admin", "reports", "list", 0])
+    // @ts-expect-error "" is not a list query
     expect(queryKeys.reports.list("")).toEqual(["admin", "reports", "list", ""])
   })
 })
@@ -262,7 +291,8 @@ describe("queryKeys id + params factories", () => {
     ["orgs.members", queryKeys.orgs.members, "orgs", "members"],
     ["orgs.events", queryKeys.orgs.events, "orgs", "events"],
   ] as const)("%s puts the id before the sub-resource", (_name, factory, domain, sub) => {
-    expect(factory("id-1", params)).toEqual(["admin", domain, "id-1", sub, params])
+    const withParams = factory as (id: string, params?: object) => readonly unknown[]
+    expect(withParams("id-1", params)).toEqual(["admin", domain, "id-1", sub, params])
     expect(factory("id-1")).toEqual(["admin", domain, "id-1", sub, null])
   })
 
@@ -275,7 +305,7 @@ describe("queryKeys id + params factories", () => {
 })
 
 describe("page vs list keys", () => {
-  const params = { status: "open" }
+  const params = { q: "open", limit: 3 }
 
   it("reports.page and reports.list are distinct keys", () => {
     expect(queryKeys.reports.page(params)).not.toEqual(queryKeys.reports.list(params))
@@ -289,12 +319,19 @@ describe("page vs list keys", () => {
     expect(queryKeys.users.list(params)).toEqual(["admin", "users", "list", params])
   })
 
+  it.each(["events", "inbox", "mail", "moderation"] as const)(
+    "%s page and list keys are distinct for equal params",
+    (domain) => {
+      const { page, list } = queryKeys[domain]
+      expect(page(params)).not.toEqual(list(params))
+      expect(page(params)).toEqual(["admin", domain, "page", params])
+    },
+  )
+
   it("keeps every page and list key under its domain `all` prefix so one invalidation hits both", () => {
-    for (const [all, keys] of [
-      [queryKeys.reports.all, [queryKeys.reports.page(params), queryKeys.reports.list(params)]],
-      [queryKeys.users.all, [queryKeys.users.page(params), queryKeys.users.list(params)]],
-    ] as const) {
-      for (const key of keys) expect(key.slice(0, all.length)).toEqual(all)
+    for (const domain of ["reports", "users", "events", "inbox", "mail", "moderation"] as const) {
+      const { all, page, list } = queryKeys[domain]
+      for (const key of [page(params), list(params)]) expect(key.slice(0, all.length)).toEqual(all)
     }
   })
 })

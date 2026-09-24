@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it } from "vitest"
 
@@ -410,9 +410,7 @@ describe("DialogHost", () => {
     expect(screen.getByRole("textbox")).toHaveValue("duplicate of an open report")
   })
 
-  // The textarea's autoFocus runs in React's commit phase, before useModalFocus's effect records the
-  // element to restore, so the hook captures the textarea itself and has nothing live to return to.
-  it("drops focus to the body instead of restoring the opener when a prompt closes (current behavior)", async () => {
+  it("restores focus to the opener when a prompt closes", async () => {
     const { user, opener } = renderDialog(() => {
       void promptDialog({ title: "Reason" })
     })
@@ -421,8 +419,70 @@ describe("DialogHost", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancel" }))
     expect(screen.queryByRole("dialog")).toBeNull()
-    expect(opener).not.toHaveFocus()
-    expect(document.activeElement).toBe(document.body)
+    expect(opener).toHaveFocus()
+  })
+
+  it("names a confirm by its title and describes it by its body", async () => {
+    const { user, opener } = renderDialog(
+      () => void confirmDialog({ title: "Remove report?", body: "It leaves the public map." }),
+    )
+    await user.click(opener)
+
+    const dialog = screen.getByRole("dialog", { name: "Remove report?" })
+    expect(dialog).toHaveAccessibleDescription("It leaves the public map.")
+  })
+
+  it("adds no description to a confirm without a body", async () => {
+    const { user, opener } = renderDialog(() => void confirmDialog({ title: "Remove report?" }))
+    await user.click(opener)
+
+    expect(screen.getByRole("dialog", { name: "Remove report?" })).not.toHaveAttribute("aria-describedby")
+  })
+
+  it("names the prompt field by its label", async () => {
+    const { user, opener } = renderDialog(
+      () => void promptDialog({ title: "Reject report", label: "Reason for the reporter" }),
+    )
+    await user.click(opener)
+
+    expect(screen.getByRole("dialog", { name: "Reject report" })).toBeInTheDocument()
+    expect(screen.getByLabelText("Reason for the reporter")).toBe(screen.getByRole("textbox"))
+  })
+
+  it("names an unlabelled prompt field by the dialog title", async () => {
+    const { user, opener } = renderDialog(() => void promptDialog({ title: "Reason" }))
+    await user.click(opener)
+
+    expect(screen.getByRole("textbox", { name: "Reason" })).toBeInTheDocument()
+  })
+
+  it("settles a pending confirm as cancelled when a second dialog replaces it", async () => {
+    let first: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      first = confirmDialog({ title: "Remove report?" })
+    })
+    await user.click(opener)
+
+    let second: Promise<string | null> | undefined
+    act(() => {
+      second = promptDialog({ title: "Reason" })
+    })
+    await expect(first).resolves.toBe(false)
+    expect(screen.getByRole("dialog", { name: "Reason" })).toBeInTheDocument()
+
+    await user.keyboard("{Escape}")
+    await expect(second).resolves.toBeNull()
+  })
+
+  it("settles a pending prompt as cancelled when a second dialog replaces it", async () => {
+    let first: Promise<string | null> | undefined
+    const { user, opener } = renderDialog(() => {
+      first = promptDialog({ title: "Reason" })
+    })
+    await user.click(opener)
+
+    act(() => void confirmDialog({ title: "Remove report?" }))
+    await expect(first).resolves.toBeNull()
   })
 
   it("restores focus to the opener when closed with Escape", async () => {

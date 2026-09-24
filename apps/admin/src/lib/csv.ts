@@ -17,9 +17,12 @@ export function toCsv(rows: readonly (readonly CsvCell[])[]): string {
     .join("\n")
 }
 
+// Excel reads a CSV without a byte order mark in the system's legacy code page, garbling accented names.
+const UTF8_BOM = "\uFEFF"
+
 export function downloadCsv(filename: string, rows: readonly (readonly CsvCell[])[]): void {
   if (typeof document === "undefined") return
-  const blob = new Blob([toCsv(rows)], { type: "text/csv" })
+  const blob = new Blob([UTF8_BOM, toCsv(rows)], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { toAppError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 
 /**
  * Standard loading / error / empty state components for data-bound views. The prototype had NONE of
@@ -30,8 +30,7 @@ export function LoadingState({ label = "Loading..." }: { label?: string }) {
 
 /**
  * Error panel with an optional retry and an optional primary action beside it (the error boundary's
- * Reload). Surfaces the normalized AppError message unless `message` replaces it; when the backend is
- * down this renders the friendly INTERNAL message rather than crashing.
+ * Reload). Shows the error's operator copy from errorMessage unless `message` replaces it.
  */
 export function ErrorState({
   error,
@@ -46,7 +45,7 @@ export function ErrorState({
   message?: string
   action?: { label: string; onClick: () => void }
 }) {
-  const errorText = React.useMemo(() => toAppError(error).message, [error])
+  const errorText = React.useMemo(() => errorMessage(error), [error])
   const retry = onRetry && (
     <button type="button" className="btn sm" onClick={onRetry}>
       Try again

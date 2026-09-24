@@ -22,8 +22,11 @@ import type { AdminOperatorDTO } from "@civfix/shared"
  * - forbidden: Cloudflare Access authenticated the user but their email is NOT on the operator
  *   allowlist (a clean 403). This is a terminal state - retrying the bootstrap would loop, so the gate
  *   shows a "not authorized" message instead of redirecting.
+ * - signing-out: the operator chose Sign out and the page is about to leave for the Access logout.
  */
-export type AuthStatus = "idle" | "loading" | "authenticated" | "anonymous" | "forbidden"
+export type AuthStatus = "idle" | "loading" | "authenticated" | "anonymous" | "forbidden" | "signing-out"
+
+export type SignedOutStatus = Extract<AuthStatus, "anonymous" | "forbidden" | "signing-out">
 
 export interface AuthState {
   status: AuthStatus
@@ -33,7 +36,8 @@ export interface AuthState {
 
   setSession: (input: { operator: AdminOperatorDTO | null; csrfToken?: string | null }) => void
   setStatus: (status: AuthStatus) => void
-  clear: () => void
+  /** Drop the identity and CSRF token, landing in `status` (anonymous unless given). */
+  clear: (status?: SignedOutStatus) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -51,7 +55,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setStatus: (status) => set({ status }),
 
-  clear: () => set({ status: "anonymous", operator: null, csrfToken: null }),
+  // Signing out is one-way: a 401 answering a request still in flight must not bring back the
+  // sign-in screen while the page leaves.
+  clear: (status = "anonymous") =>
+    set((prev) => ({
+      status: prev.status === "signing-out" ? "signing-out" : status,
+      operator: null,
+      csrfToken: null,
+    })),
 }))
 
 /**

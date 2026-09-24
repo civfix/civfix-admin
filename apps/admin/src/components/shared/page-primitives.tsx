@@ -37,18 +37,21 @@ export function PageHead({
 /** One option in a FilterChips control: either a bare string or a { value, label, count }. */
 export type FilterOption = string | { value: string; label: string; count?: React.ReactNode }
 
-/** Segmented filter control (`.filter-chips`). */
+/** Segmented filter control (`.filter-chips`): one pressed toggle per option. */
 export function FilterChips({
   options,
   value,
   onChange,
+  ariaLabel,
 }: {
   options: FilterOption[]
   value: string
   onChange: (value: string) => void
+  /** Names the group for assistive tech, e.g. "Status". */
+  ariaLabel?: string
 }) {
   return (
-    <div className="filter-chips">
+    <div className="filter-chips" role="group" aria-label={ariaLabel}>
       {options.map((o) => {
         const val = typeof o === "string" ? o : o.value
         const label = typeof o === "string" ? o : o.label
@@ -56,7 +59,9 @@ export function FilterChips({
         return (
           <button
             key={val}
+            type="button"
             className={`fchip ${value === val ? "active" : ""}`}
+            aria-pressed={value === val}
             onClick={() => onChange(val)}
           >
             {label}

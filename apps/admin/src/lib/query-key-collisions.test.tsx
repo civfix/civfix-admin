@@ -53,6 +53,8 @@ describe("list and infinite hooks mounted with equal params", () => {
         useEventList(PARAMS)
         useEventListInfinite(PARAMS)
       },
+      queryKeys.events.all,
+      queryKeys.events.page(PARAMS),
       queryKeys.events.list(PARAMS),
     ],
     [
@@ -62,6 +64,8 @@ describe("list and infinite hooks mounted with equal params", () => {
         useInboxList(PARAMS)
         useInboxListInfinite(PARAMS)
       },
+      queryKeys.inbox.all,
+      queryKeys.inbox.page(PARAMS),
       queryKeys.inbox.list(PARAMS),
     ],
     [
@@ -71,6 +75,8 @@ describe("list and infinite hooks mounted with equal params", () => {
         useMailList(PARAMS)
         useMailListInfinite(PARAMS)
       },
+      queryKeys.mail.all,
+      queryKeys.mail.page(PARAMS),
       queryKeys.mail.list(PARAMS),
     ],
     [
@@ -80,18 +86,10 @@ describe("list and infinite hooks mounted with equal params", () => {
         useModerationList(PARAMS)
         useModerationListInfinite(PARAMS)
       },
+      queryKeys.moderation.all,
+      queryKeys.moderation.page(PARAMS),
       queryKeys.moderation.list(PARAMS),
     ],
-  ] as const)(
-    "%s list hook shares one cache entry with its infinite hook (current behavior)",
-    async (_name, method, useBoth, key) => {
-      const client = await mountBoth(method, useBoth)
-      expect(client.getQueryCache().findAll({ queryKey: key, exact: true })).toHaveLength(1)
-      expect(client.getQueryCache().findAll({ queryKey: key.slice(0, 2) })).toHaveLength(1)
-    },
-  )
-
-  it.each([
     [
       "reports",
       "listAdminReports",

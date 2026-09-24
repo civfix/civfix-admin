@@ -53,14 +53,7 @@ export function getApiClient(): ApiClient {
       "x-client": "web",
     },
     getCsrfToken: () => getCsrfToken(),
-    onUnauthorized: () => {
-      // Flip to signed-out; the login gate takes over. Guard against running before hydration.
-      try {
-        useAuthStore.getState().clear()
-      } catch {
-        // no-op: store not ready
-      }
-    },
+    onUnauthorized: () => useAuthStore.getState().clear(),
   })
   return cachedClient
 }

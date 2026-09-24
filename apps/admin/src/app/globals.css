@@ -68,3 +68,8 @@
 .leaflet-container {
   font-family: var(--font-body);
 }
+
+/* The toast's success icon sits on moss in admin.css; an error must not read as a success. */
+.toast-wrap.error .ico {
+  background: var(--danger);
+}

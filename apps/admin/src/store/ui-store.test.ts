@@ -125,8 +125,8 @@ describe("initial route from the hash at module load", () => {
     })
   })
 
-  it("yields an empty-string focus id for a trailing slash (current behavior)", async () => {
-    expect(await initialRoute("#/reports/")).toEqual({ page: "reports", focusId: "" })
+  it("reads a trailing slash as no focus", async () => {
+    expect(await initialRoute("#/reports/")).toEqual({ page: "reports", focusId: null })
   })
 
   it("falls back to home and drops the focus for an unknown section", async () => {
@@ -141,8 +141,12 @@ describe("initial route from the hash at module load", () => {
     expect(await initialRoute("#/Reports")).toEqual({ page: "home", focusId: null })
   })
 
-  it("does not strip a query string from the section segment (current behavior)", async () => {
-    expect(await initialRoute("#/reports?tab=open")).toEqual({ page: "home", focusId: null })
+  it("ignores a query string after the section", async () => {
+    expect(await initialRoute("#/reports?tab=open")).toEqual({ page: "reports", focusId: null })
+  })
+
+  it("ignores a query string after the focus id", async () => {
+    expect(await initialRoute("#/reports/rep-1?tab=open")).toEqual({ page: "reports", focusId: "rep-1" })
   })
 
   it("falls back to home with no focus on a malformed percent-encoding at import", async () => {
@@ -207,18 +211,18 @@ describe("nav", () => {
     expect(useUiStore.getState()).toMatchObject({ page: "home", focusId: null })
   })
 
-  it("keeps a focus id in the store for home although the hash drops it (current behavior)", async () => {
+  it("drops a focus id for home, as the hash does", async () => {
     const { useUiStore } = await loadWithHash("")
     useUiStore.getState().nav("home", "stray")
-    expect(useUiStore.getState()).toMatchObject({ page: "home", focusId: "stray" })
+    expect(useUiStore.getState()).toMatchObject({ page: "home", focusId: null })
     expect(window.location.hash).toBe("#/")
   })
 
-  it("treats an empty-string focus like no focus in the hash", async () => {
+  it("treats an empty-string focus like no focus in the hash and the store", async () => {
     const { useUiStore } = await loadWithHash("")
     useUiStore.getState().nav("mail", "")
     expect(window.location.hash).toBe("#/mail")
-    expect(useUiStore.getState().focusId).toBe("")
+    expect(useUiStore.getState().focusId).toBeNull()
   })
 
   it("encodes the whole focus id as one segment", async () => {
@@ -275,6 +279,18 @@ describe("toast", () => {
     const second = useUiStore.getState().toast
     expect(second?.text).toBe("Saved")
     expect(second?.id).not.toBe(first?.id)
+  })
+
+  it("shows a success toast unless told otherwise", async () => {
+    const { useUiStore } = await loadWithHash("")
+    useUiStore.getState().showToast("Saved")
+    expect(useUiStore.getState().toast).toMatchObject({ text: "Saved", tone: "ok" })
+  })
+
+  it("carries the error tone", async () => {
+    const { useUiStore } = await loadWithHash("")
+    useUiStore.getState().showToast("Could not save", "error")
+    expect(useUiStore.getState().toast).toMatchObject({ text: "Could not save", tone: "error" })
   })
 
   it("replaces the current toast rather than queueing", async () => {

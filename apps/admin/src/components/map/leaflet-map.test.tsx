@@ -1,4 +1,5 @@
 import { fireEvent, render } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import L from "leaflet"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -145,6 +146,84 @@ describe("LeafletMap", () => {
     fireEvent.click(markerIcons(container)[2]!)
     expect(onPinTap).toHaveBeenCalledTimes(1)
     expect(onPinTap).toHaveBeenCalledWith(PINS[2])
+  })
+
+  it("updates a pin's tooltip when its title changes under the same id", () => {
+    const { container, rerender } = render(<LeafletMap pins={PINS} />)
+    hoverAndReadTooltip(container, markerIcons(container)[0]!)
+
+    rerender(<LeafletMap pins={[{ ...PINS[0]!, tip: "Filled pothole" }, ...PINS.slice(1)]} />)
+    const tip = hoverAndReadTooltip(container, markerIcons(container)[0]!)
+    expect(tip?.textContent).toBe("Filled pothole · Los Angeles")
+  })
+
+  it("binds a tooltip when a pin gains a title and drops it when the title goes", () => {
+    const bare: MapPin = { id: "x", lat: 34, lng: -118 }
+    const { container, rerender } = render(<LeafletMap pins={[bare]} />)
+
+    rerender(<LeafletMap pins={[{ ...bare, tip: "Now titled" }]} />)
+    expect(hoverAndReadTooltip(container, markerIcons(container)[0]!)?.textContent).toBe("Now titled")
+
+    fireEvent.mouseOut(markerIcons(container)[0]!)
+    rerender(<LeafletMap pins={[bare]} />)
+    expect(hoverAndReadTooltip(container, markerIcons(container)[0]!)).toBeNull()
+  })
+
+  it("hands onPinTap the pin's latest data after a refetch", () => {
+    const onPinTap = vi.fn()
+    const { container, rerender } = render(<LeafletMap pins={PINS} onPinTap={onPinTap} />)
+    const refetched: MapPin = { ...PINS[2]!, tip: "Park cleanup (moved)" }
+
+    rerender(<LeafletMap pins={[PINS[0]!, PINS[1]!, refetched]} onPinTap={onPinTap} />)
+    fireEvent.click(markerIcons(container)[2]!)
+    expect(onPinTap).toHaveBeenCalledWith(refetched)
+  })
+
+  it("names each interactive marker by its tooltip text", () => {
+    const { container } = render(<LeafletMap pins={PINS} />)
+
+    const icons = markerIcons(container)
+    expect(icons.map((el) => el.getAttribute("role"))).toEqual(["button", "button", "button"])
+    expect(icons.map((el) => el.getAttribute("aria-label"))).toEqual([
+      "Deep pothole · Los Angeles",
+      "Tagged wall",
+      "Park cleanup",
+    ])
+  })
+
+  it("renames a marker when its title changes", () => {
+    const { container, rerender } = render(<LeafletMap pins={PINS} />)
+
+    rerender(<LeafletMap pins={[{ ...PINS[0]!, tip: "Filled pothole" }]} />)
+    expect(markerIcons(container)[0]).toHaveAttribute("aria-label", "Filled pothole · Los Angeles")
+  })
+
+  it("keeps markers of a non-interactive map out of the tab order", () => {
+    const { container } = render(<LeafletMap pins={PINS} interactive={false} />)
+
+    for (const el of markerIcons(container)) {
+      expect(el).not.toHaveAttribute("tabindex")
+      expect(el).not.toHaveAttribute("role")
+    }
+  })
+
+  it.each(["{Enter}", " "])("activates a focused marker with %j like a tap", async (key) => {
+    const onPinTap = vi.fn()
+    const { container } = render(<LeafletMap pins={PINS} onPinTap={onPinTap} />)
+
+    const icon = markerIcons(container)[1]!
+    icon.focus()
+    await userEvent.setup().keyboard(key)
+    expect(onPinTap).toHaveBeenCalledTimes(1)
+    expect(onPinTap).toHaveBeenCalledWith(PINS[1])
+  })
+
+  it("moves the view when the center or zoom props change", () => {
+    const setView = vi.spyOn(L.Map.prototype, "setView")
+    const { rerender } = render(<LeafletMap pins={PINS} center={[34, -118]} zoom={10} />)
+
+    rerender(<LeafletMap pins={PINS} center={[40.7, -74]} zoom={12} />)
+    expect(setView).toHaveBeenLastCalledWith([40.7, -74], 12)
   })
 
   it("removes the Leaflet map on unmount", () => {

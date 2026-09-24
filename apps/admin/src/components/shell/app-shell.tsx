@@ -5,6 +5,7 @@ import * as React from "react"
 import { BackBar } from "@/components/shell/back-bar"
 import { ErrorBoundary } from "@/components/shell/error-boundary"
 import { shellEscapeGoesHome } from "@/components/shell/escape-owner"
+import { SourceFooter } from "@/components/shell/source-footer"
 import { Toast } from "@/components/shell/toast"
 import { DialogHost } from "@/components/shared/dialog"
 import { LightboxHost } from "@/components/shared/lightbox"
@@ -52,6 +53,7 @@ export function AppShell() {
             <PageComponent {...pageProps} />
           </React.Suspense>
         </ErrorBoundary>
+        {!isHome && <SourceFooter />}
       </main>
 
       <Toast />

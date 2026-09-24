@@ -4,8 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { Providers } from "@/components/providers"
 
 vi.mock("@/components/auth/auth-hydrator", () => ({ AuthHydrator: () => null }))
+const session = vi.hoisted(() => ({
+  current: { isOperator: true, operator: null, status: "authenticated" } as {
+    isOperator: boolean
+    operator: null
+    status: string
+  },
+}))
+
 vi.mock("@/hooks/use-admin-auth", () => ({
-  useOperatorSession: () => ({ isOperator: true, operator: null, status: "authenticated" }),
+  useOperatorSession: () => session.current,
 }))
 
 function Crash(): never {
@@ -18,6 +26,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
+  session.current = { isOperator: true, operator: null, status: "authenticated" }
 })
 
 describe("Providers", () => {
@@ -44,5 +53,18 @@ describe("Providers", () => {
     )
     expect(alert).not.toHaveTextContent("shell exploded")
     expect(within(alert).getByRole("button", { name: "Reload" })).toBeInTheDocument()
+  })
+
+  it("shows a signing-out screen rather than the sign-in gate while signing out", () => {
+    session.current = { isOperator: false, operator: null, status: "signing-out" }
+    render(
+      <Providers>
+        <p>Dashboard content</p>
+      </Providers>,
+    )
+
+    expect(screen.getByRole("status")).toHaveTextContent("Signing out...")
+    expect(screen.queryByText("Dashboard content")).toBeNull()
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull()
   })
 })
