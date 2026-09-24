@@ -47,7 +47,7 @@ export function AppShell() {
       <main className={`main ${isHome ? "main-home" : ""}`} key={page}>
         {!isHome && <BackBar page={page as SectionId} />}
         <ErrorBoundary>
-          <React.Suspense fallback={<LoadingState label="Loading..." />}>
+          <React.Suspense fallback={<LoadingState />}>
             <PageComponent {...pageProps} />
           </React.Suspense>
         </ErrorBoundary>

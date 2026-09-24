@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminOrgDTO, AdminOrgEventWhen } from "@civfix/shared"
+import type { AdminOrgDTO, AdminOrgEventListResponse, AdminOrgEventWhen } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -17,6 +17,59 @@ const WHEN_OPTIONS: { value: AdminOrgEventWhen; label: string }[] = [
   { value: "past", label: "Past" },
   { value: "all", label: "All" },
 ]
+
+type OrgEventItem = AdminOrgEventListResponse["items"][number]
+
+function OrgEventRow({ item, onOpen }: { item: OrgEventItem; onOpen: () => void }) {
+  const kind = eventKindView(item.eventKind)
+  const KindIco = kind.icon
+  const status = eventStatusView(item.status)
+  return (
+    <div
+      className="qrow"
+      role="button"
+      tabIndex={0}
+      title="Open in Events"
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onOpen()
+      }}
+    >
+      <div className="leading">
+        <span className="evt-row-ico hue-sun" title={kind.label}>
+          <KindIco size={15} />
+        </span>
+      </div>
+      <div className="body">
+        <div className="top">
+          <span className="title">{item.title}</span>
+          {item.flagged && (
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
+              <Icons.Flag size={10} />
+            </span>
+          )}
+        </div>
+        <div className="sub">
+          <span className="strong">{item.place}</span>
+          <span className="sep">·</span>
+          <span>
+            {item.attendees}
+            {item.capacity !== null ? `/${item.capacity}` : ""} attending
+          </span>
+          <span className="sep">·</span>
+          <span>{item.organizer.name}</span>
+        </div>
+      </div>
+      <div className="trailing">
+        <span className={`pill ${status.cls} tight`}>{status.label}</span>
+        <span className="age">{item.date.abs}</span>
+        <Icons.ChevronRight size={14} className="row-arrow" />
+      </div>
+    </div>
+  )
+}
 
 export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
   const [when, setWhen] = React.useState<AdminOrgEventWhen>("upcoming")
@@ -60,57 +113,9 @@ export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
             />
           ) : (
             <>
-              {items.map((item) => {
-                const kind = eventKindView(item.eventKind)
-                const KindIco = kind.icon
-                const status = eventStatusView(item.status)
-                return (
-                  <div
-                    key={item.id}
-                    className="qrow"
-                    role="button"
-                    tabIndex={0}
-                    title="Open in Events"
-                    onClick={() => nav("events", item.id)}
-                    onKeyDown={(e) => {
-                      if (!isKeyboardActivationKey(e.key)) return
-                      e.preventDefault()
-                      nav("events", item.id)
-                    }}
-                  >
-                    <div className="leading">
-                      <span className="evt-row-ico hue-sun" title={kind.label}>
-                        <KindIco size={15} />
-                      </span>
-                    </div>
-                    <div className="body">
-                      <div className="top">
-                        <span className="title">{item.title}</span>
-                        {item.flagged && (
-                          <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
-                            <Icons.Flag size={10} />
-                          </span>
-                        )}
-                      </div>
-                      <div className="sub">
-                        <span className="strong">{item.place}</span>
-                        <span className="sep">·</span>
-                        <span>
-                          {item.attendees}
-                          {item.capacity !== null ? `/${item.capacity}` : ""} attending
-                        </span>
-                        <span className="sep">·</span>
-                        <span>{item.organizer.name}</span>
-                      </div>
-                    </div>
-                    <div className="trailing">
-                      <span className={`pill ${status.cls} tight`}>{status.label}</span>
-                      <span className="age">{item.date.abs}</span>
-                      <Icons.ChevronRight size={14} className="row-arrow" />
-                    </div>
-                  </div>
-                )
-              })}
+              {items.map((item) => (
+                <OrgEventRow key={item.id} item={item} onOpen={() => nav("events", item.id)} />
+              ))}
               {q.hasNextPage && (
                 <button
                   type="button"

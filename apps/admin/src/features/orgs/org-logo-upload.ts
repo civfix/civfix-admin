@@ -1,29 +1,31 @@
 import { MAX_IMAGE_BYTES, type CreateMediaUploadRequest } from "@civfix/shared"
 import type { ApiClient } from "@civfix/shared/client"
 
+import { BYTES_PER_MB } from "@/lib/bytes"
 import { errorMessage } from "@/lib/error-messages"
+import { SECOND_MS } from "@/lib/timing"
 
-export const ORG_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const
+const ORG_LOGO_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"] as const
 export const ORG_LOGO_ACCEPT = ORG_LOGO_MIME_TYPES.join(",")
 export const MAX_ORG_LOGO_BYTES = MAX_IMAGE_BYTES
 export const ORG_LOGO_PUT_BASE_TIMEOUT_MS = 120_000
-export const ORG_LOGO_MIN_BYTES_PER_SEC = 64_000
+const ORG_LOGO_MIN_BYTES_PER_SEC = 64_000
 
-export const MAX_ORG_LOGO_LABEL = `${Math.round(MAX_ORG_LOGO_BYTES / (1024 * 1024))} MB`
+export const MAX_ORG_LOGO_LABEL = `${Math.round(MAX_ORG_LOGO_BYTES / BYTES_PER_MB)} MB`
 
 export interface LogoFileFacts {
   type: string
   size: number
 }
 
-export interface PreparedLogo {
+interface PreparedLogo {
   contentType: string
   byteSize: number
   sha256: string
 }
 
 export function logoPutTimeoutMs(byteSize: number): number {
-  return Math.max(ORG_LOGO_PUT_BASE_TIMEOUT_MS, (byteSize / ORG_LOGO_MIN_BYTES_PER_SEC) * 1000)
+  return Math.max(ORG_LOGO_PUT_BASE_TIMEOUT_MS, (byteSize / ORG_LOGO_MIN_BYTES_PER_SEC) * SECOND_MS)
 }
 
 export function logoContentType(type: string): string {
@@ -53,7 +55,7 @@ export function logoUploadErrorMessage(err: unknown): string {
   return errorMessage(err, {}, { fallback: "Couldn't upload the image. Please try again." })
 }
 
-export async function sha256Hex(blob: Blob): Promise<string> {
+async function sha256Hex(blob: Blob): Promise<string> {
   const subtle = globalThis.crypto?.subtle
   if (!subtle) throw new Error("A secure context is required to hash the image.")
   const digest = await subtle.digest("SHA-256", await blob.arrayBuffer())
@@ -90,7 +92,7 @@ export async function putLogoBytes(
   if (!res.ok) throw new Error(`Upload failed (${res.status}). Please try again.`)
 }
 
-export interface UploadOrgLogoInput {
+interface UploadOrgLogoInput {
   api: Pick<ApiClient, "createMediaUpload" | "finalizeMedia">
   file: Blob & LogoFileFacts
   fetchImpl?: typeof fetch

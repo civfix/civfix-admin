@@ -5,15 +5,17 @@ import { AppError, ErrorCode } from "@civfix/shared"
 
 import { getCsrfToken, useAuthStore } from "@/store/auth-store"
 
+const LOCAL_API_URL = "http://localhost:8080"
+const TRAILING_SLASHES = /\/+$/
+
 /**
  * NEXT_PUBLIC_API_URL is inlined at build time. A production build defaults to same-origin: the SPA and
  * the API sit behind one Cloudflare Access app on admin.civfix.org, so relative calls carry the Access
  * cookie, and on the ungated civfix-admin.pages.dev shell they 404, which keeps that shell inert.
  */
 export const API_BASE_URL: string = (
-  process.env.NEXT_PUBLIC_API_URL ??
-  (process.env.NODE_ENV === "production" ? "" : "http://localhost:8080")
-).replace(/\/+$/, "")
+  process.env.NEXT_PUBLIC_API_URL ?? (process.env.NODE_ENV === "production" ? "" : LOCAL_API_URL)
+).replace(TRAILING_SLASHES, "")
 
 // The static export evaluates this module with no window; globalThis.fetch keeps that from throwing,
 // and nothing is fetched at build time.

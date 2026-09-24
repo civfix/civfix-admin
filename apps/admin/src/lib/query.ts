@@ -26,6 +26,7 @@ import {
 import { useUiStore } from "@/store/ui-store"
 import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
+import { MINUTE_MS, SECOND_MS } from "@/lib/timing"
 
 declare module "@tanstack/react-query" {
   interface Register {
@@ -51,6 +52,8 @@ declare module "@tanstack/react-query" {
 type UserSubPageParams = Omit<UserSubListQuery, "id">
 type OrgMemberPageParams = Omit<AdminOrgMemberListRequest, "id">
 
+const QUERY_STALE_MS = 30 * SECOND_MS
+const QUERY_GC_MS = 5 * MINUTE_MS
 const MAX_QUERY_RETRIES = 2
 
 // Retrying cannot change these answers, and a retried 429 only deepens the rate limit.
@@ -88,8 +91,8 @@ export function makeQueryClient(): QueryClient {
     mutationCache: makeMutationCache(),
     defaultOptions: {
       queries: {
-        staleTime: 30_000,
-        gcTime: 5 * 60_000,
+        staleTime: QUERY_STALE_MS,
+        gcTime: QUERY_GC_MS,
         refetchOnWindowFocus: false,
         retry: (failureCount, error) =>
           !NO_RETRY_CODES.has(toAppError(error).code) && failureCount < MAX_QUERY_RETRIES,

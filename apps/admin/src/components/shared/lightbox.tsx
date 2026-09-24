@@ -60,6 +60,60 @@ export function LightboxSync({ images }: { images: LightboxImage[] }) {
   return null
 }
 
+function useLightboxKeys(count: number, close: () => void, step: (delta: number) => void): void {
+  React.useEffect(() => {
+    if (count === 0) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        close()
+      } else if (e.key === "ArrowRight" && count > 1) {
+        e.preventDefault()
+        step(1)
+      } else if (e.key === "ArrowLeft" && count > 1) {
+        e.preventDefault()
+        step(-1)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [count, close, step])
+}
+
+function LightboxLoading() {
+  return (
+    <div className="lightbox-face" role="status" aria-live="polite">
+      <span className="op-spin" aria-hidden="true" />
+      <span>Loading photo...</span>
+    </div>
+  )
+}
+
+function LightboxExpired({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="lightbox-face" role="alert">
+      <span className="lightbox-face-title">This photo link expired</span>
+      <span className="lightbox-face-sub">Photo links are short-lived. Refresh to fetch a new one.</span>
+      <button type="button" className="lightbox-face-btn" onClick={onRetry}>
+        Refresh photo
+      </button>
+    </div>
+  )
+}
+
+function LightboxSteppers({ step }: { step: (delta: number) => void }) {
+  return (
+    <>
+      <button className="lightbox-btn lightbox-prev" onClick={() => step(-1)} aria-label="Previous photo">
+        <Icons.ChevronLeft size={20} />
+      </button>
+      <button className="lightbox-btn lightbox-next" onClick={() => step(1)} aria-label="Next photo">
+        <Icons.ChevronRight size={20} />
+      </button>
+    </>
+  )
+}
+
 export function LightboxHost() {
   const images = useLightboxStore((s) => s.images)
   const index = useLightboxStore((s) => s.index)
@@ -79,23 +133,7 @@ export function LightboxHost() {
   const status = forCurrent ? load.status : "loading"
   const attempt = forCurrent ? load.attempt : 0
 
-  React.useEffect(() => {
-    if (count === 0) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        close()
-      } else if (e.key === "ArrowRight" && count > 1) {
-        e.preventDefault()
-        step(1)
-      } else if (e.key === "ArrowLeft" && count > 1) {
-        e.preventDefault()
-        step(-1)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [count, close, step])
+  useLightboxKeys(count, close, step)
 
   const backdrop = useBackdropDismiss(close)
 
@@ -138,41 +176,9 @@ export function LightboxHost() {
             onError={() => setLoad({ url: current.url, status: "failed", attempt })}
           />
         )}
-        {status === "loading" && (
-          <div className="lightbox-face" role="status" aria-live="polite">
-            <span className="op-spin" aria-hidden="true" />
-            <span>Loading photo...</span>
-          </div>
-        )}
-        {status === "failed" && (
-          <div className="lightbox-face" role="alert">
-            <span className="lightbox-face-title">This photo link expired</span>
-            <span className="lightbox-face-sub">
-              Photo links are short-lived. Refresh to fetch a new one.
-            </span>
-            <button type="button" className="lightbox-face-btn" onClick={retry}>
-              Refresh photo
-            </button>
-          </div>
-        )}
-        {many && (
-          <>
-            <button
-              className="lightbox-btn lightbox-prev"
-              onClick={() => step(-1)}
-              aria-label="Previous photo"
-            >
-              <Icons.ChevronLeft size={20} />
-            </button>
-            <button
-              className="lightbox-btn lightbox-next"
-              onClick={() => step(1)}
-              aria-label="Next photo"
-            >
-              <Icons.ChevronRight size={20} />
-            </button>
-          </>
-        )}
+        {status === "loading" && <LightboxLoading />}
+        {status === "failed" && <LightboxExpired onRetry={retry} />}
+        {many && <LightboxSteppers step={step} />}
       </div>
     </div>
   )

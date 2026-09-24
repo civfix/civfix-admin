@@ -1,17 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { SOCIAL_PLATFORM_LABELS, monogram } from "@civfix/shared"
-
-import { Icons } from "@/components/icons"
 import {
   MAX_ORG_DESCRIPTION,
   MAX_ORG_NAME,
-  SOCIAL_PLACEHOLDER,
+  SOCIAL_PLATFORM_LABELS,
   SOCIAL_PLATFORMS,
+  monogram,
+  type SocialPlatform,
+} from "@civfix/shared"
+
+import { Icons } from "@/components/icons"
+import {
+  SOCIAL_PLACEHOLDER,
   type OrgProfileDraft,
   type OrgProfileErrors,
-  type SocialPlatform,
 } from "@/features/orgs/org-form"
 import {
   MAX_ORG_LOGO_LABEL,
@@ -19,8 +22,25 @@ import {
   logoFileProblem,
   logoUploadErrorMessage,
 } from "@/features/orgs/org-logo-upload"
-import { deriveSlug, publicOrgUrl } from "@/features/orgs/org-slug"
+import {
+  PUBLIC_ORG_URL_LABEL,
+  SLUG_RULES_HINT,
+  deriveSlug,
+  normalizeSlug,
+  publicOrgUrl,
+} from "@/features/orgs/org-slug"
 import { useUploadOrgLogo } from "@/features/orgs/use-orgs"
+
+// Mirrors AdminReasonSchema in @civfix/shared, which exports no constant for it.
+const ADMIN_REASON_MAX_LENGTH = 1000
+const DESCRIPTION_ROWS = 4
+const REASON_ROWS = 2
+
+type FormMode = "create" | "edit"
+
+function orgFieldId(mode: FormMode, name: string): string {
+  return `org-${mode}-${name}`
+}
 
 export function fieldErrorId(fieldId: string): string {
   return `${fieldId}-error`
@@ -52,23 +72,18 @@ export function FieldError({ id, text }: { id: string; text: string | null | und
   )
 }
 
-export function LogoField({
-  draft,
-  error,
-  onChange,
-  mode,
-  disabled,
-  onUploadingChange,
-}: {
+interface LogoUploadOptions {
   draft: OrgProfileDraft
-  error: string | undefined
   onChange: (next: OrgProfileDraft) => void
-  mode: "create" | "edit"
-  disabled?: boolean
-  onUploadingChange?: (uploading: boolean) => void
-}) {
+  onUploadingChange: ((uploading: boolean) => void) | undefined
+}
+
+/**
+ * The upload outlives the render that started it, so its result is merged into the latest draft (not
+ * the one captured at pick time) and dropped entirely once the field has unmounted.
+ */
+function useLogoUpload({ draft, onChange, onUploadingChange }: LogoUploadOptions) {
   const upload = useUploadOrgLogo()
-  const inputRef = React.useRef<HTMLInputElement>(null)
   const objectUrlRef = React.useRef<string | null>(null)
   const latest = React.useRef(draft)
   const mounted = React.useRef(true)
@@ -94,7 +109,7 @@ export function LogoField({
     objectUrlRef.current = null
   }
 
-  const onPick = (file: File) => {
+  const pick = (file: File) => {
     setProblem(null)
     const bad = logoFileProblem(file)
     if (bad) {
@@ -116,16 +131,36 @@ export function LogoField({
     })
   }
 
-  const onRemove = () => {
+  const remove = () => {
     setProblem(null)
     releasePreview()
     onChange({ ...latest.current, logoMediaId: null, logoPreviewUrl: null })
   }
 
+  return { uploading, problem, pick, remove }
+}
+
+function LogoField({
+  draft,
+  error,
+  onChange,
+  mode,
+  disabled,
+  onUploadingChange,
+}: {
+  draft: OrgProfileDraft
+  error: string | undefined
+  onChange: (next: OrgProfileDraft) => void
+  mode: FormMode
+  disabled?: boolean
+  onUploadingChange?: (uploading: boolean) => void
+}) {
+  const { uploading, problem, pick, remove } = useLogoUpload({ draft, onChange, onUploadingChange })
+  const inputRef = React.useRef<HTMLInputElement>(null)
   const busy = !!disabled || uploading
   const hasLogo = draft.logoPreviewUrl !== null || draft.logoMediaId !== null
   const message = problem ?? error
-  const inputId = `org-${mode}-logo`
+  const inputId = orgFieldId(mode, "logo")
 
   return (
     <div className={`field ${message ? "has-error" : ""}`}>
@@ -152,7 +187,7 @@ export function LogoField({
             onChange={(e) => {
               const file = e.target.files?.[0] ?? null
               e.target.value = ""
-              if (file) onPick(file)
+              if (file) pick(file)
             }}
           />
           <button
@@ -165,7 +200,7 @@ export function LogoField({
             {uploading ? "Uploading…" : hasLogo ? "Replace image" : "Upload logo"}
           </button>
           {hasLogo && (
-            <button type="button" className="btn sm ghost" disabled={busy} onClick={onRemove}>
+            <button type="button" className="btn sm ghost" disabled={busy} onClick={remove}>
               <Icons.Trash size={13} /> Remove
             </button>
           )}
@@ -182,11 +217,136 @@ export function LogoField({
   )
 }
 
+interface DraftFieldProps {
+  draft: OrgProfileDraft
+  errors: OrgProfileErrors
+  onChange: (next: OrgProfileDraft) => void
+  mode: FormMode
+  disabled: boolean | undefined
+}
+
 /**
  * In create mode the slug follows the name until the operator edits it by hand; in edit mode the slug
  * never auto-changes and a change is called out because it breaks every existing link to the public
  * page.
  */
+function SlugField({
+  draft,
+  errors,
+  onChange,
+  mode,
+  disabled,
+  slugTouched,
+  setSlugTouched,
+}: DraftFieldProps & { slugTouched: boolean; setSlugTouched: (touched: boolean) => void }) {
+  const inputId = orgFieldId(mode, "slug")
+  const slugPreview = normalizeSlug(draft.slug)
+  const slugWarningId = `${inputId}-warning`
+  const slugHintIds = [fieldHintId(inputId), ...(mode === "edit" ? [slugWarningId] : [])]
+
+  return (
+    <div className={`field ${errors.slug ? "has-error" : ""}`}>
+      <label className="lbl" htmlFor={inputId}>
+        Slug
+        <span className="opt">public address</span>
+      </label>
+      <div className="slug-input">
+        <span className="slug-prefix mono">{PUBLIC_ORG_URL_LABEL}</span>
+        <input
+          id={inputId}
+          type="text"
+          className="mono"
+          value={draft.slug}
+          spellCheck={false}
+          autoCapitalize="none"
+          placeholder="friends-of-griffith-park"
+          disabled={disabled}
+          {...fieldA11y(inputId, errors.slug, slugHintIds)}
+          onChange={(e) => {
+            setSlugTouched(true)
+            onChange({ ...draft, slug: e.target.value.toLowerCase() })
+          }}
+        />
+        {mode === "create" && slugTouched && draft.name.trim() !== "" && (
+          <button
+            type="button"
+            className="btn sm ghost"
+            title="Derive the slug from the name again"
+            disabled={disabled}
+            onClick={() => {
+              setSlugTouched(false)
+              onChange({ ...draft, slug: deriveSlug(draft.name) })
+            }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      {errors.slug ? (
+        <FieldError id={fieldErrorId(inputId)} text={errors.slug} />
+      ) : (
+        <span className="hint" id={fieldHintId(inputId)}>
+          {slugPreview !== "" ? (
+            <>
+              Public page: <span className="mono">{publicOrgUrl(slugPreview)}</span>
+            </>
+          ) : (
+            SLUG_RULES_HINT
+          )}
+        </span>
+      )}
+      {mode === "edit" && (
+        <span className="hint tone-warn" id={slugWarningId}>
+          <Icons.AlertTriangle size={11} /> Changing the slug breaks existing links to the public
+          page, QR codes and shared signup pages.
+        </span>
+      )}
+    </div>
+  )
+}
+
+function SocialLinksField({ draft, errors, onChange, mode, disabled }: DraftFieldProps) {
+  const setSocial = (p: SocialPlatform, v: string) =>
+    onChange({ ...draft, social: { ...draft.social, [p]: v } })
+
+  return (
+    <div className="field">
+      <span className="lbl">
+        Social links
+        <span className="opt">optional · handles, not URLs</span>
+      </span>
+      <div className="social-grid">
+        {SOCIAL_PLATFORMS.map((p) => {
+          const inputId = orgFieldId(mode, `social-${p}`)
+          return (
+            <div key={p} className={`social-cell ${errors[p] ? "has-error" : ""}`}>
+              <label className="social-lbl" htmlFor={inputId}>
+                {SOCIAL_PLATFORM_LABELS[p]}
+              </label>
+              <div className="slug-input">
+                <span className="slug-prefix mono">{p === "whatsapp" ? "+" : "@"}</span>
+                <input
+                  id={inputId}
+                  type="text"
+                  inputMode={p === "whatsapp" ? "tel" : "text"}
+                  value={draft.social[p]}
+                  placeholder={SOCIAL_PLACEHOLDER[p]}
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  disabled={disabled}
+                  onChange={(e) => setSocial(p, e.target.value)}
+                  {...fieldA11y(inputId, errors[p])}
+                />
+              </div>
+              <FieldError id={fieldErrorId(inputId)} text={errors[p]} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export function OrgProfileFields({
   draft,
   errors,
@@ -198,22 +358,18 @@ export function OrgProfileFields({
   draft: OrgProfileDraft
   errors: OrgProfileErrors
   onChange: (next: OrgProfileDraft) => void
-  mode: "create" | "edit"
+  mode: FormMode
   disabled?: boolean
   onLogoUploadingChange?: (uploading: boolean) => void
 }) {
   const [slugTouched, setSlugTouched] = React.useState(mode === "edit")
-  const id = (name: string) => `org-${mode}-${name}`
-  const slugPreview = draft.slug.trim().toLowerCase()
-  const slugWarningId = `${id("slug")}-warning`
-  const slugHintIds = [fieldHintId(id("slug")), ...(mode === "edit" ? [slugWarningId] : [])]
+  const id = (name: string) => orgFieldId(mode, name)
+  const fieldProps: DraftFieldProps = { draft, errors, onChange, mode, disabled }
 
   const setName = (name: string) => {
     if (mode === "create" && !slugTouched) onChange({ ...draft, name, slug: deriveSlug(name) })
     else onChange({ ...draft, name })
   }
-  const setSocial = (p: SocialPlatform, v: string) =>
-    onChange({ ...draft, social: { ...draft.social, [p]: v } })
 
   return (
     <>
@@ -234,63 +390,7 @@ export function OrgProfileFields({
         <FieldError id={fieldErrorId(id("name"))} text={errors.name} />
       </div>
 
-      <div className={`field ${errors.slug ? "has-error" : ""}`}>
-        <label className="lbl" htmlFor={id("slug")}>
-          Slug
-          <span className="opt">public address</span>
-        </label>
-        <div className="slug-input">
-          <span className="slug-prefix mono">civfix.org/orgs/</span>
-          <input
-            id={id("slug")}
-            type="text"
-            className="mono"
-            value={draft.slug}
-            spellCheck={false}
-            autoCapitalize="none"
-            placeholder="friends-of-griffith-park"
-            disabled={disabled}
-            {...fieldA11y(id("slug"), errors.slug, slugHintIds)}
-            onChange={(e) => {
-              setSlugTouched(true)
-              onChange({ ...draft, slug: e.target.value.toLowerCase() })
-            }}
-          />
-          {mode === "create" && slugTouched && draft.name.trim() !== "" && (
-            <button
-              type="button"
-              className="btn sm ghost"
-              title="Derive the slug from the name again"
-              disabled={disabled}
-              onClick={() => {
-                setSlugTouched(false)
-                onChange({ ...draft, slug: deriveSlug(draft.name) })
-              }}
-            >
-              Reset
-            </button>
-          )}
-        </div>
-        {errors.slug ? (
-          <FieldError id={fieldErrorId(id("slug"))} text={errors.slug} />
-        ) : (
-          <span className="hint" id={fieldHintId(id("slug"))}>
-            {slugPreview !== "" ? (
-              <>
-                Public page: <span className="mono">{publicOrgUrl(slugPreview)}</span>
-              </>
-            ) : (
-              "3–40 lowercase letters, digits and hyphens."
-            )}
-          </span>
-        )}
-        {mode === "edit" && (
-          <span className="hint tone-warn" id={slugWarningId}>
-            <Icons.AlertTriangle size={11} /> Changing the slug breaks existing links to the public
-            page, QR codes and shared signup pages.
-          </span>
-        )}
-      </div>
+      <SlugField {...fieldProps} slugTouched={slugTouched} setSlugTouched={setSlugTouched} />
 
       <div className={`field ${errors.description ? "has-error" : ""}`}>
         <label className="lbl" htmlFor={id("description")}>
@@ -302,7 +402,7 @@ export function OrgProfileFields({
         </label>
         <textarea
           id={id("description")}
-          rows={4}
+          rows={DESCRIPTION_ROWS}
           value={draft.description}
           maxLength={MAX_ORG_DESCRIPTION}
           placeholder="What the organization does and where it works."
@@ -340,37 +440,7 @@ export function OrgProfileFields({
         <FieldError id={fieldErrorId(id("website"))} text={errors.websiteUrl} />
       </div>
 
-      <div className="field">
-        <span className="lbl">
-          Social links
-          <span className="opt">optional · handles, not URLs</span>
-        </span>
-        <div className="social-grid">
-          {SOCIAL_PLATFORMS.map((p) => (
-            <div key={p} className={`social-cell ${errors[p] ? "has-error" : ""}`}>
-              <label className="social-lbl" htmlFor={id(`social-${p}`)}>
-                {SOCIAL_PLATFORM_LABELS[p]}
-              </label>
-              <div className="slug-input">
-                <span className="slug-prefix mono">{p === "whatsapp" ? "+" : "@"}</span>
-                <input
-                  id={id(`social-${p}`)}
-                  type="text"
-                  inputMode={p === "whatsapp" ? "tel" : "text"}
-                  value={draft.social[p]}
-                  placeholder={SOCIAL_PLACEHOLDER[p]}
-                  spellCheck={false}
-                  autoCapitalize="none"
-                  disabled={disabled}
-                  onChange={(e) => setSocial(p, e.target.value)}
-                  {...fieldA11y(id(`social-${p}`), errors[p])}
-                />
-              </div>
-              <FieldError id={fieldErrorId(id(`social-${p}`))} text={errors[p]} />
-            </div>
-          ))}
-        </div>
-      </div>
+      <SocialLinksField {...fieldProps} />
     </>
   )
 }
@@ -398,9 +468,9 @@ export function ReasonField({
       </label>
       <textarea
         id={id}
-        rows={2}
+        rows={REASON_ROWS}
         value={value}
-        maxLength={1000}
+        maxLength={ADMIN_REASON_MAX_LENGTH}
         placeholder={placeholder ?? "Why this change is being made…"}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

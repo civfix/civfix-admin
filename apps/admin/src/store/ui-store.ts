@@ -34,7 +34,7 @@ export const PAGE_LABEL: Record<PageId, string> = {
 
 export type ToastTone = "ok" | "error"
 
-export interface Toast {
+interface Toast {
   id: number
   text: string
   tone: ToastTone
@@ -59,6 +59,8 @@ interface Route {
 }
 
 const HOME_ROUTE: Route = { page: "home", focusId: null }
+const HOME_HASH = "#/"
+const HASH_ROUTE_PREFIX = /^#\/?/
 
 // The hash comes from whatever link the operator opened, and this runs at import and on popstate, so a
 // malformed escape must degrade to home rather than throw and leave the app unrendered.
@@ -72,7 +74,7 @@ function decodeFocus(encoded: string): string | null {
 
 function parseHash(): Route {
   if (typeof window === "undefined") return HOME_ROUTE
-  const [path = ""] = window.location.hash.replace(/^#\/?/, "").split("?")
+  const [path = ""] = window.location.hash.replace(HASH_ROUTE_PREFIX, "").split("?")
   const [seg = "", ...rest] = path.split("/")
   const page: PageId = (SECTIONS as readonly string[]).includes(seg) ? (seg as PageId) : "home"
   const encodedFocus = rest.join("/")
@@ -82,7 +84,7 @@ function parseHash(): Route {
 }
 
 function hashFor(page: PageId, focusId: string | null): string {
-  if (page === "home") return "#/"
+  if (page === "home") return HOME_HASH
   return focusId ? `#/${page}/${encodeURIComponent(focusId)}` : `#/${page}`
 }
 

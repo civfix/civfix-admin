@@ -24,6 +24,10 @@ import { useUiStore } from "@/store/ui-store"
 import { shortId } from "@/features/events/event-id"
 import { pluralize } from "@/features/reports/plural"
 
+function eventMessage(id: string, text: string): string {
+  return `${shortId(id)} · ${text}`
+}
+
 export function useEventList(params: AdminEventListQuery) {
   return useQuery<AdminEventListResponse>({
     queryKey: queryKeys.events.page(params),
@@ -84,7 +88,7 @@ export function useFlagEvent() {
       }
       useUiStore
         .getState()
-        .showToast(event.flagged ? `${shortId(id)} · flagged for review` : `${shortId(id)} · flag cleared`)
+        .showToast(eventMessage(id, event.flagged ? "flagged for review" : "flag cleared"))
     },
   })
 }
@@ -94,7 +98,9 @@ export function useCancelEvent() {
   return useMutation({
     mutationFn: (input: CancelRequest) => api.cancelEvent(input),
     onSuccess: (_res, { id }) => invalidateEvents(qc, id),
-    meta: { successMessage: (_res: unknown, { id }: CancelRequest) => `${shortId(id)} · event cancelled` },
+    meta: {
+      successMessage: (_res: unknown, { id }: CancelRequest) => eventMessage(id, "event cancelled"),
+    },
   })
 }
 
@@ -130,9 +136,10 @@ export function useLinkReports() {
       ]),
     meta: {
       successMessage: (_res: unknown, { id, reportIds }: LinkEventReportsRequest) =>
-        reportIds.length === 1
-          ? `${shortId(id)} · 1 report linked`
-          : `${shortId(id)} · ${reportIds.length} reports linked`,
+        eventMessage(
+          id,
+          reportIds.length === 1 ? "1 report linked" : `${reportIds.length} reports linked`,
+        ),
     },
   })
 }
@@ -148,7 +155,7 @@ export function useUnlinkReport() {
         qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
       ]),
     meta: {
-      successMessage: (_res: unknown, { id }: { id: string }) => `${shortId(id)} · report unlinked`,
+      successMessage: (_res: unknown, { id }: { id: string }) => eventMessage(id, "report unlinked"),
     },
   })
 }

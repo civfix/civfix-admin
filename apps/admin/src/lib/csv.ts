@@ -1,4 +1,4 @@
-export type CsvCell = string | number | null | undefined
+type CsvCell = string | number | null | undefined
 
 const FORMULA_PREFIX = /^[=+@\t\r]/
 const NUMERIC = /^-?\d+(\.\d+)?$/

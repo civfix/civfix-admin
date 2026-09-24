@@ -37,7 +37,7 @@ function operatorFromLogin(res: AdminLoginResponse): AdminOperatorDTO {
  * "forbidden": Access authenticated the user but they are not an allowlisted operator. Terminal, since a
  * retry would get the same answer. "error": the exchange failed for any other reason and may be retried.
  */
-export type BootstrapOutcome = "ok" | "forbidden" | "error"
+type BootstrapOutcome = "ok" | "forbidden" | "error"
 
 // A non-operator would pass the gate's session check yet fail selectIsOperator, so storing it would
 // send the gate's Try again straight back to the same session.

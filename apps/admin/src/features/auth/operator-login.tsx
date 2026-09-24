@@ -2,6 +2,7 @@
 
 import * as React from "react"
 
+import { BrandBug } from "@/components/shared/brand-bug"
 import { useOperatorBootstrap, useOperatorSession } from "@/hooks/use-admin-auth"
 import { SOURCE } from "@/lib/source"
 
@@ -18,9 +19,7 @@ export function OperatorLogin() {
       <div className="op-login-card card">
         <div className="op-login-head">
           <span className="op-login-bug" aria-hidden="true">
-            {/* Tiny static brand SVG: <img> is appropriate (static export, images.unoptimized). */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/ds/pinit-bug.svg" alt="" width={26} height={30} />
+            <BrandBug width={26} height={30} />
           </span>
           <div className="op-login-brand">
             civfix <span className="op-login-tag">OPERATIONS</span>

@@ -4,6 +4,7 @@ import * as React from "react"
 import L from "leaflet"
 
 import { withCartoKey } from "@/lib/carto"
+import { MAP_SETTLE_MS } from "@/lib/timing"
 
 // Derived from Leaflet's own signature, so no direct @types/geojson dependency is needed.
 type LeafletGeoJson = Parameters<typeof L.geoJSON>[0]
@@ -17,6 +18,12 @@ const TILE = {
   subdomains: "abcd",
 }
 
+const TILE_MAX_ZOOM = 19
+// maxZoom caps how far the fit zooms in, so a tiny place still shows its surroundings.
+const FIT_OPTIONS: L.FitBoundsOptions = { padding: [12, 12], maxZoom: 13 }
+const SHAPE_WEIGHT = 2
+const SHAPE_FILL_OPACITY = 0.18
+
 const LAYER_COLOR: Record<string, string> = {
   place: "#5B8C6E",
   county: "#3F7CAC",
@@ -25,7 +32,7 @@ const LAYER_COLOR: Record<string, string> = {
   tribal: "#B0593F",
 }
 
-export interface BoundaryMapProps {
+interface BoundaryMapProps {
   geometry: { type: string; coordinates: unknown }
   /** [west, south, east, north] */
   bbox: [number, number, number, number]
@@ -49,17 +56,17 @@ export function BoundaryMap({ geometry, bbox, layer = "place" }: BoundaryMapProp
     L.tileLayer(TILE.url, {
       attribution: TILE.attribution,
       subdomains: TILE.subdomains,
-      maxZoom: 19,
+      maxZoom: TILE_MAX_ZOOM,
       detectRetina: true,
     }).addTo(map)
 
-    const ro = new ResizeObserver(() => map.invalidateSize())
-    ro.observe(elRef.current)
-    const t0 = setTimeout(() => map.invalidateSize(), 60)
+    const resizeObserver = new ResizeObserver(() => map.invalidateSize())
+    resizeObserver.observe(elRef.current)
+    const settleTimer = setTimeout(() => map.invalidateSize(), MAP_SETTLE_MS)
 
     return () => {
-      ro.disconnect()
-      clearTimeout(t0)
+      resizeObserver.disconnect()
+      clearTimeout(settleTimer)
       map.remove()
       mapRef.current = null
       shapeRef.current = null
@@ -76,7 +83,7 @@ export function BoundaryMap({ geometry, bbox, layer = "place" }: BoundaryMapProp
     const color = LAYER_COLOR[layer] ?? LAYER_COLOR.place
     // L.geoJSON accepts a bare GeoJSON geometry object.
     const shape = L.geoJSON(geometry as unknown as LeafletGeoJson, {
-      style: { color, weight: 2, fillColor: color, fillOpacity: 0.18 },
+      style: { color, weight: SHAPE_WEIGHT, fillColor: color, fillOpacity: SHAPE_FILL_OPACITY },
     }).addTo(map)
     shapeRef.current = shape
 
@@ -87,7 +94,7 @@ export function BoundaryMap({ geometry, bbox, layer = "place" }: BoundaryMapProp
         [south, west],
         [north, east],
       ],
-      { padding: [12, 12], maxZoom: 13 },
+      FIT_OPTIONS,
     )
   }, [geometry, bbox, layer])
 

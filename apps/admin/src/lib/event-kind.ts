@@ -4,7 +4,7 @@ import { EVENT_KIND_LABELS, type EventKind } from "@civfix/shared"
 // The one source of an event kind's label, icon and pin for the events list, event detail and live
 // map, so they never disagree.
 
-export const EVENT_KIND_VIEW: Record<EventKind, { icon: IconComponent; label: string }> = {
+const EVENT_KIND_VIEW: Record<EventKind, { icon: IconComponent; label: string }> = {
   cleanup: { icon: Icons.Calendar, label: EVENT_KIND_LABELS.cleanup },
   other_volunteer: { icon: Icons.Users, label: EVENT_KIND_LABELS.other_volunteer },
 }

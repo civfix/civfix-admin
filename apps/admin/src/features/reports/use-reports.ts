@@ -29,6 +29,10 @@ import { queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 import { shortId } from "@/features/reports/report-id"
 
+function reportMessage(id: string, text: string): string {
+  return `${shortId(id)} · ${text}`
+}
+
 export function useReportList(params: AdminReportListQuery) {
   return useQuery<AdminReportListResponse>({
     queryKey: queryKeys.reports.page(params),
@@ -90,7 +94,7 @@ export function useSetReportStatus() {
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
     meta: {
       successMessage: (_res: unknown, { id, status }: SetReportStatusRequest) =>
-        `${shortId(id)} · status → ${ADMIN_REPORT_STATUS_LABELS[status]}`,
+        reportMessage(id, `status → ${ADMIN_REPORT_STATUS_LABELS[status]}`),
     },
   })
 }
@@ -112,7 +116,7 @@ export function useFlagReport() {
       }
       useUiStore
         .getState()
-        .showToast(report.flagged ? `${shortId(id)} · flagged for review` : `${shortId(id)} · flag cleared`)
+        .showToast(reportMessage(id, report.flagged ? "flagged for review" : "flag cleared"))
     },
   })
 }
@@ -123,7 +127,8 @@ export function useRemoveReport() {
     mutationFn: (input: RemoveReportRequest) => api.removeReport(input),
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
     meta: {
-      successMessage: (_res: unknown, { id }: RemoveReportRequest) => `${shortId(id)} · report removed`,
+      successMessage: (_res: unknown, { id }: RemoveReportRequest) =>
+        reportMessage(id, "report removed"),
     },
   })
 }
@@ -163,7 +168,7 @@ export function useSetReportVerdict() {
     onSuccess: (_res, { id }) => invalidateReports(qc, id),
     meta: {
       successMessage: (_res: unknown, { id, verdict }: SetReportVerdictRequest) =>
-        `${shortId(id)} · ${VERDICT_TOAST[verdict]}`,
+        reportMessage(id, VERDICT_TOAST[verdict]),
     },
   })
 }
