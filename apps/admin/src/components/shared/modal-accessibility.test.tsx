@@ -203,20 +203,20 @@ describe("DialogHost", () => {
     const close = screen.getByRole("button", { name: "Close" })
     const cancel = screen.getByRole("button", { name: "Cancel" })
     const confirm = screen.getByRole("button", { name: "Remove" })
-    expect(confirm).toHaveFocus()
+    expect(cancel).toHaveFocus()
 
     await user.tab()
+    expect(confirm).toHaveFocus()
+    await user.tab()
     expect(close).toHaveFocus()
     await user.tab()
-    expect(cancel).toHaveFocus()
-    await user.tab()
-    expect(confirm).toHaveFocus()
-    await user.tab({ shift: true })
     expect(cancel).toHaveFocus()
     await user.tab({ shift: true })
     expect(close).toHaveFocus()
     await user.tab({ shift: true })
     expect(confirm).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(cancel).toHaveFocus()
     expect(dialog).toContainElement(document.activeElement as HTMLElement)
 
     await user.click(cancel)
@@ -256,16 +256,16 @@ describe("DialogHost", () => {
     expect(screen.queryByRole("dialog")).toBeNull()
   })
 
-  it("puts initial focus on the confirm button for a non-danger confirm and confirms on Enter", async () => {
+  it("puts initial focus on Cancel for a non-danger confirm, so a second Enter cancels", async () => {
     let result: Promise<boolean> | undefined
     const { user, opener } = renderDialog(() => {
-      result = confirmDialog({ title: "Remove report?", confirmLabel: "Remove" })
+      result = confirmDialog({ title: "Send to the city?", confirmLabel: "Send" })
     })
     await user.click(opener)
-    expect(screen.getByRole("button", { name: "Remove" })).toHaveFocus()
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus()
 
     await user.keyboard("{Enter}")
-    await expect(result).resolves.toBe(true)
+    await expect(result).resolves.toBe(false)
     expect(screen.queryByRole("dialog")).toBeNull()
   })
 
@@ -302,7 +302,9 @@ describe("DialogHost", () => {
       result = confirmDialog({ title: "Remove report?", confirmLabel: "Remove" })
     })
     await user.click(opener)
-    await user.tab({ shift: true })
+    await user.tab()
+    await user.tab()
+    await user.tab()
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus()
 
     await user.keyboard("{Enter}")
@@ -322,15 +324,16 @@ describe("DialogHost", () => {
     await expect(result).resolves.toBe(true)
   })
 
-  it("still confirms on Enter from a target that has no activation of its own", async () => {
+  it("does not confirm on Enter from a target that has no activation of its own", async () => {
     let result: Promise<boolean> | undefined
     const { user, opener } = renderDialog(() => {
-      result = confirmDialog({ title: "Remove report?" })
+      result = confirmDialog({ title: "Approve and provision?" })
     })
     await user.click(opener)
 
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Enter" })
-    await expect(result).resolves.toBe(true)
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(await settledYet(result!)).toBe(false)
   })
 
   it("does not confirm a danger confirm on Enter once a click on its text moved focus to the page", async () => {

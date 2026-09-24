@@ -71,10 +71,10 @@ export function promptDialog(
 
 const NATIVE_ENTER_TAGS = new Set(["BUTTON", "A", "SELECT"])
 
-// The window listener sees Enter from every focused control. A focused button, link or select must
-// keep its own activation (Enter on Close or Cancel must not confirm). A danger confirm is accepted
-// only by activating its own button, so Enter after a click that left focus on the page cannot ban
-// or remove anything.
+// The window listener sees Enter from every focused control. A focused button, link or select keeps
+// its own activation (Enter on Close or Cancel must not confirm). A confirm is accepted only by
+// activating its own button: many confirms grant access or email a city irreversibly, so a stray or
+// doubled Enter must never commit one.
 function enterAccepts({
   request,
   targetTag,
@@ -86,7 +86,7 @@ function enterAccepts({
 }): boolean {
   if (targetTag && NATIVE_ENTER_TAGS.has(targetTag)) return false
   if (targetTag === "TEXTAREA" && !modified) return false
-  if (request.kind === "confirm") return !request.danger
+  if (request.kind === "confirm") return false
   return modified
 }
 
@@ -96,7 +96,6 @@ export function DialogHost() {
   const [value, setValue] = React.useState("")
   const modalRef = useModalFocus<HTMLDivElement>(current !== null)
   const cancelRef = React.useRef<HTMLButtonElement>(null)
-  const confirmRef = React.useRef<HTMLButtonElement>(null)
   const fieldRef = React.useRef<HTMLTextAreaElement>(null)
   const titleId = React.useId()
   const bodyId = React.useId()
@@ -111,7 +110,7 @@ export function DialogHost() {
   React.useEffect(() => {
     if (!current) return
     if (current.kind === "prompt") fieldRef.current?.focus()
-    else (current.danger ? cancelRef : confirmRef).current?.focus()
+    else cancelRef.current?.focus()
   }, [current])
 
   const cancel = React.useCallback(() => {
@@ -207,7 +206,6 @@ export function DialogHost() {
             {current.kind === "confirm" ? (current.cancelLabel ?? "Cancel") : "Cancel"}
           </button>
           <button
-            ref={confirmRef}
             className={`btn ${current.danger ? "danger" : "primary"}`}
             onClick={accept}
             disabled={confirmDisabled}
