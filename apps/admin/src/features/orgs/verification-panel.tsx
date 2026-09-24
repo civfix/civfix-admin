@@ -1,25 +1,32 @@
 "use client"
 
-import type { OrgVerificationKind } from "@civfix/shared"
+import {
+  OrgVerificationKindSchema,
+  type AdminOrgDTO,
+  type OrgVerificationKind,
+} from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
-import { isHttpsUrl } from "@/lib/external-url"
-import { orgStatusView } from "@/lib/org-status"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { EvidenceList } from "@/features/orgs/evidence-list"
+import {
+  DeletedFact,
+  Fact,
+  OrgStatusSubHead,
+  UrlFact,
+  kindLabel,
+} from "@/features/orgs/org-facts"
 import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verification"
 import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
 import { useNav } from "@/store/ui-store"
 
-const APPROVE_KINDS: OrgVerificationKind[] = ["nonprofit", "government", "community"]
+type OrgVerification = NonNullable<AdminOrgDTO["verification"]>
 
 export function VerificationPanel({ orgId }: { orgId: string }) {
   const q = useAdminOrg(orgId)
-  const decide = useDecideOrgVerification()
-  const nav = useNav()
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />
   if (q.isError && !q.data) {
@@ -33,11 +40,122 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
   }
   const org = q.data
   if (!org) return null
-
   const verification = org.verification ?? null
-  const statusView = orgStatusView(org.verifiedStatus)
-  const documentIds = verification?.documentMediaIds ?? []
-  const decidable = canDecideVerification(org)
+
+  return (
+    <div className="org-panel">
+      <OrgSummary org={org} />
+      <ApplicationSummary verification={verification} />
+      {verification !== null && <EvidenceSection verification={verification} />}
+      <DecisionSection org={org} />
+    </div>
+  )
+}
+
+function OrgSummary({ org }: { org: AdminOrgDTO }) {
+  const nav = useNav()
+  const owner = org.owner
+  return (
+    <div className="sub">
+      <OrgStatusSubHead title="Profile" org={org} />
+      <div className="sub-body">
+        <div className="user-head">
+          {org.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="user-av" src={org.logoUrl} alt="" />
+          ) : (
+            <span className="user-av">
+              <Icons.Building size={16} />
+            </span>
+          )}
+          <div>
+            <div className="user-name">{org.name}</div>
+            <div className="user-handle mono">/{org.slug}</div>
+          </div>
+        </div>
+        {org.description && <p className="rep-desc">{org.description}</p>}
+        <div className="user-meta-rows">
+          <Fact label="Kind">{kindLabel(org.verifiedKind)}</Fact>
+          <Fact label="Website">
+            <UrlFact url={org.websiteUrl} />
+          </Fact>
+          <Fact label="Members" mono>
+            {org.memberCount.toLocaleString()}
+          </Fact>
+          <Fact label="Events" mono>
+            {org.eventCount.toLocaleString()}
+          </Fact>
+          <Fact label="Created">{formatDate(org.createdAt)}</Fact>
+          <Fact label="Verified">{formatDateTime(org.verifiedAt)}</Fact>
+          <DeletedFact deletedAt={org.deletedAt} />
+        </div>
+        {owner && (
+          <button type="button" className="btn sm ghost full" onClick={() => nav("users", owner.id)}>
+            Owner · {owner.name} →
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ApplicationSummary({ verification }: { verification: OrgVerification | null }) {
+  return (
+    <div className="sub">
+      <div className="sub-head">
+        Application
+        {verification?.einLast4 && (
+          <span className="rep-confirms mono" style={{ marginLeft: "auto" }}>
+            EIN ••–•••{verification.einLast4}
+          </span>
+        )}
+      </div>
+      <div className="sub-body">
+        {verification === null ? (
+          <div className="org-evidence-note">
+            This organization has never applied for verification.
+          </div>
+        ) : (
+          <>
+            <div className="user-meta-rows">
+              <Fact label="Requested kind">{kindLabel(verification.kind)}</Fact>
+              <Fact label="Submitted">{formatDateTime(verification.submittedAt)}</Fact>
+              <Fact label="Submitted by">{verification.submittedBy?.name ?? EMPTY_VALUE}</Fact>
+              <Fact label="Reviewed">{formatDateTime(verification.reviewedAt)}</Fact>
+              <Fact label="Reviewed by">{verification.reviewedBy?.name ?? EMPTY_VALUE}</Fact>
+            </div>
+            {verification.note && <p className="rep-desc">{verification.note}</p>}
+            {verification.rejectionReason && (
+              <div className="pay-note tone-alert">
+                <Icons.AlertTriangle size={13} /> Rejected: {verification.rejectionReason}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EvidenceSection({ verification }: { verification: OrgVerification }) {
+  const documentIds = verification.documentMediaIds ?? []
+  return (
+    <div className="sub">
+      <div className="sub-head">
+        Evidence
+        <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+          <Icons.FileText size={12} /> {documentIds.length}
+        </span>
+      </div>
+      <div className="sub-body">
+        <EvidenceList key={documentIds.join(",")} mediaIds={documentIds} />
+      </div>
+    </div>
+  )
+}
+
+function DecisionSection({ org }: { org: AdminOrgDTO }) {
+  const decide = useDecideOrgVerification()
 
   const onApprove = async (kind: OrgVerificationKind) => {
     const ok = await confirmDialog({
@@ -63,176 +181,39 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
     decide.mutate({ id: org.id, decision: "rejected", reason: reason.trim() })
   }
 
+  if (!canDecideVerification(org)) {
+    return (
+      <div className="pay-note">
+        <Icons.Clock size={13} />{" "}
+        {org.deletedAt
+          ? "This organization was deleted, so its application can no longer be decided."
+          : "No application is awaiting a decision."}
+      </div>
+    )
+  }
   return (
-    <div className="org-panel">
-      <div className="sub">
-        <div className="sub-head">
-          Profile
-          <span className={`pill ${statusView.cls} tight`} style={{ marginLeft: "auto" }}>
-            {statusView.label}
-          </span>
-        </div>
-        <div className="sub-body">
-          <div className="user-head">
-            {org.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="user-av" src={org.logoUrl} alt="" />
-            ) : (
-              <span className="user-av">
-                <Icons.Building size={16} />
-              </span>
-            )}
-            <div>
-              <div className="user-name">{org.name}</div>
-              <div className="user-handle mono">/{org.slug}</div>
-            </div>
-          </div>
-          {org.description && <p className="rep-desc">{org.description}</p>}
-          <div className="user-meta-rows">
-            <div className="umr">
-              <span>Kind</span>
-              <span>{org.verifiedKind ? ORG_KIND_LABEL[org.verifiedKind] : EMPTY_VALUE}</span>
-            </div>
-            <div className="umr">
-              <span>Website</span>
-              <span>
-                {isHttpsUrl(org.websiteUrl) ? (
-                  <a href={org.websiteUrl} target="_blank" rel="noreferrer noopener">
-                    {org.websiteUrl}
-                  </a>
-                ) : org.websiteUrl ? (
-                  org.websiteUrl
-                ) : (
-                  EMPTY_VALUE
-                )}
-              </span>
-            </div>
-            <div className="umr">
-              <span>Members</span>
-              <span className="mono">{org.memberCount.toLocaleString()}</span>
-            </div>
-            <div className="umr">
-              <span>Events</span>
-              <span className="mono">{org.eventCount.toLocaleString()}</span>
-            </div>
-            <div className="umr">
-              <span>Created</span>
-              <span>{formatDate(org.createdAt)}</span>
-            </div>
-            <div className="umr">
-              <span>Verified</span>
-              <span>{formatDateTime(org.verifiedAt)}</span>
-            </div>
-            {org.deletedAt && (
-              <div className="umr">
-                <span>Deleted</span>
-                <span>{formatDateTime(org.deletedAt)}</span>
-              </div>
-            )}
-          </div>
-          {org.owner && (
-            <button className="btn sm ghost full" onClick={() => nav("users", org.owner!.id)}>
-              Owner · {org.owner.name} →
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="sub">
-        <div className="sub-head">
-          Application
-          {verification?.einLast4 && (
-            <span className="rep-confirms mono" style={{ marginLeft: "auto" }}>
-              EIN ••–•••{verification.einLast4}
-            </span>
-          )}
-        </div>
-        <div className="sub-body">
-          {verification === null ? (
-            <div className="org-evidence-note">
-              This organization has never applied for verification.
-            </div>
-          ) : (
-            <>
-              <div className="user-meta-rows">
-                <div className="umr">
-                  <span>Requested kind</span>
-                  <span>{verification.kind ? ORG_KIND_LABEL[verification.kind] : EMPTY_VALUE}</span>
-                </div>
-                <div className="umr">
-                  <span>Submitted</span>
-                  <span>{formatDateTime(verification.submittedAt)}</span>
-                </div>
-                <div className="umr">
-                  <span>Submitted by</span>
-                  <span>{verification.submittedBy?.name ?? EMPTY_VALUE}</span>
-                </div>
-                <div className="umr">
-                  <span>Reviewed</span>
-                  <span>{formatDateTime(verification.reviewedAt)}</span>
-                </div>
-                <div className="umr">
-                  <span>Reviewed by</span>
-                  <span>{verification.reviewedBy?.name ?? EMPTY_VALUE}</span>
-                </div>
-              </div>
-              {verification.note && <p className="rep-desc">{verification.note}</p>}
-              {verification.rejectionReason && (
-                <div className="pay-note tone-alert">
-                  <Icons.AlertTriangle size={13} /> Rejected: {verification.rejectionReason}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {verification !== null && (
-        <div className="sub">
-          <div className="sub-head">
-            Evidence
-            <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-              <Icons.FileText size={12} /> {documentIds.length}
-            </span>
-          </div>
-          <div className="sub-body">
-            <EvidenceList mediaIds={documentIds} />
-          </div>
-        </div>
-      )}
-
-      {decidable ? (
-        <div className="rep-actions">
-          <span className="rep-actions-label">Decision</span>
-          {APPROVE_KINDS.map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              className="btn sm"
-              disabled={decide.isPending}
-              onClick={() => void onApprove(kind)}
-            >
-              Verify as {ORG_KIND_LABEL[kind].toLowerCase()}
-            </button>
-          ))}
-          <div className="spacer" />
-          <button
-            type="button"
-            className="btn danger"
-            disabled={decide.isPending}
-            onClick={() => void onReject()}
-          >
-            <Icons.X size={13} /> Reject
-          </button>
-        </div>
-      ) : (
-        <div className="pay-note">
-          <Icons.Clock size={13} />{" "}
-          {org.deletedAt
-            ? "This organization was deleted, so its application can no longer be decided."
-            : "No application is awaiting a decision."}
-        </div>
-      )}
+    <div className="rep-actions">
+      <span className="rep-actions-label">Decision</span>
+      {OrgVerificationKindSchema.options.map((kind) => (
+        <button
+          key={kind}
+          type="button"
+          className="btn sm"
+          disabled={decide.isPending}
+          onClick={() => void onApprove(kind)}
+        >
+          Verify as {ORG_KIND_LABEL[kind].toLowerCase()}
+        </button>
+      ))}
+      <div className="spacer" />
+      <button
+        type="button"
+        className="btn danger"
+        disabled={decide.isPending}
+        onClick={() => void onReject()}
+      >
+        <Icons.X size={13} /> Reject
+      </button>
     </div>
   )
 }

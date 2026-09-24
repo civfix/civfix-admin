@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { deriveSlug, publicOrgUrl, slugProblem } from "./org-slug"
+import { deriveSlug, normalizeSlug, publicOrgUrl, slugProblem } from "./org-slug"
 
 describe("deriveSlug", () => {
   it("lowercases and kebab-cases a name", () => {
@@ -51,5 +51,11 @@ describe("publicOrgUrl", () => {
     expect(publicOrgUrl("friends-of-griffith-park")).toBe(
       "https://civfix.org/orgs/friends-of-griffith-park",
     )
+  })
+})
+
+describe("normalizeSlug", () => {
+  it("trims and lowercases", () => {
+    expect(normalizeSlug("  River-Friends ")).toBe("river-friends")
   })
 })

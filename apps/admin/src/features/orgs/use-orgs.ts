@@ -108,6 +108,11 @@ function invalidateOrg(qc: Qc, id: string) {
   ])
 }
 
+function storeOrgAndInvalidate(qc: Qc, id: string, org: GetAdminOrgResponse) {
+  qc.setQueryData(queryKeys.orgs.detail(id), org)
+  return invalidateOrg(qc, id)
+}
+
 function invalidateOrgMembers(qc: Qc, id: string) {
   return Promise.all([
     qc.invalidateQueries({ queryKey: queryKeys.orgs.members(id) }),
@@ -168,10 +173,7 @@ export function useUpdateOrg() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: AdminUpdateOrgRequest) => api.adminUpdateOrg(input),
-    onSuccess: (org, { id }) => {
-      qc.setQueryData(queryKeys.orgs.detail(id), org)
-      return invalidateOrg(qc, id)
-    },
+    onSuccess: (org, { id }) => storeOrgAndInvalidate(qc, id, org),
     meta: {
       errorMessage: (error: unknown, request: AdminUpdateOrgRequest) =>
         messageUnlessShownInline(updateFieldErrors(error, request), error),
@@ -184,10 +186,7 @@ export function useSetOrgSuspended() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: AdminSetOrgSuspendedRequest) => api.adminSetOrgSuspended(input),
-    onSuccess: (org, { id }) => {
-      qc.setQueryData(queryKeys.orgs.detail(id), org)
-      return invalidateOrg(qc, id)
-    },
+    onSuccess: (org, { id }) => storeOrgAndInvalidate(qc, id, org),
     meta: {
       successMessage: (org: GetAdminOrgResponse, { suspended }: AdminSetOrgSuspendedRequest) =>
         suspended ? `${org.name} suspended` : `${org.name} restored`,

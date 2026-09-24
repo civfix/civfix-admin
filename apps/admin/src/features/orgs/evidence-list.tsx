@@ -9,8 +9,11 @@ import { formatDateTime } from "@/lib/dates"
 import { evidenceUrlRemainingMs, isEvidenceUrlExpired } from "@/features/orgs/evidence-cache"
 import { useOrgVerificationDocument } from "@/features/orgs/use-orgs"
 
+const SHORT_MEDIA_ID_LENGTH = 8
+const UUID_HYPHENS = /-/g
+
 function shortMediaId(id: string): string {
-  return id.replace(/-/g, "").slice(0, 8)
+  return id.replace(UUID_HYPHENS, "").slice(0, SHORT_MEDIA_ID_LENGTH)
 }
 
 function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) {
@@ -73,14 +76,10 @@ function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) 
   )
 }
 
+/** Holds which document is open; the parent keys it by the id list so a new application starts closed. */
 export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
   const [openId, setOpenId] = React.useState<string | null>(null)
   const viewerIdPrefix = React.useId()
-
-  const mediaKey = mediaIds.join(",")
-  React.useEffect(() => {
-    setOpenId(null)
-  }, [mediaKey])
 
   if (mediaIds.length === 0) {
     return (
