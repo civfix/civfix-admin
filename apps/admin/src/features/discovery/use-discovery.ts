@@ -1,6 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  partialMatchKey,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import type {
   AddNoteRequest,
   DiscoveryListQuery,
@@ -91,11 +97,18 @@ export function useJurisdictionGeometry(geoid: string | null) {
   })
 }
 
+const BOUNDARY_KEY = queryKeys.jurisdictions.geometry("").slice(0, -1)
+
 /** Invalidate every discovery/jurisdiction view plus the home aggregates after a write. */
 function invalidateDiscovery(qc: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     qc.invalidateQueries({ queryKey: queryKeys.discovery.all }),
-    qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all }),
+    // No discovery write changes a boundary, and refetching the polygon would hold every save's
+    // pending state on the largest payload in the section.
+    qc.invalidateQueries({
+      queryKey: queryKeys.jurisdictions.all,
+      predicate: (query) => !partialMatchKey(query.queryKey, BOUNDARY_KEY),
+    }),
     qc.invalidateQueries({ queryKey: queryKeys.home.all }),
   ])
 }
@@ -141,6 +154,8 @@ export function useSaveDiscoveryDraft() {
 
 export interface SaveContactsVariables {
   request: SaveContactsRequest
+  /** The jurisdiction's name, for the success toast. */
+  org: string
   /** The note / @handle a PATCH already saved just before this request, which a failure must mention. */
   savedFirst?: SavedExtras
 }
@@ -154,8 +169,34 @@ export function useSaveJurisdictionContacts() {
     meta: {
       errorMessage: (error: unknown, { savedFirst }: SaveContactsVariables) =>
         savedFirst ? partialSaveMessage(savedFirst, errorMessage(error)) : errorMessage(error),
+      successMessage: (_res: unknown, { org }: SaveContactsVariables) =>
+        `Contacts saved for ${org} · discovery task closed`,
     },
   })
+}
+
+export interface PatchJurisdictionVariables {
+  request: PatchJurisdictionRequest
+  /** The jurisdiction's name, for the success toast. */
+  org: string
+  /**
+   * What the operator saved, which picks the toast. "extras" is the note / @handle saved just before
+   * Save & route, which leaves the toast to that save.
+   */
+  action: "flag" | "draft" | "template" | "extras"
+}
+
+function patchSuccessMessage({ request, org, action }: PatchJurisdictionVariables): string | null {
+  switch (action) {
+    case "flag":
+      return request.flagged ? `${org} flagged for review` : `Flag cleared for ${org}`
+    case "draft":
+      return `Draft saved for ${org}`
+    case "template":
+      return `Email template saved for ${org}`
+    case "extras":
+      return null
+  }
 }
 
 /**
@@ -166,7 +207,11 @@ export function useSaveJurisdictionContacts() {
 export function usePatchJurisdiction() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: PatchJurisdictionRequest) => api.patchJurisdiction(input),
+    mutationFn: ({ request }: PatchJurisdictionVariables) => api.patchJurisdiction(request),
     onSuccess: () => invalidateDiscovery(qc),
+    meta: {
+      successMessage: (_res: unknown, variables: PatchJurisdictionVariables) =>
+        patchSuccessMessage(variables),
+    },
   })
 }
