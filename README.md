@@ -29,8 +29,10 @@ contains the built `dist`, so no local build of the contract is required.
 pnpm install      # fetches @civfix/shared from repo.civfix.org
 pnpm build        # admin (next build, static export -> apps/admin/out)
 pnpm typecheck
-pnpm lint
+pnpm lint         # eslint (flat config, typed rules) over apps/admin
 pnpm test         # vitest unit tests
+pnpm --filter admin knip   # unused files, exports and dependencies
+pnpm --filter admin dup    # jscpd duplication gate (app code and tests measured separately)
 pnpm dev          # runs the dashboard dev server (admin)
 ```
 

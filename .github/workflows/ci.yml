@@ -36,6 +36,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Unused files, exports and dependencies (knip)
+        run: pnpm --filter admin knip
+
+      - name: Duplication (jscpd)
+        run: pnpm --filter admin dup
+
       - name: Typecheck
         run: pnpm typecheck
 
