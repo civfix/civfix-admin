@@ -13,6 +13,7 @@ import type {
   DiscoveryListQuery,
   DiscoveryListResponse,
   FlagDiscoveryRequest,
+  GetDiscoveryTaskResponse,
   JurisdictionGeometryResponse,
   PatchJurisdictionRequest,
   SaveContactsRequest,
@@ -82,6 +83,17 @@ function invalidateDiscovery(qc: QueryClient, id?: string) {
     },
     queryKeys.home.all,
   ])
+}
+
+// Unused until the discovery notes decision (append-only task notes vs the jurisdiction note field):
+// it reads the discovery task that owns the note history.
+/** @public */
+export function useDiscoveryTask(id: string | null) {
+  return useQuery<GetDiscoveryTaskResponse>({
+    queryKey: queryKeys.discovery.detail(id ?? ""),
+    queryFn: () => api.getDiscoveryTask({ id: id as string }),
+    enabled: !!id,
+  })
 }
 
 export function useAddDiscoveryNote() {

@@ -429,6 +429,19 @@ describe("invalidateKeys", () => {
     stats.unsubscribe()
   })
 
+  it("never skips a key with object params, whose matching is not transitive", async () => {
+    const client = makeQueryClient()
+    const flagged = await watched(client, queryKeys.events.list({ filter: "flagged" }))
+
+    await invalidateKeys(client, [
+      queryKeys.events.list({ filter: undefined }),
+      queryKeys.events.list({}),
+    ])
+
+    expect(flagged.queryFn).toHaveBeenCalledTimes(1)
+    flagged.unsubscribe()
+  })
+
   it("still invalidates a key that no other key in the batch covers", async () => {
     const client = makeQueryClient()
     const detail = await watched(client, queryKeys.reports.detail("r1"))

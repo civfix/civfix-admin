@@ -247,12 +247,19 @@ function isQueryKey(target: QueryKey | InvalidateQueryFilters): target is QueryK
 // A second invalidation of a query whose refetch is in flight cancels that refetch and requests it
 // again, so a key that a broader key in the same batch already matches (or an earlier copy of itself)
 // would cost a duplicate request for no fresher data.
+// Only keys of primitives compose: partialMatchKey is not transitive for object segments (an explicit
+// undefined property matches differently than a missing one), so such a key is never skipped.
+const isPrimitiveKey = (key: QueryKey): boolean =>
+  key.every((part) => part === null || typeof part !== "object")
+
 function coveredByAnother(target: QueryKey, index: number, targets: readonly Invalidation[]): boolean {
+  if (!isPrimitiveKey(target)) return false
   return targets.some(
     (other, otherIndex) =>
       otherIndex !== index &&
       other !== null &&
       isQueryKey(other) &&
+      isPrimitiveKey(other) &&
       partialMatchKey(target, other) &&
       (!partialMatchKey(other, target) || otherIndex < index),
   )
