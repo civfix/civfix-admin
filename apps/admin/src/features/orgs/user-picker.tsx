@@ -18,6 +18,9 @@ import { errorMessage } from "@/lib/error-messages"
 
 const RESULT_ROWS = 8
 const API_MAX_LIMIT = 100
+const PICKER_DEBOUNCE_MS = 200
+const PICKED_AVATAR_SIZE = 28
+const AVATAR_FONT_RATIO = 0.4
 
 export interface PickedUser {
   id: string
@@ -27,8 +30,8 @@ export interface PickedUser {
   avatarUrl?: string | null
 }
 
-export function PickedUserAvatar({ user, size = 28 }: { user: PickedUser; size?: number }) {
-  const style: React.CSSProperties = { width: size, height: size, fontSize: Math.round(size * 0.4) }
+export function PickedUserAvatar({ user, size = PICKED_AVATAR_SIZE }: { user: PickedUser; size?: number }) {
+  const style: React.CSSProperties = { width: size, height: size, fontSize: Math.round(size * AVATAR_FONT_RATIO) }
   if (user.avatarUrl) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img className="user-av" style={style} src={user.avatarUrl} alt="" />
@@ -64,23 +67,23 @@ export function UserPicker({
   describedBy?: string
 }) {
   const [query, setQuery] = React.useState("")
-  const debounced = useDebounced(query, 200)
-  const q = debounced.trim()
+  const debouncedQuery = useDebounced(query, PICKER_DEBOUNCE_MS)
+  const searchText = debouncedQuery.trim()
   // Members are filtered out here, not by the API, so the page is widened by their count to still fill
   // the result rows with people who can be added.
   const limit = Math.min(API_MAX_LIMIT, RESULT_ROWS + (excludeIds?.size ?? 0))
-  const list = useUserList({ q: userSearchTerm(debounced), limit }, { keepPreviousData: true })
+  const list = useUserList({ q: userSearchTerm(debouncedQuery), limit }, { keepPreviousData: true })
   const fetched = React.useMemo(() => list.data?.items ?? [], [list.data])
   const results = React.useMemo(
     () => fetched.filter((u) => !excludeIds?.has(u.id)).slice(0, RESULT_ROWS),
     [fetched, excludeIds],
   )
   const emptyNote =
-    q === ""
+    searchText === ""
       ? "Type to search users."
       : fetched.length > 0
         ? "Everyone matching is already a member."
-        : `No user matches “${q}”.`
+        : `No user matches “${searchText}”.`
   const announcement =
     list.isLoading || list.isError
       ? ""

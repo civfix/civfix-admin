@@ -1,4 +1,4 @@
-export type UserMessageDestination = { page: "events" | "reports"; id: string }
+type UserMessageDestination = { page: "events" | "reports"; id: string }
 
 export function getUserMessageDestination(input: {
   source?: string | null

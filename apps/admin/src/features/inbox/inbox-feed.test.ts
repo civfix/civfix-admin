@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
 import { INBOX_FEED_FILTER_LABELS, InboxFeedFilterSchema } from "@civfix/shared"
@@ -67,11 +67,13 @@ describe("reply rows", () => {
 
 describe("inbound mail rendering", () => {
   it("renders sender-controlled mail as text, never as markup", () => {
-    const sources = [
-      "./inbox-views.tsx",
-      "../mail/mail-page.tsx",
-      "../mail/mail-badges.tsx",
-    ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+    const sources = ["./", "../mail/"].flatMap((dir) => {
+      const url = new URL(dir, import.meta.url)
+      return readdirSync(url)
+        .filter((name) => name.endsWith(".tsx") && !name.includes(".test."))
+        .map((name) => readFileSync(new URL(name, url), "utf8"))
+    })
+    expect(sources.length).toBeGreaterThan(5)
     for (const source of sources) {
       expect(source).not.toMatch(/dangerouslySetInnerHTML|innerHTML|bodyHtml/)
     }

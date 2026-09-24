@@ -1,3 +1,5 @@
+import type { JurisdictionLayer, JurisdictionListQuery } from "@civfix/shared"
+
 import { EMPTY_VALUE } from "@/lib/empty-value"
 
 export type JurisdictionFilter = "all" | "attention" | "clear"
@@ -40,4 +42,62 @@ export function pickSelected<T extends { geoid: string }>(
 ): T | null {
   if (selId === null) return null
   return items.find((x) => x.geoid === selId) ?? (lastSeen?.geoid === selId ? lastSeen : null)
+}
+
+export type DirectoryQuery = Pick<JurisdictionListQuery, "q" | "filter" | "layer" | "sort">
+
+const SERVER_FILTER: Record<JurisdictionFilter, NonNullable<JurisdictionListQuery["filter"]>> = {
+  attention: "needs_mapping",
+  clear: "routed",
+  all: "all",
+}
+
+const SERVER_SORT: Record<JurisdictionSort, NonNullable<JurisdictionListQuery["sort"]>> = {
+  pop: "population",
+  reports: "reports",
+  oldest: "oldest",
+}
+
+export function toDirectoryQuery(
+  filter: JurisdictionFilter,
+  sort: JurisdictionSort,
+  layer: "all" | JurisdictionLayer,
+  q: string,
+): DirectoryQuery {
+  return {
+    filter: SERVER_FILTER[filter],
+    sort: SERVER_SORT[getJurisdictionSort(filter, sort)],
+    ...(layer !== "all" ? { layer } : {}),
+    ...(q ? { q } : {}),
+  }
+}
+
+export type CountDisplay = ReturnType<typeof getCountDisplay>
+
+export function directoryCounts({
+  filter,
+  total,
+  facets,
+  needsMapping,
+  list,
+  loadedCount,
+}: {
+  filter: JurisdictionFilter
+  total: number | null
+  facets: { routed: number; unrouted: number } | null
+  needsMapping: CountDisplay
+  list: { isLoading: boolean; isError: boolean }
+  loadedCount: number
+}): { chips: Record<JurisdictionFilter, CountDisplay>; header: CountDisplay } {
+  const listCount = (count: number | null) => getCountDisplay({ count, ...list })
+  const allTotal = facets ? facets.routed + facets.unrouted : filter === "all" ? total : null
+  const listedTotal = filter === "clear" ? facets?.routed : total
+  return {
+    chips: {
+      attention: needsMapping,
+      clear: listCount(facets?.routed ?? null),
+      all: listCount(allTotal),
+    },
+    header: filter === "attention" ? needsMapping : listedTotal ?? loadedCount,
+  }
 }

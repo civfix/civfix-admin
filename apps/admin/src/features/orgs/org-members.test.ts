@@ -44,6 +44,12 @@ describe("roleChangeCopy", () => {
     expect(copy.confirmLabel).toBeUndefined()
   })
 
+  it("names the target role when demoting the owner to admin", () => {
+    const copy = roleChangeCopy({ memberName: "Grace", from: "owner", to: "admin", orgName: "X" })
+    expect(copy.title).toBe("Demote Grace to admin?")
+    expect(copy.confirmLabel).toBeUndefined()
+  })
+
   it("describes a plain promotion or demotion", () => {
     expect(
       roleChangeCopy({ memberName: "Ada", from: "member", to: "admin", orgName: "X" }).title,

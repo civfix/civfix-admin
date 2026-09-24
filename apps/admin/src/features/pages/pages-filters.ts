@@ -18,10 +18,10 @@ export function pageListParams(
   filter: string,
   search: string,
 ): Pick<AdminEventPageListQuery, "status" | "flagged" | "q"> {
-  const q = search.trim() === "" ? undefined : search.trim()
-  if (!isPageFilter(filter) || filter === "all") return { q }
-  if (filter === "flagged") return { flagged: true, q }
-  return { status: filter satisfies EventPageStatus, q }
+  const searchTerm = search.trim() || undefined
+  if (!isPageFilter(filter) || filter === "all") return { q: searchTerm }
+  if (filter === "flagged") return { flagged: true, q: searchTerm }
+  return { status: filter satisfies EventPageStatus, q: searchTerm }
 }
 
 export function pageRowFromDTO(page: EventPageDTO): AdminEventPageListItemDTO {

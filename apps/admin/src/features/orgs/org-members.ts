@@ -1,6 +1,6 @@
 import type { OrganizationMemberRole } from "@civfix/shared"
 
-export const ORG_ROLES: readonly OrganizationMemberRole[] = ["owner", "admin", "member"] as const
+export const ORG_ROLES: readonly OrganizationMemberRole[] = ["owner", "admin", "member"]
 
 export const ORG_ROLE_LABEL: Record<OrganizationMemberRole, string> = {
   owner: "Owner",
@@ -27,7 +27,7 @@ export function canRemoveMember(role: OrganizationMemberRole): boolean {
   return role !== "owner"
 }
 
-export interface RoleChangeCopy {
+interface RoleChangeCopy {
   title: string
   body: string
   /** Absent when the change cannot proceed (demoting the owner): the dialog only explains. */

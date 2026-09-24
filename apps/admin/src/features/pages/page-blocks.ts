@@ -1,7 +1,7 @@
 import type { EventPageBlock, EventPageBlockKind } from "@civfix/shared"
 import { markdownToPlainText, parseMarkdownSubset } from "@civfix/shared/markdown"
 
-export const PAGE_BLOCK_LABEL: Record<EventPageBlockKind, string> = {
+const PAGE_BLOCK_LABEL: Record<EventPageBlockKind, string> = {
   hero: "Hero",
   about: "About",
   agenda: "Agenda",
@@ -41,76 +41,69 @@ function pushLink(links: string[], value: string | null | undefined): void {
   if (trimmed !== "" && !links.includes(trimmed)) links.push(trimmed)
 }
 
-export function pageBlockView(block: EventPageBlock): PageBlockView {
-  const lines: string[] = []
-  const links: string[] = []
-  let title: string | null = null
+function blockTitle(block: EventPageBlock): string | null {
+  return plain(block.kind === "hero" ? block.headline : block.title) || null
+}
 
+function collectBlockBody(block: EventPageBlock, lines: string[], links: string[]): void {
   switch (block.kind) {
     case "hero":
-      title = plain(block.headline) || null
       pushText(lines, block.subhead)
-      break
+      return
     case "about":
-      title = plain(block.title) || null
       pushText(lines, block.body)
-      break
+      return
     case "agenda":
-      title = plain(block.title) || null
       for (const item of block.items) {
         const when = plain(item.time)
         const what = plain(item.title)
         lines.push(when === "" ? what : `${when} · ${what}`)
         pushText(lines, item.description)
       }
-      break
+      return
     case "hosts":
-      title = plain(block.title) || null
       for (const entry of block.entries) {
         const role = plain(entry.role)
         lines.push(role === "" ? plain(entry.name) : `${plain(entry.name)} · ${role}`)
         pushText(lines, entry.bio)
       }
-      break
+      return
     case "faq":
-      title = plain(block.title) || null
       for (const item of block.items) {
         lines.push(plain(item.question))
         pushText(lines, item.answer)
       }
-      break
+      return
     case "location":
-      title = plain(block.title) || null
+    case "registration":
       pushText(lines, block.note)
-      break
+      return
     case "sponsors":
-      title = plain(block.title) || null
       for (const entry of block.entries) {
         lines.push(plain(entry.name))
         pushLink(links, entry.url)
       }
-      break
+      return
     case "donate":
-      title = plain(block.title) || null
       pushText(lines, block.blurb)
       pushLink(links, block.url)
-      break
-    case "registration":
-      title = plain(block.title) || null
-      pushText(lines, block.note)
-      break
+      return
     case "contact":
-      title = plain(block.title) || null
       pushText(lines, block.body)
       pushLink(links, block.replyTo)
-      break
+      return
   }
+}
 
+export function pageBlockView(block: EventPageBlock): PageBlockView {
+  const lines: string[] = []
+  const links: string[] = []
+  collectBlockBody(block, lines, links)
   return {
     id: block.id,
     kind: block.kind,
     label: PAGE_BLOCK_LABEL[block.kind],
-    title,
+    title: blockTitle(block),
     lines: lines.filter((line) => line !== ""),
     links,
   }
