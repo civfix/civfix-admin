@@ -1,9 +1,16 @@
 "use client"
 
+import type { CSSProperties } from "react"
+
+import { barHeightPcts, barValueLabel, sparkHeightPcts } from "@/features/analytics/chart-geometry"
+
 // Class names and DOM match the `.barchart*` and `.hub-spark*` rules in admin.css.
 
+// The `.hue-*` classes admin.css defines; any other value paints nothing.
+export type Hue = "slate" | "lilac" | "sun" | "sky" | "moss" | "bloom"
+
 export function BarChart({ values, labels }: { values: number[]; labels?: string[] }) {
-  const max = Math.max(...values, 1)
+  const heights = barHeightPcts(values)
   return (
     <div className="barchart">
       {values.map((v, i) => (
@@ -12,9 +19,9 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
           <div className="barchart-bar-wrap">
             <div
               className={`barchart-bar ${i === values.length - 1 ? "now" : ""}`}
-              style={{ height: `${(v / max) * 100}%` }}
+              style={{ height: `${heights[i]}%` }}
             >
-              <span className="barchart-val">{v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}</span>
+              <span className="barchart-val">{barValueLabel(v)}</span>
             </div>
           </div>
           {labels && <div className="barchart-label">{labels[i]}</div>}
@@ -31,22 +38,21 @@ export function Spark({
 }: {
   values: number[]
   label: string
-  hue?: string
+  hue?: Hue
 }) {
-  const max = Math.max(...values)
-  const min = Math.min(...values)
+  const heights = sparkHeightPcts(values)
   return (
     <div className={`hub-spark hue-${hue}`} role="img" aria-label={label}>
-      {values.map((v, i) => (
+      {heights.map((height, i) => (
         <span
           // eslint-disable-next-line react/no-array-index-key
           key={i}
-          className={`hub-spark-bar ${i === values.length - 1 ? "now" : ""}`}
+          className={`hub-spark-bar ${i === heights.length - 1 ? "now" : ""}`}
           style={
             {
-              height: `${10 + ((v - min) / (max - min || 1)) * 88}%`,
+              height: `${height}%`,
               "--sh": "var(--hue)",
-            } as React.CSSProperties
+            } as CSSProperties
           }
         />
       ))}

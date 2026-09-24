@@ -5,21 +5,53 @@ import * as React from "react"
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
-import { pageBlockViews } from "@/features/pages/page-blocks"
+import { pageBlockViews, type PageBlockView } from "@/features/pages/page-blocks"
 import { publicPagePath } from "@/features/pages/page-path"
 import { useAdminEventPage } from "@/features/pages/use-pages"
 
-export function PagePreview({ cleanupId, title }: { cleanupId: string; title: string }) {
-  const q = useAdminEventPage(cleanupId)
-  const blocks = React.useMemo(() => pageBlockViews(q.data?.blocks ?? []), [q.data])
+function PageBlockCard({ block }: { block: PageBlockView }) {
+  return (
+    <div className="pg-block">
+      <div className="pg-block-head">
+        <span className="pg-block-kind">{block.label}</span>
+        {block.title && <span className="pg-block-title">{block.title}</span>}
+      </div>
+      {block.lines.length > 0 && (
+        <div className="pg-block-body">
+          {block.lines.map((line, index) => (
+            // eslint-disable-next-line react/no-array-index-key
+            <p key={index}>{line}</p>
+          ))}
+        </div>
+      )}
+      {block.links.length > 0 && (
+        <div className="pg-block-links">
+          {block.links.map((href) => (
+            <span key={href} className="mono">
+              {href}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
-  if (q.isLoading) return <LoadingState label="Loading page content..." />
-  if (q.isError) {
+export function PagePreview({ cleanupId, title }: { cleanupId: string; title: string }) {
+  const pageQuery = useAdminEventPage(cleanupId)
+  const blocks = React.useMemo(() => pageBlockViews(pageQuery.data?.blocks ?? []), [pageQuery.data])
+
+  if (pageQuery.isLoading) return <LoadingState label="Loading page content..." />
+  if (pageQuery.isError) {
     return (
-      <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load the page" />
+      <ErrorState
+        error={pageQuery.error}
+        onRetry={() => pageQuery.refetch()}
+        title="Could not load the page"
+      />
     )
   }
-  const page = q.data
+  const page = pageQuery.data
   if (!page) return null
 
   return (
@@ -45,29 +77,7 @@ export function PagePreview({ cleanupId, title }: { cleanupId: string; title: st
       ) : (
         <div className="pg-blocks">
           {blocks.map((block) => (
-            <div key={block.id} className="pg-block">
-              <div className="pg-block-head">
-                <span className="pg-block-kind">{block.label}</span>
-                {block.title && <span className="pg-block-title">{block.title}</span>}
-              </div>
-              {block.lines.length > 0 && (
-                <div className="pg-block-body">
-                  {block.lines.map((line, index) => (
-                    // eslint-disable-next-line react/no-array-index-key
-                    <p key={index}>{line}</p>
-                  ))}
-                </div>
-              )}
-              {block.links.length > 0 && (
-                <div className="pg-block-links">
-                  {block.links.map((href) => (
-                    <span key={href} className="mono">
-                      {href}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PageBlockCard key={block.id} block={block} />
           ))}
         </div>
       )}

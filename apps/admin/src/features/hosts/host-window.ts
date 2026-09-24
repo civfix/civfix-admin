@@ -4,9 +4,13 @@ import type {
   AdminHostListQuery,
 } from "@civfix/shared"
 
+import { MINUTE_MS } from "@/lib/timing"
+
 export const HOST_ACTIVITY_WINDOW_DAYS = 30
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * MINUTE_MS
+
+const UNTITLED_EVENT_TITLE = "Untitled event"
 
 export interface HostActivityWindow {
   from: string
@@ -32,9 +36,9 @@ export function hostListParams(
   search: string,
   windowDays: number = HOST_ACTIVITY_WINDOW_DAYS,
 ): Pick<AdminHostListQuery, "suspended" | "q" | "windowDays"> {
-  const q = search.trim() === "" ? undefined : search.trim()
-  if (!isHostFilter(filter) || filter === "all") return { q, windowDays }
-  return { suspended: filter === "suspended", q, windowDays }
+  const searchTerm = search.trim() || undefined
+  if (!isHostFilter(filter) || filter === "all") return { q: searchTerm, windowDays }
+  return { suspended: filter === "suspended", q: searchTerm, windowDays }
 }
 
 export function hostBroadcastParams(
@@ -56,15 +60,15 @@ export interface HostEventRef {
 export function eventsFromBroadcasts(
   items: readonly AdminBroadcastListItemDTO[],
 ): HostEventRef[] {
-  const byId = new Map<string, HostEventRef>()
+  const byCleanupId = new Map<string, HostEventRef>()
   for (const item of items) {
-    const existing = byId.get(item.cleanupId)
+    const existing = byCleanupId.get(item.cleanupId)
     const title = item.eventTitle ?? null
     if (existing === undefined) {
-      byId.set(item.cleanupId, { cleanupId: item.cleanupId, title: title ?? "Untitled event" })
+      byCleanupId.set(item.cleanupId, { cleanupId: item.cleanupId, title: title ?? UNTITLED_EVENT_TITLE })
       continue
     }
-    if (title !== null && existing.title === "Untitled event") existing.title = title
+    if (title !== null && existing.title === UNTITLED_EVENT_TITLE) existing.title = title
   }
-  return [...byId.values()]
+  return [...byCleanupId.values()]
 }
