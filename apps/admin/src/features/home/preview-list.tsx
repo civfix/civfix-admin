@@ -5,17 +5,8 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import type { PeekItem } from "@/features/home/home-preview-rows"
 import type { PreviewState } from "@/features/home/home-preview-state"
 import { categoryPinSrc } from "@/lib/category"
-import { INITIALS_MAX_LETTERS } from "@/lib/display"
+import { initials } from "@/lib/display"
 import { useNav, type PageId } from "@/store/ui-store"
-
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .map((word) => word[0] ?? "")
-    .slice(0, INITIALS_MAX_LETTERS)
-    .join("")
-    .toUpperCase()
-}
 
 function PeekGlyph({ item }: { item: PeekItem }) {
   if (item.kind === "pin") {

@@ -3,7 +3,7 @@
 import type { GovClaimDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { confirmDialog, promptReason } from "@/components/shared/dialog"
 import {
   GOV_CHECKS,
   govClaimApproveBlockedMessage,
@@ -65,18 +65,16 @@ export function GovClaimDecisionBar({
   }
 
   const onReject = async () => {
-    const reason = await promptDialog({
+    const reason = await promptReason({
       title: `Reject ${claim.name}?`,
       body: "The reason is stored on the claim and written to the audit log.",
-      label: "Reason (required)",
       placeholder: "The directory listing does not show this person in that department…",
       confirmLabel: "Reject claim",
-      required: true,
       danger: true,
     })
     if (reason === null) return
     reject.mutate(
-      { request: { id: claim.id, reason: reason.trim() }, claim },
+      { request: { id: claim.id, reason }, claim },
       { onSuccess: () => onDecided(claim.id) },
     )
   }

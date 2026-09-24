@@ -6,15 +6,9 @@ import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDateTime } from "@/lib/dates"
-import { SHORT_ID_LENGTH } from "@/lib/display"
+import { shortId } from "@/lib/display"
 import { evidenceUrlRemainingMs, isEvidenceUrlExpired } from "@/features/orgs/evidence-cache"
 import { useOrgVerificationDocument } from "@/features/orgs/use-orgs"
-
-const UUID_HYPHENS = /-/g
-
-function shortMediaId(id: string): string {
-  return id.replace(UUID_HYPHENS, "").slice(0, SHORT_ID_LENGTH)
-}
 
 function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) {
   const q = useOrgVerificationDocument(mediaId)
@@ -113,7 +107,7 @@ export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
                 <Icons.FileText size={14} />
               </span>
               <span className="org-evidence-title">Document {index + 1}</span>
-              <span className="ident mono">{shortMediaId(mediaId)}</span>
+              <span className="ident mono">{shortId(mediaId)}</span>
               <Icons.ChevronDown size={13} />
             </button>
             {open && (

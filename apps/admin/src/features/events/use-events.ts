@@ -20,14 +20,14 @@ import type {
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
+import { shortRef } from "@/lib/display"
 import { infiniteListOptions } from "@/lib/infinite"
 import { invalidateKeys, queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
-import { shortId } from "@/features/events/event-id"
 import { pluralize } from "@/features/reports/plural"
 
 function eventMessage(id: string, text: string): string {
-  return `${shortId(id)} · ${text}`
+  return `${shortRef(id)} · ${text}`
 }
 
 export function useEventList(params: AdminEventListQuery) {

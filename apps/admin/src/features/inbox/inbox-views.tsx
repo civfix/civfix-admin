@@ -13,11 +13,12 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { formatPreciseDateTime } from "@/lib/dates"
 import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { replyOriginLabel } from "@/features/inbox/inbox-feed"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
-import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
+import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 
 const INBOUND_STATUS_CLS: Record<InboundEmailStatus, string> = {
   unread: "status-flag",
@@ -56,7 +57,7 @@ export function InboxRow({
           <span className="mail-from">
             {(isEmail ? item.from : item.org || item.from) || "(unknown sender)"}
           </span>
-          <span className="mail-ts mono" title={tsTitle(item.ts)}>
+          <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
             {relativeAgo(item.ts)}
           </span>
         </div>

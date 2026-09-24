@@ -8,7 +8,7 @@ import {
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { confirmDialog, promptReason } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { EvidenceList } from "@/features/orgs/evidence-list"
@@ -168,17 +168,15 @@ function DecisionSection({ org }: { org: AdminOrgDTO }) {
   }
 
   const onReject = async () => {
-    const reason = await promptDialog({
+    const reason = await promptReason({
       title: `Reject ${org.name}?`,
       body: "The applicant sees the reason. It is written to the audit log.",
-      label: "Reason (required)",
       placeholder: "The uploaded determination letter does not match the submitted EIN…",
       confirmLabel: "Reject verification",
-      required: true,
       danger: true,
     })
-    if (reason === null || reason.trim() === "") return
-    decide.mutate({ id: org.id, decision: "rejected", reason: reason.trim() })
+    if (reason === null) return
+    decide.mutate({ id: org.id, decision: "rejected", reason })
   }
 
   if (!canDecideVerification(org)) {

@@ -3,15 +3,10 @@
 import type { LinkedEventRef } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { formatDate } from "@/lib/dates"
+import { firstName } from "@/lib/display"
 import { eventKindView } from "@/lib/event-kind"
-import { firstName } from "@/features/reports/person-name"
 import { useNav } from "@/store/ui-store"
-
-function eventDate(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-}
 
 function LinkedEventCard({ event, onOpen }: { event: LinkedEventRef; onOpen: () => void }) {
   const view = eventKindView(event.eventKind)
@@ -26,7 +21,7 @@ function LinkedEventCard({ event, onOpen }: { event: LinkedEventRef; onOpen: () 
         <span className="evt-linked-sub">
           <span className="evt-linked-cat">{view.label}</span>
           <span className="sep">·</span>
-          <span>{eventDate(event.scheduledAt)}</span>
+          <span>{formatDate(event.scheduledAt)}</span>
           <span className="sep">·</span>
           <span>{`${event.going} going`}</span>
         </span>

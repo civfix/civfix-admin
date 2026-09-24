@@ -8,7 +8,6 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
 import { useSelection } from "@/hooks/use-selection"
-import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
 import { flatPages } from "@/lib/infinite"
 import { HostDetail } from "@/features/hosts/host-detail"
 import { HostListPane } from "@/features/hosts/host-list-pane"
@@ -67,7 +66,7 @@ export function HostsPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<HostFilter>("all")
   const [query, setQuery] = React.useState("")
 
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
   const activityWindow = React.useMemo(() => hostActivityWindow(), [])
   const listParams = React.useMemo(
     () => hostListParams(filter, debouncedQuery),

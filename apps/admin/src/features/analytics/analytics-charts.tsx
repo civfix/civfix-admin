@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from "react"
 
-import { barHeightPcts, barValueLabel, sparkHeightPcts } from "@/features/analytics/chart-geometry"
+import { barHeightPcts, sparkHeightPcts } from "@/features/analytics/chart-geometry"
+import { formatCompactCount } from "@/lib/display"
 
 // Class names and DOM match the `.barchart*` and `.hub-spark*` rules in admin.css.
 
@@ -21,7 +22,7 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
               className={`barchart-bar ${i === values.length - 1 ? "now" : ""}`}
               style={{ height: `${heights[i]}%` }}
             >
-              <span className="barchart-val">{barValueLabel(v)}</span>
+              <span className="barchart-val">{formatCompactCount(v)}</span>
             </div>
           </div>
           {labels && <div className="barchart-label">{labels[i]}</div>}

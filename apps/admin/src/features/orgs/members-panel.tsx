@@ -6,7 +6,7 @@ import type { AdminOrgDTO, AdminOrgMemberDTO, OrganizationMemberRole } from "@ci
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { LoadMoreButton } from "@/components/shared/section-list"
-import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { confirmDialog, promptReason } from "@/components/shared/dialog"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDate } from "@/lib/dates"
@@ -30,7 +30,6 @@ import { useRowMenu, type RowMenu } from "@/features/orgs/use-row-menu"
 import { useNav } from "@/store/ui-store"
 
 const MEMBER_AVATAR_SIZE = 32
-const REASON_LABEL = "Reason (required)"
 const CURRENT_OWNER_FALLBACK = "the current owner"
 const PERSON_FIELD_ID = "org-add-person"
 const PERSON_LABEL_ID = "org-add-person-label"
@@ -137,14 +136,11 @@ function useMemberActions(org: AdminOrgDTO, member: AdminOrgMemberDTO, ownerName
 
   const askReason = async (prompt: ReasonPrompt): Promise<string | null> => {
     prompting.current = true
-    let reason: string | null
     try {
-      reason = await promptDialog({ ...prompt, label: REASON_LABEL, required: true })
+      return await promptReason(prompt)
     } finally {
       prompting.current = false
     }
-    const trimmed = reason?.trim() ?? ""
-    return trimmed === "" ? null : trimmed
   }
 
   const changeRole = async (to: OrganizationMemberRole) => {

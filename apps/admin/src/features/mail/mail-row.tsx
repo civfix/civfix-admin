@@ -4,7 +4,8 @@ import { MAIL_STATUS_LABELS, relativeAgo, type MailThreadListItemDTO } from "@ci
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { MAIL_STATUS_CLS, tsTitle } from "@/features/mail/mail-presentation"
+import { formatPreciseDateTime } from "@/lib/dates"
+import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 
 function rowCorrespondent(item: MailThreadListItemDTO): string {
   if (item.org) return item.org
@@ -39,7 +40,7 @@ export function MailRow({
       <div className="mail-row-body">
         <div className="mail-row-top">
           <span className="mail-from">{rowCorrespondent(item)}</span>
-          <span className="mail-ts mono" title={tsTitle(item.ts)}>
+          <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
             {relativeAgo(item.ts)}
           </span>
         </div>

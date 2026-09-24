@@ -4,11 +4,6 @@ import {
   type ReactionEmoji,
 } from "@civfix/shared"
 
-export function msgWhen(iso: string): string {
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
-}
-
 export function systemLabel(msg: ChatMessageDTO): string {
   const status = msg.system?.status
   const detail = msg.system?.note?.trim() || msg.system?.body?.trim() || msg.body?.trim()

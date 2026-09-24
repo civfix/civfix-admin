@@ -7,7 +7,7 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { LoadMoreButton } from "@/components/shared/section-list"
-import { promptDialog } from "@/components/shared/dialog"
+import { promptReason } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
 import { flatPages } from "@/lib/infinite"
 import { BroadcastLog } from "@/features/hosts/broadcast-log"
@@ -188,24 +188,22 @@ function HostMessagingActions({ row }: { row: AdminHostListItemDTO }) {
 
   const onToggleSuspended = async () => {
     const next = !suspended
-    const reason = await promptDialog({
+    const reason = await promptReason({
       title: next
         ? `Suspend messaging for ${row.host.name}?`
         : `Restore messaging for ${row.host.name}?`,
       body: next
         ? "Every broadcast this host composes, schedules or sends is refused until messaging is restored. In-flight sends stop mid-chunk. The reason is written to the audit log."
         : "The host can compose and send broadcasts again, subject to the normal caps. The reason is written to the audit log.",
-      label: "Reason (required)",
       placeholder: next
         ? "Repeated off-topic broadcasts to event attendees…"
         : "Reviewed with the host; the pattern has stopped…",
       confirmLabel: next ? "Suspend messaging" : "Restore messaging",
-      required: true,
       danger: next,
     })
-    if (reason === null || reason.trim() === "") return
+    if (reason === null) return
     suspend.mutate({
-      request: { id: row.host.id, suspended: next, reason: reason.trim() },
+      request: { id: row.host.id, suspended: next, reason },
       hostName: row.host.name,
     })
   }

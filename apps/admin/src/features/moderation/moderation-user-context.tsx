@@ -3,27 +3,18 @@
 import type { ModerationItemDTO } from "@civfix/shared"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { INITIALS_MAX_LETTERS } from "@/lib/display"
+import { initials } from "@/lib/display"
 import { useNav } from "@/store/ui-store"
 
 type ModerationUser = ModerationItemDTO["user"]
 
 const CONTEXT_AVATAR_BACKGROUND = "linear-gradient(135deg, var(--sky), var(--moss))"
 
-function nameInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((word) => word[0] ?? "")
-    .slice(0, INITIALS_MAX_LETTERS)
-    .join("")
-    .toUpperCase()
-}
-
 function UserContextHead({ user }: { user: ModerationUser }) {
   return (
     <div className="user-head">
       <span className="user-av" style={{ background: CONTEXT_AVATAR_BACKGROUND }}>
-        {nameInitials(user.name)}
+        {initials(user.name)}
       </span>
       <div>
         <div className="user-name">{user.name}</div>

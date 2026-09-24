@@ -4,9 +4,10 @@ import type { ChatMessageDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LightboxSync, type LightboxImage } from "@/components/shared/lightbox"
+import { formatPreciseDateTime } from "@/lib/dates"
+import { initials } from "@/lib/display"
 import { ImageThumbButton, openLightboxAt, StillThumbFace } from "@/features/reports/media-thumb"
-import { initials } from "@/features/reports/person-name"
-import { msgWhen, reactionLabel, systemLabel } from "@/features/reports/report-chat"
+import { reactionLabel, systemLabel } from "@/features/reports/report-chat"
 import { useNav } from "@/store/ui-store"
 
 type ChatAttachment = NonNullable<ChatMessageDTO["attachments"]>[number]
@@ -24,7 +25,7 @@ export function ChatSystemRow({ msg }: { msg: ChatMessageDTO }) {
       <div className="dsc-msg-body">
         <div className="dsc-msg-top">
           <span className="dsc-msg-who">{systemLabel(msg)}</span>
-          <span className="dsc-msg-when">{msgWhen(msg.createdAt)}</span>
+          <span className="dsc-msg-when">{formatPreciseDateTime(msg.createdAt)}</span>
         </div>
       </div>
     </div>
@@ -71,7 +72,7 @@ function MessageAuthor({
           <Icons.Send size={10} /> Forwarded to city
         </span>
       )}
-      <span className="dsc-msg-when">{msgWhen(msg.createdAt)}</span>
+      <span className="dsc-msg-when">{formatPreciseDateTime(msg.createdAt)}</span>
     </div>
   )
 }
@@ -172,7 +173,7 @@ export function ChatMessageRow({
         {removed ? (
           <p className="dsc-msg-text tombstone">
             <Icons.EyeOff size={12} /> Message removed
-            {msg.deletedAt ? ` · ${msgWhen(msg.deletedAt)}` : ""}
+            {msg.deletedAt ? ` · ${formatPreciseDateTime(msg.deletedAt)}` : ""}
           </p>
         ) : (
           <p className="dsc-msg-text">{msg.body}</p>

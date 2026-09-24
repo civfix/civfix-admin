@@ -347,7 +347,7 @@ describe("AnalyticsPage", () => {
     renderPage()
 
     const c = await findCard("Pins per week")
-    expect(await within(c).findByText("1.2k")).toBeInTheDocument()
+    expect(await within(c).findByText("1.2K")).toBeInTheDocument()
     expect(within(c).getByText("3")).toBeInTheDocument()
     expect(within(c).getByText("Wk A")).toBeInTheDocument()
     expect(within(c).getByText("Wk B")).toBeInTheDocument()

@@ -9,13 +9,13 @@ import {
   LAYER_LABEL,
   UNMAPPED_GEOID,
   dominantCategory,
-  formatPopulation,
-  formatRoutedDate,
   formatWaitingAge,
   isOverdue,
 } from "@/features/discovery/jurisdiction-view"
 import { RoutingStatusPill } from "@/features/discovery/routing-status-pill"
 import { categoryPinSrc } from "@/lib/category"
+import { formatMonthDay } from "@/lib/dates"
+import { formatCompactCount } from "@/lib/display"
 
 function MappedLeading({ item }: { item: JurisdictionDirectoryDTO }) {
   const dominant = dominantCategory(item.perCategoryCounts)
@@ -43,7 +43,7 @@ function MappedBadges({ item }: { item: JurisdictionDirectoryDTO }) {
 function MappedSub({ item }: { item: JurisdictionDirectoryDTO }) {
   return (
     <>
-      <span className="strong">{formatPopulation(item.population)} pop</span>
+      <span className="strong">{formatCompactCount(item.population)} pop</span>
       <span className="sep">·</span>
       <span>{item.reportsWaiting} waiting</span>
       <span className="sep">·</span>
@@ -79,7 +79,7 @@ function RowAge({
     return <WaitingAge oldestReportAt={item.oldestReportAt} />
   }
   if (unmapped) return null
-  return <span className="age">{formatRoutedDate(item.lastRouted)}</span>
+  return <span className="age">{formatMonthDay(item.lastRouted)}</span>
 }
 
 export function JurisdictionRow({

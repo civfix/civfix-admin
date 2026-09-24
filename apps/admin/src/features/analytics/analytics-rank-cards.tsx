@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 
-import { INITIALS_MAX_LETTERS } from "@/lib/display"
+import { initials } from "@/lib/display"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { AnalyticsCard } from "@/features/analytics/analytics-card"
 import type {
@@ -11,16 +11,6 @@ import type {
 } from "@/features/analytics/use-analytics"
 
 const GOOD_VALUE_STYLE = { color: "var(--moss-700)", fontWeight: 700 } as const
-
-function initials(name: string): string {
-  const letters = name
-    .split(" ")
-    .map((word) => word[0] ?? "")
-    .slice(0, INITIALS_MAX_LETTERS)
-    .join("")
-    .toUpperCase()
-  return letters || "?"
-}
 
 interface RankRow {
   key: string

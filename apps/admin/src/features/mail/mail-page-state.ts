@@ -51,6 +51,10 @@ export function inboxFeedParams(folder: Folder, box: MailBox, q: string | undefi
   return folder === "inbox" ? { filter: mailboxFeedFilter(box), q } : { filter: "all" }
 }
 
+export function inboxFocusId(emailId: string): string {
+  return `${INBOX_FOCUS_PREFIX}${emailId}`
+}
+
 export function parseFocus(focusId: string | null): { folder: Folder; id: string | null } {
   if (!focusId) return { folder: "outreach", id: null }
   if (focusId.startsWith(INBOX_FOCUS_PREFIX)) {

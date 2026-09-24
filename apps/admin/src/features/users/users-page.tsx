@@ -8,7 +8,6 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
 import { idOf, useSelection } from "@/hooks/use-selection"
-import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
 import { flatPages } from "@/lib/infinite"
 import { useUserListInfinite } from "@/features/users/use-users"
 import { UserDetail } from "@/features/users/user-detail"
@@ -32,7 +31,7 @@ function filterOptions(counts: AdminUserListResponse["counts"] | undefined) {
 export function UsersPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<UserFilter>("all")
   const [query, setQuery] = React.useState("")
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
 
   const searchTerm = userSearchTerm(debouncedQuery)
   const listParams: AdminUserListQuery = {

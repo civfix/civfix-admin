@@ -3,7 +3,7 @@
 import type { AdminEventPageListItemDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { promptDialog } from "@/components/shared/dialog"
+import { promptReason } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { pageStatusView, VISIBILITY_LABEL } from "@/features/pages/page-labels"
@@ -102,30 +102,26 @@ function PageModerationActions({
       flag.mutate({ id: item.cleanupId, flagged: false })
       return
     }
-    const reason = await promptDialog({
+    const reason = await promptReason({
       title: `Flag “${item.title}”?`,
       body: "Flagging marks the page for review without taking it off the public web. The reason is written to the audit log.",
-      label: "Reason (required)",
       placeholder: "Fundraising claims that do not match the linked organization…",
       confirmLabel: "Flag page",
-      required: true,
     })
-    if (reason === null || reason.trim() === "") return
-    flag.mutate({ id: item.cleanupId, flagged: true, reason: reason.trim() })
+    if (reason === null) return
+    flag.mutate({ id: item.cleanupId, flagged: true, reason })
   }
 
   const onUnpublish = async () => {
-    const reason = await promptDialog({
+    const reason = await promptReason({
       title: `Unpublish “${item.title}”?`,
       body: "The public page returns a 404 immediately. The event, its roster and every registration are untouched. The reason is written to the audit log.",
-      label: "Reason (required)",
       placeholder: "Page impersonates a city agency…",
       confirmLabel: "Unpublish page",
-      required: true,
       danger: true,
     })
-    if (reason === null || reason.trim() === "") return
-    unpublish.mutate({ id: item.cleanupId, reason: reason.trim() })
+    if (reason === null) return
+    unpublish.mutate({ id: item.cleanupId, reason })
   }
 
   return (

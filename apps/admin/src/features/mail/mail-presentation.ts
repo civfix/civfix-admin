@@ -10,12 +10,6 @@ export const MAIL_STATUS_CLS: Record<MailStatus, string> = {
   bounced: "status-flag",
 }
 
-export function tsTitle(value: string): string {
-  if (!value) return ""
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? "" : d.toLocaleString()
-}
-
 export const AUTH_VERDICT_VIEW: Record<MailAuthVerdict, { cls: string; title: string }> = {
   pass: { cls: "status-ok", title: "The sender's domain passed authentication." },
   fail: {

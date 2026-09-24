@@ -16,6 +16,17 @@ describe("external url guard", () => {
     expect(isHttpsUrl("data:text/html,<script>alert(1)</script>")).toBe(false)
   })
 
+  it("refuses hosts the shared safe-link gate rejects", () => {
+    expect(isHttpsUrl("https://192.168.0.1/admin")).toBe(false)
+    expect(isHttpsUrl("https://xn--80ak6aa92e.com")).toBe(false)
+    expect(isHttpsUrl("https://user:pw@example.org")).toBe(false)
+    expect(isHttpsUrl(`https://example.org/${"a".repeat(2100)}`)).toBe(false)
+  })
+
+  it("still requires a parseable url", () => {
+    expect(isHttpsUrl("https://example.org:99999/")).toBe(false)
+  })
+
   it("treats a missing url as unsafe", () => {
     expect(isHttpsUrl(null)).toBe(false)
     expect(isHttpsUrl(undefined)).toBe(false)

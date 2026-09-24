@@ -3,7 +3,7 @@
 import type { AdminReportDTO } from "@civfix/shared"
 
 import { toReporterProfileId } from "@/features/reports/reporter-navigation"
-import { initials } from "@/features/reports/person-name"
+import { initials } from "@/lib/display"
 import { useNav } from "@/store/ui-store"
 
 export function ReporterCard({ reporter }: { reporter: AdminReportDTO["reporter"] }) {

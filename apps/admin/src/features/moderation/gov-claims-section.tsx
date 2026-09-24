@@ -8,7 +8,6 @@ import { FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
 import { idOf, useSelection } from "@/hooks/use-selection"
-import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
 import { flatPages } from "@/lib/infinite"
 import { GovClaimDetail, GovClaimRow } from "@/features/moderation/gov-claims-views"
 import { useGovClaimListInfinite } from "@/features/moderation/use-gov-claims"
@@ -26,7 +25,7 @@ export function GovClaimsSection() {
   const [filter, setFilter] = React.useState<GovClaimFilter>("pending")
   const [query, setQuery] = React.useState("")
 
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
   const listParams: GovClaimListQuery = {
     ...(filter === "all" ? {} : { filter }),
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),

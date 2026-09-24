@@ -1,6 +1,6 @@
 import type { AdminReportDTO } from "@civfix/shared"
 
-import { msgWhen } from "@/features/reports/report-chat"
+import { formatPreciseDateTime } from "@/lib/dates"
 import {
   routeActionView,
   routeSendLabel,
@@ -30,7 +30,7 @@ export interface SendPanelView {
 
 function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string {
   if (action.kind === "already_sent") {
-    return action.routedAt ? `Already sent · ${msgWhen(action.routedAt)}` : "Already sent"
+    return action.routedAt ? `Already sent · ${formatPreciseDateTime(action.routedAt)}` : "Already sent"
   }
   if (action.kind === "resend") return "Send again to jurisdiction"
   return routeSendLabel(verdictApproved)

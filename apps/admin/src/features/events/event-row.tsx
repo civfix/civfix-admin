@@ -6,8 +6,7 @@ import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { eventStatusView } from "@/lib/event-status"
 import { eventKindView } from "@/lib/event-kind"
-import { shortId } from "@/features/events/event-id"
-import { firstName } from "@/features/reports/person-name"
+import { firstName, shortRef } from "@/lib/display"
 import { useNav } from "@/store/ui-store"
 
 function OrganizerLink({ organizer }: { organizer: AdminEventListItemDTO["organizer"] }) {
@@ -72,7 +71,7 @@ export function EventRow({
             </span>
           )}
           <span className="ident" title={item.id}>
-            {shortId(item.id)}
+            {shortRef(item.id)}
           </span>
         </div>
         <div className="sub">

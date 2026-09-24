@@ -6,11 +6,10 @@ import { REPORT_CATEGORY_LABELS, type AdminReportListItemDTO } from "@civfix/sha
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { categoryCssVar, categoryPinSrc } from "@/lib/category"
+import { firstName, shortRef } from "@/lib/display"
 import { reportStatusView } from "@/lib/report-status"
 import { toReporterProfileId } from "@/features/reports/reporter-navigation"
-import { firstName } from "@/features/reports/person-name"
 import { pluralize } from "@/features/reports/plural"
-import { shortId } from "@/features/reports/report-id"
 import { useNav } from "@/store/ui-store"
 
 function ReportRowLeading({ item }: { item: AdminReportListItemDTO }) {
@@ -95,7 +94,7 @@ export const ReportRow = React.memo(function ReportRow({
             </span>
           )}
           <span className="ident" title={item.id}>
-            {shortId(item.id)}
+            {shortRef(item.id)}
           </span>
         </div>
         <div className="sub">

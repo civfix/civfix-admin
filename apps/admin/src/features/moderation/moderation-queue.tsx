@@ -8,7 +8,6 @@ import { FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
 import { idOf, useSelection } from "@/hooks/use-selection"
-import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
 import { flatPages } from "@/lib/infinite"
 import { ModerationDetail } from "@/features/moderation/moderation-detail"
 import { ModerationRowMemo } from "@/features/moderation/moderation-row"
@@ -32,7 +31,7 @@ export function ModerationQueueSection({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState<QueueFilter>("all")
   const [query, setQuery] = React.useState("")
 
-  const debouncedQuery = useDebounced(query, SEARCH_DEBOUNCE_MS)
+  const debouncedQuery = useDebounced(query)
 
   const listParams: ModerationListQuery = {
     ...(filter === "all" ? {} : { filter }),

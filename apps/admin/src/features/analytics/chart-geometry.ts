@@ -2,8 +2,6 @@
 const SPARK_FLOOR_PCT = 10
 const SPARK_SPAN_PCT = 88
 
-const COMPACT_BAR_VALUE_FROM = 1000
-
 export function barHeightPcts(values: readonly number[]): number[] {
   const max = Math.max(...values, 1)
   return values.map((v) => (v / max) * 100)
@@ -13,10 +11,4 @@ export function sparkHeightPcts(values: readonly number[]): number[] {
   const max = Math.max(...values)
   const min = Math.min(...values)
   return values.map((v) => SPARK_FLOOR_PCT + ((v - min) / (max - min || 1)) * SPARK_SPAN_PCT)
-}
-
-export function barValueLabel(value: number): string {
-  return value >= COMPACT_BAR_VALUE_FROM
-    ? `${(value / COMPACT_BAR_VALUE_FROM).toFixed(1)}k`
-    : String(value)
 }
