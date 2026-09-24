@@ -1,13 +1,23 @@
 "use client"
 
 import * as React from "react"
-import { avatarColor, monogram, type AdminUserListItemDTO } from "@civfix/shared"
+import {
+  ErrorCode,
+  USER_STATUS_LABELS,
+  avatarColor,
+  monogram,
+  type AdminUserListItemDTO,
+} from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { LoadingState } from "@/components/shared/data-states"
 import { useUserList } from "@/features/users/use-users"
+import { userSearchTerm } from "@/features/users/user-search"
 import { useDebounced } from "@/hooks/use-debounced"
-import { toAppError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
+
+const RESULT_ROWS = 8
+const API_MAX_LIMIT = 100
 
 /** The minimum a picked user needs to render: id, name, handle (avatar optional). */
 export interface PickedUser {
@@ -32,16 +42,18 @@ export function PickedUserAvatar({ user, size = 28 }: { user: PickedUser; size?:
 }
 
 /**
- * Search-and-pick a user by name, @handle or email through the admin users list. Once picked, the
+ * Search-and-pick a user by name, handle or city through the admin users list. Once picked, the
  * control collapses to the chosen user with a "Change" affordance so the form keeps a stable height.
  * Ownership is assigned by id (DECISIONS §32): the handle is only how the operator finds the person.
  */
 export function UserPicker({
   value,
   onChange,
-  placeholder = "Search by name, @handle or email…",
+  placeholder = "Search by name, handle or city…",
   excludeIds,
   autoFocus,
+  labelledBy,
+  describedBy,
 }: {
   value: PickedUser | null
   onChange: (user: PickedUser | null) => void
@@ -49,15 +61,35 @@ export function UserPicker({
   /** Users already in the org (hidden from the results so they cannot be added twice). */
   excludeIds?: ReadonlySet<string>
   autoFocus?: boolean
+  /** Id of the form's visible label for this field; replaces the built-in search label. */
+  labelledBy?: string
+  /** Id of the form's error or hint for this field. */
+  describedBy?: string
 }) {
   const [query, setQuery] = React.useState("")
   const debounced = useDebounced(query, 200)
   const q = debounced.trim()
-  const list = useUserList({ q: q === "" ? undefined : q, limit: 8 }, { keepPreviousData: true })
+  // Members are filtered out here, not by the API, so the page is widened by their count to still fill
+  // the result rows with people who can be added.
+  const limit = Math.min(API_MAX_LIMIT, RESULT_ROWS + (excludeIds?.size ?? 0))
+  const list = useUserList({ q: userSearchTerm(debounced), limit }, { keepPreviousData: true })
+  const fetched = React.useMemo(() => list.data?.items ?? [], [list.data])
   const results = React.useMemo(
-    () => (list.data?.items ?? []).filter((u) => !excludeIds?.has(u.id)),
-    [list.data, excludeIds],
+    () => fetched.filter((u) => !excludeIds?.has(u.id)).slice(0, RESULT_ROWS),
+    [fetched, excludeIds],
   )
+  const emptyNote =
+    q === ""
+      ? "Type to search users."
+      : fetched.length > 0
+        ? "Everyone matching is already a member."
+        : `No user matches “${q}”.`
+  const announcement =
+    list.isLoading || list.isError
+      ? ""
+      : results.length === 0
+        ? emptyNote
+        : `${results.length} matching ${results.length === 1 ? "user" : "users"}`
 
   if (value) {
     return (
@@ -67,7 +99,12 @@ export function UserPicker({
           <span className="user-pick-name">{value.name}</span>
           <span className="user-pick-handle">{value.handle}</span>
         </div>
-        <button type="button" className="btn sm ghost" onClick={() => onChange(null)}>
+        <button
+          type="button"
+          className="btn sm ghost"
+          aria-label="Change selected user"
+          onClick={() => onChange(null)}
+        >
           Change
         </button>
       </div>
@@ -80,7 +117,9 @@ export function UserPicker({
         <Icons.Search size={14} />
         <input
           type="text"
-          aria-label="Search users by name, handle or email"
+          aria-label={labelledBy ? undefined : "Search users by name, handle or city"}
+          aria-labelledby={labelledBy}
+          aria-describedby={describedBy}
           autoComplete="off"
           autoFocus={autoFocus}
           placeholder={placeholder}
@@ -88,6 +127,11 @@ export function UserPicker({
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
+      {/* Stays mounted so a screen reader hears each new result count; the visible note is hidden from it
+          to avoid reading the same line twice. */}
+      <span className="visually-hidden" role="status">
+        {announcement}
+      </span>
       {/* Plain buttons in a list: each result is an ordinary Tab stop that picks the user. */}
       {list.isLoading ? (
         <div className="user-pick-results">
@@ -95,12 +139,16 @@ export function UserPicker({
         </div>
       ) : list.isError ? (
         <div className="user-pick-results">
-          <div className="user-pick-note tone-alert">{toAppError(list.error).message}</div>
+          <div className="user-pick-note tone-alert">
+            {errorMessage(list.error, {
+              [ErrorCode.INTERNAL]: "Could not search users. Check your connection and try again.",
+            })}
+          </div>
         </div>
       ) : results.length === 0 ? (
         <div className="user-pick-results">
-          <div className="user-pick-note" role="status">
-            {q === "" ? "Type to search users." : `No user matches “${q}”.`}
+          <div className="user-pick-note" aria-hidden="true">
+            {emptyNote}
           </div>
         </div>
       ) : (
@@ -128,8 +176,11 @@ export function UserPicker({
                     {u.city && u.city !== "-" ? ` · ${u.city}` : ""}
                   </span>
                 </span>
+                {u.deletedAt && <span className="pill status-flag tight">Deleted</span>}
                 {u.status !== "active" && (
-                  <span className="pill status-flag tight">{u.status}</span>
+                  <span className="pill status-flag tight">
+                    {USER_STATUS_LABELS[u.status] ?? u.status}
+                  </span>
                 )}
               </button>
             </li>

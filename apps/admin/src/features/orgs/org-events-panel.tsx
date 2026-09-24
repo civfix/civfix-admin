@@ -40,13 +40,14 @@ export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
         <div className="sub-head">
           Events
           <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-            <Icons.Calendar size={12} /> {items.length}
+            <Icons.Calendar size={12} /> {items.length.toLocaleString()}
+            {q.hasNextPage ? "+" : ""}
           </span>
         </div>
         <div className="queue-list">
           {q.isLoading ? (
             <LoadingState label="Loading events..." />
-          ) : q.isError ? (
+          ) : q.isError && !q.data ? (
             <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load events" />
           ) : items.length === 0 ? (
             <EmptyState
@@ -87,7 +88,7 @@ export function OrgEventsPanel({ org }: { org: AdminOrgDTO }) {
                       <div className="top">
                         <span className="title">{item.title}</span>
                         {item.flagged && (
-                          <span className="rep-flag-dot" title="Flagged">
+                          <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
                             <Icons.Flag size={10} />
                           </span>
                         )}

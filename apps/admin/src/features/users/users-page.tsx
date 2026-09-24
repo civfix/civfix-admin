@@ -10,6 +10,7 @@ import {
   type AdminUserDTO,
   type AdminUserListItemDTO,
   type AdminUserListQuery,
+  type CleanupMemberRole,
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
@@ -35,13 +36,15 @@ import {
   useUserReports,
 } from "@/features/users/use-users"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { ORG_ROLE_LABEL, ORG_ROLE_PILL } from "@/features/orgs/org-members"
+import { ORG_ROLE_LABEL, ORG_ROLE_PILL, menuFocusIndex } from "@/features/orgs/org-members"
 import {
   userOrganizationFocus,
   userOrganizationsView,
   type UserOrganization,
 } from "@/features/users/user-organizations"
 import { getUserMessageDestination } from "./profile-activity-navigation"
+import { userSearchTerm } from "./user-search"
+import { isNotFound } from "@/lib/api"
 import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
@@ -112,7 +115,9 @@ function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
       tabIndex={0}
       onClick={open}
       onKeyDown={(e) => {
-        if (e.key === "Enter") open()
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        open()
       }}
     >
       <span className="prow-pin" title={REPORT_CATEGORY_LABELS[r.category]}>
@@ -133,8 +138,16 @@ function ProfileReportRow({ r, nav }: { r: UserReportItemDTO; nav: NavFn }) {
   )
 }
 
+const EVENT_ROLE_VIEW: Record<CleanupMemberRole, { verb: string; pill: string | null }> = {
+  organizer: { verb: "Organized", pill: "Organizer" },
+  cohost: { verb: "Co-hosted", pill: "Co-host" },
+  coordinator: { verb: "Coordinated", pill: "Coordinator" },
+  staff: { verb: "Staffed", pill: "Staff" },
+  member: { verb: "Joined", pill: null },
+}
+
 function ProfileEventRow({ e, nav }: { e: UserEventItemDTO; nav: NavFn }) {
-  const organized = e.role === "organizer"
+  const role = EVENT_ROLE_VIEW[e.role] ?? EVENT_ROLE_VIEW.member
   const open = () => nav("events", e.id)
   return (
     <div
@@ -143,7 +156,9 @@ function ProfileEventRow({ e, nav }: { e: UserEventItemDTO; nav: NavFn }) {
       tabIndex={0}
       onClick={open}
       onKeyDown={(ev) => {
-        if (ev.key === "Enter") open()
+        if (!isKeyboardActivationKey(ev.key)) return
+        ev.preventDefault()
+        open()
       }}
     >
       <span className="prow-ico hue-moss">
@@ -151,7 +166,7 @@ function ProfileEventRow({ e, nav }: { e: UserEventItemDTO; nav: NavFn }) {
       </span>
       <div className="prow-body">
         <div className="prow-title">
-          {organized ? "Organized" : "Joined"} the {e.title}
+          {role.verb} the {e.title}
         </div>
         <div className="prow-meta">
           {!isMissing(e.place) && (
@@ -160,10 +175,10 @@ function ProfileEventRow({ e, nav }: { e: UserEventItemDTO; nav: NavFn }) {
               <span className="sep"> · </span>
             </>
           )}
-          {e.attendees} neighbors joined
+          {e.attendees} {e.attendees === 1 ? "neighbor" : "neighbors"} joined
         </div>
       </div>
-      {organized && <span className="pill status-progress tight">Organizer</span>}
+      {role.pill && <span className="pill status-progress tight">{role.pill}</span>}
       <span className="prow-age">{e.when}</span>
     </div>
   )
@@ -180,28 +195,28 @@ function ProfileMessageRow({
   removing: boolean
   nav: NavFn
 }) {
-  const userDeleted = !!m.deletedAt
+  const removed = !!m.deletedAt
   const linkTo: { page: PageId; id: string } | null = getUserMessageDestination(m)
   const open = linkTo ? () => nav(linkTo.page, linkTo.id) : undefined
   const content = (
     <>
       <span className="prow-ico hue-sky">
-        {userDeleted ? <Icons.Trash size={14} /> : <Icons.MessageSquare size={14} />}
+        {removed ? <Icons.Trash size={14} /> : <Icons.MessageSquare size={14} />}
       </span>
-      <div className="prow-body">
-        <div className="prow-title">
-          {userDeleted && <span className="pill status-flag tight">[deleted by user]</span>} {m.text}
-        </div>
-        <div className="prow-meta">
+      <span className="prow-body">
+        <span className="prow-title">
+          {removed && <span className="pill status-flag tight">Removed</span>} {m.text}
+        </span>
+        <span className="prow-meta">
           {m.source && <span className="pill priority-low tight">{SOURCE_LABEL[m.source]}</span>} in{" "}
           {m.thread}
-        </div>
-      </div>
+        </span>
+      </span>
       <span className="prow-age">{m.when}</span>
     </>
   )
   return (
-    <div className={`prow ${userDeleted ? "removed" : ""}`}>
+    <div className={`prow ${removed ? "removed" : ""}`}>
       {open ? (
         <button type="button" className="prow-main row-link" onClick={open}>
           {content}
@@ -209,7 +224,7 @@ function ProfileMessageRow({
       ) : (
         <div className="prow-main">{content}</div>
       )}
-      {!userDeleted && (
+      {!removed && (
         <button
           className="btn sm danger"
           disabled={removing}
@@ -225,27 +240,43 @@ function ProfileMessageRow({
 
 type TabId = "reports" | "events" | "messages"
 
+interface SubListQuery {
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  fetchNextPage: () => unknown
+}
+
+function LoadMore({ query }: { query: SubListQuery }) {
+  if (!query.hasNextPage) return null
+  return (
+    <button
+      type="button"
+      className="btn load-more"
+      disabled={query.isFetchingNextPage}
+      onClick={() => void query.fetchNextPage()}
+    >
+      {query.isFetchingNextPage ? "Loading…" : "Load more"}
+    </button>
+  )
+}
+
 function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   const nav = useNav()
   const reports = useUserReports(tab === "reports" ? userId : null)
   const events = useUserEvents(tab === "events" ? userId : null)
   const messages = useUserMessages(tab === "messages" ? userId : null)
   const removeMsg = useRemoveUserMessage()
-  const toast = useToast()
 
   const onRemoveMessage = async (m: UserMessageItemDTO) => {
     const reason = await promptDialog({ title: "Remove message", label: "Reason (optional)" })
     if (reason === null) return
-    removeMsg.mutate(
-      { id: userId, messageId: m.id, ...(reason ? { reason } : {}) },
-      { onSuccess: () => toast("Message removed") },
-    )
+    removeMsg.mutate({ id: userId, messageId: m.id, ...(reason ? { reason } : {}) })
   }
 
   if (tab === "reports") {
     if (reports.isLoading) return <LoadingState label="Loading reports..." />
     if (reports.isError) return <ErrorState error={reports.error} onRetry={() => reports.refetch()} />
-    const items = reports.data?.items ?? []
+    const items = reports.data?.pages.flatMap((p) => p.items) ?? []
     if (!items.length)
       return (
         <EmptyState
@@ -259,6 +290,7 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
         {items.map((r) => (
           <ProfileReportRow key={r.id} r={r} nav={nav} />
         ))}
+        <LoadMore query={reports} />
       </>
     )
   }
@@ -266,7 +298,7 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
   if (tab === "events") {
     if (events.isLoading) return <LoadingState label="Loading cleanups..." />
     if (events.isError) return <ErrorState error={events.error} onRetry={() => events.refetch()} />
-    const items = events.data?.items ?? []
+    const items = events.data?.pages.flatMap((p) => p.items) ?? []
     if (!items.length)
       return (
         <EmptyState
@@ -280,13 +312,14 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
         {items.map((e) => (
           <ProfileEventRow key={e.id} e={e} nav={nav} />
         ))}
+        <LoadMore query={events} />
       </>
     )
   }
 
   if (messages.isLoading) return <LoadingState label="Loading messages..." />
   if (messages.isError) return <ErrorState error={messages.error} onRetry={() => messages.refetch()} />
-  const items = messages.data?.items ?? []
+  const items = messages.data?.pages.flatMap((p) => p.items) ?? []
   if (!items.length)
     return (
       <EmptyState
@@ -306,6 +339,7 @@ function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
           nav={nav}
         />
       ))}
+      <LoadMore query={messages} />
     </>
   )
 }
@@ -376,15 +410,19 @@ function UserDetail({ userId }: { userId: string }) {
   const setReportVerified = useSetUserReportVerified()
 
   const [tab, setTab] = React.useState<TabId>("reports")
+  const tabsId = React.useId()
+  const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([])
 
   if (q.isLoading) return <LoadingState label="Loading account..." />
-  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  if (q.isError && !isNotFound(q.error)) {
+    return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  }
   const user = q.data
   if (!user) {
     return (
       <EmptyState
-        title="No user selected"
-        sub="Pick an account from the list."
+        title="User not found"
+        sub="No account has this ID."
         icon={<Icons.Users size={20} />}
       />
     )
@@ -400,13 +438,7 @@ function UserDetail({ userId }: { userId: string }) {
   ]
 
   const onFlag = () => {
-    flag.mutate(
-      { id: user.id },
-      {
-        onSuccess: () =>
-          toast(user.flagged ? `${user.name} · flag cleared` : `${user.name} · account flagged`),
-      },
-    )
+    flag.mutate({ request: { id: user.id }, name: user.name, wasFlagged: user.flagged })
   }
 
   const onBan = async () => {
@@ -418,10 +450,7 @@ function UserDetail({ userId }: { userId: string }) {
       confirmLabel: "Ban",
     })
     if (!ok) return
-    setStatus.mutate(
-      { id: user.id, status: "banned" },
-      { onSuccess: () => toast(`${user.name} · account banned`) },
-    )
+    setStatus.mutate({ request: { id: user.id, status: "banned" }, name: user.name })
   }
 
   const onSuspend = async () => {
@@ -433,10 +462,7 @@ function UserDetail({ userId }: { userId: string }) {
       confirmLabel: "Suspend",
     })
     if (!ok) return
-    setStatus.mutate(
-      { id: user.id, status: "suspended" },
-      { onSuccess: () => toast(`${user.name} · account suspended`) },
-    )
+    setStatus.mutate({ request: { id: user.id, status: "suspended" }, name: user.name })
   }
 
   const onReactivate = async () => {
@@ -448,33 +474,22 @@ function UserDetail({ userId }: { userId: string }) {
       confirmLabel: verb,
     })
     if (!ok) return
-    setStatus.mutate(
-      { id: user.id, status: "active" },
-      { onSuccess: () => toast(`${user.name} · account reactivated`) },
-    )
+    setStatus.mutate({ request: { id: user.id, status: "active" }, name: user.name })
   }
 
   const onCopyId = () => {
-    const id = user.id
-    void Promise.resolve(navigator?.clipboard?.writeText(id))
-      .then(() => toast("User ID copied"))
-      .catch(() => toast("Couldn't copy — select the ID manually"))
+    const copyFailed = () => toast("Couldn't copy. Select the ID manually.", "error")
+    // The Clipboard API exists only in a secure context; without it nothing is copied.
+    if (!navigator.clipboard) {
+      copyFailed()
+      return
+    }
+    navigator.clipboard.writeText(user.id).then(() => toast("User ID copied"), copyFailed)
   }
 
   const isReportVerified = !!user.reportVerified
   const onToggleReportVerified = () => {
-    const next = !isReportVerified
-    setReportVerified.mutate(
-      { id: user.id, value: next },
-      {
-        onSuccess: () =>
-          toast(
-            next
-              ? `${user.name} · report-verified`
-              : `${user.name} · report-verification removed`,
-          ),
-      },
-    )
+    setReportVerified.mutate({ request: { id: user.id, value: !isReportVerified }, name: user.name })
   }
 
   return (
@@ -548,23 +563,44 @@ function UserDetail({ userId }: { userId: string }) {
 
       <UserOrganizations user={user} nav={nav} />
 
-      <div className="profile-tabs">
-        {tabs.map((t) => {
-          const n = tabCount(user, t.id)
+      <div className="profile-tabs" role="tablist" aria-label="Activity">
+        {tabs.map((t, i) => {
+          const selected = tab === t.id
           return (
             <button
               key={t.id}
-              className={`profile-tab ${tab === t.id ? "on" : ""}`}
+              ref={(el) => {
+                tabRefs.current[i] = el
+              }}
+              type="button"
+              role="tab"
+              id={`${tabsId}-tab-${t.id}`}
+              aria-selected={selected}
+              aria-controls={`${tabsId}-panel`}
+              tabIndex={selected ? 0 : -1}
+              className={`profile-tab ${selected ? "on" : ""}`}
               onClick={() => setTab(t.id)}
+              onKeyDown={(e) => {
+                const next = menuFocusIndex(e.key, i, tabs.length, "horizontal")
+                if (next === null) return
+                e.preventDefault()
+                setTab(tabs[next]!.id)
+                tabRefs.current[next]?.focus()
+              }}
             >
               {t.label}
-              <span className="profile-tab-n">{n}</span>
+              <span className="profile-tab-n">{tabCount(user, t.id)}</span>
             </button>
           )
         })}
       </div>
 
-      <div className="profile-list">
+      <div
+        className="profile-list"
+        role="tabpanel"
+        id={`${tabsId}-panel`}
+        aria-labelledby={`${tabsId}-tab-${tab}`}
+      >
         <UserActivity userId={user.id} tab={tab} />
       </div>
 
@@ -627,13 +663,24 @@ function UserRow({
 }) {
   const statusView = userStatusView(user.status)
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
+      }}
+    >
       <UserAvatar user={user} />
       <div className="body">
         <div className="top">
           <span className="title">{user.name}</span>
           {user.flagged && (
-            <span className="rep-flag-dot" title="Flagged">
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
               <Icons.Flag size={10} />
             </span>
           )}
@@ -646,9 +693,13 @@ function UserRow({
               <span className="sep">·</span>
             </>
           )}
-          <span className="strong">{user.reports} reports</span>
+          <span className="strong">
+            {user.reports} {user.reports === 1 ? "report" : "reports"}
+          </span>
           <span className="sep">·</span>
-          <span>{user.cleanups} cleanups</span>
+          <span>
+            {user.cleanups} {user.cleanups === 1 ? "cleanup" : "cleanups"}
+          </span>
         </div>
       </div>
       <div className="trailing">
@@ -671,10 +722,12 @@ export function UsersPage({ focusId }: SectionPageProps) {
   const debouncedQuery = useDebounced(query, 250)
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
+  const searchTerm = userSearchTerm(debouncedQuery)
   const listParams: AdminUserListQuery = {
     ...(filter === "all" ? {} : { filter }),
-    ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
+    ...(searchTerm ? { q: searchTerm } : {}),
   }
+  const listKey = JSON.stringify(listParams)
   const listQuery = useUserListInfinite(listParams)
   const items = React.useMemo(
     () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
@@ -686,10 +739,23 @@ export function UsersPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
+  // The selection rules every master-detail page follows: only the first load picks on the operator's
+  // behalf. A pick that a filter or search leaves out stays open, because the detail reads it by id. A
+  // pick that drops out of the same list after a refetch (a ban under the Active chip, say) clears, so
+  // the pane never jumps to another account's Ban button. Each decision waits for data fetched for the
+  // current params: a cached page that is refetching may predate the change that matters.
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
-  }, [items, selId])
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
+      return
+    }
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   return (
     <>
@@ -721,6 +787,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search accounts"
             placeholder="Search name, handle, city…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

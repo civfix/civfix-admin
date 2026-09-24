@@ -1,19 +1,24 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type {
-  AdminReportDTO,
-  AdminReportListItemDTO,
-  AdminReportListResponse,
-  ChatHistoryResponse,
+import {
+  AppError,
+  ErrorCode,
+  type AdminReportDTO,
+  type AdminReportListItemDTO,
+  type AdminReportListResponse,
+  type ChatHistoryResponse,
+  type ChatMessageDTO,
 } from "@civfix/shared"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
 import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
 import { detailCard } from "@/test/panes"
+import { DialogHost } from "@/components/shared/dialog"
 import { ReportsPage } from "@/features/reports/reports-page"
+import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const { apiMock } = await import("@/test/api-mock")
@@ -292,5 +297,459 @@ describe("ReportsPage", () => {
     expect(within(list).getByText("Old broken hydrant")).toBeInTheDocument()
     expect(within(list).getByText("Couch dumped on sidewalk")).toBeInTheDocument()
     expect(apiMock.getAdminReport).toHaveBeenCalledWith({ id: OLD.id })
+  })
+})
+
+function renderPage(focusId: string | null = null) {
+  return renderWithQuery(
+    <>
+      <ReportsPage focusId={focusId} />
+      <DialogHost />
+    </>,
+  )
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => {
+    resolve = r
+  })
+  return { promise, resolve }
+}
+
+const RITA = {
+  id: "0a0a0a0a-0000-4000-8000-00000000000a",
+  name: "Rita Gomez",
+  handle: "@rita",
+  followers: 0,
+  following: 0,
+  isFollowing: false,
+}
+
+function chatMessage(over: Partial<ChatMessageDTO> & { id: string }): ChatMessageDTO {
+  return {
+    cleanupId: "c0c0c0c0-0000-4000-8000-00000000000c",
+    roomKind: "report",
+    from: RITA,
+    body: "Still there this morning",
+    kind: "text",
+    createdAt: "2026-09-23T09:00:00.000Z",
+    reactions: [],
+    mentions: [],
+    ...over,
+  }
+}
+
+describe("ReportsPage correctness and accessibility", () => {
+  beforeEach(() => {
+    useUiStore.setState({ page: "reports", focusId: null, toast: null })
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {})
+    return () => {
+      scrollTo.mockRestore()
+      window.history.replaceState(null, "", "#/")
+    }
+  })
+
+  it("selects a row from the keyboard with Enter or Space and marks it current", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    const tagRow = within(listCard()).getByRole("button", { name: /Tag on the underpass/ })
+    tagRow.focus()
+    await user.keyboard("{Enter}")
+    expect(await within(detailCard()).findByRole("heading", { name: TAG.title })).toBeInTheDocument()
+    expect(tagRow).toHaveAttribute("aria-current", "true")
+
+    const couchRow = within(listCard()).getByRole("button", { name: /Couch dumped on sidewalk/ })
+    expect(couchRow).not.toHaveAttribute("aria-current")
+    couchRow.focus()
+    await user.keyboard(" ")
+    expect(await within(detailCard()).findByRole("heading", { name: COUCH.title })).toBeInTheDocument()
+  })
+
+  it("opens the reporter profile from the keyboard inside a row", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    within(listCard()).getByRole("button", { name: "Rita" }).focus()
+    await user.keyboard("{Enter}")
+
+    expect(useUiStore.getState()).toMatchObject({ page: "users", focusId: "u-rita" })
+  })
+
+  it("names the flagged marker for assistive tech", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    renderPage()
+    await screen.findByText(TAG.title)
+    expect(within(listCard()).getByRole("img", { name: "Flagged" })).toBeInTheDocument()
+  })
+
+  it("labels the search box and the email fields", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
+    mockDetails(COUCH)
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: COUCH.title })
+
+    expect(screen.getByRole("textbox", { name: "Search reports" })).toBeInTheDocument()
+    const followup = within(card).getByRole("textbox", { name: "Message to the city" })
+    expect(followup).toHaveAttribute("maxlength", "4000")
+
+    await userEvent.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
+    const note = within(card).getByRole("textbox", { name: "Note to include in the email" })
+    expect(note).toHaveAttribute("maxlength", "4000")
+  })
+
+  it("still sends a verified report to the city when the operator opens another report mid-approval", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    const verdict = deferred<{ ok: true }>()
+    apiMock.setReportVerdict.mockReturnValue(verdict.promise)
+    apiMock.routeReport.mockResolvedValue({
+      ok: true,
+      threadId: "t-1",
+      routedTo: "works@oaklandca.gov",
+    })
+    const user = userEvent.setup()
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
+    await user.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Verify and send" }))
+    await waitFor(() =>
+      expect(apiMock.setReportVerdict).toHaveBeenCalledWith({ id: COUCH.id, verdict: "approved" }),
+    )
+
+    await user.click(within(listCard()).getByText(TAG.title))
+    await within(detailCard()).findByRole("heading", { name: TAG.title })
+    await act(async () => {
+      verdict.resolve({ ok: true })
+    })
+
+    await waitFor(() => expect(apiMock.routeReport).toHaveBeenCalledWith({ id: COUCH.id }))
+  })
+
+  it("does not jump to another report after the selected one is removed", async () => {
+    let removed = false
+    apiMock.listAdminReports.mockImplementation(async () => page(removed ? [TAG] : [COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    apiMock.removeReport.mockImplementation(async () => {
+      removed = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Remove report/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }))
+
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    await waitFor(() =>
+      expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument(),
+    )
+    expect(within(detailCard()).getByText("No report selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
+  })
+
+  it("clears a pinned report once it is removed instead of showing it as not found", async () => {
+    const OLD = listItem({
+      id: "r9f9f9f9-0000-4000-8000-000000000009",
+      title: "Old broken hydrant",
+      category: "water",
+    })
+    let removed = false
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    apiMock.getAdminReport.mockImplementation(async ({ id }: { id: string }) => {
+      if (id === OLD.id) {
+        if (removed) throw new AppError(ErrorCode.NOT_FOUND, "Report not found")
+        return detail(OLD)
+      }
+      return detail(id === TAG.id ? TAG : COUCH)
+    })
+    apiMock.removeReport.mockImplementation(async () => {
+      removed = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage(OLD.id)
+    await within(detailCard()).findByRole("heading", { name: OLD.title })
+    expect(await within(listCard()).findByText("Linked report")).toBeInTheDocument()
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Remove report/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }))
+
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByText("Report not found")).not.toBeInTheDocument()
+    expect(within(listCard()).queryByText("Linked report")).not.toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("heading", { name: COUCH.title })).not.toBeInTheDocument()
+  })
+
+  it("clears a report that a verdict drops from the Needs verification list, without opening another", async () => {
+    let rejected = false
+    apiMock.listAdminReports.mockImplementation(async () => page(rejected ? [TAG] : [COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    apiMock.setReportVerdict.mockImplementation(async () => {
+      rejected = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+
+    await waitFor(() =>
+      expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument(),
+    )
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
+  })
+
+  it("still confirms a Reject when the list refetch drops the report before its detail refetch lands", async () => {
+    let rejected = false
+    apiMock.listAdminReports.mockImplementation(async () => page(rejected ? [TAG] : [COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    const heldDetail = deferred<AdminReportDTO>()
+    apiMock.getAdminReport
+      .mockResolvedValueOnce(detail(COUCH))
+      .mockImplementation(() => heldDetail.promise)
+    apiMock.setReportVerdict.mockImplementation(async () => {
+      rejected = true
+      return { ok: true }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
+    await waitFor(() =>
+      expect(useUiStore.getState().toast).toMatchObject({ text: "#r1a2b3c4 · rejected", tone: "ok" }),
+    )
+    await act(async () => {
+      heldDetail.resolve(detail(COUCH))
+    })
+  })
+
+  it("labels a selection that left the filter as selected, not linked", async () => {
+    apiMock.listAdminReports.mockImplementation(async (params: { filter?: string }) =>
+      params.filter === "completed" ? page([COUCH]) : page([COUCH, TAG]),
+    )
+    mockDetails(COUCH, TAG)
+    const user = userEvent.setup()
+    renderPage()
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await user.click(within(listCard()).getByText(TAG.title))
+    await within(detailCard()).findByRole("heading", { name: TAG.title })
+    await user.click(screen.getByRole("button", { name: /^Completed/ }))
+
+    expect(await within(listCard()).findByText("Selected report")).toBeInTheDocument()
+    expect(within(listCard()).queryByText("Linked report")).not.toBeInTheDocument()
+    expect(within(detailCard()).getByRole("heading", { name: TAG.title })).toBeInTheDocument()
+  })
+
+  it("shows why Send is blocked as visible text tied to the button", async () => {
+    const SENT = listItem({ id: "r3c3c3c3-0000-4000-8000-000000000003", title: "Pothole on 40th" })
+    apiMock.listAdminReports.mockResolvedValue(page([SENT]))
+    apiMock.getAdminReport.mockResolvedValue({
+      ...detail(SENT),
+      outreach: {
+        status: "sent",
+        threadId: "t-9",
+        routedTo: "works@oaklandca.gov",
+        routedAt: "2026-09-22T10:00:00.000Z",
+      },
+    })
+    apiMock.adminReportMessages.mockResolvedValue(NO_CHAT)
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: SENT.title })
+
+    const reason = "This report was already sent. Resend it from the Mail thread."
+    expect(within(card).getByText(reason)).toBeInTheDocument()
+    expect(within(card).getByRole("button", { name: /Already sent/ })).toHaveAccessibleDescription(reason)
+  })
+
+  it("shows why a follow-up is blocked before the first send", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
+    mockDetails(COUCH)
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: COUCH.title })
+
+    const reason = "Send the report to the city first. A follow-up goes on that conversation."
+    expect(within(card).getByText(reason)).toBeInTheDocument()
+    expect(within(card).getByRole("button", { name: "Send to city" })).toHaveAccessibleDescription(reason)
+  })
+
+  it("does not offer Reject again on an already rejected report", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
+    apiMock.getAdminReport.mockResolvedValue({ ...detail(COUCH), verificationVerdict: "rejected" })
+    apiMock.adminReportMessages.mockResolvedValue(NO_CHAT)
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: COUCH.title })
+
+    const reject = within(card).getByRole("button", { name: /Reject/ })
+    expect(reject).toBeDisabled()
+    expect(reject).toHaveAccessibleDescription("This report is already rejected.")
+    expect(within(card).getByText("This report is already rejected.")).toBeInTheDocument()
+  })
+
+  it("links the video of a video-only report instead of hiding it behind the preview", async () => {
+    const CLIP = listItem({
+      id: "r4d4d4d4-0000-4000-8000-000000000004",
+      title: "Dumping caught on video",
+      hasPhoto: true,
+    })
+    apiMock.listAdminReports.mockResolvedValue(page([CLIP]))
+    apiMock.getAdminReport.mockResolvedValue({
+      ...detail(CLIP),
+      media: [
+        {
+          id: "m-video",
+          kind: "video",
+          url: "https://media.test/clip.mp4",
+          thumbUrl: "https://media.test/clip.jpg",
+        },
+      ],
+    })
+    apiMock.adminReportMessages.mockResolvedValue(NO_CHAT)
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: CLIP.title })
+
+    expect(within(card).getByRole("link", { name: "Open full media in a new tab" })).toHaveAttribute(
+      "href",
+      "https://media.test/clip.mp4",
+    )
+    expect(within(card).queryByText("Reporter photo")).not.toBeInTheDocument()
+  })
+
+  it("words the flag toast from the refetched report, not the cached one", async () => {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
+    mockDetails(COUCH)
+    apiMock.flagReport.mockResolvedValue({ ok: true })
+    const user = userEvent.setup()
+    renderPage()
+    const card = detailCard()
+    await within(card).findByRole("heading", { name: COUCH.title })
+
+    // Another operator flagged it first, so this toggle cleared the flag and the refetch says so.
+    await user.click(within(card).getByRole("button", { name: "Flag" }))
+
+    await waitFor(() => expect(useUiStore.getState().toast?.text).toBe("#r1a2b3c4 · flag cleared"))
+  })
+})
+
+describe("ReportsPage chat", () => {
+  beforeEach(() => {
+    useUiStore.setState({ page: "reports", focusId: null, toast: null })
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {})
+    return () => {
+      scrollTo.mockRestore()
+      window.history.replaceState(null, "", "#/")
+    }
+  })
+
+  function renderWithChat(chat: (params: { before?: string }) => ChatHistoryResponse) {
+    apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
+    mockDetails(COUCH)
+    apiMock.adminReportMessages.mockImplementation(async (params: { before?: string }) => chat(params))
+    renderPage()
+    return detailCard()
+  }
+
+  it("falls back to the message body when a system event carries a blank body", async () => {
+    const card = renderWithChat(() => ({
+      items: [
+        chatMessage({
+          id: "0b0b0b0b-0000-4000-8000-00000000000b",
+          kind: "system",
+          from: null,
+          body: "Crew dispatched",
+          system: { status: "acknowledged", body: "   " },
+        }),
+      ],
+      nextCursor: null,
+    }))
+    expect(await within(card).findByText(/Crew dispatched/)).toBeInTheDocument()
+  })
+
+  it("labels every reaction the contract knows", async () => {
+    const card = renderWithChat(() => ({
+      items: [
+        chatMessage({
+          id: "0d0d0d0d-0000-4000-8000-00000000000d",
+          reactions: [
+            { emoji: "laugh", count: 2, mine: false },
+            { emoji: "sad", count: 1, mine: false },
+          ],
+        }),
+      ],
+      nextCursor: null,
+    }))
+    expect(await within(card).findByText("Laugh 2")).toBeInTheDocument()
+    expect(within(card).getByText("Sad 1")).toBeInTheDocument()
+  })
+
+  it("opens the author's profile with Space", async () => {
+    const card = renderWithChat(() => ({
+      items: [chatMessage({ id: "0e0e0e0e-0000-4000-8000-00000000000e" })],
+      nextCursor: null,
+    }))
+    const user = userEvent.setup()
+    const author = await within(card).findByRole("button", { name: "Rita Gomez" })
+    author.focus()
+    await user.keyboard(" ")
+    expect(useUiStore.getState()).toMatchObject({ page: "users", focusId: RITA.id })
+  })
+
+  it("names Post without reading the shortcut glyphs and declares the shortcut on the composer", async () => {
+    const card = renderWithChat(() => ({ items: [], nextCursor: null }))
+    await within(card).findByText("No messages yet")
+    expect(within(card).getByRole("button", { name: "Post" })).toBeInTheDocument()
+    expect(within(card).getByRole("textbox", { name: "Message the report chat" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Meta+Enter Control+Enter",
+    )
+  })
+
+  it("loads older messages past the first page", async () => {
+    const OLDER = chatMessage({
+      id: "0f0f0f0f-0000-4000-8000-00000000000f",
+      body: "First sighting last week",
+      createdAt: "2026-09-16T09:00:00.000Z",
+    })
+    const NEWER = chatMessage({ id: "1a1a1a1a-0000-4000-8000-00000000001a", body: "Still there" })
+    const card = renderWithChat(({ before }) =>
+      before === OLDER.id ? { items: [OLDER], nextCursor: null } : { items: [NEWER], nextCursor: OLDER.id },
+    )
+    await within(card).findByText("Still there")
+
+    await userEvent.click(within(card).getByRole("button", { name: "Load older messages" }))
+
+    expect(await within(card).findByText("First sighting last week")).toBeInTheDocument()
+    expect(apiMock.adminReportMessages).toHaveBeenLastCalledWith({
+      id: COUCH.id,
+      limit: 50,
+      before: OLDER.id,
+    })
+    expect(within(card).queryByRole("button", { name: "Load older messages" })).not.toBeInTheDocument()
   })
 })

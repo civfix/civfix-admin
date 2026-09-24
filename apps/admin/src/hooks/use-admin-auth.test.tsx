@@ -104,16 +104,20 @@ describe("useOperatorBootstrap: session reuse", () => {
     expect(useAuthStore.getState().csrfToken).toBe("csrf-old")
   })
 
-  it("marks a non-operator session authenticated but not an operator (current behavior)", async () => {
+  it("refuses a non-operator session as forbidden instead of storing it", async () => {
     const citizen: AdminOperatorDTO = { ...OPERATOR, role: "citizen" }
     apiMock.adminSession.mockResolvedValue({ authenticated: true, operator: citizen, csrfToken: "c" })
     const client = makeTestQueryClient()
     const boot = renderHook(() => useOperatorBootstrap(), { wrapper: wrapperFor(client) })
+    let outcome = ""
     await act(async () => {
-      await boot.result.current()
+      outcome = await boot.result.current()
     })
+    expect(outcome).toBe("forbidden")
+    expect(apiMock.adminAccessExchange).not.toHaveBeenCalled()
     const session = renderHook(() => useOperatorSession(), { wrapper: wrapperFor(client) })
-    expect(session.result.current).toEqual({ isOperator: false, operator: citizen, status: "authenticated" })
+    expect(session.result.current).toEqual({ isOperator: false, operator: null, status: "forbidden" })
+    expect(useAuthStore.getState().csrfToken).toBeNull()
   })
 
   it("sets status to loading while the session check is in flight", async () => {
@@ -202,15 +206,17 @@ describe("useOperatorBootstrap: Access exchange", () => {
     expect(useAuthStore.getState()).toMatchObject({ status: "forbidden", operator: null })
   })
 
-  it("leaves a previously stored operator and CSRF token in place on forbidden (current behavior)", async () => {
+  it("drops a previously stored operator and CSRF token on forbidden", async () => {
     useAuthStore.setState({ operator: OPERATOR, csrfToken: "csrf-old", status: "authenticated" })
     apiMock.adminAccessExchange.mockRejectedValue(new AppError(ErrorCode.FORBIDDEN, "no"))
     expect(await bootstrap()).toBe("forbidden")
-    expect(useAuthStore.getState()).toMatchObject({
-      status: "forbidden",
-      operator: OPERATOR,
-      csrfToken: "csrf-old",
-    })
+    expect(useAuthStore.getState()).toMatchObject({ status: "forbidden", operator: null, csrfToken: null })
+  })
+
+  it("refuses an exchanged session whose user is not an operator", async () => {
+    apiMock.adminAccessExchange.mockResolvedValue(loginResponse({ role: "citizen" }, "csrf-x"))
+    expect(await bootstrap()).toBe("forbidden")
+    expect(useAuthStore.getState()).toMatchObject({ status: "forbidden", operator: null, csrfToken: null })
   })
 
   it.each([
@@ -225,15 +231,11 @@ describe("useOperatorBootstrap: Access exchange", () => {
     expect(useAuthStore.getState().status).toBe("anonymous")
   })
 
-  it("leaves a previously stored operator in place on a retryable error (current behavior)", async () => {
+  it("drops a previously stored operator and CSRF token on a retryable error", async () => {
     useAuthStore.setState({ operator: OPERATOR, csrfToken: "csrf-old", status: "authenticated" })
     apiMock.adminAccessExchange.mockRejectedValue(new TypeError("Failed to fetch"))
     expect(await bootstrap()).toBe("error")
-    expect(useAuthStore.getState()).toMatchObject({
-      status: "anonymous",
-      operator: OPERATOR,
-      csrfToken: "csrf-old",
-    })
+    expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", operator: null, csrfToken: null })
   })
 
   it("can be retried after an error", async () => {
@@ -249,6 +251,27 @@ describe("useOperatorBootstrap: Access exchange", () => {
     expect(outcomes).toEqual(["error", "ok"])
     expect(apiMock.adminSession).toHaveBeenCalledTimes(2)
     expect(useAuthStore.getState().status).toBe("authenticated")
+  })
+
+  it("shares one attempt between overlapping calls, so a double mount mints one session", async () => {
+    let resolveExchange: (value: AdminLoginResponse) => void = () => undefined
+    apiMock.adminAccessExchange.mockReturnValue(
+      new Promise<AdminLoginResponse>((resolve) => {
+        resolveExchange = resolve
+      }),
+    )
+    const first = renderBootstrap()
+    const second = renderBootstrap()
+    let outcomes: string[] = []
+    await act(async () => {
+      const pending = Promise.all([first.result.current(), second.result.current()])
+      await vi.waitFor(() => expect(apiMock.adminAccessExchange).toHaveBeenCalled())
+      resolveExchange(loginResponse({}, "csrf-x"))
+      outcomes = await pending
+    })
+    expect(outcomes).toEqual(["ok", "ok"])
+    expect(apiMock.adminSession).toHaveBeenCalledTimes(1)
+    expect(apiMock.adminAccessExchange).toHaveBeenCalledTimes(1)
   })
 
   it("returns a stable callback across renders", () => {
@@ -281,20 +304,40 @@ describe("useAdminLogout", () => {
     client.setQueryData(["admin", "reports", "list", null], { items: [] })
     await logout(client)
     expect(apiMock.adminLogout).toHaveBeenCalledTimes(1)
-    expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({ status: "signing-out", operator: null, csrfToken: null })
     expect(client.getQueryCache().getAll()).toHaveLength(0)
     expect(assign).toHaveBeenCalledTimes(1)
     expect(assign).toHaveBeenCalledWith(`${API_BASE_URL}/cdn-cgi/access/logout`)
   })
 
-  it("clears local state before navigating", async () => {
+  it("clears local state into signing-out, not the signed-out screen, before navigating", async () => {
     apiMock.adminLogout.mockResolvedValue({ ok: true })
-    let statusAtNavigation: string | null = null
+    let stateAtNavigation: unknown = null
     assign.mockImplementation(() => {
-      statusAtNavigation = useAuthStore.getState().status
+      const { status, operator, csrfToken } = useAuthStore.getState()
+      stateAtNavigation = { status, operator, csrfToken }
     })
     await logout(makeTestQueryClient())
-    expect(statusAtNavigation).toBe("anonymous")
+    expect(stateAtNavigation).toEqual({ status: "signing-out", operator: null, csrfToken: null })
+  })
+
+  it("reports signing-out while the revoke call is in flight and still sends the CSRF token", async () => {
+    let resolveLogout: (value: { ok: true }) => void = () => undefined
+    apiMock.adminLogout.mockReturnValue(
+      new Promise((resolve) => {
+        resolveLogout = resolve
+      }),
+    )
+    const { result } = renderHook(() => useAdminLogout(), { wrapper: wrapperFor(makeTestQueryClient()) })
+    let pending: Promise<void> = Promise.resolve()
+    act(() => {
+      pending = result.current()
+    })
+    expect(useAuthStore.getState()).toMatchObject({ status: "signing-out", csrfToken: "csrf-s" })
+    await act(async () => {
+      resolveLogout({ ok: true })
+      await pending
+    })
   })
 
   it.each([
@@ -305,7 +348,7 @@ describe("useAdminLogout", () => {
     const client = makeTestQueryClient()
     client.setQueryData(["admin", "home", "summary"], { n: 1 })
     await logout(client)
-    expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({ status: "signing-out", operator: null, csrfToken: null })
     expect(client.getQueryCache().getAll()).toHaveLength(0)
     expect(assign).toHaveBeenCalledWith(`${API_BASE_URL}/cdn-cgi/access/logout`)
   })

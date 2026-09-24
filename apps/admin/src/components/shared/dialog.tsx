@@ -38,9 +38,20 @@ interface DialogState {
   close: () => void
 }
 
-const useDialogStore = create<DialogState>((set) => ({
+function dismissed(req: DialogRequest): void {
+  if (req.kind === "prompt") req.resolve(null)
+  else req.resolve(false)
+}
+
+const useDialogStore = create<DialogState>((set, get) => ({
   current: null,
-  open: (req) => set({ current: req }),
+  // One dialog shows at a time; a replaced request answers as dismissed so its caller's await (and the
+  // busy flag it clears in finally) never hangs.
+  open: (req) => {
+    const replaced = get().current
+    if (replaced) dismissed(replaced)
+    set({ current: req })
+  },
   close: () => set({ current: null }),
 }))
 
@@ -85,20 +96,26 @@ export function DialogHost() {
   const [value, setValue] = React.useState("")
   const modalRef = useModalFocus<HTMLDivElement>(current !== null)
   const cancelRef = React.useRef<HTMLButtonElement>(null)
+  const fieldRef = React.useRef<HTMLTextAreaElement>(null)
+  const titleId = React.useId()
+  const bodyId = React.useId()
+  const fieldId = React.useId()
 
   React.useEffect(() => {
     if (current?.kind === "prompt") setValue(current.defaultValue ?? "")
   }, [current])
 
-  // Runs after useModalFocus's effect, so that hook has already recorded the opener to restore.
+  // Runs after useModalFocus's effect, so that hook has already recorded the opener to restore; an
+  // autoFocus on the field would land first and be recorded as the opener instead.
   React.useEffect(() => {
-    if (current?.kind === "confirm") cancelRef.current?.focus()
+    if (!current) return
+    if (current.kind === "prompt") fieldRef.current?.focus()
+    else cancelRef.current?.focus()
   }, [current])
 
   const cancel = React.useCallback(() => {
     if (!current) return
-    if (current.kind === "prompt") current.resolve(null)
-    else current.resolve(false)
+    dismissed(current)
     close()
   }, [current, close])
 
@@ -149,21 +166,33 @@ export function DialogHost() {
         className="modal dialog-modal"
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={current.body ? bodyId : undefined}
       >
         <div className="modal-head">
-          <h3>{current.title}</h3>
+          <h3 id={titleId}>{current.title}</h3>
           <button className="closebtn" onClick={cancel} aria-label="Close">
             <Icons.X size={16} />
           </button>
         </div>
         <div className="dialog-body">
-          {current.body && <p className="dialog-text">{current.body}</p>}
+          {current.body && (
+            <p id={bodyId} className="dialog-text">
+              {current.body}
+            </p>
+          )}
           {current.kind === "prompt" && (
             <>
-              {current.label && <label className="dialog-label">{current.label}</label>}
+              {current.label && (
+                <label className="dialog-label" htmlFor={fieldId}>
+                  {current.label}
+                </label>
+              )}
               <textarea
+                ref={fieldRef}
+                id={fieldId}
+                aria-labelledby={current.label ? undefined : titleId}
                 className="dialog-input"
-                autoFocus
                 rows={3}
                 value={value}
                 placeholder={current.placeholder}

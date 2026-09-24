@@ -22,10 +22,31 @@ import {
 import { deriveSlug, publicOrgUrl } from "@/features/orgs/org-slug"
 import { useUploadOrgLogo } from "@/features/orgs/use-orgs"
 
-export function FieldError({ text }: { text: string | undefined }) {
+export function fieldErrorId(fieldId: string): string {
+  return `${fieldId}-error`
+}
+
+export function fieldHintId(fieldId: string): string {
+  return `${fieldId}-hint`
+}
+
+/**
+ * The `aria-invalid` / `aria-describedby` pair for a control: described by its error when there is
+ * one, else by whichever hints are on screen, so no reference ever points at an unrendered node.
+ */
+export function fieldA11y(
+  fieldId: string,
+  error: string | null | undefined,
+  hintIds: readonly string[] = [],
+): { "aria-invalid"?: true; "aria-describedby"?: string } {
+  if (error) return { "aria-invalid": true, "aria-describedby": fieldErrorId(fieldId) }
+  return hintIds.length > 0 ? { "aria-describedby": hintIds.join(" ") } : {}
+}
+
+export function FieldError({ id, text }: { id: string; text: string | null | undefined }) {
   if (!text) return null
   return (
-    <span className="field-error" role="alert">
+    <span className="field-error" role="alert" id={id}>
       <Icons.AlertTriangle size={11} /> {text}
     </span>
   )
@@ -125,6 +146,7 @@ export function LogoField({
             ref={inputRef}
             className="org-logo-file"
             type="file"
+            {...fieldA11y(inputId, message, [fieldHintId(inputId)])}
             accept={ORG_LOGO_ACCEPT}
             disabled={busy}
             onChange={(e) => {
@@ -150,9 +172,9 @@ export function LogoField({
         </div>
       </div>
       {message ? (
-        <FieldError text={message} />
+        <FieldError id={fieldErrorId(inputId)} text={message} />
       ) : (
-        <span className="hint">
+        <span className="hint" id={fieldHintId(inputId)}>
           Shown on the public page and next to every event the organization hosts.
         </span>
       )}
@@ -183,6 +205,8 @@ export function OrgProfileFields({
   const [slugTouched, setSlugTouched] = React.useState(mode === "edit")
   const id = (name: string) => `org-${mode}-${name}`
   const slugPreview = draft.slug.trim().toLowerCase()
+  const slugWarningId = `${id("slug")}-warning`
+  const slugHintIds = [fieldHintId(id("slug")), ...(mode === "edit" ? [slugWarningId] : [])]
 
   const setName = (name: string) => {
     if (mode === "create" && !slugTouched) onChange({ ...draft, name, slug: deriveSlug(name) })
@@ -205,8 +229,9 @@ export function OrgProfileFields({
           placeholder="Friends of Griffith Park"
           disabled={disabled}
           onChange={(e) => setName(e.target.value)}
+          {...fieldA11y(id("name"), errors.name)}
         />
-        <FieldError text={errors.name} />
+        <FieldError id={fieldErrorId(id("name"))} text={errors.name} />
       </div>
 
       <div className={`field ${errors.slug ? "has-error" : ""}`}>
@@ -225,6 +250,7 @@ export function OrgProfileFields({
             autoCapitalize="none"
             placeholder="friends-of-griffith-park"
             disabled={disabled}
+            {...fieldA11y(id("slug"), errors.slug, slugHintIds)}
             onChange={(e) => {
               setSlugTouched(true)
               onChange({ ...draft, slug: e.target.value.toLowerCase() })
@@ -235,6 +261,7 @@ export function OrgProfileFields({
               type="button"
               className="btn sm ghost"
               title="Derive the slug from the name again"
+              disabled={disabled}
               onClick={() => {
                 setSlugTouched(false)
                 onChange({ ...draft, slug: deriveSlug(draft.name) })
@@ -245,9 +272,9 @@ export function OrgProfileFields({
           )}
         </div>
         {errors.slug ? (
-          <FieldError text={errors.slug} />
+          <FieldError id={fieldErrorId(id("slug"))} text={errors.slug} />
         ) : (
-          <span className="hint">
+          <span className="hint" id={fieldHintId(id("slug"))}>
             {slugPreview !== "" ? (
               <>
                 Public page: <span className="mono">{publicOrgUrl(slugPreview)}</span>
@@ -258,7 +285,7 @@ export function OrgProfileFields({
           </span>
         )}
         {mode === "edit" && (
-          <span className="hint tone-warn">
+          <span className="hint tone-warn" id={slugWarningId}>
             <Icons.AlertTriangle size={11} /> Changing the slug breaks existing links to the public
             page, QR codes and shared signup pages.
           </span>
@@ -281,8 +308,9 @@ export function OrgProfileFields({
           placeholder="What the organization does and where it works."
           disabled={disabled}
           onChange={(e) => onChange({ ...draft, description: e.target.value })}
+          {...fieldA11y(id("description"), errors.description)}
         />
-        <FieldError text={errors.description} />
+        <FieldError id={fieldErrorId(id("description"))} text={errors.description} />
       </div>
 
       <LogoField
@@ -307,8 +335,9 @@ export function OrgProfileFields({
           placeholder="https://example.org"
           disabled={disabled}
           onChange={(e) => onChange({ ...draft, websiteUrl: e.target.value })}
+          {...fieldA11y(id("website"), errors.websiteUrl)}
         />
-        <FieldError text={errors.websiteUrl} />
+        <FieldError id={fieldErrorId(id("website"))} text={errors.websiteUrl} />
       </div>
 
       <div className="field">
@@ -334,9 +363,10 @@ export function OrgProfileFields({
                   autoCapitalize="none"
                   disabled={disabled}
                   onChange={(e) => setSocial(p, e.target.value)}
+                  {...fieldA11y(id(`social-${p}`), errors[p])}
                 />
               </div>
-              <FieldError text={errors[p]} />
+              <FieldError id={fieldErrorId(id(`social-${p}`))} text={errors[p]} />
             </div>
           ))}
         </div>
@@ -374,8 +404,9 @@ export function ReasonField({
         placeholder={placeholder ?? "Why this change is being made…"}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
+        {...fieldA11y(id, error)}
       />
-      <FieldError text={error} />
+      <FieldError id={fieldErrorId(id)} text={error} />
     </div>
   )
 }

@@ -13,12 +13,11 @@ import {
   ORG_ROLE_LABEL,
   ORG_ROLE_PILL,
   ORG_ROLES,
-  canRemoveMember,
   menuFocusIndex,
   roleChangeCopy,
   roleTargets,
 } from "@/features/orgs/org-members"
-import { ReasonField } from "@/features/orgs/org-form-fields"
+import { FieldError, ReasonField, fieldErrorId } from "@/features/orgs/org-form-fields"
 import {
   useAddOrgMember,
   useOrgMembersInfinite,
@@ -26,12 +25,12 @@ import {
   useSetOrgMemberRole,
 } from "@/features/orgs/use-orgs"
 import { PickedUserAvatar, UserPicker, type PickedUser } from "@/features/orgs/user-picker"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 
 export function MembersPanel({ org }: { org: AdminOrgDTO }) {
   const q = useOrgMembersInfinite(org.id)
   const members = React.useMemo(() => q.data?.pages.flatMap((p) => p.items) ?? [], [q.data])
-  const owner = members.find((m) => m.role === "owner") ?? null
+  const ownerName = members.find((m) => m.role === "owner")?.user.name ?? org.owner?.name ?? null
   const memberIds = React.useMemo(() => new Set(members.map((m) => m.user.id)), [members])
   const [adding, setAdding] = React.useState(false)
   const suspended = !!org.suspendedAt
@@ -41,7 +40,7 @@ export function MembersPanel({ org }: { org: AdminOrgDTO }) {
       {adding ? (
         <AddMemberForm
           org={org}
-          ownerName={owner?.user.name ?? org.owner?.name ?? null}
+          ownerName={ownerName}
           excludeIds={memberIds}
           onDone={() => setAdding(false)}
         />
@@ -66,13 +65,16 @@ export function MembersPanel({ org }: { org: AdminOrgDTO }) {
         <div className="sub-head">
           Roster
           <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-            <Icons.Users size={12} /> {members.length}
+            <Icons.Users size={12} />{" "}
+            {q.hasNextPage
+              ? `${members.length.toLocaleString()} of ${org.memberCount.toLocaleString()}`
+              : members.length.toLocaleString()}
           </span>
         </div>
         <div className="queue-list">
           {q.isLoading ? (
             <LoadingState label="Loading members..." />
-          ) : q.isError ? (
+          ) : q.isError && !q.data ? (
             <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load members" />
           ) : members.length === 0 ? (
             <EmptyState
@@ -87,7 +89,7 @@ export function MembersPanel({ org }: { org: AdminOrgDTO }) {
                   key={m.user.id}
                   org={org}
                   member={m}
-                  ownerName={owner?.user.name ?? null}
+                  ownerName={ownerName}
                 />
               ))}
               {q.hasNextPage && (
@@ -118,7 +120,6 @@ function MemberRow({
   ownerName: string | null
 }) {
   const nav = useNav()
-  const toast = useToast()
   const setRole = useSetOrgMemberRole()
   const remove = useRemoveOrgMember()
   // The menu is position:fixed (anchored to the trigger's rect) so the card's overflow:hidden and the
@@ -134,7 +135,9 @@ function MemberRow({
   const prompting = React.useRef(false)
   const menuOpen = menuPos !== null
   const busy = setRole.isPending || remove.isPending
-  const removable = canRemoveMember(member.role)
+  // The backend refuses every change to the owner's own membership: ownership moves by promoting
+  // someone else, so the owner row has no actions.
+  const isOwner = member.role === "owner"
 
   const openMenu = () => {
     const rect = triggerRef.current?.getBoundingClientRect()
@@ -151,7 +154,7 @@ function MemberRow({
 
   const menuItems = () =>
     Array.from(
-      popRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [],
+      popRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
     )
 
   // A real menu: the first item takes focus on open; arrows/Home/End move (wrapping), Escape closes
@@ -209,16 +212,6 @@ function MemberRow({
     prompting.current = true
     let reason: string | null
     try {
-      if (member.role === "owner") {
-        // An org must keep an owner: the backend refuses a plain demotion, so explain instead of trying.
-        await confirmDialog({
-          title: copy.title,
-          body: copy.body,
-          confirmLabel: "Got it",
-          cancelLabel: "Close",
-        })
-        return
-      }
       reason = await promptDialog({
         title: copy.title,
         body: copy.body,
@@ -234,17 +227,11 @@ function MemberRow({
       prompting.current = false
     }
     if (reason === null || reason.trim() === "") return
-    setRole.mutate(
-      { id: org.id, userId: member.user.id, role: to, reason: reason.trim() },
-      {
-        onSuccess: () =>
-          toast(
-            copy.transfer
-              ? `${member.user.name} now owns ${org.name}`
-              : `${member.user.name} · ${ORG_ROLE_LABEL[to]}`,
-          ),
-      },
-    )
+    setRole.mutate({
+      request: { id: org.id, userId: member.user.id, role: to, reason: reason.trim() },
+      memberName: member.user.name,
+      orgName: org.name,
+    })
   }
 
   const onRemove = async () => {
@@ -266,10 +253,11 @@ function MemberRow({
       prompting.current = false
     }
     if (reason === null || reason.trim() === "") return
-    remove.mutate(
-      { id: org.id, userId: member.user.id, reason: reason.trim() },
-      { onSuccess: () => toast(`${member.user.name} removed from ${org.name}`) },
-    )
+    remove.mutate({
+      request: { id: org.id, userId: member.user.id, reason: reason.trim() },
+      memberName: member.user.name,
+      orgName: org.name,
+    })
   }
 
   const picked: PickedUser = { id: member.user.id, name: member.user.name, handle: member.user.handle }
@@ -297,10 +285,10 @@ function MemberRow({
         </div>
         <div className="sub">
           <span>Joined {formatDate(member.joinedAt)}</span>
-          {member.role === "owner" && (
+          {isOwner && (
             <>
               <span className="sep">·</span>
-              <span className="muted">Transfer ownership before removing</span>
+              <span className="muted">Transfer ownership before changing this role or removing</span>
             </>
           )}
         </div>
@@ -317,7 +305,7 @@ function MemberRow({
             aria-label={`Actions for ${member.user.name}`}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            disabled={busy || !!org.deletedAt}
+            disabled={busy || isOwner || !!org.deletedAt}
             onClick={() => (menuOpen ? closeMenu(false) : openMenu())}
             onKeyDown={(e) => {
               // ArrowDown on a closed menu button opens it (WAI-ARIA menu-button pattern).
@@ -339,7 +327,9 @@ function MemberRow({
               onKeyDown={onMenuKeyDown}
               onBlur={onMenuBlur}
             >
-              <div className="row-menu-label">Change role</div>
+              <div className="row-menu-label" role="presentation">
+                Change role
+              </div>
               {roleTargets(member.role).map((r) => (
                 <button
                   key={r}
@@ -357,16 +347,14 @@ function MemberRow({
                   )}
                 </button>
               ))}
-              <div className="row-menu-sep" />
+              <div className="row-menu-sep" role="separator" />
               <button
                 type="button"
                 role="menuitem"
                 className="row-menu-item danger"
-                disabled={!removable}
-                title={removable ? undefined : "Transfer ownership first"}
                 onClick={() => void onRemove()}
               >
-                <Icons.Trash size={12} /> Remove{removable ? "" : " (transfer ownership first)"}
+                <Icons.Trash size={12} /> Remove
               </button>
             </div>
           )}
@@ -388,7 +376,6 @@ function AddMemberForm({
   onDone: () => void
 }) {
   const add = useAddOrgMember()
-  const toast = useToast()
   const [user, setUser] = React.useState<PickedUser | null>(null)
   const [role, setRole] = React.useState<OrganizationMemberRole>("member")
   const [reason, setReason] = React.useState("")
@@ -396,6 +383,7 @@ function AddMemberForm({
   // Guards a second Enter while the transfer confirmation is open.
   const confirming = React.useRef(false)
   const transfer = role === "owner"
+  const personError = attempted && !user ? "Pick a user to add." : null
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -418,17 +406,12 @@ function AddMemberForm({
       if (!ok) return
     }
     add.mutate(
-      { id: org.id, userId: user.id, role, reason: reason.trim() },
       {
-        onSuccess: () => {
-          toast(
-            transfer
-              ? `${user.name} now owns ${org.name}`
-              : `${user.name} added as ${ORG_ROLE_LABEL[role].toLowerCase()}`,
-          )
-          onDone()
-        },
+        request: { id: org.id, userId: user.id, role, reason: reason.trim() },
+        memberName: user.name,
+        orgName: org.name,
       },
+      { onSuccess: onDone },
     )
   }
 
@@ -436,14 +419,17 @@ function AddMemberForm({
     <form className="sub" onSubmit={(e) => void submit(e)}>
       <div className="sub-head">Add member</div>
       <div className="sub-body">
-        <div className={`field ${attempted && !user ? "has-error" : ""}`}>
-          <span className="lbl">Person</span>
+        <div
+          className={`field ${personError ? "has-error" : ""}`}
+          role="group"
+          aria-labelledby="org-add-person-label"
+          aria-describedby={personError ? fieldErrorId("org-add-person") : undefined}
+        >
+          <span className="lbl" id="org-add-person-label">
+            Person
+          </span>
           <UserPicker value={user} onChange={setUser} excludeIds={excludeIds} autoFocus />
-          {attempted && !user && (
-            <span className="field-error" role="alert">
-              <Icons.AlertTriangle size={11} /> Pick a user to add.
-            </span>
-          )}
+          <FieldError id={fieldErrorId("org-add-person")} text={personError} />
         </div>
         <div className="field">
           <label className="lbl" htmlFor="org-add-role">

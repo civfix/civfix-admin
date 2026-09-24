@@ -6,6 +6,8 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
+import { isNotFound } from "@/lib/api"
 import { isHttpsUrl } from "@/lib/external-url"
 import {
   GOV_CHECKS,
@@ -23,7 +25,7 @@ import {
   useRejectGovClaim,
   useVerifyGovClaimCheck,
 } from "@/features/moderation/use-gov-claims"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 
 export function GovClaimRow({
   item,
@@ -36,7 +38,18 @@ export function GovClaimRow({
 }) {
   const status = GOV_CLAIM_STATUS_VIEW[item.status] ?? GOV_CLAIM_STATUS_VIEW.pending
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={() => onSelect(item.id)}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onSelect(item.id)
+      }}
+    >
       <span className="prow-ico hue-slate" title={GOV_METHOD_LABEL[item.method]}>
         <Icons.Building size={15} />
       </span>
@@ -99,6 +112,7 @@ function CheckRow({
       <button
         className="btn sm"
         disabled={busy}
+        aria-label={`Mark ${govCheckLabel(check)} ${verified ? "pending" : "verified"}`}
         onClick={() => onToggle(check, verified ? "pending" : "verified")}
       >
         {verified ? (
@@ -126,13 +140,14 @@ export function GovClaimDetail({
   const verifyCheck = useVerifyGovClaimCheck()
   const approve = useApproveGovClaim()
   const reject = useRejectGovClaim()
-  const toast = useToast()
   const nav = useNav()
 
   const busy = verifyCheck.isPending || approve.isPending || reject.isPending
 
   if (q.isLoading) return <LoadingState label="Loading claim..." />
-  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  if (q.isError && !isNotFound(q.error)) {
+    return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  }
   const claim = q.data
   if (!claim)
     return (
@@ -159,7 +174,6 @@ export function GovClaimDetail({
           ...(stored.evidence ? { evidence: stored.evidence } : {}),
           ...keepNote,
         },
-        { onSuccess: () => toast(`${govCheckLabel(check)} · back to pending`) },
       )
       return
     }
@@ -179,7 +193,6 @@ export function GovClaimDetail({
         ...(evidence.trim() ? { evidence: evidence.trim() } : {}),
         ...keepNote,
       },
-      { onSuccess: () => toast(`${govCheckLabel(check)} · verified`) },
     )
   }
 
@@ -191,15 +204,7 @@ export function GovClaimDetail({
       confirmLabel: "Approve and provision",
     })
     if (!ok) return
-    approve.mutate(
-      { id: claim.id },
-      {
-        onSuccess: () => {
-          toast(`${claim.name} approved · government role provisioned`)
-          onDecided(claim.id)
-        },
-      },
-    )
+    approve.mutate({ request: { id: claim.id }, claim }, { onSuccess: () => onDecided(claim.id) })
   }
 
   const onReject = async () => {
@@ -214,13 +219,8 @@ export function GovClaimDetail({
     })
     if (reason === null || reason.trim() === "") return
     reject.mutate(
-      { id: claim.id, reason: reason.trim() },
-      {
-        onSuccess: () => {
-          toast(`${claim.name} rejected`)
-          onDecided(claim.id)
-        },
-      },
+      { request: { id: claim.id, reason: reason.trim() }, claim },
+      { onSuccess: () => onDecided(claim.id) },
     )
   }
 

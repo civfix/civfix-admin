@@ -149,6 +149,10 @@ function readBlob(blob: Blob): Promise<string> {
 }
 
 function renderPage() {
+  return renderWithQuery(<AnalyticsPage focusId={null} />)
+}
+
+function renderPageWithToast() {
   return renderWithQuery(
     <>
       <AnalyticsPage focusId={null} />
@@ -294,7 +298,7 @@ describe("AnalyticsPage", () => {
     apiMock.analyticsTopContributors.mockResolvedValue({ rows: [] } satisfies AnalyticsTopContributorsResponse)
     renderPage()
 
-    await waitFor(() => expect(screen.getAllByText("No data yet")).toHaveLength(CARD_TITLES.length))
+    await waitFor(() => expect(screen.getAllByText("No data yet")).toHaveLength(CARD_TITLES.length + 1))
     for (const title of CARD_TITLES) {
       const c = card(title)
       expect(within(c).getByText("No data yet")).toBeInTheDocument()
@@ -303,8 +307,21 @@ describe("AnalyticsPage", () => {
     expect(screen.queryByText("events this month")).not.toBeInTheDocument()
     expect(screen.queryByRole("status")).not.toBeInTheDocument()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-    // An empty KPI list still counts as loaded, so Export is enabled with an empty strip.
+    // An empty KPI list still counts as loaded, so Export stays enabled.
     expect(screen.getByRole("button", { name: "Export" })).toBeEnabled()
+  })
+
+  it("shows the empty state in the KPI strip when every KPI is hidden", async () => {
+    mockPopulated()
+    apiMock.analyticsKpis.mockResolvedValue({
+      kpis: [{ label: "Avg. route time", num: 0, delta: "Phase 3", dir: "flat" }],
+    } satisfies AnalyticsKpisResponse)
+    renderPage()
+
+    await within(await findCard("Top jurisdictions")).findByText("Oakland")
+    const empty = await screen.findByText("No data yet")
+    expect(empty.closest("section")).toBeNull()
+    expect(screen.getByText("Nothing to show for this window.")).toBeInTheDocument()
   })
 
   it("renders the KPI strip: hides routing KPIs, shows resolved as a rounded percent, counts with separators", async () => {
@@ -383,6 +400,25 @@ describe("AnalyticsPage", () => {
     expect(within(c).getByText(/^\u2014$/)).toBeInTheDocument()
   })
 
+  it("rounds resolution times to whole hours before splitting them into days", async () => {
+    mockPopulated()
+    apiMock.analyticsResolutionByCategory.mockResolvedValue({
+      rows: [
+        { cat: "trash", hours: 23.6 },
+        { cat: "graffiti", hours: 47.6 },
+        { cat: "hazard", hours: 25.2 },
+      ],
+    } satisfies AnalyticsResolutionByCategoryResponse)
+    renderPage()
+
+    const c = await findCard("Median resolution time")
+    expect(await within(c).findByText("1d")).toBeInTheDocument()
+    expect(within(c).getByText("2d")).toBeInTheDocument()
+    expect(within(c).getByText("1d 1h")).toBeInTheDocument()
+    expect(within(c).queryByText("24h")).not.toBeInTheDocument()
+    expect(within(c).queryByText("1d 24h")).not.toBeInTheDocument()
+  })
+
   it("renders cleanup events stats and hides bags collected when there are none", async () => {
     mockPopulated()
     renderPage()
@@ -423,6 +459,32 @@ describe("AnalyticsPage", () => {
     expect(within(c).getByText("20%")).toBeInTheDocument()
   })
 
+  it("exposes the ranking tables with table, row, column header and cell roles", async () => {
+    mockPopulated()
+    renderPage()
+
+    const jurisdictions = await within(await findCard("Top jurisdictions")).findByRole("table", {
+      name: "Top jurisdictions",
+    })
+    expect(
+      within(jurisdictions)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["Jurisdiction", "Pins", "Resolved"])
+    expect(within(jurisdictions).getAllByRole("row")).toHaveLength(3)
+    expect(within(jurisdictions).getByRole("cell", { name: "Oakland" })).toBeInTheDocument()
+    expect(within(jurisdictions).getByRole("cell", { name: "64%" })).toBeInTheDocument()
+
+    const contributors = within(card("Top contributors")).getByRole("table", { name: "Top contributors" })
+    expect(
+      within(contributors)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["Neighbor", "Reports", "Cleanups"])
+    expect(within(contributors).getAllByRole("row")).toHaveLength(3)
+    expect(within(contributors).getByRole("cell", { name: "17" })).toBeInTheDocument()
+  })
+
   it("renders the top contributors table with initials and a placeholder for a missing city", async () => {
     mockPopulated()
     renderPage()
@@ -439,6 +501,45 @@ describe("AnalyticsPage", () => {
     expect(within(c).getByText("G")).toBeInTheDocument()
     expect(within(c).getByText(/^\u2014$/)).toBeInTheDocument()
     expect(within(c).getByText("9")).toBeInTheDocument()
+  })
+
+  it("keeps Export disabled until every exported section has loaded", async () => {
+    mockPopulated()
+    let resolveCategories: (value: AnalyticsByCategoryResponse) => void = () => {}
+    apiMock.analyticsByCategory.mockReturnValue(
+      new Promise((resolve) => {
+        resolveCategories = resolve
+      }),
+    )
+    let resolveEvents: (value: AnalyticsEventsResponse) => void = () => {}
+    apiMock.analyticsEvents.mockReturnValue(
+      new Promise((resolve) => {
+        resolveEvents = resolve
+      }),
+    )
+    renderPage()
+
+    expect(await screen.findByText("1,234")).toBeInTheDocument()
+    const exportButton = screen.getByRole("button", { name: "Export" })
+    expect(exportButton).toBeDisabled()
+
+    resolveCategories(byCategory)
+    expect(await within(card("By category")).findByText("Trash")).toBeInTheDocument()
+    expect(exportButton).toBeDisabled()
+
+    resolveEvents(events)
+    await waitFor(() => expect(exportButton).toBeEnabled())
+  })
+
+  it("keeps Export disabled while a section it exports has failed", async () => {
+    mockPopulated()
+    apiMock.analyticsByCategory.mockRejectedValue(new Error("categories offline"))
+    renderPage()
+
+    expect(await within(await findCard("By category")).findByText("categories offline")).toBeInTheDocument()
+    expect(screen.getByText("1,234")).toBeInTheDocument()
+    await within(card("Cleanup events")).findByText("events this month")
+    expect(screen.getByRole("button", { name: "Export" })).toBeDisabled()
   })
 
   it("exports the KPIs, event totals and category shares as a CSV download and confirms with a toast", async () => {
@@ -461,7 +562,7 @@ describe("AnalyticsPage", () => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       downloads.push(this.download)
     })
-    renderPage()
+    renderPageWithToast()
 
     const exportButton = screen.getByRole("button", { name: "Export" })
     expect(exportButton).toBeDisabled()
@@ -473,12 +574,12 @@ describe("AnalyticsPage", () => {
     expect(downloads).toEqual(["civfix-analytics.csv"])
     expect(blobs).toHaveLength(1)
     const blob = blobs[0] as Blob
-    expect(blob.type).toBe("text/csv")
+    expect(blob.type).toBe("text/csv;charset=utf-8")
     expect(await readBlob(blob)).toBe(
       [
         '"Metric","Value","Change"',
         '"Pins dropped","1234","\'+12% vs last month"',
-        '"Resolved","41.6","\'-2 pts"',
+        '"Resolved","42%","\'-2 pts"',
         '"Cleanups planned","7","no change"',
         '"Cleanup events (month)","4",""',
         '"Volunteers","1250",""',

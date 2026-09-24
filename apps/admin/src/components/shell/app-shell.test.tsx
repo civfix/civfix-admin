@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AppShell } from "@/components/shell/app-shell"
+import { SOURCE } from "@/lib/source"
 import { useUiStore } from "@/store/ui-store"
 import { renderWithQuery } from "@/test/render"
 
@@ -67,5 +68,24 @@ describe("AppShell error containment", () => {
     await user.click(screen.getByRole("button", { name: "Dashboard" }))
     expect(await screen.findByRole("heading", { name: "Home stub" })).toBeInTheDocument()
     expect(screen.queryByRole("alert")).toBeNull()
+  })
+})
+
+describe("AppShell source link", () => {
+  it("links the AGPL source from every section page", async () => {
+    useUiStore.setState({ page: "reports", focusId: null })
+    renderWithQuery(<AppShell />)
+
+    const link = await screen.findByRole("link", { name: "Source code (AGPL-3.0)" })
+    expect(link).toHaveAttribute("href", SOURCE.url)
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("rel", "noreferrer noopener")
+  })
+
+  it("leaves the home page to its own footer", async () => {
+    renderWithQuery(<AppShell />)
+
+    expect(await screen.findByRole("heading", { name: "Home stub" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Source code (AGPL-3.0)" })).toBeNull()
   })
 })

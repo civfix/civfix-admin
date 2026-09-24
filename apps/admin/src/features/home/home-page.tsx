@@ -13,11 +13,12 @@ import {
   type MailThreadListItemDTO,
   type ModerationListItemDTO,
   type ReportCategory,
+  relativeAgo,
 } from "@civfix/shared"
 import type { UseQueryResult } from "@tanstack/react-query"
 
 import { Icons, type IconComponent } from "@/components/icons"
-import { SOURCE } from "@/lib/source"
+import { SourceFooter } from "@/components/shell/source-footer"
 import { LiveMap } from "@/components/map/live-map"
 import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -85,20 +86,25 @@ interface SectionSummary {
   metrics?: { k: string; v: React.ReactNode; delta?: string }[]
 }
 
-function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
+const NO_COUNT = { lead: null, unit: "" } as const
+
+function counted(lead: number | undefined, unit: string): Pick<SectionSummary, "lead" | "unit"> {
+  return lead === undefined ? NO_COUNT : { lead, unit }
+}
+
+function buildSummaries(d: HomeSummaryResponse | undefined): SectionSummary[] {
   return [
     {
       id: "discovery",
       page: "discovery",
       label: "Jurisdictions",
       hue: "slate",
-      lead: d.discovery.queue,
-      unit: "jurisdictions in queue",
+      ...counted(d?.discovery.queue, "jurisdictions in queue"),
       blurb:
         "Jurisdictions with reports waiting on routing setup — work the queue so neighbors' reports reach the right city department.",
       stats: [
-        { k: "Reports waiting", v: d.discovery.reportsWaiting },
-        { k: "Over SLA", v: d.discovery.overSla, tone: d.discovery.overSla > 0 ? "warn" : null },
+        { k: "Reports waiting", v: d?.discovery.reportsWaiting },
+        { k: "Over SLA", v: d?.discovery.overSla, tone: (d?.discovery.overSla ?? 0) > 0 ? "warn" : null },
       ],
       cta: "Open",
     },
@@ -107,13 +113,12 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       page: "reports",
       label: "Reports",
       hue: "lilac",
-      lead: d.reports.flagged,
-      unit: "reports flagged",
+      ...counted(d?.reports.flagged, "reports flagged"),
       blurb:
         "Every report neighbors submit, routed to the right city department — track status and close the loop.",
       stats: [
-        { k: "In progress", v: d.reports.inProgress },
-        { k: "Completed", v: d.reports.completed },
+        { k: "In progress", v: d?.reports.inProgress },
+        { k: "Completed", v: d?.reports.completed },
       ],
       cta: "Open reports",
     },
@@ -122,13 +127,12 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       page: "events",
       label: "Events",
       hue: "sun",
-      lead: d.events.upcoming,
-      unit: "upcoming events",
+      ...counted(d?.events.upcoming, "upcoming events"),
       blurb:
         "Community cleanups neighbors organize — track turnout, keep them legit, and message attendees.",
       stats: [
-        { k: "Live now", v: d.events.live },
-        { k: "Attending", v: d.events.attending },
+        { k: "Live now", v: d?.events.live },
+        { k: "Attending", v: d?.events.attending },
       ],
       cta: "Open events",
     },
@@ -137,13 +141,12 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       page: "mail",
       label: "Mail",
       hue: "sky",
-      lead: d.mail.unread,
-      unit: "unread messages",
+      ...counted(d?.mail.unread, "unread messages"),
       blurb:
         "Two-way mail with municipal contacts — outbound routing and the replies that come back.",
       stats: [
-        { k: "Needs action", v: d.mail.needsAction, tone: d.mail.needsAction > 0 ? "warn" : null },
-        { k: "Unread", v: d.mail.unread },
+        { k: "Needs action", v: d?.mail.needsAction, tone: (d?.mail.needsAction ?? 0) > 0 ? "warn" : null },
+        { k: "Unread", v: d?.mail.unread },
       ],
       cta: "Open inbox",
     },
@@ -152,12 +155,11 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       page: "users",
       label: "Users",
       hue: "sun",
-      lead: d.users.flagged,
-      unit: "accounts flagged",
+      ...counted(d?.users.flagged, "accounts flagged"),
       blurb: "Most neighbors never appear here. The queue surfaces the few who need a trust review.",
       stats: [
-        { k: "High risk", v: d.users.highRisk, tone: d.users.highRisk > 0 ? "alert" : null },
-        { k: "Suspended", v: d.users.suspended },
+        { k: "High risk", v: d?.users.highRisk, tone: (d?.users.highRisk ?? 0) > 0 ? "alert" : null },
+        { k: "Suspended", v: d?.users.suspended },
       ],
       cta: "Review accounts",
     },
@@ -166,12 +168,11 @@ function buildSummaries(d: HomeSummaryResponse): SectionSummary[] {
       page: "analytics",
       label: "Analytics",
       hue: "moss",
-      lead: d.analytics.pinsThisMonth,
-      unit: "pins this month",
+      ...counted(d?.analytics.pinsThisMonth, "pins this month"),
       blurb: "The numbers are the proof civfix works — dropped, routed, resolved, cleaned up.",
-      stats: [{ k: "Cleanups", v: d.analytics.cleanups }],
-      spark: d.analytics.pinsByWeek,
-      metrics: [
+      stats: [{ k: "Cleanups", v: d?.analytics.cleanups }],
+      spark: d?.analytics.pinsByWeek,
+      metrics: d && [
         { k: "Resolved", v: `${d.analytics.resolvedPct}%` },
         { k: "Coverage", v: `${d.analytics.coveragePct}%` },
         { k: "Events", v: d.analytics.eventsThisMonth },
@@ -192,11 +193,13 @@ function initials(name: string): string {
 }
 
 
+const POPULATION_FORMAT = new Intl.NumberFormat("en", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
+
 function compactPop(pop: number): string {
-  if (pop <= 0) return ""
-  if (pop < 1000) return String(pop)
-  const k = pop / 1000
-  return `${k < 10 ? k.toFixed(1) : k.toFixed(0)}k`
+  return pop > 0 ? POPULATION_FORMAT.format(pop) : ""
 }
 
 function discoveryRow(x: DiscoveryTaskDTO): PeekItem {
@@ -240,7 +243,7 @@ function mailRow(t: MailThreadListItemDTO): PeekItem {
     dir: t.dir,
     title: t.org,
     meta: t.subject,
-    age: t.ts,
+    age: relativeAgo(t.ts),
     focusId: t.id,
   }
 }
@@ -252,9 +255,25 @@ function inboxRow(i: InboundEmailListItemDTO): PeekItem {
     hue: "sky",
     title: i.from || i.recipient,
     meta: i.subject || "(no subject)",
-    age: i.ts,
+    age: relativeAgo(i.ts),
     focusId: `inbox:${i.id}`,
   }
+}
+
+function mailPreviewRows(
+  outreach: readonly MailThreadListItemDTO[],
+  inbound: readonly InboundEmailListItemDTO[],
+  limit: number,
+): PeekItem[] {
+  // Both feeds serialize ts with toISOString, so comparing the strings orders them by time.
+  const newestFirst = (a: { ts: string }, b: { ts: string }) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)
+  return [
+    ...outreach.map((t) => ({ ts: t.ts, row: mailRow(t) })),
+    ...inbound.map((i) => ({ ts: i.ts, row: inboxRow(i) })),
+  ]
+    .sort(newestFirst)
+    .slice(0, limit)
+    .map((x) => x.row)
 }
 
 function userRow(u: AdminUserListItemDTO): PeekItem {
@@ -344,6 +363,8 @@ interface PreviewState {
   error: unknown
   onRetry: () => void
   hasMore: boolean
+  /** One source of a merged tile failed while the other loaded; its rows still show. */
+  partialError?: { title: string; error: unknown; onRetry: () => void }
 }
 
 function PreviewList({
@@ -369,10 +390,17 @@ function PreviewList({
       </div>
     )
   }
+  const partial = state.partialError && (
+    <ErrorState
+      error={state.partialError.error}
+      onRetry={state.partialError.onRetry}
+      title={state.partialError.title}
+    />
+  )
   if (rows.length === 0) {
     return (
       <div className="stile-list">
-        <div className="slr-empty">Nothing here right now.</div>
+        {partial ?? <div className="slr-empty">Nothing here right now.</div>}
       </div>
     )
   }
@@ -381,6 +409,7 @@ function PreviewList({
       {rows.map((item) => (
         <PreviewRow key={item.focusId} item={item} page={page} />
       ))}
+      {partial}
     </div>
   )
 }
@@ -488,7 +517,7 @@ function SectionTile({
           <Ico size={16} />
         </span>
         <span className="stile-label">{s.label}</span>
-        {!metric && (
+        {!metric && s.unit && (
           <span className="stile-headcount">
             {s.lead === null ? (
               s.unit
@@ -510,7 +539,11 @@ function SectionTile({
             </div>
             {s.spark &&
               (s.spark.some((v) => v > 0) ? (
-                <Spark values={s.spark} hue={s.hue} />
+                <Spark
+                  values={s.spark}
+                  hue={s.hue}
+                  label={`Pins per week, last ${s.spark.length} weeks: ${s.spark.join(", ")}`}
+                />
               ) : (
                 <div className="hub-spark hub-spark-empty">No data yet</div>
               ))}
@@ -583,16 +616,13 @@ export function HomePage(_props: SectionPageProps) {
   const usersQuery = useUserList({ limit: PREVIEW_ROWS + 1 })
   const moderationQuery = useModerationList({ limit: PREVIEW_ROWS + 1 })
 
-  const summaries = React.useMemo(
-    () => (summaryQuery.data ? buildSummaries(summaryQuery.data) : []),
-    [summaryQuery.data],
-  )
+  const summaries = React.useMemo(() => buildSummaries(summaryQuery.data), [summaryQuery.data])
   const mailSummary = React.useMemo<SectionSummary | undefined>(() => {
     const base = summaries.find((s) => s.id === "mail")
     if (!base) return undefined
     const needsAction = summaryQuery.data?.mail.needsAction ?? 0
     const inboxUnread = summaryQuery.data?.inboxUnread
-    const presentation = getMailPreviewPresentation(base.lead ?? 0)
+    const presentation = base.lead === null ? NO_COUNT : getMailPreviewPresentation(base.lead)
     return {
       ...base,
       lead: presentation.lead,
@@ -609,7 +639,9 @@ export function HomePage(_props: SectionPageProps) {
     }
   }, [summaries, summaryQuery.data])
   const moderationItems = moderationQuery.data?.items ?? []
-  const moderationPresentation = getModerationPreviewPresentation(summaryQuery.data?.moderationQueue)
+  const moderationPresentation = summaryQuery.data
+    ? getModerationPreviewPresentation(summaryQuery.data.moderationQueue)
+    : NO_COUNT
   const moderationSummary = React.useMemo<SectionSummary>(
     () => ({
       id: "moderation",
@@ -631,7 +663,7 @@ export function HomePage(_props: SectionPageProps) {
         : summaries.find((s) => s.id === id)
   const summary = summaryQuery.data
 
-  const analytics = byId("analytics")
+  const analytics = summary ? byId("analytics") : undefined
   const previewTiles: PreviewTile[] = []
   const addTile = (
     id: string,
@@ -664,11 +696,11 @@ export function HomePage(_props: SectionPageProps) {
     "cities",
     { feature: true, total: summary?.discovery.queue },
   )
-  const mailPeek = (mailQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(mailRow)
-  const inboxPeek = (inboxQuery.data?.items ?? []).slice(0, PREVIEW_ROWS).map(inboxRow)
+  const outreachItems = mailQuery.data?.items ?? []
+  const inboundItems = inboxQuery.data?.items ?? []
   const mailState: PreviewState = {
     isLoading: mailQuery.isLoading || inboxQuery.isLoading,
-    isError: mailQuery.isError || inboxQuery.isError,
+    isError: mailQuery.isError && inboxQuery.isError,
     error: mailQuery.error ?? inboxQuery.error,
     onRetry: () => {
       void mailQuery.refetch()
@@ -677,13 +709,27 @@ export function HomePage(_props: SectionPageProps) {
     hasMore:
       mailQuery.data?.nextCursor != null ||
       inboxQuery.data?.nextCursor != null ||
-      mailPeek.length + inboxPeek.length > PREVIEW_ROWS,
+      outreachItems.length + inboundItems.length > PREVIEW_ROWS,
+    partialError:
+      mailQuery.isError && !inboxQuery.isError
+        ? {
+            title: "Could not load outreach mail",
+            error: mailQuery.error,
+            onRetry: () => void mailQuery.refetch(),
+          }
+        : inboxQuery.isError && !mailQuery.isError
+          ? {
+              title: "Could not load the inbox",
+              error: inboxQuery.error,
+              onRetry: () => void inboxQuery.refetch(),
+            }
+          : undefined,
   }
   addTile(
     "mail",
     "bt-mail",
     mailState,
-    [...mailPeek, ...inboxPeek].slice(0, PREVIEW_ROWS),
+    mailPreviewRows(outreachItems, inboundItems, PREVIEW_ROWS),
     "message",
     "messages",
   )
@@ -740,48 +786,35 @@ export function HomePage(_props: SectionPageProps) {
           <LiveMap />
         </div>
 
-        {summaryQuery.isLoading ? (
-          <div className="bt-cell bt-discovery">
+        {renderTile(tile("discovery"))}
+        <div className="bt-cell bt-analytics">
+          {summaryQuery.isLoading ? (
             <section className="card">
-              <LoadingState label="Loading dashboard..." />
+              <LoadingState label="Loading summary..." />
             </section>
-          </div>
-        ) : summaryQuery.isError ? (
-          <div className="bt-cell bt-discovery">
+          ) : summaryQuery.isError ? (
             <section className="card">
               <ErrorState
                 error={summaryQuery.error}
                 onRetry={() => summaryQuery.refetch()}
-                title="Could not load the dashboard"
+                title="Could not load the dashboard summary"
               />
             </section>
-          </div>
-        ) : (
-          <>
-            {renderTile(tile("discovery"))}
-            {analytics && (
-              <div className="bt-cell bt-analytics">
-                <SectionTile s={analytics} />
-              </div>
-            )}
-            {renderTile(tile("moderation"))}
-            {renderTile(tile("mail"))}
-            {renderTile(tile("users"))}
-            {renderTile(tile("reports"))}
-            {renderTile(tile("events"))}
-          </>
-        )}
+          ) : analytics ? (
+            <SectionTile s={analytics} />
+          ) : null}
+        </div>
+        {renderTile(tile("moderation"))}
+        {renderTile(tile("mail"))}
+        {renderTile(tile("users"))}
+        {renderTile(tile("reports"))}
+        {renderTile(tile("events"))}
 
         <div className="bt-cell bt-host">
           <HostPlatformLauncher />
         </div>
       </div>
-      <footer className="hub-foot">
-        <a href={SOURCE.url} target="_blank" rel="noreferrer noopener">
-          <Icons.ExternalLink size={12} /> Source code (AGPL-3.0)
-        </a>
-        {SOURCE.commit ? <span className="hub-foot-commit">{SOURCE.commit.slice(0, 7)}</span> : null}
-      </footer>
+      <SourceFooter />
     </div>
   )
 }

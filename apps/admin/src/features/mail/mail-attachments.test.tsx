@@ -1,6 +1,7 @@
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import type {
   GetForwardTemplateDefaultResponse,
+  InboxFeedResponse,
   InboxListResponse,
   MailListResponse,
   MailStatsResponse,
@@ -11,6 +12,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { apiMock } from "@/test/api-mock"
+import { startFakeTimersWithUser } from "@/test/fake-timers"
 import { renderWithQuery } from "@/test/render"
 import { detailCard } from "@/test/panes"
 import { MailPage } from "@/features/mail/mail-page"
@@ -87,5 +89,31 @@ describe("MailReader attachments", () => {
     expect(unsafe).toHaveTextContent("link unavailable")
     expect(photo).not.toHaveTextContent("link unavailable")
     expect(document.querySelector('a[href^="javascript:"]')).toBeNull()
+  })
+
+  it("re-reads an open thread with attachments before their presigned links expire", async () => {
+    startFakeTimersWithUser()
+    apiMock.getMailStats.mockResolvedValue({
+      unread: 0,
+      threads: 1,
+      sent: 0,
+      bounced: 0,
+      failed: 0,
+    } satisfies MailStatsResponse)
+    apiMock.getForwardTemplateDefault.mockResolvedValue({
+      subjectTemplate: null,
+      bodyTemplate: null,
+      updatedAt: null,
+    } satisfies GetForwardTemplateDefaultResponse)
+    apiMock.listInboxFeed.mockResolvedValue({ items: [], nextCursor: null } satisfies InboxFeedResponse)
+    apiMock.listMail.mockResolvedValue({ items: [THREAD], nextCursor: null } satisfies MailListResponse)
+    apiMock.getMailThread.mockResolvedValue(DETAIL)
+    renderWithQuery(<MailPage focusId={null} />)
+    await screen.findByRole("link", { name: /pothole\.jpg/ })
+    expect(apiMock.getMailThread).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(10 * 60_000)
+
+    await waitFor(() => expect(apiMock.getMailThread).toHaveBeenCalledTimes(2))
   })
 })

@@ -9,25 +9,19 @@ import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import { orgStatusView } from "@/lib/org-status"
 import { EvidenceList } from "@/features/orgs/evidence-list"
+import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verification"
 import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
-import { useNav, useToast } from "@/store/ui-store"
-
-export const ORG_KIND_LABEL: Record<OrgVerificationKind, string> = {
-  nonprofit: "Nonprofit",
-  government: "Government",
-  community: "Community group",
-}
+import { useNav } from "@/store/ui-store"
 
 const APPROVE_KINDS: OrgVerificationKind[] = ["nonprofit", "government", "community"]
 
 export function VerificationPanel({ orgId }: { orgId: string }) {
   const q = useAdminOrg(orgId)
   const decide = useDecideOrgVerification()
-  const toast = useToast()
   const nav = useNav()
 
   if (q.isLoading) return <LoadingState label="Loading organization..." />
-  if (q.isError) {
+  if (q.isError && !q.data) {
     return (
       <ErrorState
         error={q.error}
@@ -42,7 +36,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
   const verification = org.verification ?? null
   const statusView = orgStatusView(org.verifiedStatus)
   const documentIds = verification?.documentMediaIds ?? []
-  const pending = org.verifiedStatus === "pending"
+  const decidable = canDecideVerification(org)
 
   const onApprove = async (kind: OrgVerificationKind) => {
     const ok = await confirmDialog({
@@ -51,10 +45,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
       confirmLabel: "Verify organization",
     })
     if (!ok) return
-    decide.mutate(
-      { id: org.id, decision: "verified", kind },
-      { onSuccess: () => toast(`${org.name} verified · ${ORG_KIND_LABEL[kind]}`) },
-    )
+    decide.mutate({ id: org.id, decision: "verified", kind })
   }
 
   const onReject = async () => {
@@ -68,10 +59,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
       danger: true,
     })
     if (reason === null || reason.trim() === "") return
-    decide.mutate(
-      { id: org.id, decision: "rejected", reason: reason.trim() },
-      { onSuccess: () => toast(`${org.name} rejected`) },
-    )
+    decide.mutate({ id: org.id, decision: "rejected", reason: reason.trim() })
   }
 
   return (
@@ -198,48 +186,50 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
         </div>
       </div>
 
-      <div className="sub">
-        <div className="sub-head">
-          Evidence
-          <span className="rep-confirms" style={{ marginLeft: "auto" }}>
-            <Icons.FileText size={12} /> {documentIds.length}
-          </span>
+      {verification !== null && (
+        <div className="sub">
+          <div className="sub-head">
+            Evidence
+            <span className="rep-confirms" style={{ marginLeft: "auto" }}>
+              <Icons.FileText size={12} /> {documentIds.length}
+            </span>
+          </div>
+          <div className="sub-body">
+            <EvidenceList mediaIds={documentIds} />
+          </div>
         </div>
-        <div className="sub-body">
-          <EvidenceList mediaIds={documentIds} />
-        </div>
-      </div>
+      )}
 
-      <div className="rep-actions">
-        <span className="rep-actions-label">Decision</span>
-        {APPROVE_KINDS.map((kind) => (
+      {decidable ? (
+        <div className="rep-actions">
+          <span className="rep-actions-label">Decision</span>
+          {APPROVE_KINDS.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className="btn sm"
+              disabled={decide.isPending}
+              onClick={() => void onApprove(kind)}
+            >
+              Verify as {ORG_KIND_LABEL[kind].toLowerCase()}
+            </button>
+          ))}
+          <div className="spacer" />
           <button
-            key={kind}
             type="button"
-            className={`btn sm ${org.verifiedKind === kind && org.verifiedStatus === "verified" ? "primary" : ""}`}
+            className="btn danger"
             disabled={decide.isPending}
-            onClick={() => void onApprove(kind)}
+            onClick={() => void onReject()}
           >
-            {org.verifiedKind === kind && org.verifiedStatus === "verified" && (
-              <Icons.Check size={11} />
-            )}
-            Verify as {ORG_KIND_LABEL[kind].toLowerCase()}
+            <Icons.X size={13} /> Reject
           </button>
-        ))}
-        <div className="spacer" />
-        <button
-          type="button"
-          className="btn danger"
-          disabled={decide.isPending}
-          onClick={() => void onReject()}
-        >
-          <Icons.X size={13} /> Reject
-        </button>
-      </div>
-      {!pending && org.verifiedStatus !== "unverified" && (
+        </div>
+      ) : (
         <div className="pay-note">
-          <Icons.Clock size={13} /> This application was already decided. Deciding again overwrites
-          the previous outcome and is audited.
+          <Icons.Clock size={13} />{" "}
+          {org.deletedAt
+            ? "This organization was deleted, so its application can no longer be decided."
+            : "No application is awaiting a decision."}
         </div>
       )}
     </div>

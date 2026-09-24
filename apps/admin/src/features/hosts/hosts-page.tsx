@@ -7,6 +7,7 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { useDebounced } from "@/hooks/use-debounced"
 import { formatDateTime } from "@/lib/dates"
 import { BroadcastLog } from "@/features/hosts/broadcast-log"
@@ -24,7 +25,7 @@ import {
   useAdminHostsInfinite,
   useSetHostMessagingSuspended,
 } from "@/features/hosts/use-hosts"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const FILTER_LABEL: Record<(typeof HOST_FILTERS)[number], string> = {
@@ -43,7 +44,18 @@ function HostRow({
   onClick: () => void
 }) {
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
+      }}
+    >
       <div className="leading">
         <span className="evt-row-ico hue-bloom" title="Host">
           <Icons.Send size={15} />
@@ -88,7 +100,6 @@ function HostDetail({
   activityWindow: HostActivityWindow
 }) {
   const suspend = useSetHostMessagingSuspended()
-  const toast = useToast()
   const nav = useNav()
   const logParams = React.useMemo(
     () => hostBroadcastParams(row.host.id, activityWindow),
@@ -120,17 +131,10 @@ function HostDetail({
       danger: next,
     })
     if (reason === null || reason.trim() === "") return
-    suspend.mutate(
-      { id: row.host.id, suspended: next, reason: reason.trim() },
-      {
-        onSuccess: () =>
-          toast(
-            next
-              ? `Messaging suspended · ${row.host.name}`
-              : `Messaging restored · ${row.host.name}`,
-          ),
-      },
-    )
+    suspend.mutate({
+      request: { id: row.host.id, suspended: next, reason: reason.trim() },
+      hostName: row.host.name,
+    })
   }
 
   return (
@@ -236,6 +240,12 @@ function HostDetail({
         <div className="sub-body">
           {logQuery.isLoading ? (
             <LoadingState label="Reading the broadcast log..." />
+          ) : logQuery.isError ? (
+            <EmptyState
+              title="No events to show"
+              sub="The broadcast log did not load. Try again above to see which events this host messaged."
+              icon={<Icons.Calendar size={20} />}
+            />
           ) : events.length === 0 ? (
             <EmptyState
               title="No events in the loaded log"
@@ -287,6 +297,7 @@ export function HostsPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState("all")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
 
   const debouncedQuery = useDebounced(query, 250)
   const activityWindow = React.useMemo(() => hostActivityWindow(), [])
@@ -303,15 +314,28 @@ export function HostsPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
+  // Only the first load picks a host on the operator's behalf, and a deep-linked host is never
+  // replaced. There is no single-host read, so a pick that a filter or search leaves out clears, and so
+  // does any host that drops out of the same list after a refetch (a suspend under the Active chip): the
+  // action buttons never land on a host nobody chose. Decided only on data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!selId && rows.length) setSelId(rows[0]!.host.id)
-    if (selId && selId !== focusId && rows.length && !rows.some((r) => r.host.id === selId)) {
-      setSelId(rows[0]!.host.id)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && rows.length) setSelId(rows[0]!.host.id)
+      return
     }
-  }, [rows, selId, focusId])
+    setAutoPick(false)
+    if (rows.some((r) => r.host.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (selId !== focusId || (seenIn.current?.id === selId && seenIn.current.list === listKey)) {
+      setSelId(null)
+    }
+  }, [listQuery.isSuccess, listQuery.isFetching, rows, selId, focusId, listKey, autoPick])
 
   const selected = rows.find((r) => r.host.id === selId) ?? null
-  const missingLink = selected === null && selId !== null && !listQuery.isLoading
+  const missingLink =
+    selected === null && selId !== null && selId === focusId && listQuery.isSuccess
 
   return (
     <>
@@ -339,6 +363,7 @@ export function HostsPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search hosts"
             placeholder="Search host name or handle…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -351,7 +376,12 @@ export function HostsPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>Hosts</h3>
             <div className="spacer" />
-            <span className="meta">{rows.length}</span>
+            {listQuery.isSuccess && (
+              <span className="meta">
+                {rows.length}
+                {listQuery.hasNextPage ? "+" : ""}
+              </span>
+            )}
           </div>
           <div className="queue-list">
             {listQuery.isLoading ? (

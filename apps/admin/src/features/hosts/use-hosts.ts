@@ -7,6 +7,7 @@ import type {
   AdminHostListQuery,
   AdminHostListResponse,
   SetHostMessagingSuspendedRequest,
+  SetHostMessagingSuspendedResponse,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
@@ -38,16 +39,28 @@ export function useAdminBroadcastsInfinite(params: AdminBroadcastListQuery) {
   })
 }
 
+export interface SetHostMessagingSuspendedVariables {
+  request: SetHostMessagingSuspendedRequest
+  hostName: string
+}
+
 export function useSetHostMessagingSuspended() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: SetHostMessagingSuspendedRequest) =>
-      api.adminSetHostMessagingSuspended(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.hosts.all })
-      qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) })
-      qc.invalidateQueries({ queryKey: queryKeys.users.all })
-      qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+    mutationFn: ({ request }: SetHostMessagingSuspendedVariables) =>
+      api.adminSetHostMessagingSuspended(request),
+    onSuccess: (_res, { request: { id } }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.hosts.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) }),
+        qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+      ]),
+    meta: {
+      successMessage: (
+        { suspended }: SetHostMessagingSuspendedResponse,
+        { hostName }: SetHostMessagingSuspendedVariables,
+      ) => (suspended ? `Messaging suspended · ${hostName}` : `Messaging restored · ${hostName}`),
     },
   })
 }

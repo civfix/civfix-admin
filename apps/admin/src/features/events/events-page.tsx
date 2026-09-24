@@ -3,7 +3,9 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import {
+  PostMessageRequestSchema,
   REPORT_CATEGORY_LABELS,
+  type AdminEventCounts,
   type AdminEventDTO,
   type AdminEventListItemDTO,
   type AdminReportListItemDTO,
@@ -15,6 +17,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { useModalFocus } from "@/components/shared/modal-focus"
 import { useDebounced } from "@/hooks/use-debounced"
 import { cancelBlockedFor, EVENT_STATUS_VIEW, eventStatusView } from "@/lib/event-status"
@@ -31,8 +34,12 @@ import {
   useSetEventOutcome,
   useUnlinkReport,
 } from "@/features/events/use-events"
-import { useReportList } from "@/features/reports/use-reports"
-import { useNav, useToast } from "@/store/ui-store"
+import { parseBags } from "@/features/events/event-outcome"
+import { shortId } from "@/features/events/event-id"
+import { pluralize } from "@/features/reports/plural"
+import { SubmitShortcutHint, SUBMIT_KEYSHORTCUTS } from "@/features/reports/submit-shortcut"
+import { useReportListInfinite } from "@/features/reports/use-reports"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -40,6 +47,10 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
+
+const ATTENDEE_MESSAGE_MAX = PostMessageRequestSchema.shape.body.maxLength ?? undefined
+
+type EventFilter = keyof AdminEventCounts
 
 const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> = {
   create: Icons.Pin,
@@ -55,10 +66,6 @@ const TL_ICON: Record<AdminEventDTO["timeline"][number]["kind"], IconComponent> 
 
 function firstName(name: string): string {
   return name.split(" ")[0] ?? name
-}
-
-function shortId(id: string): string {
-  return `#${id.replace(/-/g, "").slice(0, 8)}`
 }
 
 function initials(name: string): string {
@@ -132,6 +139,7 @@ function LinkReportsPicker({
   onLink: (reportIds: string[]) => void
 }) {
   const [query, setQuery] = React.useState("")
+  const debouncedQuery = useDebounced(query, 250).trim()
   const [picked, setPicked] = React.useState<Set<string>>(() => new Set())
   const modalRef = useModalFocus<HTMLDivElement>(true)
   const searchRef = React.useRef<HTMLInputElement>(null)
@@ -146,9 +154,13 @@ function LinkReportsPicker({
   // The search text is cheap to retype, so only a selection makes the picker a draft worth keeping.
   const backdrop = usePristineDismiss(onClose, picked.size === 0)
 
-  const listQuery = useReportList({ q: query.trim() || undefined })
+  const listQuery = useReportListInfinite(
+    { q: debouncedQuery || undefined },
+    { keepPreviousData: true },
+  )
   const candidates = React.useMemo<AdminReportListItemDTO[]>(
-    () => (listQuery.data?.items ?? []).filter((r) => !excludeIds.has(r.id)),
+    () =>
+      (listQuery.data?.pages.flatMap((p) => p.items) ?? []).filter((r) => !excludeIds.has(r.id)),
     [listQuery.data, excludeIds],
   )
 
@@ -185,6 +197,7 @@ function LinkReportsPicker({
               ref={searchRef}
               type="text"
               placeholder="Search title, place, reporter…"
+              aria-label="Search reports to link"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -196,7 +209,13 @@ function LinkReportsPicker({
           ) : candidates.length === 0 ? (
             <EmptyState
               title="No reports to link"
-              sub={query.trim() ? "Try a different search." : "Every matching report is already linked."}
+              sub={
+                debouncedQuery
+                  ? "Try a different search."
+                  : listQuery.hasNextPage
+                    ? "Every report loaded so far is already linked. Load more to see older ones."
+                    : "Every matching report is already linked."
+              }
               icon={<Icons.Search size={20} />}
             />
           ) : (
@@ -207,6 +226,8 @@ function LinkReportsPicker({
                 return (
                   <button
                     key={r.id}
+                    type="button"
+                    aria-pressed={on}
                     className={`evt-pick-row ${on ? "on" : ""}`}
                     onClick={() => toggle(r.id)}
                     title={r.title}
@@ -227,6 +248,16 @@ function LinkReportsPicker({
                 )
               })}
             </div>
+          )}
+          {!listQuery.isLoading && !listQuery.isError && listQuery.hasNextPage && (
+            <button
+              type="button"
+              className="btn full"
+              disabled={listQuery.isFetchingNextPage}
+              onClick={() => listQuery.fetchNextPage()}
+            >
+              {listQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
           )}
         </div>
         <div className="modal-foot">
@@ -265,9 +296,26 @@ function EventRow({
   const statusPill = eventStatusView(item.status)
   const nav = useNav()
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        // A key pressed on the nested organizer link bubbles here; it must stay that link's activation.
+        if (e.target !== e.currentTarget || !isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
+      }}
+    >
       <div className="leading">
-        <span className="evt-row-ico hue-sun" title={kindView.label}>
+        <span
+          className="evt-row-ico hue-sun"
+          role="img"
+          aria-label={kindView.label}
+          title={kindView.label}
+        >
           <KindIco size={15} />
         </span>
       </div>
@@ -275,7 +323,7 @@ function EventRow({
         <div className="top">
           <span className="title">{item.title}</span>
           {item.flagged && (
-            <span className="rep-flag-dot" title="Flagged">
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
               <Icons.Flag size={10} />
             </span>
           )}
@@ -288,24 +336,17 @@ function EventRow({
           <span className="sep">·</span>
           <span>{item.attendees} attending</span>
           <span className="sep">·</span>
-          <span
+          <button
+            type="button"
             className="lnk-inline"
-            role="button"
-            tabIndex={0}
             title={`Open ${item.organizer.name}'s profile`}
             onClick={(e) => {
               e.stopPropagation()
               nav("users", item.organizer.id)
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.stopPropagation()
-                nav("users", item.organizer.id)
-              }
-            }}
           >
             {firstName(item.organizer.name)}
-          </span>
+          </button>
         </div>
       </div>
       <div className="trailing">
@@ -316,10 +357,9 @@ function EventRow({
   )
 }
 
-function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (id: string) => void }) {
+function EventDetail({ eventId }: { eventId: string }) {
   const q = useEvent(eventId)
   const nav = useNav()
-  const toast = useToast()
 
   const flag = useFlagEvent()
   const cancel = useCancelEvent()
@@ -331,6 +371,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
   const [text, setText] = React.useState("")
   const [bagsInput, setBagsInput] = React.useState("")
   const [pickerOpen, setPickerOpen] = React.useState(false)
+  const cancelBlockedId = React.useId()
 
   if (q.isLoading) return <LoadingState label="Loading event..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -349,44 +390,19 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
 
   const send = () => {
     const body = text.trim()
-    if (!body) return
-    postMessage.mutate(
-      { id: event.id, body },
-      {
-        onSuccess: () => {
-          setText("")
-          toast("Update posted to attendees")
-        },
-      },
-    )
+    if (!body || postMessage.isPending) return
+    postMessage.mutate({ id: event.id, body }, { onSuccess: () => setText("") })
   }
 
+  const bags = parseBags(bagsInput)
+
   const logOutcome = () => {
-    const bags = Number.parseInt(bagsInput, 10)
-    if (!Number.isFinite(bags) || bags < 0) return
-    outcome.mutate(
-      { id: event.id, bags },
-      {
-        onSuccess: () => {
-          setBagsInput("")
-          toast(`Outcome logged · ${bags} bags`)
-        },
-      },
-    )
+    if (bags === null) return
+    outcome.mutate({ id: event.id, bags }, { onSuccess: () => setBagsInput("") })
   }
 
   const onFlag = () => {
-    flag.mutate(
-      { id: event.id },
-      {
-        onSuccess: () =>
-          toast(
-            event.flagged
-              ? `${shortId(event.id)} · flag cleared`
-              : `${shortId(event.id)} · flagged for review`,
-          ),
-      },
-    )
+    flag.mutate({ id: event.id })
   }
 
   const cancelBlockedReason = cancelBlockedFor(event.status)
@@ -401,31 +417,11 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
       cancelLabel: "Keep event",
     })
     if (!ok) return
-    cancel.mutate(
-      { id: event.id },
-      {
-        onSuccess: () => {
-          toast(`${shortId(event.id)} · event cancelled`)
-          onCancelled(event.id)
-        },
-      },
-    )
+    cancel.mutate({ id: event.id })
   }
 
   const onLink = (reportIds: string[]) => {
-    linkReports.mutate(
-      { id: event.id, reportIds },
-      {
-        onSuccess: () => {
-          setPickerOpen(false)
-          toast(
-            reportIds.length === 1
-              ? `${shortId(event.id)} · 1 report linked`
-              : `${shortId(event.id)} · ${reportIds.length} reports linked`,
-          )
-        },
-      },
-    )
+    linkReports.mutate({ id: event.id, reportIds }, { onSuccess: () => setPickerOpen(false) })
   }
 
   const onUnlink = async (report: LinkedReportRef) => {
@@ -436,10 +432,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
       confirmLabel: "Unlink",
     })
     if (!ok) return
-    unlinkReport.mutate(
-      { id: event.id, reportId: report.id },
-      { onSuccess: () => toast(`${shortId(event.id)} · report unlinked`) },
-    )
+    unlinkReport.mutate({ id: event.id, reportId: report.id })
   }
 
   return (
@@ -627,7 +620,8 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
               {event.bags > 0 ? (
                 <div className="evt-stat-row">
                   <span className="evt-stat">
-                    <Icons.Trash size={13} /> <b>{event.bags}</b> bags collected
+                    <Icons.Trash size={13} /> <b>{event.bags}</b>{" "}
+                    {event.bags === 1 ? "bag" : "bags"} collected
                   </span>
                 </div>
               ) : (
@@ -645,14 +639,16 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                   <input
                     type="number"
                     min={0}
+                    step={1}
                     placeholder="bags"
+                    aria-label="Bags collected"
                     value={bagsInput}
                     onChange={(e) => setBagsInput(e.target.value)}
                     style={{ width: 84 }}
                   />
                   <button
                     className="btn sm"
-                    disabled={outcome.isPending || bagsInput.trim() === ""}
+                    disabled={outcome.isPending || bags === null}
                     onClick={logOutcome}
                   >
                     {event.bags > 0 ? "Update outcome" : "Log outcome"}
@@ -717,8 +713,11 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                 placeholder={
                   event.attendees === 0
                     ? "No attendees to message yet"
-                    : `Post an update to ${event.attendees} attendees…`
+                    : `Post an update to ${pluralize(event.attendees, "attendee")}…`
                 }
+                aria-label="Update for attendees"
+                aria-keyshortcuts={SUBMIT_KEYSHORTCUTS}
+                maxLength={ATTENDEE_MESSAGE_MAX}
                 value={text}
                 disabled={event.attendees === 0}
                 onChange={(e) => setText(e.target.value)}
@@ -739,7 +738,7 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
                     : undefined
                 }
               >
-                <Icons.Send size={13} /> Post update <span className="kbdhint">⌘⏎</span>
+                <Icons.Send size={13} /> Post update <SubmitShortcutHint />
               </button>
               <div className="evt-post-hint">Updates are posted as CivFix, not from your own account.</div>
             </div>
@@ -761,12 +760,17 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
         <button
           className="btn danger"
           disabled={cancel.isPending || cancelBlockedReason !== null}
-          title={cancelBlockedReason ?? undefined}
+          aria-describedby={cancelBlockedReason ? cancelBlockedId : undefined}
           onClick={onCancel}
         >
           <Icons.Trash size={13} /> Cancel event
         </button>
       </div>
+      {cancelBlockedReason && (
+        <div id={cancelBlockedId} className="evt-post-hint">
+          {cancelBlockedReason}
+        </div>
+      )}
 
       { }
       {pickerOpen && event.eventKind === "cleanup" && (
@@ -782,16 +786,13 @@ function EventDetail({ eventId, onCancelled }: { eventId: string; onCancelled: (
 }
 
 export function EventsPage({ focusId }: SectionPageProps) {
-  const [filter, setFilter] = React.useState("all")
+  const [filter, setFilter] = React.useState<EventFilter>("all")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
 
   const debouncedQuery = useDebounced(query, 250)
   const listParams = {
-    filter:
-      filter === "all"
-        ? undefined
-        : (filter as "upcoming" | "in_progress" | "completed" | "flagged"),
+    filter: filter === "all" ? undefined : filter,
     q: debouncedQuery.trim() || undefined,
   }
   const listQuery = useEventListInfinite(listParams)
@@ -800,25 +801,36 @@ export function EventsPage({ focusId }: SectionPageProps) {
     [listQuery.data],
   )
 
-  const counts = listQuery.data?.pages[0]?.counts ?? {
+  const serverCounts: AdminEventCounts | null = listQuery.data?.pages[0]?.counts ?? null
+  const counts = serverCounts ?? {
     all: 0,
     upcoming: 0,
     in_progress: 0,
     completed: 0,
     flagged: 0,
   }
+  const listCount = serverCounts ? serverCounts[filter] : items.length
 
+  // Only the first load picks an event on the operator's behalf, and a deep-linked event is never
+  // replaced. A pick that a filter or search leaves out stays open (the detail reads it by id); a pick
+  // that drops out of the same list after a refetch (a cancel under the Upcoming chip) clears, so the
+  // pane never jumps to another event's live buttons. Decided only on data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
-  }, [items, selId])
-
-  const onCancelled = (id: string) => {
-    setSelId((cur) => (cur === id ? null : cur))
-  }
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.id)
+      return
+    }
+    setAutoPick(false)
+    if (items.some((x) => x.id === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   return (
     <>
@@ -846,7 +858,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
             { value: "flagged", label: "Flagged", count: counts.flagged },
           ]}
           value={filter}
-          onChange={setFilter}
+          onChange={(v) => setFilter(v as EventFilter)}
         />
         <div className="toolbar-spacer" />
         <div className="searchbox">
@@ -854,6 +866,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
           <input
             type="text"
             placeholder="Search title, place, organizer…"
+            aria-label="Search events"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -865,7 +878,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>Events</h3>
             <div className="spacer" />
-            <span className="meta">{items.length}</span>
+            <span className="meta">{listCount}</span>
           </div>
           <div className="queue-list">
             {listQuery.isLoading ? (
@@ -906,7 +919,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
 
         <section className="card md-detail-card">
           {selId ? (
-            <EventDetail key={selId} eventId={selId} onCancelled={onCancelled} />
+            <EventDetail key={selId} eventId={selId} />
           ) : (
             <EmptyState
               title="No event selected"

@@ -14,7 +14,7 @@ import {
 import { Icons } from "@/components/icons"
 import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
-import { toAppError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 import { usePreviewForwardTemplate } from "@/features/mail/use-mail"
 import {
   resolveTemplateSeed,
@@ -195,7 +195,7 @@ function ForwardTemplateEditor({
             {preview.isPending && <div className="hint">Rendering a preview…</div>}
             {preview.isError && !preview.isPending && (
               <div className="tpl-issue" role="alert">
-                {toAppError(preview.error).message}
+                {errorMessage(preview.error)}
               </div>
             )}
           </div>

@@ -48,17 +48,48 @@ describe("errorMessage server message and fallback", () => {
     expect(errorMessage(foreignAppError(ErrorCode.FORBIDDEN, "Nope"))).toBe("Nope")
   })
 
-  it("shows a plain Error's message as INTERNAL", () => {
-    expect(errorMessage(new TypeError("Failed to fetch"))).toBe("Failed to fetch")
+  it("shows a plain Error's own message", () => {
+    expect(errorMessage(new Error("Upload failed (413). Please try again."))).toBe(
+      "Upload failed (413). Please try again.",
+    )
+  })
+
+  it.each([
+    "Failed to fetch",
+    "NetworkError when attempting to fetch resource.",
+    "Load failed",
+  ])("shows connection copy instead of the browser's fetch failure %j", (message) => {
+    expect(errorMessage(new TypeError(message))).toBe(
+      "Could not reach the server. Check your connection and try again.",
+    )
+    expect(errorMessage(new TypeError(message), {}, { fallback: "Try later" })).toBe(
+      "Could not reach the server. Check your connection and try again.",
+    )
+  })
+
+  it("keeps a code override ahead of the connection copy", () => {
+    expect(errorMessage(new TypeError("Failed to fetch"), { [ErrorCode.INTERNAL]: "Offline" })).toBe("Offline")
+  })
+
+  it("shows the fallback, not the connection copy, for a fetch failure when preferServerMessage is false", () => {
+    expect(
+      errorMessage(new TypeError("Failed to fetch"), {}, { preferServerMessage: false, fallback: "Try later" }),
+    ).toBe("Try later")
+  })
+
+  it("does not blame the connection for a TypeError from app code", () => {
+    expect(errorMessage(new TypeError("x is not a function"))).not.toBe(
+      "Could not reach the server. Check your connection and try again.",
+    )
   })
 
   it("shows the network fallback for a plain Error with no message", () => {
     expect(errorMessage(new Error(""))).toBe("Network request failed")
   })
 
-  it("shows \"Unknown error\" for a non-Error value rather than the fallback (current behavior)", () => {
-    expect(errorMessage("boom")).toBe("Unknown error")
-    expect(errorMessage(undefined, {}, { fallback: "Try later" })).toBe("Unknown error")
+  it("shows the fallback for a non-Error value", () => {
+    expect(errorMessage("boom")).toBe(GENERIC)
+    expect(errorMessage(undefined, {}, { fallback: "Try later" })).toBe("Try later")
   })
 
   it("uses the fallback for a non-Error value when preferServerMessage is false", () => {
@@ -169,9 +200,12 @@ describe("errorMessage field errors", () => {
     ).toBe("That slug is in use")
   })
 
-  it("returns an inherited Object.prototype member when a field value names one (current behavior)", () => {
-    expect(errorMessage(validation("bad", { slug: "toString" }), {}, { fields })).toBe(
-      Object.prototype.toString,
-    )
-  })
+  it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])(
+    "ignores a field value %j that names an inherited Object.prototype member",
+    (value) => {
+      expect(errorMessage(validation("Server says no", { slug: value }), {}, { fields })).toBe(
+        "Server says no",
+      )
+    },
+  )
 })

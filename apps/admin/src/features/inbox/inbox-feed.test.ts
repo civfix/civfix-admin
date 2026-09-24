@@ -27,19 +27,17 @@ describe("inbox feed keys", () => {
 })
 
 describe("selected feed item", () => {
-  const picked = { item: { source: "reply" as const, id: "m1", unread: true }, view: "unread:" }
-  const listed = { ...picked.item, unread: false }
+  const picked = { source: "reply" as const, id: "m1", unread: true }
+  const listed = { ...picked, unread: false }
 
-  it("reads the listed row, and keeps the picked row once marking it read drops it", () => {
-    expect(resolveFeedSelection(new Map([["reply:m1", listed]]), picked, "reply:m1", "unread:")).toBe(listed)
-    expect(resolveFeedSelection(new Map(), picked, "reply:m1", "unread:")).toBe(picked.item)
+  it("reads the listed row, and keeps the picked row once a filter or an action drops it", () => {
+    expect(resolveFeedSelection(new Map([["reply:m1", listed]]), picked, "reply:m1")).toBe(listed)
+    expect(resolveFeedSelection(new Map(), picked, "reply:m1")).toBe(picked)
   })
 
-  it("resolves nothing for an unlisted key unless it was picked under the same filter and search", () => {
-    expect(resolveFeedSelection(new Map(), picked, "reply:m1", "replies:")).toBeUndefined()
-    expect(resolveFeedSelection(new Map(), picked, "reply:m1", "unread:city")).toBeUndefined()
-    expect(resolveFeedSelection(new Map(), picked, "reply:m2", "unread:")).toBeUndefined()
-    expect(resolveFeedSelection(new Map(), null, "email:e1", "unread:")).toBeUndefined()
+  it("resolves nothing for a key that was neither listed nor picked", () => {
+    expect(resolveFeedSelection(new Map(), picked, "reply:m2")).toBeUndefined()
+    expect(resolveFeedSelection(new Map(), null, "email:e1")).toBeUndefined()
   })
 })
 

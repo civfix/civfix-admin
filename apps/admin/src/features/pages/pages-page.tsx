@@ -11,9 +11,11 @@ import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { useDebounced } from "@/hooks/use-debounced"
 import { formatDateTime } from "@/lib/dates"
 import { pageListParams, pageRowFromDTO } from "@/features/pages/pages-filters"
+import { publicPagePath } from "@/features/pages/page-path"
 import { PagePreview } from "@/features/pages/page-preview"
 import {
   useAdminEventPage,
@@ -21,13 +23,17 @@ import {
   useFlagEventPage,
   useUnpublishEventPage,
 } from "@/features/pages/use-pages"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 const PAGE_STATUS_VIEW: Record<EventPageStatus, { label: string; cls: string }> = {
   draft: { label: "Draft", cls: "priority-low" },
   published: { label: "Published", cls: "status-ok" },
   unpublished: { label: "Unpublished", cls: "status-flag" },
+}
+
+function pageStatusView(status: EventPageStatus): { label: string; cls: string } {
+  return Object.hasOwn(PAGE_STATUS_VIEW, status) ? PAGE_STATUS_VIEW[status] : { label: status, cls: "priority-low" }
 }
 
 const VISIBILITY_LABEL: Record<EventVisibility, string> = {
@@ -45,9 +51,20 @@ function PageRow({
   selected: boolean
   onClick: () => void
 }) {
-  const view = PAGE_STATUS_VIEW[item.status]
+  const view = pageStatusView(item.status)
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={onClick}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onClick()
+      }}
+    >
       <div className="leading">
         <span className="evt-row-ico hue-lilac" title="Signup page">
           <Icons.Globe size={15} />
@@ -57,11 +74,11 @@ function PageRow({
         <div className="top">
           <span className="title">{item.title}</span>
           {item.flaggedAt && (
-            <span className="rep-flag-dot" title="Flagged">
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
               <Icons.Flag size={10} />
             </span>
           )}
-          <span className="ident">{item.slug ? `/${item.slug}` : "no slug"}</span>
+          <span className="ident">{item.slug ? publicPagePath(item.slug) : "no slug"}</span>
         </div>
         <div className="sub">
           <span className="strong">{VISIBILITY_LABEL[item.visibility]}</span>
@@ -92,14 +109,13 @@ function PageRow({
 function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
   const flag = useFlagEventPage()
   const unpublish = useUnpublishEventPage()
-  const toast = useToast()
   const nav = useNav()
-  const view = PAGE_STATUS_VIEW[item.status]
+  const view = pageStatusView(item.status)
   const flagged = item.flaggedAt != null
 
   const onFlag = async () => {
     if (flagged) {
-      flag.mutate({ id: item.cleanupId, flagged: false }, { onSuccess: () => toast("Flag cleared") })
+      flag.mutate({ id: item.cleanupId, flagged: false })
       return
     }
     const reason = await promptDialog({
@@ -111,10 +127,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
       required: true,
     })
     if (reason === null || reason.trim() === "") return
-    flag.mutate(
-      { id: item.cleanupId, flagged: true, reason: reason.trim() },
-      { onSuccess: () => toast(`Flagged · /${item.slug ?? item.cleanupId}`) },
-    )
+    flag.mutate({ id: item.cleanupId, flagged: true, reason: reason.trim() })
   }
 
   const onUnpublish = async () => {
@@ -128,10 +141,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
       danger: true,
     })
     if (reason === null || reason.trim() === "") return
-    unpublish.mutate(
-      { id: item.cleanupId, reason: reason.trim() },
-      { onSuccess: () => toast(`Unpublished · /${item.slug ?? item.cleanupId}`) },
-    )
+    unpublish.mutate({ id: item.cleanupId, reason: reason.trim() })
   }
 
   return (
@@ -143,7 +153,7 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
           </span>
         </span>
         <div className="rep-head-text">
-          <div className="crumb mono">{item.slug ? `/e/${item.slug}` : "unpublished draft"}</div>
+          <div className="crumb mono">{item.slug ? publicPagePath(item.slug) : "unpublished draft"}</div>
           <h2>{item.title}</h2>
         </div>
         {flagged && (
@@ -236,6 +246,7 @@ export function PagesPage({ focusId }: SectionPageProps) {
   const [filter, setFilter] = React.useState("published")
   const [query, setQuery] = React.useState("")
   const [selId, setSelId] = React.useState<string | null>(focusId)
+  const [autoPick, setAutoPick] = React.useState(focusId === null)
 
   const debouncedQuery = useDebounced(query, 250)
   const listParams = React.useMemo(
@@ -251,23 +262,28 @@ export function PagesPage({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
+  // Only the first load picks a page on the operator's behalf, and a deep-linked page is never
+  // replaced. A pick that a filter or search leaves out stays open, read by id; a pick that drops out of
+  // the same list after a refetch (an unpublish under the Published chip) clears, so the moderation
+  // buttons never land on a page nobody chose. Decided only on data fetched for the current params.
+  const listKey = JSON.stringify(listParams)
+  const seenIn = React.useRef<{ id: string; list: string } | null>(null)
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.cleanupId)
-    if (
-      selId &&
-      selId !== focusId &&
-      items.length &&
-      !items.some((x) => x.cleanupId === selId)
-    ) {
-      setSelId(items[0]!.cleanupId)
+    if (!listQuery.isSuccess || listQuery.isFetching) return
+    if (selId === null) {
+      if (autoPick && items.length) setSelId(items[0]!.cleanupId)
+      return
     }
-  }, [items, selId, focusId])
+    setAutoPick(false)
+    if (items.some((x) => x.cleanupId === selId)) seenIn.current = { id: selId, list: listKey }
+    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
+  }, [listQuery.isSuccess, listQuery.isFetching, items, selId, listKey, autoPick])
 
   const listed = items.find((x) => x.cleanupId === selId) ?? null
-  const linked = useAdminEventPage(
-    selId !== null && listed === null && !listQuery.isLoading ? selId : null,
-  )
-  const selected = listed ?? (linked.data ? pageRowFromDTO(linked.data) : null)
+  // The detail's preview reads the same key, so fetching before the list settles never doubles a request.
+  const byId = useAdminEventPage(listed === null ? selId : null)
+  const selected = listed ?? (byId.data ? pageRowFromDTO(byId.data) : null)
+  const byIdNoun = selId === focusId ? "the linked page" : "the page"
 
   return (
     <>
@@ -298,6 +314,7 @@ export function PagesPage({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search signup pages"
             placeholder="Search slug or title…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -310,7 +327,12 @@ export function PagesPage({ focusId }: SectionPageProps) {
           <div className="card-head">
             <h3>Pages</h3>
             <div className="spacer" />
-            <span className="meta">{items.length}</span>
+            {listQuery.isSuccess && (
+              <span className="meta">
+                {items.length}
+                {listQuery.hasNextPage ? "+" : ""}
+              </span>
+            )}
           </div>
           <div className="queue-list">
             {listQuery.isLoading ? (
@@ -353,13 +375,13 @@ export function PagesPage({ focusId }: SectionPageProps) {
         <section className="card md-detail-card">
           {selected ? (
             <PageDetail key={selected.cleanupId} item={selected} />
-          ) : linked.isLoading ? (
-            <LoadingState label="Loading the linked page..." />
-          ) : linked.isError ? (
+          ) : byId.isLoading ? (
+            <LoadingState label={`Loading ${byIdNoun}...`} />
+          ) : byId.isError ? (
             <ErrorState
-              error={linked.error}
-              onRetry={() => linked.refetch()}
-              title="Could not load the linked page"
+              error={byId.error}
+              onRetry={() => byId.refetch()}
+              title={`Could not load ${byIdNoun}`}
             />
           ) : (
             <EmptyState

@@ -5,8 +5,10 @@ import type {
   AdminUserListResponse,
   DiscoveryListResponse,
   HomeSummaryResponse,
+  InboundEmailListItemDTO,
   InboxListResponse,
   MailListResponse,
+  MailThreadListItemDTO,
   ModerationListResponse,
 } from "@civfix/shared"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -34,6 +36,8 @@ vi.mock("@/components/map/live-map", () => ({
 }))
 
 const never = () => new Promise<never>(() => {})
+
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString()
 
 const summary = {
   discovery: { queue: 12, reportsWaiting: 30, overSla: 4 },
@@ -140,43 +144,37 @@ const eventsPage = {
   counts: { all: 1, upcoming: 1, in_progress: 0, completed: 0, flagged: 0 },
 } satisfies AdminEventListResponse
 
-const mailPage = {
-  items: [
-    {
-      id: "m-1",
-      dir: "out",
-      from: "routing@civfix.org",
-      to: "works@la.gov",
-      org: "LA Public Works",
-      subject: "Pothole on Main",
-      preview: "Hello",
-      ts: "5m",
-      unread: false,
-      status: "sent",
-      jurisdictionGeoid: "0644000",
-      reportId: null,
-    },
-  ],
-  nextCursor: null,
-} satisfies MailListResponse
+const outreachThread = {
+  id: "m-1",
+  dir: "out",
+  from: "routing@civfix.org",
+  to: "works@la.gov",
+  org: "LA Public Works",
+  subject: "Pothole on Main",
+  preview: "Hello",
+  ts: minutesAgo(5),
+  unread: false,
+  status: "sent",
+  jurisdictionGeoid: "0644000",
+  reportId: null,
+} satisfies MailThreadListItemDTO
 
-const inboxPage = {
-  items: [
-    {
-      id: "in-1",
-      from: "",
-      recipient: "hello@civfix.org",
-      localPart: "hello",
-      subject: "",
-      preview: "",
-      ts: "9m",
-      status: "unread",
-      unread: true,
-      hasAttachments: false,
-    },
-  ],
-  nextCursor: null,
-} satisfies InboxListResponse
+const mailPage = { items: [outreachThread], nextCursor: null } satisfies MailListResponse
+
+const inboundEmail = {
+  id: "in-1",
+  from: "",
+  recipient: "hello@civfix.org",
+  localPart: "hello",
+  subject: "",
+  preview: "",
+  ts: minutesAgo(9),
+  status: "unread",
+  unread: true,
+  hasAttachments: false,
+} satisfies InboundEmailListItemDTO
+
+const inboxPage = { items: [inboundEmail], nextCursor: null } satisfies InboxListResponse
 
 const usersPage = {
   items: [
@@ -252,7 +250,7 @@ afterEach(() => {
 })
 
 describe("HomePage", () => {
-  it("shows the dashboard loading state while the summary is in flight, with the launcher and footer", () => {
+  it("shows the summary loading state and every preview tile's own loading state, with the launcher and footer", () => {
     apiMock.adminHomeSummary.mockImplementation(never)
     apiMock.listDiscovery.mockImplementation(never)
     apiMock.listAdminReports.mockImplementation(never)
@@ -264,8 +262,11 @@ describe("HomePage", () => {
 
     renderWithQuery(<HomePage focusId={null} />)
 
-    expect(screen.getByRole("status")).toHaveTextContent("Loading dashboard...")
-    expect(screen.queryByRole("button", { name: /^Reports/ })).not.toBeInTheDocument()
+    expect(screen.getByText("Loading summary...")).toBeInTheDocument()
+    expect(screen.getAllByText("Loading...")).toHaveLength(6)
+    expect(screen.getByRole("button", { name: /^Reports$/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Jurisdictions$/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Moderation$/ })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Host platform" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Organizations/ })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Host messaging/ })).toBeInTheDocument()
@@ -273,21 +274,28 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: /Source code \(AGPL-3\.0\)/ })).toBeInTheDocument()
   })
 
-  it("replaces every section tile with one retryable error when the summary fails", async () => {
+  it("keeps every preview tile when the summary fails and shows one retryable summary error", async () => {
     mockAllLoaded()
     apiMock.adminHomeSummary.mockRejectedValue(new Error("summary exploded"))
 
     renderWithQuery(<HomePage focusId={null} />)
 
     const alert = await screen.findByRole("alert")
-    expect(alert).toHaveTextContent("Could not load the dashboard")
+    expect(alert).toHaveTextContent("Could not load the dashboard summary")
     expect(alert).toHaveTextContent("summary exploded")
-    expect(screen.queryByText("Los Angeles")).not.toBeInTheDocument()
+    expect(screen.getAllByRole("alert")).toHaveLength(1)
+    expect(await within(tileOf(/^Jurisdictions$/)).findByText("Los Angeles")).toBeInTheDocument()
+    expect(await within(tileOf(/^Reports$/)).findByText("Broken streetlight")).toBeInTheDocument()
+    expect(await within(tileOf(/^Mail$/)).findByText("LA Public Works")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^Analytics$/ })).not.toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Host platform" })).toBeInTheDocument()
 
     apiMock.adminHomeSummary.mockResolvedValue(summary)
     fireEvent.click(within(alert).getByRole("button", { name: "Try again" }))
-    expect(await screen.findByRole("button", { name: /^Jurisdictions/ })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: /^Jurisdictions\s*12 jurisdictions in queue$/ }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Analytics$/ })).toBeInTheDocument()
     expect(apiMock.adminHomeSummary).toHaveBeenCalledTimes(2)
   })
 
@@ -327,6 +335,9 @@ describe("HomePage", () => {
       within(analytics).getByRole("button", { name: /^9 Cleanups\s*See analytics$/ }),
     ).toBeInTheDocument()
     expect(within(analytics).queryByText("No data yet")).not.toBeInTheDocument()
+    expect(
+      within(analytics).getByRole("img", { name: "Pins per week, last 4 weeks: 1, 4, 2, 6" }),
+    ).toBeInTheDocument()
   })
 
   it("renders up to two preview rows per tile and the remaining count", async () => {
@@ -338,7 +349,7 @@ describe("HomePage", () => {
       within(tile).getByText("Los Angeles")
       return tile
     })
-    expect(within(discovery).getByText("17 reports · pop 3899k")).toBeInTheDocument()
+    expect(within(discovery).getByText("17 reports · pop 3.9M")).toBeInTheDocument()
     expect(within(discovery).getByText("3d")).toBeInTheDocument()
     expect(within(discovery).getByText("Tiny Town")).toBeInTheDocument()
     expect(within(discovery).getByText("2 reports")).toBeInTheDocument()
@@ -357,8 +368,10 @@ describe("HomePage", () => {
     const mail = tileOf(/^Mail/)
     expect(await within(mail).findByText("LA Public Works")).toBeInTheDocument()
     expect(within(mail).getByText("Pothole on Main")).toBeInTheDocument()
+    expect(within(mail).getByText("5m")).toBeInTheDocument()
     expect(within(mail).getByText("hello@civfix.org")).toBeInTheDocument()
     expect(within(mail).getByText("(no subject)")).toBeInTheDocument()
+    expect(within(mail).getByText("9m")).toBeInTheDocument()
 
     const users = tileOf(/^Users/)
     expect(await within(users).findByText("Sam Rivera")).toBeInTheDocument()
@@ -404,7 +417,7 @@ describe("HomePage", () => {
     expect(await within(tileOf(/^Users/)).findByText("Sam Rivera")).toBeInTheDocument()
   })
 
-  it("shows the mail tile error when only the inbox half fails", async () => {
+  it("keeps the outreach rows and shows a retryable inbox error when only the inbox half fails", async () => {
     mockAllLoaded()
     apiMock.listInbox.mockRejectedValue(new Error("inbox down"))
 
@@ -415,8 +428,65 @@ describe("HomePage", () => {
       within(tile).getByRole("alert")
       return tile
     })
-    expect(within(mail).getByRole("alert")).toHaveTextContent("inbox down")
-    expect(within(mail).queryByText("LA Public Works")).not.toBeInTheDocument()
+    const alert = within(mail).getByRole("alert")
+    expect(alert).toHaveTextContent("Could not load the inbox")
+    expect(alert).toHaveTextContent("inbox down")
+    expect(within(mail).getByText("LA Public Works")).toBeInTheDocument()
+
+    apiMock.listInbox.mockResolvedValue(inboxPage)
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }))
+    expect(await within(tileOf(/^Mail/)).findByText("hello@civfix.org")).toBeInTheDocument()
+    expect(within(tileOf(/^Mail/)).queryByRole("alert")).not.toBeInTheDocument()
+    expect(apiMock.listMail).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the inbox rows and shows a retryable outreach error when only the outreach half fails", async () => {
+    mockAllLoaded()
+    apiMock.listMail.mockRejectedValue(new Error("outreach down"))
+
+    renderWithQuery(<HomePage focusId={null} />)
+
+    const mail = await waitFor(() => {
+      const tile = tileOf(/^Mail/)
+      within(tile).getByRole("alert")
+      return tile
+    })
+    expect(within(mail).getByRole("alert")).toHaveTextContent("Could not load outreach mail")
+    expect(within(mail).getByRole("alert")).toHaveTextContent("outreach down")
+    expect(within(mail).getByText("hello@civfix.org")).toBeInTheDocument()
+  })
+
+  it("merges outreach and inbound mail newest first with relative ages", async () => {
+    mockAllLoaded()
+    apiMock.listMail.mockResolvedValue({
+      items: [
+        { ...outreachThread, id: "m-1", org: "Older outreach", ts: minutesAgo(120) },
+        { ...outreachThread, id: "m-2", org: "Oldest outreach", ts: minutesAgo(180) },
+      ],
+      nextCursor: null,
+    } satisfies MailListResponse)
+    apiMock.listInbox.mockResolvedValue({
+      items: [{ ...inboundEmail, id: "in-1", from: "resident@example.com", ts: minutesAgo(60) }],
+      nextCursor: null,
+    } satisfies InboxListResponse)
+
+    renderWithQuery(<HomePage focusId={null} />)
+
+    const mail = await waitFor(() => {
+      const tile = tileOf(/^Mail/)
+      within(tile).getByText("resident@example.com")
+      return tile
+    })
+    const rows = within(mail)
+      .getAllByRole("button")
+      .filter((b) => b.classList.contains("slr"))
+    expect(rows.map((r) => r.querySelector(".slr-title")?.textContent)).toEqual([
+      "resident@example.com",
+      "Older outreach",
+    ])
+    expect(rows.map((r) => r.querySelector(".slr-age")?.textContent)).toEqual(["1h", "2h"])
+    expect(within(mail).queryByText("Oldest outreach")).not.toBeInTheDocument()
+    expect(within(mail).queryByText(/T\d\d:\d\d/)).not.toBeInTheDocument()
   })
 
   it("shows an empty line in every preview tile when the lists come back empty", async () => {

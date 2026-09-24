@@ -21,13 +21,15 @@ import type {
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
 import { queryKeys } from "@/lib/query"
+import { EVIDENCE_URL_MAX_CACHE_MS, evidenceStaleTime } from "@/features/orgs/evidence-cache"
 import {
-  EVIDENCE_URL_MAX_CACHE_MS,
-  evidenceUrlLifetimeMs,
-} from "@/features/orgs/evidence-cache"
-import type { OrgProfileErrors } from "@/features/orgs/org-form"
+  fieldErrorsFromError,
+  updateFieldErrors,
+  type OrgProfileErrors,
+} from "@/features/orgs/org-form"
 import { uploadOrgLogo, type LogoFileFacts } from "@/features/orgs/org-logo-upload"
-import { useUiStore } from "@/store/ui-store"
+import { ORG_ROLE_LABEL } from "@/features/orgs/org-members"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
 
 /** Every organization (adminListOrgs), keyset-paged; page one carries the chip `counts`. */
 export function useOrgsInfinite(params: AdminOrgListQuery) {
@@ -85,7 +87,7 @@ export function useOrgVerificationDocument(mediaId: string | null) {
     queryKey: queryKeys.media.document(mediaId ?? ""),
     queryFn: () => api.adminGetMedia({ id: mediaId as string }),
     enabled: !!mediaId,
-    staleTime: (query) => evidenceUrlLifetimeMs(query.state.data?.expiresAt),
+    staleTime: evidenceStaleTime,
     gcTime: EVIDENCE_URL_MAX_CACHE_MS,
   })
 }
@@ -93,21 +95,27 @@ export function useOrgVerificationDocument(mediaId: string | null) {
 type Qc = ReturnType<typeof useQueryClient>
 
 function invalidateOrgLists(qc: Qc) {
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+  ])
 }
 
 function invalidateOrg(qc: Qc, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) })
-  invalidateOrgLists(qc)
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) }),
+    invalidateOrgLists(qc),
+  ])
 }
 
 function invalidateOrgMembers(qc: Qc, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.members(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
-  qc.invalidateQueries({ queryKey: queryKeys.users.all })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.members(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+  ])
 }
 
 export function useDecideOrgVerification() {
@@ -115,23 +123,22 @@ export function useDecideOrgVerification() {
   return useMutation({
     mutationFn: (input: DecideOrgVerificationRequest) => api.adminDecideOrgVerification(input),
     onSuccess: (_res, { id }) => invalidateOrg(qc, id),
+    meta: {
+      successMessage: (org: GetAdminOrgResponse, { decision, kind }: DecideOrgVerificationRequest) => {
+        if (decision === "rejected") return `${org.name} rejected`
+        return kind ? `${org.name} verified · ${ORG_KIND_LABEL[kind]}` : `${org.name} verified`
+      },
+    },
   })
 }
 
 /**
- * Create/update render server field errors inline (slug conflict, VALIDATION.fields), so the hooks opt
- * out of the global error toast (a mutation-level onError replaces the QueryClient default). The form
- * maps the error to the fields it renders and calls this with what it could show: anything the form
- * has no field for — an unknown key, a CONFLICT on an unchanged slug, a rejected reason after the
- * prompt closed — still surfaces as the toast instead of vanishing.
+ * Create and update show the server's field errors inline (slug conflict, VALIDATION.fields), so the
+ * global toast stays quiet for them; anything the form has no field for (an unknown key, a CONFLICT on
+ * an unchanged slug, a rejected reason after the prompt closed) still surfaces as the error toast.
  */
-export function toastUnlessShownInline(err: unknown, shown: OrgProfileErrors) {
-  if (Object.keys(shown).length > 0) return
-  useUiStore.getState().showToast(errorMessage(err))
-}
-
-function quietOnError() {
-  /* handled by the form: see toastUnlessShownInline */
+function messageUnlessShownInline(inline: OrgProfileErrors, error: unknown): string | null {
+  return Object.keys(inline).length > 0 ? null : errorMessage(error)
 }
 
 export function useCreateOrg() {
@@ -140,16 +147,20 @@ export function useCreateOrg() {
     mutationFn: (input: AdminCreateOrgRequest) => api.adminCreateOrg(input),
     onSuccess: (org) => {
       qc.setQueryData(queryKeys.orgs.detail(org.id), org)
-      invalidateOrgLists(qc)
+      return invalidateOrgLists(qc)
     },
-    onError: quietOnError,
+    meta: {
+      errorMessage: (error: unknown, request: AdminCreateOrgRequest) =>
+        messageUnlessShownInline(fieldErrorsFromError(error, request), error),
+      successMessage: (org: GetAdminOrgResponse) => `${org.name} created`,
+    },
   })
 }
 
 export function useUploadOrgLogo() {
   return useMutation({
     mutationFn: (file: Blob & LogoFileFacts) => uploadOrgLogo({ api, file }),
-    onError: quietOnError,
+    meta: { errorToast: false },
   })
 }
 
@@ -159,9 +170,13 @@ export function useUpdateOrg() {
     mutationFn: (input: AdminUpdateOrgRequest) => api.adminUpdateOrg(input),
     onSuccess: (org, { id }) => {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
-      invalidateOrg(qc, id)
+      return invalidateOrg(qc, id)
     },
-    onError: quietOnError,
+    meta: {
+      errorMessage: (error: unknown, request: AdminUpdateOrgRequest) =>
+        messageUnlessShownInline(updateFieldErrors(error, request), error),
+      successMessage: (org: GetAdminOrgResponse) => `${org.name} updated`,
+    },
   })
 }
 
@@ -171,31 +186,63 @@ export function useSetOrgSuspended() {
     mutationFn: (input: AdminSetOrgSuspendedRequest) => api.adminSetOrgSuspended(input),
     onSuccess: (org, { id }) => {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
-      invalidateOrg(qc, id)
+      return invalidateOrg(qc, id)
+    },
+    meta: {
+      successMessage: (org: GetAdminOrgResponse, { suspended }: AdminSetOrgSuspendedRequest) =>
+        suspended ? `${org.name} suspended` : `${org.name} restored`,
     },
   })
+}
+
+/** A roster write plus the names its confirmation toast uses, which the request only carries as ids. */
+export interface OrgMemberVariables<R> {
+  request: R
+  memberName: string
+  orgName: string
 }
 
 export function useAddOrgMember() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AdminAddOrgMemberRequest) => api.adminAddOrgMember(input),
-    onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
+    mutationFn: ({ request }: OrgMemberVariables<AdminAddOrgMemberRequest>) => api.adminAddOrgMember(request),
+    onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
+    meta: {
+      successMessage: (
+        _res: unknown,
+        { request: { role }, memberName, orgName }: OrgMemberVariables<AdminAddOrgMemberRequest>,
+      ) =>
+        role === "owner"
+          ? `${memberName} now owns ${orgName}`
+          : `${memberName} added as ${ORG_ROLE_LABEL[role].toLowerCase()}`,
+    },
   })
 }
 
 export function useSetOrgMemberRole() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AdminSetOrgMemberRoleRequest) => api.adminSetOrgMemberRole(input),
-    onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
+    mutationFn: ({ request }: OrgMemberVariables<AdminSetOrgMemberRoleRequest>) =>
+      api.adminSetOrgMemberRole(request),
+    onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
+    meta: {
+      successMessage: (
+        _res: unknown,
+        { request: { role }, memberName, orgName }: OrgMemberVariables<AdminSetOrgMemberRoleRequest>,
+      ) => (role === "owner" ? `${memberName} now owns ${orgName}` : `${memberName} · ${ORG_ROLE_LABEL[role]}`),
+    },
   })
 }
 
 export function useRemoveOrgMember() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: AdminRemoveOrgMemberRequest) => api.adminRemoveOrgMember(input),
-    onSuccess: (_res, { id }) => invalidateOrgMembers(qc, id),
+    mutationFn: ({ request }: OrgMemberVariables<AdminRemoveOrgMemberRequest>) =>
+      api.adminRemoveOrgMember(request),
+    onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { memberName, orgName }: OrgMemberVariables<AdminRemoveOrgMemberRequest>) =>
+        `${memberName} removed from ${orgName}`,
+    },
   })
 }

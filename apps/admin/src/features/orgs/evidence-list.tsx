@@ -13,25 +13,24 @@ function shortMediaId(id: string): string {
   return id.replace(/-/g, "").slice(0, 8)
 }
 
-function EvidenceViewer({ mediaId }: { mediaId: string }) {
+function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) {
   const q = useOrgVerificationDocument(mediaId)
   const expiresAt = q.data?.expiresAt ?? null
-  const [expired, setExpired] = React.useState(false)
+  // Expiry is read during render so cached data past its expiry never paints the dead url; the timer
+  // only re-renders at the moment a live url expires.
+  const expired = expiresAt !== null && isEvidenceUrlExpired(expiresAt)
+  const [, rerenderAtExpiry] = React.useReducer((n: number) => n + 1, 0)
 
   React.useEffect(() => {
-    if (expiresAt === null) {
-      setExpired(false)
-      return
-    }
+    if (expiresAt === null) return
     const remaining = evidenceUrlRemainingMs(expiresAt)
-    setExpired(isEvidenceUrlExpired(expiresAt))
     if (remaining <= 0) return
-    const timer = setTimeout(() => setExpired(true), remaining)
+    const timer = setTimeout(rerenderAtExpiry, remaining)
     return () => clearTimeout(timer)
   }, [expiresAt])
 
   if (q.isLoading) return <LoadingState label="Loading document..." />
-  if (q.isError) {
+  if (q.isError && !q.data) {
     return <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not open evidence" />
   }
   if (!q.data) return null
@@ -60,7 +59,7 @@ function EvidenceViewer({ mediaId }: { mediaId: string }) {
     <div className="org-evidence-view">
       {media.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="org-evidence-img" src={media.url} alt="" />
+        <img className="org-evidence-img" src={media.url} alt={`Evidence document ${index + 1}`} />
       ) : null}
       <a className="btn sm" href={media.url} target="_blank" rel="noreferrer noopener">
         <Icons.ExternalLink size={12} /> Open document
@@ -76,6 +75,7 @@ function EvidenceViewer({ mediaId }: { mediaId: string }) {
 
 export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
   const [openId, setOpenId] = React.useState<string | null>(null)
+  const viewerIdPrefix = React.useId()
 
   const mediaKey = mediaIds.join(",")
   React.useEffect(() => {
@@ -96,12 +96,14 @@ export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
     <div className="org-evidence-list">
       {mediaIds.map((mediaId, index) => {
         const open = openId === mediaId
+        const viewerId = `${viewerIdPrefix}-${mediaId}`
         return (
           <div key={mediaId} className={`org-evidence-row ${open ? "open" : ""}`}>
             <button
               type="button"
               className="org-evidence-head"
               aria-expanded={open}
+              aria-controls={open ? viewerId : undefined}
               onClick={() => setOpenId(open ? null : mediaId)}
             >
               <span className="org-evidence-ico">
@@ -111,7 +113,11 @@ export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
               <span className="ident mono">{shortMediaId(mediaId)}</span>
               <Icons.ChevronDown size={13} />
             </button>
-            {open && <EvidenceViewer mediaId={mediaId} />}
+            {open && (
+              <div id={viewerId}>
+                <EvidenceViewer mediaId={mediaId} index={index} />
+              </div>
+            )}
           </div>
         )
       })}

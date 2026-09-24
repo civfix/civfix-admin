@@ -35,6 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 /**
  * The operator gate. Only an authenticated operator session renders the dashboard:
  *  - idle / loading  -> a minimal loading screen (Access exchange in flight, or pre-hydration).
+ *  - signing-out     -> the same screen, saying so, until the Access logout navigation lands.
  *  - not an operator -> the full-page Cloudflare Access gate (anonymous: authenticating + manual
  *                       continue; forbidden: not-authorized message).
  *  - operator        -> the dashboard shell (children).
@@ -43,7 +44,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { isOperator, status } = useOperatorSession()
 
   if (status === "idle" || status === "loading") {
-    return <BootScreen />
+    return <BootScreen label="Loading operations..." />
+  }
+
+  if (status === "signing-out") {
+    return <BootScreen label="Signing out..." />
   }
 
   if (!isOperator) {
@@ -53,8 +58,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-/** Minimal centered loading screen shown while the session check is in flight. */
-function BootScreen() {
+/** Minimal centered screen shown while the session is being established or ended. */
+function BootScreen({ label }: { label: string }) {
   return (
     <div className="op-boot" role="status" aria-live="polite">
       <span className="op-boot-bug" aria-hidden="true">
@@ -63,7 +68,7 @@ function BootScreen() {
         <img src="/ds/pinit-bug.svg" alt="" width={30} height={36} />
       </span>
       <span className="op-boot-spin" aria-hidden="true" />
-      <span className="op-boot-text">Loading operations...</span>
+      <span className="op-boot-text">{label}</span>
     </div>
   )
 }

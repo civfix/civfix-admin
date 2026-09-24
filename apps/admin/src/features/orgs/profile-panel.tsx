@@ -14,21 +14,19 @@ import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import { orgStatusView } from "@/lib/org-status"
 import {
-  SOCIAL_PLATFORMS as PROFILE_SOCIALS,
   buildUpdateRequest,
   clearChangedFieldErrors,
   draftFromOrg,
-  fieldErrorsFromError,
-  pickFieldErrors,
+  updateFieldErrors,
   validateProfileDraft,
   type OrgProfileDraft,
   type OrgProfileErrors,
 } from "@/features/orgs/org-form"
 import { OrgProfileFields } from "@/features/orgs/org-form-fields"
 import { publicOrgUrl } from "@/features/orgs/org-slug"
-import { toastUnlessShownInline, useUpdateOrg } from "@/features/orgs/use-orgs"
-import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
-import { useNav, useToast } from "@/store/ui-store"
+import { useUpdateOrg } from "@/features/orgs/use-orgs"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
+import { useNav } from "@/store/ui-store"
 
 /** Read view of the org profile with an inline edit mode (adminUpdateOrg, reason prompted on save). */
 export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
@@ -38,6 +36,18 @@ export function ProfilePanel({ org }: { org: AdminOrgDTO }) {
   ) : (
     <ProfileView org={org} onEdit={() => setEditing(true)} />
   )
+}
+
+/** Only an https url becomes a link; anything else stored is shown as text so it is never hidden. */
+function UrlFact({ url }: { url: string | null | undefined }) {
+  if (isHttpsUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer noopener">
+        {url}
+      </a>
+    )
+  }
+  return <>{url || "\u2014"}</>
 }
 
 function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) {
@@ -75,25 +85,13 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
             <div className="umr">
               <span>Website</span>
               <span>
-                {isHttpsUrl(org.websiteUrl) ? (
-                  <a href={org.websiteUrl} target="_blank" rel="noreferrer noopener">
-                    {org.websiteUrl}
-                  </a>
-                ) : (
-                  (org.websiteUrl ?? "—")
-                )}
+                <UrlFact url={org.websiteUrl} />
               </span>
             </div>
             <div className="umr">
               <span>Donation link</span>
               <span>
-                {isHttpsUrl(org.donationUrl) ? (
-                  <a href={org.donationUrl} target="_blank" rel="noreferrer noopener">
-                    {org.donationUrl}
-                  </a>
-                ) : (
-                  "None"
-                )}
+                <UrlFact url={org.donationUrl} />
               </span>
             </div>
             <div className="umr">
@@ -170,19 +168,8 @@ function ProfileView({ org, onEdit }: { org: AdminOrgDTO; onEdit: () => void }) 
   )
 }
 
-/** The fields the editor renders; a server error on anything else (the reason, say) is toasted. */
-const EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
-  "name",
-  "slug",
-  "description",
-  "websiteUrl",
-  "logoMediaId",
-  ...PROFILE_SOCIALS,
-]
-
 function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }) {
   const update = useUpdateOrg()
-  const toast = useToast()
   // The draft and the diff share one snapshot taken when editing starts: diffing against the live
   // prop would PATCH an untouched field back to its old value after a mid-edit refetch.
   const [baseline] = React.useState(org)
@@ -231,15 +218,8 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
     }
     setServerErrors({})
     update.mutate(body, {
-      onSuccess: () => {
-        toast(`${draft.name.trim()} updated`)
-        onDone()
-      },
-      onError: (err) => {
-        const shown = pickFieldErrors(fieldErrorsFromError(err, body), EDITOR_FIELDS)
-        setServerErrors(shown)
-        toastUnlessShownInline(err, shown)
-      },
+      onSuccess: onDone,
+      onError: (err) => setServerErrors(updateFieldErrors(err, body)),
     })
   }
 
@@ -274,7 +254,12 @@ function ProfileEditor({ org, onDone }: { org: AdminOrgDTO; onDone: () => void }
           !dirty && <span className="muted">No changes yet</span>
         )}
         <div className="spacer" />
-        <button type="button" className="btn ghost" onClick={onDone} disabled={update.isPending}>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={onDone}
+          disabled={update.isPending || logoUploading}
+        >
           Cancel
         </button>
         <button

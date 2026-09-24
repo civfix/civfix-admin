@@ -6,11 +6,14 @@ import type {
   AdminEventPageListResponse,
   AdminGetEventPageResponse,
   FlagEventPageRequest,
+  FlagEventPageResponse,
   UnpublishEventPageRequest,
+  UnpublishEventPageResponse,
 } from "@civfix/shared"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
+import { publicPagePath } from "@/features/pages/page-path"
 
 export function useEventPagesInfinite(params: AdminEventPageListQuery) {
   return useInfiniteQuery<AdminEventPageListResponse>({
@@ -33,19 +36,30 @@ export function useAdminEventPage(cleanupId: string | null) {
   })
 }
 
+function pageName(page: Pick<FlagEventPageResponse, "slug" | "title">): string {
+  return page.slug ? publicPagePath(page.slug) : page.title
+}
+
 function invalidatePages(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: queryKeys.pages.all })
-  qc.invalidateQueries({ queryKey: queryKeys.events.all })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+  ])
 }
 
 export function useFlagEventPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: FlagEventPageRequest) => api.adminFlagEventPage(input),
-    onSuccess: (_res, { id }) => {
-      invalidatePages(qc)
-      qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidatePages(qc),
+        qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+      ]),
+    meta: {
+      successMessage: (page: FlagEventPageResponse, { flagged }: FlagEventPageRequest) =>
+        flagged ? `Flagged · ${pageName(page)}` : "Flag cleared",
     },
   })
 }
@@ -54,9 +68,13 @@ export function useUnpublishEventPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: UnpublishEventPageRequest) => api.adminUnpublishEventPage(input),
-    onSuccess: (_res, { id }) => {
-      invalidatePages(qc)
-      qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidatePages(qc),
+        qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+      ]),
+    meta: {
+      successMessage: (page: UnpublishEventPageResponse) => `Unpublished · ${pageName(page)}`,
     },
   })
 }
