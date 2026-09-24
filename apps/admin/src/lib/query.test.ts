@@ -91,7 +91,7 @@ describe("makeQueryClient mutation defaults", () => {
     expect(useUiStore.getState().toast?.text).toBe("Something went wrong. Please try again.")
   })
 
-  it("toasts the INTERNAL \"Unknown error\" message for a non-error rejection", async () => {
+  it("toasts \"Unknown error\" rather than the fallback for a non-error rejection (current behavior)", async () => {
     await failMutation(makeQueryClient(), "boom")
     expect(useUiStore.getState().toast?.text).toBe("Unknown error")
   })
@@ -274,32 +274,16 @@ describe("queryKeys id + params factories", () => {
   })
 })
 
-describe("list vs infinite key sharing", () => {
+describe("page vs list keys", () => {
   const params = { status: "open" }
 
-  // The list and infinite hooks for these domains both call `<domain>.list(params)`, so a flat page
-  // and an InfiniteData payload land in one cache entry when both hooks mount with equal params.
-  it.each([
-    ["events", queryKeys.events.list],
-    ["inbox", queryKeys.inbox.list],
-    ["mail", queryKeys.mail.list],
-    ["moderation", queryKeys.moderation.list],
-  ] as const)(
-    "%s list hook shares a key with its infinite hook (known collision)",
-    (_name, listFactory) => {
-      const flatKey = listFactory(params)
-      const infiniteKey = listFactory(params)
-      expect(flatKey).toEqual(infiniteKey)
-    },
-  )
-
-  it("reports list hook uses reports.page, apart from the infinite reports.list", () => {
+  it("reports.page and reports.list are distinct keys", () => {
     expect(queryKeys.reports.page(params)).not.toEqual(queryKeys.reports.list(params))
     expect(queryKeys.reports.page(params)).toEqual(["admin", "reports", "page", params])
     expect(queryKeys.reports.list(params)).toEqual(["admin", "reports", "list", params])
   })
 
-  it("users list hook uses users.page, apart from the infinite users.list", () => {
+  it("users.page and users.list are distinct keys", () => {
     expect(queryKeys.users.page(params)).not.toEqual(queryKeys.users.list(params))
     expect(queryKeys.users.page(params)).toEqual(["admin", "users", "page", params])
     expect(queryKeys.users.list(params)).toEqual(["admin", "users", "list", params])
