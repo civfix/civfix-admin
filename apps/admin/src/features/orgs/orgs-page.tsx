@@ -163,7 +163,7 @@ function OrgDetail({
         title: suspended ? `Restore ${org.name}?` : `Suspend ${org.name}?`,
         body: suspended
           ? "Lifting the suspension restores exactly what was there: verification, members and profile settings are untouched. The reason is written to the audit log."
-          : "A suspended organization keeps its data and members, but every write under its name — events, broadcasts, invites — is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
+          : "A suspended organization keeps its data and members, but every write under its name (events, broadcasts, invites) is refused until it is restored. Its public page shows a notice. The reason is written to the audit log.",
         label: "Reason (required)",
         placeholder: suspended
           ? "Resolved after the org replaced its contact…"

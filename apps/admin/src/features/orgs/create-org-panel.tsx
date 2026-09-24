@@ -252,7 +252,7 @@ function CreateOrgSlideOver({
                       <span className="hint">
                         {verifiedKind === ""
                           ? "The organization can apply for verification itself from its settings."
-                          : "Created already verified — no evidence round-trip. Use for partners you onboard directly (a city department, a known nonprofit)."}
+                          : "Created already verified, with no evidence round-trip. Use for partners you onboard directly (a city department, a known nonprofit)."}
                       </span>
                     </div>
                   </div>

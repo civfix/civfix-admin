@@ -14,6 +14,7 @@ import {
 
 import { Icons } from "@/components/icons"
 import { errorMessage } from "@/lib/error-messages"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   REPORT_CATEGORIES,
   categoryLabel,
@@ -69,18 +70,18 @@ const LAYER_LABEL: Record<JurisdictionLayer, string> = {
 const UNMAPPED_GEOID = "__unmapped__"
 
 function fmtRouted(iso: string | null): string {
-  if (!iso) return "—"
+  if (!iso) return EMPTY_VALUE
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return "—"
+  if (Number.isNaN(d.getTime())) return EMPTY_VALUE
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
 const HOUR_MS = 60 * 60 * 1000
 
 function fmtAge(iso: string | null): string {
-  if (!iso) return "—"
+  if (!iso) return EMPTY_VALUE
   const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return "—"
+  if (Number.isNaN(then)) return EMPTY_VALUE
   const diff = Date.now() - then
   if (diff < 60 * 1000) return "just now"
   const mins = Math.floor(diff / (60 * 1000))
@@ -412,7 +413,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
           <span
             className="pill status-flag"
             style={{ marginLeft: "auto" }}
-            title="The routing contact hard-bounced — re-enter a contact to clear it"
+            title="The routing contact hard-bounced. Re-enter a contact to clear it."
           >
             <Icons.AlertTriangle size={11} /> Bounced
           </span>
@@ -490,7 +491,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 <input
                   type="text"
                   value={handle}
-                  placeholder="sf — tag this jurisdiction in a report discussion"
+                  placeholder="e.g. sf, to tag this jurisdiction in a report discussion"
                   onChange={(e) => setHandle(e.target.value)}
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -582,7 +583,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                           value={contacts[c.id] ?? ""}
                           placeholder={
                             attention
-                              ? "Add a contact — reports waiting"
+                              ? "Reports waiting: add a contact"
                               : "e.g. publicworks@city.gov"
                           }
                           onChange={(e) => setCat(c.id, e.target.value)}
@@ -667,7 +668,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         <span>
           <b>Save &amp; route</b> saves the contacts, the note and the @handle, closes the discovery
           task, and queues an outreach digest to this jurisdiction when outreach digests are enabled. It
-          does not email the reports already waiting — send each of those from its report.{" "}
+          does not email the reports already waiting; send each of those from its report.{" "}
           <b>Save draft</b> saves the same fields and leaves the discovery task open.
         </span>
       </div>

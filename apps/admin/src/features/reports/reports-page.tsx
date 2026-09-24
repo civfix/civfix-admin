@@ -679,7 +679,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     const ok = await confirmDialog({
       title: "Reject report",
       body: sendAttempted
-        ? "This rejects the report's verification verdict. It was already emailed to the city — rejecting does not recall that email."
+        ? "This rejects the report's verification verdict. It was already emailed to the city, and rejecting does not recall that email."
         : "This rejects the report's verification verdict. It is not sent to the city.",
       danger: true,
       confirmLabel: "Reject",
@@ -995,7 +995,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               ) : (
                 <div className="rep-city-contact warn">
                   <Icons.AlertTriangle size={12} />
-                  <span>No contact on file — set one in Jurisdictions</span>
+                  <span>No contact on file. Set one in Jurisdictions.</span>
                 </div>
               )}
 
@@ -1154,7 +1154,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 className="rep-followup"
                 style={{ marginTop: 8 }}
                 rows={3}
-                placeholder={`Message ${report.city.dept} — e.g. nudge for an update…`}
+                placeholder={`Message ${report.city.dept}, e.g. nudge for an update…`}
                 aria-label="Message to the city"
                 maxLength={FOLLOWUP_MAX}
                 value={text}
@@ -1273,7 +1273,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
         title="Reports"
         subtitle={
           <span>
-            Every report neighbors submit — verified, then routed to the right city department. Track
+            Every report neighbors submit, verified and then routed to the right city department. Track
             status, follow up with the city, and close the loop.
           </span>
         }

@@ -827,7 +827,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
         title="Events"
         subtitle={
           <span>
-            Events neighbors organize on civfix — cleanups and other volunteer events alike. Track
+            Cleanups and other volunteer events neighbors organize on civfix. Track
             turnout, keep them on the level, and message attendees.
           </span>
         }

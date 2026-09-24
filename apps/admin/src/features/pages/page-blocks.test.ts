@@ -26,7 +26,7 @@ describe("signup page block extraction", () => {
         { time: null, title: "Cleanup" },
       ],
     })
-    expect(view.lines).toEqual(["9:00 — Check-in", "Grab a bag", "Cleanup"])
+    expect(view.lines).toEqual(["9:00 · Check-in", "Grab a bag", "Cleanup"])
   })
 
   it("collects outbound links without duplicating them", () => {

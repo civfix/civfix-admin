@@ -11,5 +11,5 @@ const MODERATION_MIX = "user reports, held media, clusters and appeals"
 // length of the two-row preview, which counts nothing.
 export function getModerationPreviewPresentation(queueTotal?: number) {
   if (queueTotal === undefined) return { lead: null, unit: MODERATION_MIX }
-  return { lead: queueTotal, unit: `queued — ${MODERATION_MIX}` }
+  return { lead: queueTotal, unit: `queued · ${MODERATION_MIX}` }
 }

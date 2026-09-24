@@ -8,6 +8,7 @@ import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { isHttpsUrl } from "@/lib/external-url"
 import { orgStatusView } from "@/lib/org-status"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { EvidenceList } from "@/features/orgs/evidence-list"
 import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verification"
 import { useAdminOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
@@ -90,7 +91,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
           <div className="user-meta-rows">
             <div className="umr">
               <span>Kind</span>
-              <span>{org.verifiedKind ? ORG_KIND_LABEL[org.verifiedKind] : "—"}</span>
+              <span>{org.verifiedKind ? ORG_KIND_LABEL[org.verifiedKind] : EMPTY_VALUE}</span>
             </div>
             <div className="umr">
               <span>Website</span>
@@ -102,7 +103,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
                 ) : org.websiteUrl ? (
                   org.websiteUrl
                 ) : (
-                  "—"
+                  EMPTY_VALUE
                 )}
               </span>
             </div>
@@ -156,7 +157,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
               <div className="user-meta-rows">
                 <div className="umr">
                   <span>Requested kind</span>
-                  <span>{verification.kind ? ORG_KIND_LABEL[verification.kind] : "—"}</span>
+                  <span>{verification.kind ? ORG_KIND_LABEL[verification.kind] : EMPTY_VALUE}</span>
                 </div>
                 <div className="umr">
                   <span>Submitted</span>
@@ -164,7 +165,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
                 </div>
                 <div className="umr">
                   <span>Submitted by</span>
-                  <span>{verification.submittedBy?.name ?? "—"}</span>
+                  <span>{verification.submittedBy?.name ?? EMPTY_VALUE}</span>
                 </div>
                 <div className="umr">
                   <span>Reviewed</span>
@@ -172,7 +173,7 @@ export function VerificationPanel({ orgId }: { orgId: string }) {
                 </div>
                 <div className="umr">
                   <span>Reviewed by</span>
-                  <span>{verification.reviewedBy?.name ?? "—"}</span>
+                  <span>{verification.reviewedBy?.name ?? EMPTY_VALUE}</span>
                 </div>
               </div>
               {verification.note && <p className="rep-desc">{verification.note}</p>}

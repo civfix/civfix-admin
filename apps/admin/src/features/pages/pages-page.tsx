@@ -14,6 +14,7 @@ import { promptDialog } from "@/components/shared/dialog"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { useDebounced } from "@/hooks/use-debounced"
 import { formatDateTime } from "@/lib/dates"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { pageListParams, pageRowFromDTO } from "@/features/pages/pages-filters"
 import { publicPagePath } from "@/features/pages/page-path"
 import { PagePreview } from "@/features/pages/page-preview"
@@ -184,11 +185,11 @@ function PageDetail({ item }: { item: AdminEventPageListItemDTO }) {
             </div>
             <div className="umr">
               <span>Organization</span>
-              <span>{item.orgName ?? "—"}</span>
+              <span>{item.orgName ?? EMPTY_VALUE}</span>
             </div>
             <div className="umr">
               <span>Organizer</span>
-              <span>{item.organizer?.name ?? "—"}</span>
+              <span>{item.organizer?.name ?? EMPTY_VALUE}</span>
             </div>
             {flagged && (
               <div className="umr">

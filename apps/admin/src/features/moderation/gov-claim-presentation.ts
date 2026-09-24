@@ -71,7 +71,7 @@ export function govClaimApproveErrorMessage(error: unknown): string {
     error,
     {
       [ErrorCode.FORBIDDEN]:
-        "That contact email belongs to an operator account. Operator accounts are managed through ADMIN_EMAILS and cannot be re-roled here — the applicant needs a different address.",
+        "That contact email belongs to an operator account. Operator accounts are managed through ADMIN_EMAILS and cannot be re-roled here, so the applicant needs a different address.",
     },
     {
       fields: {

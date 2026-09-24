@@ -781,14 +781,14 @@ export function ModerationPage({ focusId }: SectionPageProps) {
         subtitle={
           queue ? (
             <span>
-              The moderation queue — citizen content reports (the in-app &ldquo;Report&rdquo; button)
+              The moderation queue: citizen content reports (the in-app &ldquo;Report&rdquo; button)
               plus held media, coordinated-report clusters, and appeals. Review the signals, then
               approve, remove, hold, or decide the appeal.
             </span>
           ) : (
             <span>
               Government staff asking for access to their jurisdiction. Verify who they are, then
-              approve — which provisions a government role on their account — or reject with a reason.
+              approve (which provisions a government role on their account) or reject with a reason.
             </span>
           )
         }

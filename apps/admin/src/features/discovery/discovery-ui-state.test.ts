@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   getCountDisplay,
   getJurisdictionSort,
@@ -16,7 +17,7 @@ describe("Jurisdictions UI state", () => {
 
   it("shows loading and unavailable count labels instead of false zeroes", () => {
     expect(getCountDisplay({ count: null, isLoading: true, isError: false })).toBe("Loading…")
-    expect(getCountDisplay({ count: null, isLoading: false, isError: true })).toBe("\u2014")
+    expect(getCountDisplay({ count: null, isLoading: false, isError: true })).toBe(EMPTY_VALUE)
     expect(getCountDisplay({ count: 0, isLoading: false, isError: false })).toBe(0)
   })
 })

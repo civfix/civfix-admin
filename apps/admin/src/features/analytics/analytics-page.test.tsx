@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Toast } from "@/components/shell/toast"
 import type * as ApiModule from "@/lib/api"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { AnalyticsPage } from "@/features/analytics/analytics-page"
 import { useUiStore } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
@@ -397,7 +398,7 @@ describe("AnalyticsPage", () => {
     expect(within(c).getByText("Hazard")).toBeInTheDocument()
     expect(within(c).getByText("<1h")).toBeInTheDocument()
     expect(within(c).getByText("Water")).toBeInTheDocument()
-    expect(within(c).getByText(/^\u2014$/)).toBeInTheDocument()
+    expect(within(c).getByText(EMPTY_VALUE)).toBeInTheDocument()
   })
 
   it("rounds resolution times to whole hours before splitting them into days", async () => {
@@ -499,7 +500,7 @@ describe("AnalyticsPage", () => {
     expect(within(c).getByText("17")).toBeInTheDocument()
     expect(within(c).getByText("grace")).toBeInTheDocument()
     expect(within(c).getByText("G")).toBeInTheDocument()
-    expect(within(c).getByText(/^\u2014$/)).toBeInTheDocument()
+    expect(within(c).getByText(EMPTY_VALUE)).toBeInTheDocument()
     expect(within(c).getByText("9")).toBeInTheDocument()
   })
 

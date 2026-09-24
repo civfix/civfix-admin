@@ -24,6 +24,7 @@ import { Spark } from "@/features/analytics/analytics-charts"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { useHomeSummary } from "@/hooks/use-admin-home"
 import { useDiscoveryList } from "@/features/discovery/use-discovery"
 import { useReportList } from "@/features/reports/use-reports"
@@ -100,7 +101,7 @@ function buildSummaries(d: HomeSummaryResponse | undefined): SectionSummary[] {
       hue: "slate",
       ...counted(d?.discovery.queue, "jurisdictions in queue"),
       blurb:
-        "Jurisdictions with reports waiting on routing setup — work the queue so neighbors' reports reach the right city department.",
+        "Jurisdictions with reports waiting on routing setup. Work the queue so neighbors' reports reach the right city department.",
       stats: [
         { k: "Reports waiting", v: d?.discovery.reportsWaiting },
         { k: "Over SLA", v: d?.discovery.overSla, tone: (d?.discovery.overSla ?? 0) > 0 ? "warn" : null },
@@ -114,7 +115,7 @@ function buildSummaries(d: HomeSummaryResponse | undefined): SectionSummary[] {
       hue: "lilac",
       ...counted(d?.reports.flagged, "reports flagged"),
       blurb:
-        "Every report neighbors submit, routed to the right city department — track status and close the loop.",
+        "Every report neighbors submit, routed to the right city department. Track status and close the loop.",
       stats: [
         { k: "In progress", v: d?.reports.inProgress },
         { k: "Completed", v: d?.reports.completed },
@@ -128,7 +129,7 @@ function buildSummaries(d: HomeSummaryResponse | undefined): SectionSummary[] {
       hue: "sun",
       ...counted(d?.events.upcoming, "upcoming events"),
       blurb:
-        "Community cleanups neighbors organize — track turnout, keep them legit, and message attendees.",
+        "Community cleanups neighbors organize. Track turnout, keep them legit, and message attendees.",
       stats: [
         { k: "Live now", v: d?.events.live },
         { k: "Attending", v: d?.events.attending },
@@ -142,7 +143,7 @@ function buildSummaries(d: HomeSummaryResponse | undefined): SectionSummary[] {
       hue: "sky",
       ...counted(d?.mail.unread, "unread messages"),
       blurb:
-        "Two-way mail with municipal contacts — outbound routing and the replies that come back.",
+        "Two-way mail with municipal contacts: outbound routing and the replies that come back.",
       stats: [
         { k: "Needs action", v: d?.mail.needsAction, tone: (d?.mail.needsAction ?? 0) > 0 ? "warn" : null },
         { k: "Unread", v: d?.mail.unread },
@@ -168,7 +169,7 @@ function buildSummaries(d: HomeSummaryResponse | undefined): SectionSummary[] {
       label: "Analytics",
       hue: "moss",
       ...counted(d?.analytics.pinsThisMonth, "pins this month"),
-      blurb: "The numbers are the proof civfix works — dropped, routed, resolved, cleaned up.",
+      blurb: "The numbers are the proof civfix works: dropped, routed, resolved, cleaned up.",
       stats: [{ k: "Cleanups", v: d?.analytics.cleanups }],
       spark: d?.analytics.pinsByWeek,
       metrics: d && [
@@ -279,7 +280,7 @@ function userRow(u: AdminUserListItemDTO): PeekItem {
     kind: "avatar",
     name: u.name,
     title: u.name,
-    meta: u.flagReason ?? (u.city || "—"),
+    meta: u.flagReason ?? (u.city || EMPTY_VALUE),
     age: u.lastActive,
     focusId: u.id,
   }
@@ -626,7 +627,7 @@ export function HomePage(_props: SectionPageProps) {
       lead: presentation.lead,
       unit: presentation.unit,
       blurb:
-        "Two-way outreach with municipal contacts plus catch-all inbound to *@civfix.org — replies, support requests, and cold mail in one place.",
+        "Two-way outreach with municipal contacts plus catch-all inbound to *@civfix.org: replies, support requests, and cold mail in one place.",
       cta: "Open mail",
       stats: [
         { k: "Needs action", v: needsAction, tone: needsAction > 0 ? "warn" : null },

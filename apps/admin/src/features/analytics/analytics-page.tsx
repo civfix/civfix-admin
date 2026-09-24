@@ -10,6 +10,7 @@ import {
 import { Icons } from "@/components/icons"
 import { categoryCssVar } from "@/lib/category"
 import { downloadCsv } from "@/lib/csv"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { PageHead, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { BarChart } from "@/features/analytics/analytics-charts"
@@ -38,7 +39,7 @@ function initials(name: string): string {
 }
 
 function humanizeHours(hours: number): string {
-  if (hours <= 0) return "—"
+  if (hours <= 0) return EMPTY_VALUE
   if (hours < 1) return "<1h"
   const total = Math.round(hours)
   if (total < 24) return `${total}h`
@@ -410,7 +411,7 @@ export function AnalyticsPage(_props: SectionPageProps) {
                       <span className="contrib-av">{initials(c.name)}</span>
                       <span className="contrib-text">
                         <span className="td-strong">{c.name}</span>
-                        <span className="contrib-city">{c.city || "—"}</span>
+                        <span className="contrib-city">{c.city || EMPTY_VALUE}</span>
                       </span>
                     </span>
                     <span className="mono" role="cell">

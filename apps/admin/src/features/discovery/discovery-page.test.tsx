@@ -11,6 +11,7 @@ import type {
 
 import type * as ApiModule from "@/lib/api"
 import { categoryLabel } from "@/lib/category"
+import { EMPTY_VALUE } from "@/lib/empty-value"
 import { makeQueryClient } from "@/lib/query"
 import { useUiStore, type ToastTone } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
@@ -155,7 +156,7 @@ describe("DiscoveryPage", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent("Could not load this")
     expect(alert).toHaveTextContent("directory is down")
-    expect(chip(/^Needs mapping/)).toHaveTextContent(/\u2014/)
+    expect(chip(/^Needs mapping/)).toHaveTextContent(EMPTY_VALUE)
 
     apiMock.listJurisdictions.mockResolvedValue(page([LA]))
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }))
