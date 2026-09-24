@@ -88,9 +88,10 @@ function CreateOrgSlideOver({
     onClose()
   }, [onClose, pending])
 
-  // Escape dismisses an untouched panel; once there is a draft it is ignored (closing discards the
-  // draft, and Escape is too easy a reflex — dismissing the owner search, say — to make destructive).
-  // Cancel and the close button remain the deliberate way out.
+  // Escape and a backdrop click dismiss an untouched panel; once there is a draft both are ignored
+  // (closing discards the draft, and each is too easy a reflex, dismissing the owner search or a
+  // stray click beside the panel, to make destructive). Cancel and the close button remain the
+  // deliberate way out.
   const pristine =
     owner === null &&
     draft.logoMediaId === null &&
@@ -108,6 +109,23 @@ function CreateOrgSlideOver({
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [close, pristine])
+
+  // A browser may deliver the click of a press that began in a field (a text-selection drag) to the
+  // element it was released over, so only a press that also started on the backdrop counts.
+  const overlayRef = React.useRef<HTMLDivElement>(null)
+  const pressStartedOnOverlay = React.useRef(false)
+  React.useEffect(() => {
+    const onPointerDown = (e: PointerEvent) => {
+      pressStartedOnOverlay.current = e.target === overlayRef.current
+    }
+    window.addEventListener("pointerdown", onPointerDown, true)
+    return () => window.removeEventListener("pointerdown", onPointerDown, true)
+  }, [])
+  const onOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const pressed = pressStartedOnOverlay.current
+    pressStartedOnOverlay.current = false
+    if (pressed && e.target === e.currentTarget && pristine) close()
+  }
 
   const localErrors = React.useMemo(
     () => (submitted ? validateCreate(draft, owner, reason) : {}),
@@ -160,7 +178,7 @@ function CreateOrgSlideOver({
 
   return (
     <>
-      <div className="panel-overlay open" onClick={close} />
+      <div ref={overlayRef} className="panel-overlay open" onClick={onOverlayClick} />
       <aside
         className="panel org-create-panel open"
         role="dialog"
