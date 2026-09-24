@@ -145,10 +145,12 @@ describe("initial route from the hash at module load", () => {
     expect(await initialRoute("#/reports?tab=open")).toEqual({ page: "home", focusId: null })
   })
 
-  it("throws URIError on a malformed percent-encoding at import (current behavior)", async () => {
-    setHash("#/reports/%E0%A4%A")
-    vi.resetModules()
-    await expect(import("./ui-store")).rejects.toThrow(URIError)
+  it("falls back to home with no focus on a malformed percent-encoding at import", async () => {
+    expect(await initialRoute("#/reports/%E0%A4%A")).toEqual({ page: "home", focusId: null })
+  })
+
+  it("falls back to home for a lone percent sign in the focus id", async () => {
+    expect(await initialRoute("#/users/100%")).toEqual({ page: "home", focusId: null })
   })
 
   it("ignores a malformed percent-encoding in an unknown section", async () => {
@@ -164,11 +166,18 @@ describe("syncFromHash", () => {
     expect(useUiStore.getState()).toMatchObject({ page: "events", focusId: "ev-9" })
   })
 
-  it("throws URIError on a malformed percent-encoding and leaves the store as it was (current behavior)", async () => {
+  it("falls back to home with no focus on a malformed percent-encoding", async () => {
     const { useUiStore } = await loadWithHash("#/users/u-1")
     setHash("#/reports/%E0%A4%A")
-    expect(() => useUiStore.getState().syncFromHash()).toThrow(URIError)
-    expect(useUiStore.getState()).toMatchObject({ page: "users", focusId: "u-1" })
+    expect(() => useUiStore.getState().syncFromHash()).not.toThrow()
+    expect(useUiStore.getState()).toMatchObject({ page: "home", focusId: null })
+  })
+
+  it("recovers on the next valid hash after a malformed one", async () => {
+    const { useUiStore } = await loadWithHash("#/reports/%E0%A4%A")
+    setHash("#/events/ev-9")
+    useUiStore.getState().syncFromHash()
+    expect(useUiStore.getState()).toMatchObject({ page: "events", focusId: "ev-9" })
   })
 })
 
