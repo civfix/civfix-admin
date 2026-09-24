@@ -43,11 +43,12 @@ export function useSetHostMessagingSuspended() {
   return useMutation({
     mutationFn: (input: SetHostMessagingSuspendedRequest) =>
       api.adminSetHostMessagingSuspended(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.hosts.all })
-      qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) })
-      qc.invalidateQueries({ queryKey: queryKeys.users.all })
-      qc.invalidateQueries({ queryKey: queryKeys.audit.all })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.hosts.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) }),
+        qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+      ]),
   })
 }

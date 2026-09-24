@@ -45,13 +45,15 @@ export function useModerationItem(id: string | null) {
 // A decision can take down a report, a chat message, media or a whole cleanup (and its signup page) and
 // changes the subject's strikes and status, so every section that shows those refreshes too.
 function invalidateModeration(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  if (id) qc.invalidateQueries({ queryKey: queryKeys.moderation.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.moderation.all })
-  qc.invalidateQueries({ queryKey: queryKeys.reports.all })
-  qc.invalidateQueries({ queryKey: queryKeys.events.all })
-  qc.invalidateQueries({ queryKey: queryKeys.pages.all })
-  qc.invalidateQueries({ queryKey: queryKeys.users.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  return Promise.all([
+    id ? qc.invalidateQueries({ queryKey: queryKeys.moderation.detail(id) }) : null,
+    qc.invalidateQueries({ queryKey: queryKeys.moderation.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+  ])
 }
 
 export function useApproveModeration() {

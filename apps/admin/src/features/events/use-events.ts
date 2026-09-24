@@ -46,12 +46,14 @@ export function useEvent(id: string | null) {
 
 // Profiles, org event tabs and signup pages all render an event's status, turnout and flag.
 function invalidateEvents(qc: ReturnType<typeof useQueryClient>, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.events.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.users.all })
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
-  qc.invalidateQueries({ queryKey: queryKeys.pages.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
+  ])
 }
 
 export function useFlagEvent() {
@@ -90,10 +92,11 @@ export function useLinkReports() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: LinkEventReportsRequest) => api.linkEventReports(input),
-    onSuccess: (_res, { id }) => {
-      invalidateEvents(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidateEvents(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
+      ]),
   })
 }
 
@@ -101,10 +104,11 @@ export function useUnlinkReport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: { id: string; reportId: string }) => api.unlinkEventReport(input),
-    onSuccess: (_res, { id, reportId }) => {
-      invalidateEvents(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.reports.detail(reportId) })
-      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
-    },
+    onSuccess: (_res, { id, reportId }) =>
+      Promise.all([
+        invalidateEvents(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.reports.detail(reportId) }),
+        qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
+      ]),
   })
 }

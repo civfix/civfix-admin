@@ -34,19 +34,22 @@ export function useAdminEventPage(cleanupId: string | null) {
 }
 
 function invalidatePages(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: queryKeys.pages.all })
-  qc.invalidateQueries({ queryKey: queryKeys.events.all })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.pages.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+  ])
 }
 
 export function useFlagEventPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: FlagEventPageRequest) => api.adminFlagEventPage(input),
-    onSuccess: (_res, { id }) => {
-      invalidatePages(qc)
-      qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidatePages(qc),
+        qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+      ]),
   })
 }
 
@@ -54,9 +57,10 @@ export function useUnpublishEventPage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: UnpublishEventPageRequest) => api.adminUnpublishEventPage(input),
-    onSuccess: (_res, { id }) => {
-      invalidatePages(qc)
-      qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidatePages(qc),
+        qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) }),
+      ]),
   })
 }

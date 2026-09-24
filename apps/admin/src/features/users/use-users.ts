@@ -93,9 +93,11 @@ export function useUserMessages(id: string | null) {
 }
 
 function invalidateUsers(qc: ReturnType<typeof useQueryClient>, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.users.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+  ])
 }
 
 export function useFlagUser() {
@@ -126,10 +128,11 @@ export function useRemoveUserMessage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: RemoveUserMessageRequest) => api.removeUserMessage(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.users.messages(id) })
-      invalidateUsers(qc, id)
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.users.messages(id) }),
+        invalidateUsers(qc, id),
+      ]),
   })
 }
 

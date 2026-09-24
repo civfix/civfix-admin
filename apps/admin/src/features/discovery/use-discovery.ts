@@ -93,9 +93,11 @@ export function useJurisdictionGeometry(geoid: string | null) {
 
 /** Invalidate every discovery/jurisdiction view plus the home aggregates after a write. */
 function invalidateDiscovery(qc: ReturnType<typeof useQueryClient>) {
-  qc.invalidateQueries({ queryKey: queryKeys.discovery.all })
-  qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.discovery.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+  ])
 }
 
 /** POST /admin/discovery/:id/notes - append an operator note to a discovery task. */
@@ -103,10 +105,11 @@ export function useAddDiscoveryNote() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: AddNoteRequest) => api.addDiscoveryNote(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) })
-      invalidateDiscovery(qc)
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) }),
+        invalidateDiscovery(qc),
+      ]),
   })
 }
 
@@ -115,10 +118,11 @@ export function useFlagDiscovery() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: FlagDiscoveryRequest) => api.flagDiscovery(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) })
-      invalidateDiscovery(qc)
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) }),
+        invalidateDiscovery(qc),
+      ]),
   })
 }
 
@@ -127,10 +131,11 @@ export function useSaveDiscoveryDraft() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SaveDraftRequest) => api.saveDiscoveryDraft(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) })
-      invalidateDiscovery(qc)
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.discovery.detail(id) }),
+        invalidateDiscovery(qc),
+      ]),
   })
 }
 

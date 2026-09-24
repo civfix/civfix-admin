@@ -67,12 +67,14 @@ export function useRefreshReportMedia(id: string): () => void {
 
 // Profiles, event detail and the moderation queue all render a report's status and flag.
 function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.reports.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
-  qc.invalidateQueries({ queryKey: queryKeys.users.all })
-  qc.invalidateQueries({ queryKey: queryKeys.events.all })
-  qc.invalidateQueries({ queryKey: queryKeys.moderation.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.moderation.all }),
+  ])
 }
 
 export function useSetReportStatus() {
@@ -111,12 +113,13 @@ export function useRouteReport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: RouteReportRequest) => api.routeReport(input),
-    onSuccess: (_res, { id }) => {
-      invalidateReports(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.mail.all })
-      qc.invalidateQueries({ queryKey: queryKeys.discovery.all })
-      qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidateReports(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.mail.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.discovery.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all }),
+      ]),
   })
 }
 
@@ -155,10 +158,11 @@ export function useSendReportMessage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: AdminSendReportMessageRequest) => api.adminSendReportMessage(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) })
-      qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) }),
+        qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) }),
+      ]),
   })
 }
 
@@ -166,8 +170,6 @@ export function useRemoveReportMessage() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: AdminRemoveReportMessageRequest) => api.adminRemoveReportMessage(input),
-    onSuccess: (_res, { id }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) })
-    },
+    onSuccess: (_res, { id }) => qc.invalidateQueries({ queryKey: queryKeys.reports.chat(id) }),
   })
 }

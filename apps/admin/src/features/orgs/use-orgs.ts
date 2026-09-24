@@ -93,21 +93,27 @@ export function useOrgVerificationDocument(mediaId: string | null) {
 type Qc = ReturnType<typeof useQueryClient>
 
 function invalidateOrgLists(qc: Qc) {
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+  ])
 }
 
 function invalidateOrg(qc: Qc, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) })
-  invalidateOrgLists(qc)
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) }),
+    invalidateOrgLists(qc),
+  ])
 }
 
 function invalidateOrgMembers(qc: Qc, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.members(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
-  qc.invalidateQueries({ queryKey: queryKeys.users.all })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.members(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.detail(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.orgs.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.audit.all }),
+  ])
 }
 
 export function useDecideOrgVerification() {
@@ -133,7 +139,7 @@ export function useCreateOrg() {
     mutationFn: (input: AdminCreateOrgRequest) => api.adminCreateOrg(input),
     onSuccess: (org) => {
       qc.setQueryData(queryKeys.orgs.detail(org.id), org)
-      invalidateOrgLists(qc)
+      return invalidateOrgLists(qc)
     },
     meta: {
       errorMessage: (error: unknown, request: AdminCreateOrgRequest) =>
@@ -155,7 +161,7 @@ export function useUpdateOrg() {
     mutationFn: (input: AdminUpdateOrgRequest) => api.adminUpdateOrg(input),
     onSuccess: (org, { id }) => {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
-      invalidateOrg(qc, id)
+      return invalidateOrg(qc, id)
     },
     meta: {
       errorMessage: (error: unknown, request: AdminUpdateOrgRequest) =>
@@ -170,7 +176,7 @@ export function useSetOrgSuspended() {
     mutationFn: (input: AdminSetOrgSuspendedRequest) => api.adminSetOrgSuspended(input),
     onSuccess: (org, { id }) => {
       qc.setQueryData(queryKeys.orgs.detail(id), org)
-      invalidateOrg(qc, id)
+      return invalidateOrg(qc, id)
     },
   })
 }

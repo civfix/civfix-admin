@@ -69,11 +69,13 @@ export function useMailStats() {
 }
 
 export function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  if (id) qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.mail.all })
-  qc.invalidateQueries({ queryKey: queryKeys.mail.stats })
-  qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  return Promise.all([
+    id ? qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) }) : null,
+    qc.invalidateQueries({ queryKey: queryKeys.mail.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.mail.stats }),
+    qc.invalidateQueries({ queryKey: queryKeys.inbox.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+  ])
 }
 
 export function useComposeMail() {
@@ -119,11 +121,12 @@ export function useResendMail() {
 export function publishMailReplyOptions(qc: ReturnType<typeof useQueryClient>) {
   return mutationOptions({
     mutationFn: (input: PublishMailReplyRequest) => api.publishMailReply(input),
-    onSuccess: (_res, { id }) => {
-      invalidateMail(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
-      qc.invalidateQueries({ queryKey: queryKeys.events.all })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidateMail(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+      ]),
   })
 }
 

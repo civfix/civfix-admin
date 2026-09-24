@@ -43,8 +43,10 @@ export function useGovClaim(id: string | null) {
 }
 
 function invalidateGovClaims(qc: ReturnType<typeof useQueryClient>, id: string) {
-  qc.invalidateQueries({ queryKey: queryKeys.govClaims.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.govClaims.all })
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: queryKeys.govClaims.detail(id) }),
+    qc.invalidateQueries({ queryKey: queryKeys.govClaims.all }),
+  ])
 }
 
 export function useVerifyGovClaimCheck() {
@@ -60,10 +62,11 @@ export function useApproveGovClaim() {
   return useMutation({
     mutationFn: (input: ApproveGovClaimRequest) => api.approveGovClaim(input),
     meta: { errorMessage: govClaimApproveErrorMessage },
-    onSuccess: (_res, { id }) => {
-      invalidateGovClaims(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.users.all })
-    },
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidateGovClaims(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.users.all }),
+      ]),
   })
 }
 

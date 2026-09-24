@@ -67,9 +67,11 @@ export function useInboxMessage(id: string | null) {
 }
 
 function invalidateInbox(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  if (id) qc.invalidateQueries({ queryKey: queryKeys.inbox.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  return Promise.all([
+    id ? qc.invalidateQueries({ queryKey: queryKeys.inbox.detail(id) }) : null,
+    qc.invalidateQueries({ queryKey: queryKeys.inbox.all }),
+    qc.invalidateQueries({ queryKey: queryKeys.home.all }),
+  ])
 }
 
 export function useSetInboxStatus() {
