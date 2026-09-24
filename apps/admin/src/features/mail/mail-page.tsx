@@ -51,6 +51,7 @@ import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav, useToast } from "@/store/ui-store"
 import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
+import { isWebUrl } from "@/lib/external-url"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
 
@@ -402,18 +403,27 @@ function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: 
                 {msg.attachments.length > 0 && (
                   <div className="mail-attachments">
                     {msg.attachments.map((att) => (
-                      <a
-                        key={att.key}
-                        className="btn sm"
-                        href={att.key}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <Icons.ExternalLink size={13} /> {att.filename}
-                        <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
-                          {(att.size / 1024).toFixed(0)}k
+                      isWebUrl(att.key) ? (
+                        <a
+                          key={att.key}
+                          className="btn sm"
+                          href={att.key}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Icons.ExternalLink size={13} /> {att.filename}
+                          <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
+                            {(att.size / 1024).toFixed(0)}k
+                          </span>
+                        </a>
+                      ) : (
+                        <span key={att.key} title="Link unavailable">
+                          {att.filename}
+                          <span className="mono" style={{ marginLeft: 6, opacity: 0.6 }}>
+                            {(att.size / 1024).toFixed(0)}k
+                          </span>
                         </span>
-                      </a>
+                      )
                     ))}
                   </div>
                 )}
