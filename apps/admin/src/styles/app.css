@@ -115,16 +115,6 @@
 .op-login-submit {
   margin-top: 2px;
 }
-.op-login-error {
-  color: var(--bloom-700);
-  background: var(--bloom-50);
-  border: 1px solid color-mix(in oklab, var(--bloom) 25%, transparent);
-  border-radius: 8px;
-  padding: 8px 11px;
-  font-size: 12.5px;
-  font-weight: 600;
-  margin: 4px 0 0;
-}
 /* -- App-level loading / error / empty states (data hooks) ---------------- */
 /* Reuse .empty-state from the design for empty + error; these add a spinner row
    and a skeleton shimmer for loading. */
