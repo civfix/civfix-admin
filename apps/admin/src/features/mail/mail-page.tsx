@@ -21,6 +21,7 @@ import {
   type FilterOption,
 } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
+import { useModalFocus } from "@/components/shared/modal-focus"
 import {
   useComposeMail,
   useForwardTemplateDefault,
@@ -131,41 +132,74 @@ function ComposeModal({
   const [to, setTo] = React.useState("")
   const [subject, setSubject] = React.useState("")
   const [body, setBody] = React.useState("")
+  const modalRef = useModalFocus<HTMLDivElement>(open)
+  const toRef = React.useRef<HTMLInputElement>(null)
+  const titleId = React.useId()
+  const toId = React.useId()
+  const subjectId = React.useId()
+  const bodyId = React.useId()
 
+  // Focused here rather than with autoFocus: autoFocus lands before useModalFocus records the element
+  // to restore, so closing would return focus to the dead field instead of the Compose button.
   React.useEffect(() => {
     if (open) {
       setTo("")
       setSubject("")
       setBody("")
+      toRef.current?.focus()
     }
   }, [open])
+
+  // Escape and the backdrop only dismiss an empty draft; once something is typed, Cancel and the
+  // close button are the deliberate ways to discard it (the same rule as the create-org panel).
+  const pristine = to === "" && subject === "" && body === ""
+  const dismiss = React.useCallback(() => {
+    if (pristine) onClose()
+  }, [pristine, onClose])
+  React.useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismiss()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [open, dismiss])
 
   if (!open) return null
   const canSend = !!to.trim() && !!subject.trim() && !!body.trim() && !pending
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal compose-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={dismiss}>
+      <div
+        ref={modalRef}
+        className="modal compose-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div className="modal-head">
-          <h3>New message</h3>
-          <button className="closebtn" onClick={onClose}>
+          <h3 id={titleId}>New message</h3>
+          <button className="closebtn" onClick={onClose} aria-label="Close">
             <Icons.X size={16} />
           </button>
         </div>
         <div className="modal-body">
           <div className="compose-field">
-            <label>To</label>
+            <label htmlFor={toId}>To</label>
             <input
+              id={toId}
+              ref={toRef}
               type="email"
               placeholder="contact@city.gov"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              autoFocus
             />
           </div>
           <div className="compose-field">
-            <label>Subject</label>
+            <label htmlFor={subjectId}>Subject</label>
             <input
+              id={subjectId}
               type="text"
               placeholder="Subject line"
               value={subject}
@@ -173,8 +207,9 @@ function ComposeModal({
             />
           </div>
           <div className="compose-field">
-            <label>Message</label>
+            <label htmlFor={bodyId}>Message</label>
             <textarea
+              id={bodyId}
               rows={7}
               placeholder="Write your message…"
               value={body}
