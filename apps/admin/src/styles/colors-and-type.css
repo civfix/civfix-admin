@@ -1,93 +1,49 @@
-/* =========================================================================
-   PinIt - Colors & Type Foundations
-   Civics mapping app - Playful, sleek, intuitive
-
-   Ported from the design system (ds/colors_and_type.css). This file owns the
-   warm-paper CSS custom properties and the semantic type styles for the admin
-   dashboard. The Google Fonts CDN @import from the prototype is intentionally
-   dropped: fonts load through next/font (Bricolage Grotesque / Manrope /
-   JetBrains Mono) in the root layout, exposed as --font-display-next /
-   --font-body-next / --font-mono-next. ASCII only.
-   ========================================================================= */
-
 :root {
-  /* ====================================================================
-     COLOR - Brand
-     ==================================================================== */
-  /* Pastel-but-saturated. Each color has a -50 (tint, surfaces) and -600 (ink-on-color hover). */
-
-  --bloom-50:  #FFEDE9;   /* coral wash, alert surfaces */
+  --bloom-50:  #FFEDE9;
   --bloom-100: #FFD5CD;
-  --bloom-300: #FFA89A;
-  --bloom:     #FF7A6B;   /* PRIMARY - pins, CTAs, "report" */
+  --bloom:     #FF7A6B;
   --bloom-600: #E55F50;
   --bloom-700: #B8463A;
 
-  --moss-50:   #E8F3E8;   /* clean / community */
-  --moss-100:  #CDE5CD;
+  --moss-50:   #E8F3E8;
   --moss-300:  #9BCF9B;
-  --moss:      #6FB36F;   /* SUCCESS - cleanups, completed */
+  --moss:      #6FB36F;
   --moss-600:  #4F9551;
   --moss-700:  #347338;
 
-  --sun-50:    #FFF6DA;   /* highlight / cleanup events */
-  --sun-100:  #FFE9A4;
-  --sun-300:  #FFD668;
+  --sun-50:    #FFF6DA;
   --sun:       #FFCB47;
   --sun-600:   #E5AE1C;
   --sun-700:   #A77B0A;
 
-  --sky-50:    #E6F2FB;   /* info / map water */
-  --sky-100:   #C9E3F4;
-  --sky-300:   #A0CDE9;
+  --sky-50:    #E6F2FB;
   --sky:       #6FB1DC;
-  --sky-600:   #3F8DC0;
   --sky-700:   #2A6996;
 
-  --lilac-50:  #F0EBFB;   /* secondary accent */
-  --lilac-100: #DED2F5;
-  --lilac-300: #BFA9EC;
+  --lilac-50:  #F0EBFB;
   --lilac:     #9C82DE;
   --lilac-600: #7657C2;
 
-  /* ====================================================================
-     COLOR - Neutrals (warm)
-     ==================================================================== */
-  --paper:    #FBF7F0;   /* base canvas - warm cream */
-  --paper-2:  #F4EFE6;   /* sunken surface */
-  --card:     #FFFFFF;   /* elevated card */
-  --card-tint:#FCFAF6;   /* soft elevated */
+  --paper:    #FBF7F0;
+  --paper-2:  #F4EFE6;
+  --card:     #FFFFFF;
 
-  --ink:      #1A1714;   /* primary text */
-  --ink-2:    #4A453F;   /* secondary text */
-  --ink-3:    #8A8378;   /* tertiary / placeholder */
-  --ink-4:    #C9C2B5;   /* hairlines, disabled */
-  --ink-5:    #E8E2D5;   /* dividers */
+  --ink:      #1A1714;
+  --ink-2:    #4A453F;
+  --ink-3:    #8A8378;
+  --ink-4:    #C9C2B5;
 
-  /* ====================================================================
-     COLOR - Semantic
-     ==================================================================== */
   --fg-1: var(--ink);
-  --fg-2: var(--ink-2);
   --fg-3: var(--ink-3);
   --fg-on-color: #FFFFFF;
 
   --bg-1: var(--paper);
-  --bg-2: var(--paper-2);
-  --bg-card: var(--card);
 
-  --border-soft: rgba(26, 23, 20, 0.06);   /* hairline on cards */
+  --border-soft: rgba(26, 23, 20, 0.06);
   --border:      rgba(26, 23, 20, 0.10);
-  --border-strong: rgba(26, 23, 20, 0.16);
 
-  --accent:   var(--bloom);
-  --accent-fg:#FFFFFF;
-  --success:  var(--moss);
-  --warning:  var(--sun-600);
-  --info:     var(--sky);
   --danger:   var(--bloom-600);
 
-  /* Map / category colors - used for pin types */
   /* These mirror tokens.color.category plus tokens.color.cleanup (light scheme) in @civfix/shared -
      keep the two identical. */
   --cat-trash:      #776C60;
@@ -99,68 +55,44 @@
   --cat-other:      #8D8577;
   --cat-cleanup:    #D9A21B;
 
-  /* ====================================================================
-     TYPOGRAPHY - Families
-     The font NAMES are supplied by next/font via the --font-*-next variables set
-     on <html> (see src/app/layout.tsx). We alias them here with the same
-     fallbacks the prototype used so every .font-display/.mono rule resolves
-     identically.
-     ==================================================================== */
+  /* next/font sets the --font-*-next names on <html> (src/app/layout.tsx); these stacks add the
+     fallbacks. */
   --font-display: var(--font-display-next), 'Bricolage Grotesque', 'Bricolage', ui-sans-serif, system-ui, sans-serif;
   --font-body:    var(--font-body-next), 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono:    var(--font-mono-next), 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* Type scale - built on 1.25 (major third), tightened at small end */
-  --fs-12: 0.75rem;     /* 12 - micro labels, badges */
-  --fs-13: 0.8125rem;   /* 13 - captions */
-  --fs-14: 0.875rem;    /* 14 - UI body small */
-  --fs-15: 0.9375rem;   /* 15 - UI body */
-  --fs-16: 1rem;        /* 16 - base body */
-  --fs-18: 1.125rem;    /* 18 - lead body */
-  --fs-20: 1.25rem;     /* 20 - h5 */
-  --fs-24: 1.5rem;      /* 24 - h4 */
-  --fs-30: 1.875rem;    /* 30 - h3 */
-  --fs-38: 2.375rem;    /* 38 - h2 */
-  --fs-48: 3rem;        /* 48 - h1 */
-  --fs-64: 4rem;        /* 64 - display */
+  --fs-12: 0.75rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-30: 1.875rem;
+  --fs-38: 2.375rem;
+  --fs-48: 3rem;
 
   --lh-tight: 1.05;
   --lh-snug:  1.2;
   --lh-base:  1.45;
-  --lh-loose: 1.6;
 
-  --tracking-tight: -0.02em;   /* display */
-  --tracking-snug:  -0.01em;   /* headlines */
-  --tracking-base:   0;
-  --tracking-wide:   0.06em;   /* eyebrows, all-caps labels */
+  --tracking-tight: -0.02em;
+  --tracking-snug:  -0.01em;
+  --tracking-wide:   0.06em;
 
-  /* ====================================================================
-     SHAPE & SPACE
-     ==================================================================== */
-  --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
 
   --radius-xs: 6px;
   --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 20px;        /* default card */
-  --radius-xl: 28px;        /* hero card / sheet */
-  --radius-2xl: 36px;
-  --radius-pill: 999px;
-  --radius-pin: 50% 50% 50% 6px;  /* signature pin teardrop */
 
-  /* ====================================================================
-     ELEVATION - Layered, warm-tinted shadows
-     Soft + crisp pair gives the "lifted paper" feel without looking webby.
-     ==================================================================== */
+  --topbar-h: 52px;
+  --gutter: 16px;
+  --card-radius: 12px;
+  --row-pad-y: 11px;
+  --row-pad-x: 14px;
+
+  /* Each shadow pairs a crisp edge with a soft blur for the "lifted paper" look. */
   --shadow-1: 0 1px 0 rgba(26,23,20,0.04),
               0 1px 2px rgba(26,23,20,0.05);
 
@@ -176,98 +108,14 @@
               0 12px 20px rgba(26,23,20,0.08),
               0 32px 56px -16px rgba(26,23,20,0.18);
 
-  /* Inset highlight for floating elements - gives the soft "candy" sheen */
   --sheen-top: inset 0 1px 0 rgba(255,255,255,0.6);
 
-  /* Pin drop shadow (used on map markers) */
-  --shadow-pin: 0 6px 10px -2px rgba(255,122,107,0.45),
-                0 2px 4px rgba(26,23,20,0.20);
-
-  /* Focus ring - colored, not blue-default */
+  /* Focus ring: deliberately bloom-colored, not the browser's default blue. */
   --ring: 0 0 0 3px rgba(255,122,107,0.30);
 
-  /* ====================================================================
-     MOTION
-     ==================================================================== */
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);     /* default UI */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* press release / pin drop */
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-
-  --dur-1: 120ms;
-  --dur-2: 200ms;
-  --dur-3: 320ms;
-  --dur-4: 500ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
-/* =========================================================================
-   GRAVITY ANIMATION THEME
-   Things fall into place. Things fall off the screen. Quick + non-invasive.
-   Implemented as TRANSITIONS (not @keyframes) for mounted-iframe robustness.
-   ========================================================================= */
-
-.gravity-in,
-.gravity-pin,
-.gravity-cascade > * {
-  opacity: 0;
-  transform: translateY(-14px);
-  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
-              transform 280ms cubic-bezier(0.5, 0, 0.3, 1.35);
-  will-change: transform, opacity;
-}
-.gravity-pin {
-  transform: translateY(-26px) scale(0.92);
-  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
-              transform 420ms cubic-bezier(0.5, 0, 0.3, 1.35);
-}
-.gravity-sheet {
-  transform: translateY(100%);
-  transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
-}
-
-/* Entered: rested state */
-.gravity-in.gv-entered,
-.gravity-pin.gv-entered,
-.gravity-cascade.gv-entered > * {
-  opacity: 1;
-  transform: translateY(0);
-}
-.gravity-pin.gv-entered {
-  transform: translateY(0) scale(1);
-}
-.gravity-sheet.gv-entered {
-  transform: translateY(0);
-}
-
-/* Cascade stagger via transition-delay (animation-delay would be wrong here) */
-.gravity-cascade > *:nth-child(1) { transition-delay: 0ms; }
-.gravity-cascade > *:nth-child(2) { transition-delay: 40ms; }
-.gravity-cascade > *:nth-child(3) { transition-delay: 80ms; }
-.gravity-cascade > *:nth-child(4) { transition-delay: 120ms; }
-.gravity-cascade > *:nth-child(5) { transition-delay: 160ms; }
-.gravity-cascade > *:nth-child(6) { transition-delay: 200ms; }
-.gravity-cascade > *:nth-child(7) { transition-delay: 240ms; }
-.gravity-cascade > *:nth-child(8) { transition-delay: 280ms; }
-.gravity-cascade > *:nth-child(9) { transition-delay: 320ms; }
-.gravity-cascade > *:nth-child(n+10) { transition-delay: 360ms; }
-
-/* Exit utility - flip to this class to drop off-screen */
-.gravity-out {
-  opacity: 0 !important;
-  transform: translateY(28px) !important;
-  transition: opacity 180ms ease-in, transform 220ms ease-in !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gravity-in, .gravity-pin, .gravity-sheet, .gravity-cascade > * {
-    opacity: 1; transform: none; transition: none;
-  }
-}
-
-/* =========================================================================
-   SEMANTIC TYPE STYLES
-   Apply directly to elements OR use as utility class.
-   ========================================================================= */
 
 html, body {
   font-family: var(--font-body);
@@ -279,17 +127,7 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-.display, h1.display {
-  font-family: var(--font-display);
-  font-size: var(--fs-64);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-tight);
-  font-weight: 700;
-  font-variation-settings: "opsz" 72, "wdth" 95;
-  color: var(--fg-1);
-}
-
-h1, .h1 {
+h1 {
   font-family: var(--font-display);
   font-size: var(--fs-48);
   line-height: var(--lh-tight);
@@ -299,7 +137,7 @@ h1, .h1 {
   color: var(--fg-1);
 }
 
-h2, .h2 {
+h2 {
   font-family: var(--font-display);
   font-size: var(--fs-38);
   line-height: var(--lh-snug);
@@ -308,7 +146,7 @@ h2, .h2 {
   font-variation-settings: "opsz" 38, "wdth" 95;
 }
 
-h3, .h3 {
+h3 {
   font-family: var(--font-display);
   font-size: var(--fs-30);
   line-height: var(--lh-snug);
@@ -317,7 +155,7 @@ h3, .h3 {
   font-variation-settings: "opsz" 30, "wdth" 100;
 }
 
-h4, .h4 {
+h4 {
   font-family: var(--font-display);
   font-size: var(--fs-24);
   line-height: var(--lh-snug);
@@ -325,17 +163,11 @@ h4, .h4 {
   font-variation-settings: "opsz" 24, "wdth" 100;
 }
 
-h5, .h5 {
+h5 {
   font-family: var(--font-body);
   font-size: var(--fs-20);
   line-height: var(--lh-snug);
   font-weight: 700;
-}
-
-.lead {
-  font-size: var(--fs-18);
-  line-height: var(--lh-base);
-  color: var(--fg-2);
 }
 
 p, .body {
@@ -345,32 +177,12 @@ p, .body {
   text-wrap: pretty;
 }
 
-.body-sm {
-  font-size: var(--fs-14);
-  line-height: var(--lh-base);
-  color: var(--fg-2);
-}
-
-.caption {
-  font-size: var(--fs-13);
-  line-height: var(--lh-snug);
-  color: var(--fg-3);
-}
-
 .eyebrow {
   font-size: var(--fs-12);
   font-weight: 700;
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--fg-3);
-}
-
-.num, .stat {
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 48, "wdth" 85;  /* narrower for stats */
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 code, .mono {

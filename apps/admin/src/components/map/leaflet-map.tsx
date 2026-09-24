@@ -58,9 +58,9 @@ const GLYPHS: Record<string, string> = {
     "M12 9 a2 2 0 0 1 3 -1.3 a2 2 0 0 1 0.5 3 L12 14 L8.5 10.7 a2 2 0 0 1 0.5 -3 A2 2 0 0 1 12 9 Z M4 13 v5 a1 1 0 0 0 1 1 h2 v-6 Z M20 13 v5 a1 1 0 0 1 -1 1 h-2 v-6 Z",
 }
 const PIN_FILL: Record<string, string> = {
-  routed: "#8A8378",
+  routed: "var(--ink-3)",
   needs: "#E5564B",
-  event: "#E5AE1C",
+  event: "var(--sun-600)",
   "event-volunteer": "#5B8C6E",
 }
 // Event kinds own their fill and glyph; `draft` never overrides them.
@@ -82,8 +82,8 @@ function pinIcon(
   const html =
     `<div class="pi-pin2 ${state}${active ? " is-active" : ""}" style="width:${w}px;height:${h}px">` +
     `<svg viewBox="0 0 64 76" width="${w}" height="${h}">` +
-    `<path d="${TEARDROP}" fill="${fill}" stroke="#fff" stroke-width="2.5"/>` +
-    `<g transform="translate(20 16)" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="${glyph}"/></g>` +
+    `<path d="${TEARDROP}" style="fill:${fill};stroke:var(--fg-on-color)" stroke-width="2.5"/>` +
+    `<g transform="translate(20 16)" style="stroke:var(--fg-on-color)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="${glyph}"/></g>` +
     `</svg>` +
     `</div>`
   return L.divIcon({
