@@ -39,7 +39,10 @@ describe("Providers", () => {
 
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent("Something went wrong")
-    expect(alert).toHaveTextContent("shell exploded")
+    expect(alert).toHaveTextContent(
+      "This page hit an unexpected error. Try again, or reload the dashboard.",
+    )
+    expect(alert).not.toHaveTextContent("shell exploded")
     expect(within(alert).getByRole("button", { name: "Reload" })).toBeInTheDocument()
   })
 })

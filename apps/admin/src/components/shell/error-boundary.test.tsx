@@ -2,7 +2,11 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AppError, ErrorCode } from "@civfix/shared"
+
 import { ErrorBoundary, isChunkLoadError } from "@/components/shell/error-boundary"
+
+const RENDER_FAILED_COPY = "This page hit an unexpected error. Try again, or reload the dashboard."
 
 function chunkLoadError(): Error {
   const err = new Error("Loading chunk 812 failed.\n(error: https://admin.civfix.org/_next/static/chunks/812.js)")
@@ -71,10 +75,24 @@ describe("ErrorBoundary", () => {
 
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent("Something went wrong")
-    expect(alert).toHaveTextContent("Cannot read properties of undefined (reading 'cls')")
+    expect(alert).toHaveTextContent(RENDER_FAILED_COPY)
+    expect(alert).not.toHaveTextContent("Cannot read properties")
+    expect(within(alert).getByRole("button", { name: "Try again" })).toBeInTheDocument()
 
     await user.click(within(alert).getByRole("button", { name: "Reload" }))
     expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows an API error's own message", () => {
+    shouldThrow = new AppError(ErrorCode.FORBIDDEN, "Operators only.")
+    render(
+      <ErrorBoundary>
+        <Flaky />
+      </ErrorBoundary>,
+    )
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("Operators only.")
+    expect(alert).not.toHaveTextContent(RENDER_FAILED_COPY)
   })
 
   it("remounts its children on Try again", async () => {
@@ -119,6 +137,8 @@ describe("ErrorBoundary", () => {
         <Flaky />
       </ErrorBoundary>,
     )
-    expect(screen.getByRole("alert")).toHaveTextContent("Something went wrong")
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("Something went wrong")
+    expect(alert).toHaveTextContent(RENDER_FAILED_COPY)
   })
 })

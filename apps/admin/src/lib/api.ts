@@ -107,6 +107,11 @@ function isAppErrorLike(err: unknown): err is {
   return typeof code === "string" && (Object.values(ErrorCode) as string[]).includes(code)
 }
 
+/** True for an AppError from either bundle: its message is API-authored copy, safe to show. */
+export function isAppError(err: unknown): boolean {
+  return err instanceof AppError || isAppErrorLike(err)
+}
+
 /** True when the error is a not-found (used to render tidy empty states vs. hard errors). */
 export function isNotFound(err: unknown): boolean {
   return toAppError(err).code === ErrorCode.NOT_FOUND

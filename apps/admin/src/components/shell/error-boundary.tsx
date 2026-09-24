@@ -2,7 +2,9 @@
 
 import * as React from "react"
 
-import { toAppError } from "@/lib/api"
+import { ErrorState } from "@/components/shared/data-states"
+import { isAppError } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 
 const CHUNK_LOAD_MESSAGE =
   /Loading (CSS )?chunk [\w-]+ failed|Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i
@@ -11,6 +13,8 @@ export function isChunkLoadError(error: unknown): boolean {
   if (!(error instanceof Error)) return false
   return error.name === "ChunkLoadError" || CHUNK_LOAD_MESSAGE.test(error.message)
 }
+
+const RENDER_FAILED = "This page hit an unexpected error. Try again, or reload the dashboard."
 
 function reloadPage(): void {
   window.location.reload()
@@ -58,25 +62,18 @@ function BoundaryFallback({
   // React.lazy caches a rejected import, so remounting re-throws the same chunk failure; only a full
   // reload fetches the new build's chunk manifest.
   const chunkFailed = isChunkLoadError(error)
-  const message = React.useMemo(() => toAppError(error).message, [error])
+  // A developer exception's text (a TypeError naming a property) means nothing to an operator; only an
+  // AppError carries copy written for them.
+  const message = chunkFailed
+    ? "The dashboard may have been updated. Reload to get the latest version."
+    : errorMessage(error, {}, { fallback: RENDER_FAILED, preferServerMessage: isAppError(error) })
   return (
-    <div className="state-error" role="alert">
-      <div className="state-error-title">
-        {chunkFailed ? "This page could not load" : "Something went wrong"}
-      </div>
-      <div className="state-error-sub">
-        {chunkFailed ? "The dashboard may have been updated. Reload to get the latest version." : message}
-      </div>
-      <div className="row-flex">
-        {!chunkFailed && (
-          <button type="button" className="btn sm" onClick={onRetry}>
-            Try again
-          </button>
-        )}
-        <button type="button" className="btn sm primary" onClick={onReload}>
-          Reload
-        </button>
-      </div>
-    </div>
+    <ErrorState
+      error={error}
+      title={chunkFailed ? "This page could not load" : "Something went wrong"}
+      message={message}
+      onRetry={chunkFailed ? undefined : onRetry}
+      action={{ label: "Reload", onClick: onReload }}
+    />
   )
 }
