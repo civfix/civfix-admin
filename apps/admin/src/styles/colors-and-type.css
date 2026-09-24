@@ -200,71 +200,6 @@
 }
 
 /* =========================================================================
-   GRAVITY ANIMATION THEME
-   Things fall into place. Things fall off the screen. Quick + non-invasive.
-   Implemented as TRANSITIONS (not @keyframes) for mounted-iframe robustness.
-   ========================================================================= */
-
-.gravity-in,
-.gravity-pin,
-.gravity-cascade > * {
-  opacity: 0;
-  transform: translateY(-14px);
-  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
-              transform 280ms cubic-bezier(0.5, 0, 0.3, 1.35);
-  will-change: transform, opacity;
-}
-.gravity-pin {
-  transform: translateY(-26px) scale(0.92);
-  transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
-              transform 420ms cubic-bezier(0.5, 0, 0.3, 1.35);
-}
-.gravity-sheet {
-  transform: translateY(100%);
-  transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  will-change: transform;
-}
-
-/* Entered: rested state */
-.gravity-in.gv-entered,
-.gravity-pin.gv-entered,
-.gravity-cascade.gv-entered > * {
-  opacity: 1;
-  transform: translateY(0);
-}
-.gravity-pin.gv-entered {
-  transform: translateY(0) scale(1);
-}
-.gravity-sheet.gv-entered {
-  transform: translateY(0);
-}
-
-/* Cascade stagger via transition-delay (animation-delay would be wrong here) */
-.gravity-cascade > *:nth-child(1) { transition-delay: 0ms; }
-.gravity-cascade > *:nth-child(2) { transition-delay: 40ms; }
-.gravity-cascade > *:nth-child(3) { transition-delay: 80ms; }
-.gravity-cascade > *:nth-child(4) { transition-delay: 120ms; }
-.gravity-cascade > *:nth-child(5) { transition-delay: 160ms; }
-.gravity-cascade > *:nth-child(6) { transition-delay: 200ms; }
-.gravity-cascade > *:nth-child(7) { transition-delay: 240ms; }
-.gravity-cascade > *:nth-child(8) { transition-delay: 280ms; }
-.gravity-cascade > *:nth-child(9) { transition-delay: 320ms; }
-.gravity-cascade > *:nth-child(n+10) { transition-delay: 360ms; }
-
-/* Exit utility - flip to this class to drop off-screen */
-.gravity-out {
-  opacity: 0 !important;
-  transform: translateY(28px) !important;
-  transition: opacity 180ms ease-in, transform 220ms ease-in !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gravity-in, .gravity-pin, .gravity-sheet, .gravity-cascade > * {
-    opacity: 1; transform: none; transition: none;
-  }
-}
-
-/* =========================================================================
    SEMANTIC TYPE STYLES
    Apply directly to elements OR use as utility class.
    ========================================================================= */
@@ -279,17 +214,7 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-.display, h1.display {
-  font-family: var(--font-display);
-  font-size: var(--fs-64);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--tracking-tight);
-  font-weight: 700;
-  font-variation-settings: "opsz" 72, "wdth" 95;
-  color: var(--fg-1);
-}
-
-h1, .h1 {
+h1 {
   font-family: var(--font-display);
   font-size: var(--fs-48);
   line-height: var(--lh-tight);
@@ -299,7 +224,7 @@ h1, .h1 {
   color: var(--fg-1);
 }
 
-h2, .h2 {
+h2 {
   font-family: var(--font-display);
   font-size: var(--fs-38);
   line-height: var(--lh-snug);
@@ -308,7 +233,7 @@ h2, .h2 {
   font-variation-settings: "opsz" 38, "wdth" 95;
 }
 
-h3, .h3 {
+h3 {
   font-family: var(--font-display);
   font-size: var(--fs-30);
   line-height: var(--lh-snug);
@@ -317,7 +242,7 @@ h3, .h3 {
   font-variation-settings: "opsz" 30, "wdth" 100;
 }
 
-h4, .h4 {
+h4 {
   font-family: var(--font-display);
   font-size: var(--fs-24);
   line-height: var(--lh-snug);
@@ -325,17 +250,11 @@ h4, .h4 {
   font-variation-settings: "opsz" 24, "wdth" 100;
 }
 
-h5, .h5 {
+h5 {
   font-family: var(--font-body);
   font-size: var(--fs-20);
   line-height: var(--lh-snug);
   font-weight: 700;
-}
-
-.lead {
-  font-size: var(--fs-18);
-  line-height: var(--lh-base);
-  color: var(--fg-2);
 }
 
 p, .body {
@@ -345,32 +264,12 @@ p, .body {
   text-wrap: pretty;
 }
 
-.body-sm {
-  font-size: var(--fs-14);
-  line-height: var(--lh-base);
-  color: var(--fg-2);
-}
-
-.caption {
-  font-size: var(--fs-13);
-  line-height: var(--lh-snug);
-  color: var(--fg-3);
-}
-
 .eyebrow {
   font-size: var(--fs-12);
   font-weight: 700;
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--fg-3);
-}
-
-.num, .stat {
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 48, "wdth" 85;  /* narrower for stats */
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 code, .mono {
