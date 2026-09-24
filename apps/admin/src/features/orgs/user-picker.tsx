@@ -19,7 +19,6 @@ import { errorMessage } from "@/lib/error-messages"
 const RESULT_ROWS = 8
 const API_MAX_LIMIT = 100
 
-/** The minimum a picked user needs to render: id, name, handle (avatar optional). */
 export interface PickedUser {
   id: string
   name: string
@@ -42,9 +41,8 @@ export function PickedUserAvatar({ user, size = 28 }: { user: PickedUser; size?:
 }
 
 /**
- * Search-and-pick a user by name, handle or city through the admin users list. Once picked, the
- * control collapses to the chosen user with a "Change" affordance so the form keeps a stable height.
- * Ownership is assigned by id (DECISIONS §32): the handle is only how the operator finds the person.
+ * Once picked, the control collapses to the chosen user so the form keeps a stable height. Ownership
+ * is assigned by id (DECISIONS §32); the handle is only how the operator finds the person.
  */
 export function UserPicker({
   value,
@@ -63,7 +61,6 @@ export function UserPicker({
   autoFocus?: boolean
   /** Id of the form's visible label for this field; replaces the built-in search label. */
   labelledBy?: string
-  /** Id of the form's error or hint for this field. */
   describedBy?: string
 }) {
   const [query, setQuery] = React.useState("")

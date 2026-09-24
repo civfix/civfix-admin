@@ -14,11 +14,7 @@ export const ORG_ROLE_PILL: Record<OrganizationMemberRole, string> = {
   member: "priority-low",
 }
 
-/**
- * The roles a member can be moved to from their current one. Every role but the current one is a
- * legal target — including `owner`, which is an ownership transfer (DECISIONS §32) — so the menu
- * offers all the others.
- */
+// `owner` is a legal target too: choosing it is an ownership transfer (DECISIONS §32).
 export function roleTargets(current: OrganizationMemberRole): OrganizationMemberRole[] {
   return ORG_ROLES.filter((r) => r !== current)
 }

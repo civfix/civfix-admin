@@ -50,7 +50,6 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
 
 type NavFn = ReturnType<typeof useNav>
 
-
 const STATUS_VIEW: Record<UserStatus, { cls: string; label: string }> = {
   active: { cls: "status-ok", label: USER_STATUS_LABELS.active },
   suspended: { cls: "status-flag", label: USER_STATUS_LABELS.suspended },

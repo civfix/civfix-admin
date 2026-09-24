@@ -18,13 +18,6 @@ import {
   govClaimApproveErrorMessage,
 } from "@/features/moderation/gov-claim-presentation"
 
-/**
- * Data hooks for the gov-provisioning queue (GET/POST /admin/gov-claims*). An operator verifies the
- * applicant's LinkedIn / municipal directory / phone callback, then approves — which provisions the
- * government role on the contact email's account and links the jurisdiction — or rejects with a reason.
- * Approve therefore also invalidates the users caches, since it changes an account's role.
- */
-
 export function useGovClaimListInfinite(params: GovClaimListQuery) {
   return useInfiniteQuery<GovClaimListResponse>({
     queryKey: queryKeys.govClaims.list(params),
@@ -80,6 +73,7 @@ export function useApproveGovClaim() {
       successMessage: (_res: unknown, { claim }: GovClaimDecision<ApproveGovClaimRequest>) =>
         `${claim.name} approved · government role provisioned`,
     },
+    // Approval provisions a government role on the contact email's account, so the users caches go stale.
     onSuccess: (_res, { request: { id } }) =>
       Promise.all([
         invalidateGovClaims(qc, id),

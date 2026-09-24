@@ -37,7 +37,6 @@ import { GovClaimDetail, GovClaimRow } from "@/features/moderation/gov-claims-vi
 import { useNav } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
 
-
 type ServerFilter = NonNullable<ModerationListQuery["filter"]>
 
 type Section = "queue" | "gov_claims"
@@ -241,7 +240,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
   return (
     <div className="rep-detail">
-      { }
       <div className="rep-head">
         <span className="rep-head-pin">
           {React.createElement(KIND_ICON[item.kind] ?? Icons.Shield, { size: 20 })}
@@ -272,7 +270,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
       <div className="rep-grid">
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">Report</div>
             <div className="sub-body">
@@ -310,7 +307,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
             </div>
           </div>
 
-          { }
           {item.media.length > 0 && (
             <div className="sub">
               <div className="sub-head">Media</div>
@@ -362,7 +358,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
             </div>
           )}
 
-          { }
           {item.signals.length > 0 && (
             <div className="sub">
               <div className="sub-head">Signals</div>
@@ -376,7 +371,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
             </div>
           )}
 
-          { }
           {item.similar.length > 0 && (
             <div className="sub">
               <div className="sub-head">Similar items</div>
@@ -411,7 +405,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
         </div>
 
         <div className="rep-col">
-          { }
           <div className="sub">
             <div className="sub-head">User context</div>
             <div className="sub-body">
@@ -482,7 +475,6 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
         </div>
       </div>
 
-      { }
       <div className="rep-actions">
         <span className="rep-actions-label">Decision</span>
         {item.kind === "appeal" ? (
