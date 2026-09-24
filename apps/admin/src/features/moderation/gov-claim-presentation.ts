@@ -6,6 +6,7 @@ import {
   type GovClaimStatus,
   type GovMethod,
   type GovVerificationCheck,
+  type VerifyCheckRequest,
 } from "@civfix/shared"
 
 import { errorMessage } from "@/lib/error-messages"
@@ -14,6 +15,11 @@ export const GOV_CLAIM_STATUS_VIEW: Record<GovClaimStatus, { cls: string; label:
   pending: { cls: "status-new", label: "Pending" },
   approved: { cls: "status-ok", label: "Approved" },
   rejected: { cls: "status-flag", label: "Rejected" },
+}
+
+// The fallbacks cover a status newer than this build, which the client passes through.
+export function govClaimStatusView(status: GovClaimStatus): { cls: string; label: string } {
+  return GOV_CLAIM_STATUS_VIEW[status] ?? GOV_CLAIM_STATUS_VIEW.pending
 }
 
 export const GOV_CHECK_STATUS_VIEW: Record<GovCheckStatus, { cls: string; label: string }> = {
@@ -31,6 +37,28 @@ export const GOV_CHECKS: readonly GovVerificationCheck[] = ["linkedin", "directo
 
 export function govCheckLabel(check: GovVerificationCheck): string {
   return GOV_VERIFICATION_CHECK_LABELS[check]
+}
+
+/**
+ * The request that moves one check to `next`. Going back to pending keeps the stored evidence; marking
+ * verified records what the operator typed (trimmed, omitted when blank). The stored note rides along
+ * either way, because the endpoint stores an omitted field as null.
+ */
+export function verifyCheckRequest(
+  claim: Pick<GovClaimDTO, "id" | "checks">,
+  check: GovVerificationCheck,
+  next: GovCheckStatus,
+  typedEvidence = "",
+): VerifyCheckRequest {
+  const stored = claim.checks[check]
+  const evidence = next === "pending" ? stored.evidence : typedEvidence.trim()
+  return {
+    id: claim.id,
+    check,
+    status: next,
+    ...(evidence ? { evidence } : {}),
+    ...(stored.note ? { note: stored.note } : {}),
+  }
 }
 
 /**
