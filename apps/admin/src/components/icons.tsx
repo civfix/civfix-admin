@@ -1,23 +1,14 @@
-/**
- * Icons (Lucide-style inline SVG), ported from the design prototype (icons.jsx) to a typed TSX module.
- * Stroke 1.75, round caps/joins, currentColor. Every name the design's `Icons.*` set used is present,
- * so ported components reference `Icons.Pin`, `Icons.ChevronRight`, etc. exactly as in the prototype.
- */
-
 export interface IconProps {
-  /** Pixel size for width + height (viewBox stays 24). Defaults to 16. */
   size?: number
   fill?: string
   stroke?: string
-  /** Stroke width. Defaults to 1.75. */
+  /** Stroke width. */
   sw?: number
   className?: string
 }
 
 interface BaseIconProps extends IconProps {
-  /** A single path string, OR... */
   d?: string
-  /** ...several path strings. */
   paths?: string[]
 }
 
@@ -48,12 +39,10 @@ function Icon({
   )
 }
 
-/** A single icon component: takes IconProps (size/fill/stroke/sw/className). */
 export type IconComponent = (props: IconProps) => React.ReactElement
 
-// NOTE: declared as a plain object literal (not `Record<string, IconComponent>`) so that each known
-// key (Icons.Pin, Icons.ChevronRight, ...) is non-optional under `noUncheckedIndexedAccess`. The
-// `satisfies` clause still enforces that every value is a valid IconComponent.
+// A plain literal with `satisfies`, not `Record<string, IconComponent>`, so every known key stays
+// non-optional under `noUncheckedIndexedAccess`.
 export const Icons = {
   Pin: (p) => (
     <Icon

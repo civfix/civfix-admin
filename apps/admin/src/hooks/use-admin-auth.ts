@@ -13,21 +13,10 @@ import { api, toAppError } from "@/lib/api"
 import { navigateToAccessLogout } from "@/lib/access-auth"
 import { useAuthStore, selectIsOperator, selectOperator } from "@/store/auth-store"
 
-/**
- * Operator auth hooks for the dashboard.
- *
- * Auth model (Cloudflare Access SSO, doc 16; same-origin deployment): authentication is delegated to
- * Cloudflare Access. The SPA does not collect credentials; the SPA and the `/admin/*` API sit behind the
- * same Access app on the same origin, so a credentialed same-origin request already carries the Access
- * cookie and the edge injects the JWT. The bootstrap:
- *  - reuse:    GET  /admin/auth/session       -> { authenticated, operator?, csrfToken? } (adopt if valid)
- *  - exchange: POST /admin/auth/access/exchange (no body) -> { user (operator), csrfToken }
- *  - logout:   POST /admin/auth/logout, then GET /cdn-cgi/access/logout to end the Access session.
- *
- * The CSRF token returned by the exchange/session response is echoed on mutations via x-csrf-token.
- */
+// Cloudflare Access authenticates operators; the SPA never collects credentials. The SPA and the
+// `/admin/*` API sit behind the same Access app on the same origin, so a credentialed same-origin
+// request carries the Access cookie and the edge injects the JWT the exchange verifies.
 
-/** Read-side: is there an authenticated operator session right now? */
 export function useOperatorSession() {
   const isOperator = useAuthStore(selectIsOperator)
   const operator = useAuthStore(selectOperator)
@@ -35,7 +24,6 @@ export function useOperatorSession() {
   return { isOperator, operator, status }
 }
 
-/** Map the AdminLoginResponse `user` (Phase-1 SessionResponse shape) onto the operator DTO the store holds. */
 function operatorFromLogin(res: AdminLoginResponse): AdminOperatorDTO {
   return {
     id: res.user.id,
@@ -46,13 +34,8 @@ function operatorFromLogin(res: AdminLoginResponse): AdminOperatorDTO {
 }
 
 /**
- * Outcome of an operator bootstrap attempt:
- *  - "ok":        an operator session is established (reused or freshly minted); the gate unmounts.
- *  - "forbidden": Access authenticated the user but the email is not on the operator allowlist (a clean
- *                 403), or the session belongs to a non-operator. Terminal - show the not-authorized
- *                 message.
- *  - "error":     the exchange could not be completed (Access misconfigured / backend unreachable /
- *                 transient). The login screen offers a retry.
+ * "forbidden": Access authenticated the user but they are not an allowlisted operator. Terminal, since a
+ * retry would get the same answer. "error": the exchange failed for any other reason and may be retried.
  */
 export type BootstrapOutcome = "ok" | "forbidden" | "error"
 
@@ -93,7 +76,6 @@ async function establishOperatorSession(): Promise<BootstrapOutcome> {
       useAuthStore.getState().clear("forbidden")
       return "forbidden"
     }
-    // Anything else (Access not configured / backend down / network) is a retryable error.
     useAuthStore.getState().clear()
     return "error"
   }
@@ -111,25 +93,17 @@ function bootstrapOperatorSession(): Promise<BootstrapOutcome> {
 }
 
 /**
- * Establish the operator session and update the auth store. Returns a callback resolving to a
- * {@link BootstrapOutcome}. Used by the AuthHydrator on mount and by the login screen's retry button.
- * Never throws.
- *
- * It first tries to REUSE a still-valid operator session (GET /admin/auth/session) so a full-page reload
- * does not re-mint a session / write a fresh operator.login audit row. If there is none, it exchanges the
- * Access JWT (POST /admin/auth/access/exchange) for one.
+ * Never throws. A still-valid session is reused before exchanging, so a full-page reload does not mint
+ * a new session or write another operator.login audit row.
  */
 export function useOperatorBootstrap(): () => Promise<BootstrapOutcome> {
   return bootstrapOperatorSession
 }
 
 /**
- * Sign the operator out: POST /admin/auth/logout (CSRF-protected), clear local state + cache, then end
- * the Cloudflare Access session by navigating to /cdn-cgi/access/logout (doc 16 sec 6.5) - otherwise the
- * next visit silently re-authenticates from the still-valid Access cookie.
- *
- * The status turns signing-out first, so the gate shows a signing-out screen instead of the dashboard
- * or the "couldn't establish your session" screen while the request and navigation run.
+ * Ends the Access session too, or the next visit silently re-authenticates from the still-valid Access
+ * cookie. The status turns signing-out first so the gate shows neither the dashboard nor the
+ * session-error screen while the request and navigation run.
  */
 export function useAdminLogout(): () => Promise<void> {
   const setStatus = useAuthStore((s) => s.setStatus)
@@ -145,9 +119,8 @@ export function useAdminLogout(): () => Promise<void> {
       // logout below still ends the SSO session.
     }
     clear("signing-out")
-    // Drop all admin data so a future operator does not see stale cache.
+    // A future operator on this tab must not see the previous one's data.
     queryClient.clear()
-    // End the Access session and leave the page; this navigation does not return here.
     navigateToAccessLogout()
   }, [setStatus, clear, queryClient])
 }

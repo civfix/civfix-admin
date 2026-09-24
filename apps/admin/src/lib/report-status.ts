@@ -2,22 +2,14 @@ import { Icons, type IconComponent } from "@/components/icons"
 import type { AdminReportStatus } from "@civfix/shared"
 
 /**
- * Canonical report-status -> design-bucket reconciliation for the admin. This is the SINGLE source the
- * reports list, the reports detail, the users Reports tab, the home reports tile, and the live map all read
- * from, so the pill labels never disagree (they previously did — five hand-written maps that drifted).
- *
- * The civfix lifecycle is submitted -> held -> published -> acknowledged -> in_progress -> resolved
- * (+ rejected). The design surface has only three live buckets (Needs verification | In progress |
- * Completed) plus the orthogonal Removed. CRUCIAL: an authed pin is created `published` — LIVE, visible,
- * AWAITING a city contact — so published (and held, "under review") belong in the `submitted` bucket, NOT
- * Completed. Only `resolved` is Completed. This mirrors STATUS_BUCKETS in the backend
- * (admin-report-service.ts); keep the two in sync.
+ * The one status-to-bucket map every admin surface reads, so pill labels never disagree. A report is
+ * created `published`: live but still awaiting a city contact, so it (and `held`) belongs in
+ * `submitted`, and only `resolved` is Completed. Mirrors STATUS_BUCKETS in the backend's
+ * admin-report-service.ts; keep the two in sync.
  */
 
-/** A design status bucket: the three live buckets + the orthogonal Removed. */
 export type ReportBucket = "submitted" | "in_progress" | "completed" | "removed"
 
-/** Map every civfix status to its design bucket. */
 export const REPORT_STATUS_BUCKET: Record<AdminReportStatus, ReportBucket> = {
   submitted: "submitted",
   held: "submitted",
@@ -28,7 +20,6 @@ export const REPORT_STATUS_BUCKET: Record<AdminReportStatus, ReportBucket> = {
   rejected: "removed",
 }
 
-/** Pill treatment per design bucket: CSS pill class + leading icon + label. */
 export const BUCKET_VIEW: Record<
   ReportBucket,
   { cls: string; icon: IconComponent; label: string }
@@ -39,10 +30,8 @@ export const BUCKET_VIEW: Record<
   removed: { cls: "status-flag", icon: Icons.Trash, label: "Removed" },
 }
 
-/** The design bucket a civfix status falls in (for filter counts + the quick-status active state). */
 export function reportBucket(status: AdminReportStatus): ReportBucket {
-  // Fallback to "submitted" for any unknown/new status so a future enum value reads as new (awaiting
-  // action) rather than crashing or silently dropping into Completed.
+  // A status from a newer server reads as awaiting action rather than crashing or passing as Completed.
   return REPORT_STATUS_BUCKET[status] ?? "submitted"
 }
 
@@ -58,7 +47,6 @@ export function reportNeedsAttention(status: string, flagged: boolean): boolean 
   return flagged || (isReportStatus(status) && reportBucket(status) === "submitted")
 }
 
-/** The pill treatment (class + icon + label) for any civfix status, via its design bucket. */
 export function reportStatusView(status: AdminReportStatus): {
   cls: string
   icon: IconComponent

@@ -4,21 +4,6 @@ import * as React from "react"
 
 import { errorMessage } from "@/lib/error-messages"
 
-/**
- * Standard loading / error / empty state components for data-bound views. The prototype had NONE of
- * these (data was synchronous from window.DATA); every real list/detail needs them. The section pages
- * use these so the conventions stay consistent across sections.
- *
- * Recommended pattern in a page/section:
- *
- *   const q = useSomething(params)
- *   if (q.isLoading) return <LoadingState label="Loading reports..." />
- *   if (q.isError)   return <ErrorState error={q.error} onRetry={() => q.refetch()} />
- *   if (!q.data?.items.length) return <EmptyState title="Nothing here" sub="..." />
- *   // ...render q.data
- */
-
-/** Centered spinner row for in-flight queries. */
 export function LoadingState({ label = "Loading..." }: { label?: string }) {
   return (
     <div className="state-loading" role="status" aria-live="polite">
@@ -28,10 +13,6 @@ export function LoadingState({ label = "Loading..." }: { label?: string }) {
   )
 }
 
-/**
- * Error panel with an optional retry and an optional primary action beside it (the error boundary's
- * Reload). Shows the error's operator copy from errorMessage unless `message` replaces it.
- */
 export function ErrorState({
   error,
   onRetry,
@@ -69,7 +50,6 @@ export function ErrorState({
   )
 }
 
-/** A simple skeleton block; size it with width/height. Use several to fake a loading list/card. */
 export function Skeleton({
   width = "100%",
   height = 16,

@@ -1,6 +1,5 @@
 import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/shared"
 
-/** Pill treatment per event lifecycle status, shared by the Events section and the org events tab. */
 export const EVENT_STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
   upcoming: { cls: "status-new", label: EVENT_STATUS_LABELS.upcoming },
   in_progress: { cls: "status-progress", label: EVENT_STATUS_LABELS.in_progress },

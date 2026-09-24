@@ -1,6 +1,5 @@
 import type { OrgVerificationStatus } from "@civfix/shared"
 
-/** Pill treatment per org verification status, shared by the org list, profile and verification. */
 export const ORG_STATUS_VIEW: Record<OrgVerificationStatus, { label: string; cls: string }> = {
   unverified: { label: "Unverified", cls: "priority-low" },
   pending: { label: "Pending review", cls: "status-progress" },

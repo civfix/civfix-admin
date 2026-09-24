@@ -4,23 +4,15 @@ import { tokens } from "@civfix/shared/tokens"
 
 import { Providers } from "@/components/providers"
 import "./globals.css"
-// The ported design system CSS (warm-paper tokens + every shell/component class from the PinIt Admin
-// handoff). Imported AFTER globals.css so the design's component classes win over Tailwind's base
-// reset wherever they overlap on the shell. admin.css @imports colors-and-type.css itself.
+// After globals.css so the design system's component classes win over Tailwind's base reset where
+// they overlap on the shell.
 import "@/styles/admin.css"
-// Dashboard app additions the prototype lacked: the Cloudflare Access sign-in gate, boot screen, inline
-// spinner, and loading / error / empty states. Built on the same design tokens; imported last so it can
-// layer on top of the ported design CSS.
+// Last, so the app's own additions layer on top of the design system CSS.
 import "@/styles/app.css"
 
-/**
- * Fonts are loaded via next/font/google and exposed DIRECTLY as the CSS variables the ported design CSS
- * consumes (--font-display-next / --font-body-next / --font-mono-next, see colors-and-type.css). Those
- * design vars then build the final --font-display / --font-body / --font-mono stacks with literal
- * fallbacks. The next/font variable names MUST differ from the design's own --font-display/body/mono, or
- * the alias becomes a circular var() reference (which CSS invalidates -> serif fallback). The families
- * match tokens.font (Bricolage Grotesque / Manrope / JetBrains Mono), identical to community-web.
- */
+// colors-and-type.css builds the --font-display/body/mono stacks from these *-next variables. The names
+// must differ from the stacks' own, or the alias becomes a circular var() that CSS invalidates, falling
+// back to serif.
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
   variable: "--font-display-next",
@@ -49,7 +41,6 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // Sourced from the shared token (neutral.paper) so browser chrome matches the app background.
   themeColor: tokens.color.neutral.paper,
   width: "device-width",
   initialScale: 1,

@@ -1402,7 +1402,7 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   min-width: 0;
   container: panel-col / inline-size;
 }
-/* The panel is min(960px, 70vw), so its width — not the viewport's — decides whether two columns
+/* The panel is min(960px, 70vw), so its width, not the viewport's, decides whether two columns
    fit: below ~720px of panel (a viewport under ~1030px) each column would be under 330px. */
 @container panel-body (max-width: 720px) {
   .panel-top { grid-template-columns: 1fr; }
@@ -2724,7 +2724,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
    ========================================================= */
 .mail-strip { margin-bottom: 0; }
 
-/* Mailbox folder switch (Outreach | Inbox) — the unified Mail screen's primary control. A segmented
+/* Mailbox folder switch (Outreach | Inbox): the unified Mail screen's primary control. A segmented
    toggle, visually distinct from the contextual filter chips it sits beside in the toolbar. */
 .mailbox-switch {
   display: inline-flex;
@@ -3904,7 +3904,7 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 
 /* =========================================================
    Need-mapping oldest-age column + forward-email template editor (A2)
-   Appended after the A1 clickability block — do not merge into it.
+   Appended after the A1 clickability block; do not merge into it.
    ========================================================= */
 
 /* Oldest-waiting-report age chip in the "Need mapping" directory view. */
