@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { ERROR_TOAST_MS, SUCCESS_TOAST_MS, Toast } from "@/components/shell/toast"
@@ -43,11 +43,64 @@ describe("Toast", () => {
   })
 
   it("marks an error toast with the error tone", () => {
-    render(<Toast />)
+    const { container } = render(<Toast />)
+    const toast = container.firstElementChild
     show("Could not save", "error")
-    expect(screen.getByRole("status")).toHaveClass("error")
+    expect(toast).toHaveClass("error")
     show("Saved")
-    expect(screen.getByRole("status")).not.toHaveClass("error")
+    expect(toast).not.toHaveClass("error")
+  })
+
+  it("announces only the message: the Dismiss button sits outside the status region", () => {
+    render(<Toast />)
+    show("Report removed")
+    const region = screen.getByRole("status")
+    expect(region).toHaveTextContent(/^Report removed$/)
+    expect(within(region).queryByRole("button")).toBeNull()
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument()
+  })
+
+  it("returns focus to where the operator was after a keyboard dismiss", async () => {
+    const user = startFakeTimersWithUser()
+    render(
+      <>
+        <button type="button">Save changes</button>
+        <Toast />
+      </>,
+    )
+    const before = screen.getByRole("button", { name: "Save changes" })
+    before.focus()
+    show("Saved")
+
+    await user.tab()
+    expect(screen.getByRole("button", { name: "Dismiss" })).toHaveFocus()
+    await user.keyboard("{Enter}")
+
+    expect(useUiStore.getState().toast).toBeNull()
+    expect(before).toHaveFocus()
+  })
+
+  it("still dismisses when the element focused before the toast is gone", async () => {
+    const user = startFakeTimersWithUser()
+    function Page({ withSave }: { withSave: boolean }) {
+      return (
+        <>
+          {withSave && <button type="button">Save changes</button>}
+          <Toast />
+        </>
+      )
+    }
+    const { rerender } = render(<Page withSave />)
+    screen.getByRole("button", { name: "Save changes" }).focus()
+    show("Saved")
+    await user.tab()
+    rerender(<Page withSave={false} />)
+    expect(screen.getByRole("button", { name: "Dismiss" })).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+
+    expect(useUiStore.getState().toast).toBeNull()
+    expect(screen.queryByRole("button", { name: "Save changes" })).toBeNull()
   })
 
   it("auto-dismisses a success toast after the success duration", () => {

@@ -16,7 +16,8 @@ const TOAST_MS: Record<ToastTone, number> = { ok: SUCCESS_TOAST_MS, error: ERROR
  * client's mutation cache for every failed write. Toasts confirm destructive writes that have no real
  * undo, so the trailing affordance is a dismiss "X", not an "Undo" that would imply a revert.
  *
- * The status region stays mounted so screen readers announce each new toast; the dismiss button exists
+ * The status region stays mounted so screen readers announce each new toast, and holds only the message:
+ * the dismiss button sits beside it, so "Dismiss" is not read as part of the announcement, and exists
  * only while a toast is shown, so the hidden toast leaves no tab stop behind.
  */
 export function Toast() {
@@ -25,6 +26,8 @@ export function Toast() {
   const [hovered, setHovered] = React.useState(false)
   const [focused, setFocused] = React.useState(false)
   const held = hovered || focused
+  const dismissButton = React.useRef<HTMLButtonElement>(null)
+  const focusBeforeToast = React.useRef<HTMLElement | null>(null)
 
   React.useEffect(() => {
     if (!toast || held) return
@@ -32,34 +35,54 @@ export function Toast() {
     return () => clearTimeout(t)
   }, [toast, held, dismiss])
 
-  // The button unmounts with the toast, so no mouseleave or blur follows the click that removed it.
+  const onFocus = (e: React.FocusEvent<HTMLDivElement>) => {
+    setFocused(true)
+    if (e.currentTarget.contains(e.relatedTarget)) return
+    focusBeforeToast.current = e.relatedTarget instanceof HTMLElement ? e.relatedTarget : null
+  }
+
+  // The button unmounts with the toast, so no mouseleave or blur follows the click that removed it, and
+  // focus on it would fall to the body: hand it back to where the operator was before the toast.
   const close = () => {
+    const hadFocus = dismissButton.current === document.activeElement
+    const returnTo = focusBeforeToast.current
+    focusBeforeToast.current = null
     setHovered(false)
     setFocused(false)
     dismiss()
+    if (hadFocus && returnTo?.isConnected) returnTo.focus()
   }
 
   const tone = toast?.tone ?? "ok"
 
   return (
     <div
-      role="status"
       className={`toast-wrap ${toast ? "open" : ""} ${tone === "error" ? "error" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocus={() => setFocused(true)}
+      onFocus={onFocus}
       onBlur={() => setFocused(false)}
     >
+      <div role="status" className="toast-msg">
+        {toast && (
+          <>
+            <span className="ico" aria-hidden="true">
+              {tone === "error" ? <Icons.AlertTriangle size={11} /> : <Icons.Check size={11} />}
+            </span>
+            <span>{toast.text}</span>
+          </>
+        )}
+      </div>
       {toast && (
-        <>
-          <span className="ico" aria-hidden="true">
-            {tone === "error" ? <Icons.AlertTriangle size={11} /> : <Icons.Check size={11} />}
-          </span>
-          <span>{toast.text}</span>
-          <button type="button" className="undo" aria-label="Dismiss" onClick={close}>
-            <Icons.X size={13} />
-          </button>
-        </>
+        <button
+          ref={dismissButton}
+          type="button"
+          className="undo"
+          aria-label="Dismiss"
+          onClick={close}
+        >
+          <Icons.X size={13} />
+        </button>
       )}
     </div>
   )

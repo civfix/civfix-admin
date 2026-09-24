@@ -1875,6 +1875,11 @@ button:focus-visible { outline: none; box-shadow: var(--ring); }
   opacity: 1;
   pointer-events: auto;
 }
+.toast-wrap .toast-msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .toast-wrap .ico {
   width: 18px; height: 18px;
   background: var(--moss);
