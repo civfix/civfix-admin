@@ -7,6 +7,8 @@ import {
   ADMIN_REPORT_STATUS_TRANSITIONS,
   MESSAGE_BODY_MAX,
   REPORT_CATEGORY_LABELS,
+  RouteReportRequestSchema,
+  SendFollowupRequestSchema,
   type AdminReportCounts,
   type AdminReportDTO,
   type AdminReportListItemDTO,
@@ -21,12 +23,22 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { LightboxSync, openLightbox, type LightboxImage } from "@/components/shared/lightbox"
 import { categoryCssVar, categoryPinSrc } from "@/lib/category"
 import { reportStatusView } from "@/lib/report-status"
 import { eventKindView } from "@/lib/event-kind"
 import { getReporterProfileId } from "@/features/reports/reporter-navigation"
-import { routeActionFor, routeSendLabel, type RouteAction } from "@/features/reports/route-action"
+import { pluralize } from "@/features/reports/plural"
+import {
+  msgWhen,
+  reactionLabel,
+  sortChatOldestFirst,
+  systemLabel,
+} from "@/features/reports/report-chat"
+import { reportMediaView } from "@/features/reports/report-media"
+import { sendPanelView } from "@/features/reports/send-panel"
+import { SubmitShortcutHint, SUBMIT_KEYSHORTCUTS } from "@/features/reports/submit-shortcut"
 import { useDebounced } from "@/hooks/use-debounced"
 import {
   useFlagReport,
@@ -50,6 +62,9 @@ const LeafletMap = dynamic(() => import("@/components/map/leaflet-map").then((m)
   ssr: false,
   loading: () => <div className="pi-map-canvas" aria-busy="true" />,
 })
+
+const ROUTE_NOTE_MAX = RouteReportRequestSchema.shape.note.unwrap().maxLength ?? undefined
+const FOLLOWUP_MAX = SendFollowupRequestSchema.shape.body.maxLength ?? undefined
 
 type ReportFilter = "needs_verification" | "in_progress" | "completed" | "flagged" | "all"
 
@@ -101,10 +116,6 @@ function shortId(id: string): string {
   return `#${id.slice(0, 8)}`
 }
 
-function pluralize(n: number, singular: string, plural = `${singular}s`): string {
-  return `${n} ${n === 1 ? singular : plural}`
-}
-
 function eventDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
@@ -134,51 +145,8 @@ function LinkedEventCard({ event, onOpen }: { event: LinkedEventRef; onOpen: () 
   )
 }
 
-const REACTION_LABEL: Record<string, string> = {
-  like: "Like",
-  heart: "Love",
-  celebrate: "Celebrate",
-  support: "Support",
-  insightful: "Insightful",
-  concerned: "Concerned",
-}
-
-function msgWhen(iso: string): string {
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString()
-}
-
-function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string {
-  if (action.kind === "already_sent") {
-    return action.routedAt ? `Already sent · ${msgWhen(action.routedAt)}` : "Already sent"
-  }
-  if (action.kind === "resend") return "Send again to jurisdiction"
-  return routeSendLabel(verdictApproved)
-}
-
-const VERDICT_PILL = {
-  approved: { cls: "status-ok", label: "Approved" },
-  rejected: { cls: "status-flag", label: "Rejected" },
-  unreviewed: { cls: "status-new", label: "Not yet reviewed" },
-} as const
-
-function verdictPill(verdict: AdminReportDTO["verificationVerdict"], approvedLocally: boolean) {
-  if (verdict === "approved" || approvedLocally) return VERDICT_PILL.approved
-  if (verdict === "rejected") return VERDICT_PILL.rejected
-  return VERDICT_PILL.unreviewed
-}
-
 function chatAuthorName(msg: ChatMessageDTO): string {
   return msg.from?.name ?? "Removed"
-}
-
-function systemLabel(msg: ChatMessageDTO): string {
-  const status = msg.system?.status
-  const note = msg.system?.note?.trim()
-  const body = msg.system?.body?.trim() ?? msg.body?.trim()
-  const head = status ? `System · ${ADMIN_REPORT_STATUS_LABELS[status] ?? status}` : "System"
-  const detail = note || body
-  return detail ? `${head} — ${detail}` : head
 }
 
 /** A sender-less status event (report status changes, etc.). Read-only; can't be deleted. */
@@ -229,24 +197,17 @@ function ChatMessageRow({
       <div className="dsc-msg-body">
         <div className="dsc-msg-top">
           {authorId && !removed ? (
-            <span
+            <button
+              type="button"
               className="dsc-msg-who lnk-inline"
-              role="button"
-              tabIndex={0}
               title={`Open ${authorName}'s profile`}
               onClick={(e) => {
                 e.stopPropagation()
                 nav("users", authorId)
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.stopPropagation()
-                  nav("users", authorId)
-                }
-              }}
             >
               {authorName}
-            </span>
+            </button>
           ) : (
             <span className="dsc-msg-who">{authorName}</span>
           )}
@@ -313,7 +274,7 @@ function ChatMessageRow({
             <span className="dsc-msg-reactions">
               {reactions.map((r) => (
                 <span key={r.emoji} className={`dsc-reaction ${r.mine ? "mine" : ""}`}>
-                  {REACTION_LABEL[r.emoji] ?? r.emoji} {r.count}
+                  {reactionLabel(r.emoji)} {r.count}
                 </span>
               ))}
             </span>
@@ -385,17 +346,11 @@ function ReportDiscussion({
     )
   }
 
-  // Oldest → newest, matching the order neighbors see in the chat.
-  const items = React.useMemo(() => {
-    const list = [...(q.data?.items ?? [])]
-    list.sort((a, b) => {
-      const ta = Date.parse(a.createdAt)
-      const tb = Date.parse(b.createdAt)
-      if (ta !== tb) return ta - tb
-      return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
-    })
-    return list
-  }, [q.data])
+  // Oldest first, matching the order neighbors see in the chat.
+  const items = React.useMemo(
+    () => sortChatOldestFirst(q.data?.pages.flatMap((p) => p.items) ?? []),
+    [q.data],
+  )
 
   return (
     <div className="sub">
@@ -404,6 +359,7 @@ function ReportDiscussion({
         {!q.isLoading && !q.isError && (
           <span className="rep-confirms" style={{ marginLeft: "auto" }}>
             <Icons.MessageSquare size={12} /> {items.length}
+            {q.hasNextPage ? "+" : ""}
           </span>
         )}
       </div>
@@ -420,6 +376,16 @@ function ReportDiscussion({
           />
         ) : (
           <div className="dsc-list">
+            {q.hasNextPage && (
+              <button
+                type="button"
+                className="btn sm ghost full"
+                disabled={q.isFetchingNextPage}
+                onClick={() => q.fetchNextPage()}
+              >
+                {q.isFetchingNextPage ? "Loading…" : "Load older messages"}
+              </button>
+            )}
             {items.map((m) =>
               m.kind === "system" || m.from == null ? (
                 <ChatSystemRow key={m.id} msg={m} />
@@ -449,6 +415,7 @@ function ReportDiscussion({
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend()
           }}
           aria-label="Message the report chat"
+          aria-keyshortcuts={SUBMIT_KEYSHORTCUTS}
         />
         <div className="dsc-composer-foot">
           {hasCityContact && (
@@ -463,7 +430,7 @@ function ReportDiscussion({
             style={!draft.trim() ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
             onClick={onSend}
           >
-            <Icons.Send size={13} /> Post <span className="kbdhint">⌘⏎</span>
+            <Icons.Send size={13} /> Post <SubmitShortcutHint />
           </button>
         </div>
       </div>
@@ -487,7 +454,19 @@ const ReportRow = React.memo(function ReportRow({
   const thumb = item.thumbnailUrl !== brokenThumb ? item.thumbnailUrl : null
   const categoryLabel = REPORT_CATEGORY_LABELS[item.category]
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={() => onSelect(item.id)}
+      onKeyDown={(e) => {
+        // A key pressed on the nested reporter link bubbles here; it must stay that link's activation.
+        if (e.target !== e.currentTarget || !isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onSelect(item.id)
+      }}
+    >
       <div
         className={`leading ${thumb ? "has-thumb" : "has-pin"}`}
         style={{ ["--cat" as string]: categoryCssVar(item.category) }}
@@ -513,7 +492,7 @@ const ReportRow = React.memo(function ReportRow({
         <div className="top">
           <span className="title">{item.title}</span>
           {item.flagged && (
-            <span className="rep-flag-dot" title="Flagged">
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
               <Icons.Flag size={10} />
             </span>
           )}
@@ -601,6 +580,9 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const [routeOpen, setRouteOpen] = React.useState(false)
   const [routeNote, setRouteNote] = React.useState("")
   const [approvedLocally, setApprovedLocally] = React.useState(false)
+  const routeBlockedId = React.useId()
+  const rejectBlockedId = React.useId()
+  const followupBlockedId = React.useId()
 
   if (q.isLoading) return <LoadingState label="Loading report..." />
   if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
@@ -611,36 +593,17 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
   const outreachView = OUTREACH_VIEW[report.outreach.status] ?? OUTREACH_VIEW.not_sent
   const OutreachIco = outreachView.icon
   const canCity = !!report.city.contact
-  const routeAction = routeActionFor(report)
+  const panel = sendPanelView(report, approvedLocally)
   // A status newer than this build arrives unvalidated; offer no transition rather than guess one.
   const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status] ?? []
   const reporterProfileId = getReporterProfileId(report.reporter.id)
-  const verdictApproved = report.verificationVerdict === "approved" || approvedLocally
-  const verdictView = verdictPill(report.verificationVerdict, approvedLocally)
+  const { routeAction, approvesOnSend, canApproveHere, followupBlocked } = panel
   const sendAttempted = report.outreach.routedAt !== null
-  const approvesOnSend = routeAction.kind === "send" && !verdictApproved
-  const canApproveHere = !verdictApproved && !approvesOnSend
-  const followupBlocked = !canCity
-    ? "No city contact on file"
-    : report.outreach.threadId === null
-      ? "Send the report to the city first — a follow-up goes on that conversation"
-      : null
   const canSend = followupBlocked === null
   const pin = categoryPinSrc(report.category)
-  const previewMedia = report.media.find((m) => m.kind === "image") ?? report.media[0]
-  const photoUrl = previewMedia
-    ? previewMedia.kind === "image"
-      ? (previewMedia.thumbUrl ?? previewMedia.url)
-      : (previewMedia.thumbUrl ?? null)
-    : null
-  const galleryMedia = previewMedia
-    ? report.media.filter((m) => m.id !== previewMedia?.id)
-    : report.media
-  const lightboxImages: LightboxImage[] = report.media
-    .filter((m) => m.kind === "image")
-    .map((m) => ({ id: m.id, url: m.url, alt: `Photo on ${report.title}` }))
+  const { preview, gallery: galleryMedia, lightboxImages } = reportMediaView(report.media, report.title)
+  const photoUrl = preview ? (preview.thumbUrl ?? preview.url) : null
   const lightboxIndex = (id: string) => lightboxImages.findIndex((i) => i.id === id)
-  const previewIndex = previewMedia ? lightboxIndex(previewMedia.id) : -1
 
   const send = () => {
     const body = text.trim()
@@ -661,20 +624,13 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     setRouteOpen(true)
   }
 
-  const routeToJurisdiction = (note: string) => {
-    route.mutate(
-      {
-        id: report.id,
-        ...(note ? { note } : {}),
-      },
-      {
-        onSuccess: (res) => {
-          setRouteOpen(false)
-          setRouteNote("")
-          toast(`Sent to ${res.routedTo}`)
-        },
-      },
-    )
+  // Awaited rather than chained through per-call callbacks: those are dropped once the operator opens
+  // another report (this pane remounts), which would leave a report approved but never sent.
+  const routeToJurisdiction = async (note: string) => {
+    const res = await route.mutateAsync({ id: report.id, ...(note ? { note } : {}) })
+    setRouteOpen(false)
+    setRouteNote("")
+    toast(`Sent to ${res.routedTo}`)
   }
 
   const sendToJurisdiction = async () => {
@@ -689,19 +645,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
       confirmLabel: approvesOnSend ? "Verify and send" : "Send",
     })
     if (!ok) return
-    if (!approvesOnSend) {
-      routeToJurisdiction(note)
-      return
+    try {
+      if (approvesOnSend) {
+        await verdict.mutateAsync({ id: report.id, verdict: "approved" })
+        setApprovedLocally(true)
+      }
+      await routeToJurisdiction(note)
+    } catch {
+      // The query client already toasted the failure; a failed approve must stop before the send.
     }
-    verdict.mutate(
-      { id: report.id, verdict: "approved" },
-      {
-        onSuccess: () => {
-          setApprovedLocally(true)
-          routeToJurisdiction(note)
-        },
-      },
-    )
   }
 
   const onApprove = async () => {
@@ -749,12 +701,16 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
     flag.mutate(
       { id: report.id },
       {
-        onSuccess: () =>
+        // The endpoint toggles, so another operator's flag since this load flips the outcome: word the
+        // toast from the report as it now is.
+        onSuccess: async () => {
+          const { data } = await q.refetch()
           toast(
-            report.flagged
-              ? `${shortId(report.id)} · flag cleared`
-              : `${shortId(report.id)} · flagged for review`,
-          ),
+            data?.flagged
+              ? `${shortId(report.id)} · flagged for review`
+              : `${shortId(report.id)} · flag cleared`,
+          )
+        },
       },
     )
   }
@@ -884,13 +840,15 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
               <div className="rep-media">
                 <LightboxSync images={lightboxImages} />
                 {report.hasPhoto &&
-                  (previewIndex >= 0 ? (
+                  (preview ? (
                     <button
                       type="button"
                       className="rep-photo rep-photo-open"
                       style={{ ["--cat" as string]: categoryCssVar(report.category) }}
                       title="Expand this photo"
-                      onClick={() => openLightbox(lightboxImages, previewIndex, refreshMedia)}
+                      onClick={() =>
+                        openLightbox(lightboxImages, lightboxIndex(preview.id), refreshMedia)
+                      }
                     >
                       <ReportPhotoFace
                         photoUrl={photoUrl}
@@ -1145,8 +1103,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
           <div className="sub">
             <div className="sub-head">
               Send to jurisdiction
-              <span className={`pill tight ${verdictView.cls}`} style={{ marginLeft: "auto" }}>
-                {verdictView.label}
+              <span className={`pill tight ${panel.verdictPill.cls}`} style={{ marginLeft: "auto" }}>
+                {panel.verdictPill.label}
               </span>
             </div>
             <div className="sub-body">
@@ -1182,23 +1140,22 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                   )}
                 </>
               ) : !routeOpen ? (
-                <button
-                  className="btn primary full"
-                  disabled={routeAction.kind === "already_sent"}
-                  style={
-                    routeAction.kind === "already_sent"
-                      ? { opacity: 0.45, cursor: "not-allowed" }
-                      : undefined
-                  }
-                  title={
-                    routeAction.kind === "already_sent"
-                      ? "This report was already sent. Resend it from the Mail thread."
-                      : undefined
-                  }
-                  onClick={openRoute}
-                >
-                  <Icons.Send size={13} /> {routeButtonLabel(routeAction, verdictApproved)}
-                </button>
+                <>
+                  <button
+                    className="btn primary full"
+                    disabled={panel.routeBlocked !== null}
+                    aria-describedby={panel.routeBlocked ? routeBlockedId : undefined}
+                    style={panel.routeBlocked ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
+                    onClick={openRoute}
+                  >
+                    <Icons.Send size={13} /> {panel.routeLabel}
+                  </button>
+                  {panel.routeBlocked && (
+                    <div id={routeBlockedId} className="hint">
+                      {panel.routeBlocked}
+                    </div>
+                  )}
+                </>
               ) : (
                 <>
                   <div className="rep-city-contact">
@@ -1210,6 +1167,8 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                     style={{ marginTop: 8 }}
                     rows={3}
                     placeholder="Optional note to include in the email packet…"
+                    aria-label="Note to include in the email"
+                    maxLength={ROUTE_NOTE_MAX}
                     value={routeNote}
                     onChange={(e) => setRouteNote(e.target.value)}
                   />
@@ -1219,7 +1178,7 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                       disabled={route.isPending || verdict.isPending}
                       onClick={sendToJurisdiction}
                     >
-                      <Icons.Send size={13} /> {routeButtonLabel(routeAction, verdictApproved)}
+                      <Icons.Send size={13} /> {panel.routeLabel}
                     </button>
                     <button
                       className="btn"
@@ -1244,13 +1203,19 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 )}
                 <button
                   className="btn danger sm full"
-                  disabled={verdict.isPending}
+                  disabled={verdict.isPending || panel.rejectBlocked !== null}
+                  aria-describedby={panel.rejectBlocked ? rejectBlockedId : undefined}
                   onClick={onReject}
                   title="Reject this report's verification instead of sending it"
                 >
                   <Icons.X size={12} /> Reject
                 </button>
               </div>
+              {panel.rejectBlocked && (
+                <div id={rejectBlockedId} className="hint">
+                  {panel.rejectBlocked}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1267,18 +1232,25 @@ function ReportDetail({ reportId, onRemoved }: { reportId: string; onRemoved: (i
                 style={{ marginTop: 8 }}
                 rows={3}
                 placeholder={`Message ${report.city.dept} — e.g. nudge for an update…`}
+                aria-label="Message to the city"
+                maxLength={FOLLOWUP_MAX}
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
               <button
                 className="btn primary full"
                 disabled={!text.trim() || !canSend || followup.isPending}
+                aria-describedby={followupBlocked ? followupBlockedId : undefined}
                 onClick={send}
                 style={!text.trim() || !canSend ? { opacity: 0.45, cursor: "not-allowed" } : undefined}
-                title={followupBlocked ?? undefined}
               >
                 <Icons.Send size={13} /> Send to city
               </button>
+              {followupBlocked && (
+                <div id={followupBlockedId} className="hint">
+                  {followupBlocked}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1345,11 +1317,18 @@ export function ReportsPage({ focusId }: SectionPageProps) {
   }
   const listCount = serverCounts ? (serverCounts[FILTER_COUNT_KEY[filter]] ?? 0) : items.length
 
+  // Row 0 is picked once, on the first load. After an action clears the selection the list is still the
+  // pre-action page, so picking again would put another report's live buttons under the cursor.
+  const autoPicked = React.useRef(false)
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
+    if (selId !== null) autoPicked.current = true
+    else if (!autoPicked.current && items.length) {
+      autoPicked.current = true
+      setSelId(items[0]!.id)
+    }
   }, [items, selId])
 
   const selInList = selId !== null && items.some((x) => x.id === selId)
@@ -1394,6 +1373,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
           <input
             type="text"
             placeholder="Search title, place, reporter…"
+            aria-label="Search reports"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -1411,7 +1391,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
             {pinned && (
               <>
                 <div className="eyebrow" style={{ padding: "10px 10px 0" }}>
-                  Linked report
+                  {selId === focusId ? "Linked report" : "Selected report"}
                 </div>
                 <ReportRow item={pinned} selected onSelect={setSelId} />
               </>

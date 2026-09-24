@@ -18,7 +18,7 @@ import { queryKeys } from "@/lib/query"
 
 export function useEventList(params: AdminEventListQuery) {
   return useQuery<AdminEventListResponse>({
-    queryKey: queryKeys.events.list(params),
+    queryKey: queryKeys.events.page(params),
     queryFn: () => api.listAdminEvents(params),
   })
 }
@@ -44,10 +44,14 @@ export function useEvent(id: string | null) {
   })
 }
 
+// Profiles, org event tabs and signup pages all render an event's status, turnout and flag.
 function invalidateEvents(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.events.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.events.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  qc.invalidateQueries({ queryKey: queryKeys.users.all })
+  qc.invalidateQueries({ queryKey: queryKeys.orgs.all })
+  qc.invalidateQueries({ queryKey: queryKeys.pages.all })
 }
 
 export function useFlagEvent() {

@@ -1,6 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import type {
   AdminRemoveReportMessageRequest,
   AdminReportListQuery,
@@ -27,7 +33,10 @@ export function useReportList(params: AdminReportListQuery) {
   })
 }
 
-export function useReportListInfinite(params: AdminReportListQuery) {
+export function useReportListInfinite(
+  params: AdminReportListQuery,
+  opts: { keepPreviousData?: boolean } = {},
+) {
   return useInfiniteQuery<AdminReportListResponse>({
     queryKey: queryKeys.reports.list(params),
     queryFn: ({ pageParam }) =>
@@ -37,6 +46,7 @@ export function useReportListInfinite(params: AdminReportListQuery) {
       }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    ...(opts.keepPreviousData ? { placeholderData: keepPreviousData } : {}),
   })
 }
 
@@ -55,10 +65,14 @@ export function useRefreshReportMedia(id: string): () => void {
   }
 }
 
+// Profiles, event detail and the moderation queue all render a report's status and flag.
 function invalidateReports(qc: ReturnType<typeof useQueryClient>, id: string) {
   qc.invalidateQueries({ queryKey: queryKeys.reports.detail(id) })
   qc.invalidateQueries({ queryKey: queryKeys.reports.all })
   qc.invalidateQueries({ queryKey: queryKeys.home.all })
+  qc.invalidateQueries({ queryKey: queryKeys.users.all })
+  qc.invalidateQueries({ queryKey: queryKeys.events.all })
+  qc.invalidateQueries({ queryKey: queryKeys.moderation.all })
 }
 
 export function useSetReportStatus() {
@@ -110,27 +124,29 @@ export function useSetReportVerdict() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetReportVerdictRequest) => api.setReportVerdict(input),
-    onSuccess: (_res, { id }) => {
-      invalidateReports(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.users.all })
-    },
+    onSuccess: (_res, { id }) => invalidateReports(qc, id),
   })
 }
 
 /**
  * The report CHAT history on the ADMIN plane (GET /admin/reports/:id/messages), so it resolves against
  * admin.civfix.org like every other operator read. Operators see exactly what neighbors see, including
- * sender-less SYSTEM status events, and can post into the same thread.
- *
- * Pagination is intentionally minimal: we fetch the first page (newest window, up to `limit`) which is
- * plenty for an admin glance. `nextCursor` (older messages via `before`) is ignored on purpose.
+ * sender-less SYSTEM status events, and can post into the same thread. Pages run newest first; each
+ * `nextCursor` asks for the window before it, so older messages stay reachable for moderation.
  */
 const REPORT_CHAT_LIMIT = 50
 
 export function useReportChatHistory(id: string | null) {
-  return useQuery<ChatHistoryResponse>({
+  return useInfiniteQuery<ChatHistoryResponse>({
     queryKey: queryKeys.reports.chat(id ?? ""),
-    queryFn: () => api.adminReportMessages({ id: id as string, limit: REPORT_CHAT_LIMIT }),
+    queryFn: ({ pageParam }) =>
+      api.adminReportMessages({
+        id: id as string,
+        limit: REPORT_CHAT_LIMIT,
+        ...(typeof pageParam === "string" ? { before: pageParam } : {}),
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: !!id,
   })
 }
