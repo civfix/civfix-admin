@@ -439,6 +439,35 @@ describe("MailPage outreach", () => {
     expect(apiMock.getMailThread).not.toHaveBeenCalledWith({ id: "t-2" })
   })
 
+  it("keeps an unread thread open under Needs attention when opening it reads it out of the list", async () => {
+    mockChrome()
+    const UNREAD_REPLY = thread({ id: "t-4", subject: "Re: Streetlight out", dir: "in", unread: true })
+    let read = false
+    apiMock.listMail.mockImplementation(async (params: { filter?: string }) =>
+      params.filter === "attn"
+        ? mailPage(read ? [POTHOLE] : [UNREAD_REPLY, POTHOLE])
+        : mailPage([GRAFFITI, UNREAD_REPLY, POTHOLE]),
+    )
+    mockThreads(POTHOLE, GRAFFITI, UNREAD_REPLY)
+    apiMock.markMailRead.mockImplementation(async () => {
+      read = true
+      return { ok: true }
+    })
+    renderWithQuery(<MailPage focusId={null} />)
+    await within(detailCard()).findByText("Body of Graffiti at Lake Merritt")
+    await userEvent.click(screen.getByRole("button", { name: "Needs attention" }))
+    await within(listCard()).findByText("Re: Streetlight out")
+
+    await userEvent.click(within(listCard()).getByText("Re: Streetlight out"))
+
+    await waitFor(() => expect(apiMock.markMailRead).toHaveBeenCalledWith({ id: "t-4" }))
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Re: Streetlight out")).not.toBeInTheDocument(),
+    )
+    expect(within(detailCard()).getByText("Body of Re: Streetlight out")).toBeInTheDocument()
+    expect(apiMock.getMailThread).not.toHaveBeenCalledWith({ id: "t-1" })
+  })
+
   it("selects a row from the keyboard and marks the selected row current", async () => {
     mockChrome()
     apiMock.listMail.mockResolvedValue(mailPage([POTHOLE, GRAFFITI]))
@@ -759,6 +788,76 @@ describe("MailPage inbox", () => {
 
     expect(within(detailCard()).getByText("Body of Re: Pothole on 5th Ave")).toBeInTheDocument()
     expect(apiMock.getInboxMessage).not.toHaveBeenCalled()
+  })
+
+  it("keeps an unread message open under Unread when opening it reads it out of the list", async () => {
+    const NOTICE = inboxItem({ id: "i-3", subject: "Street closure notice" })
+    let read = false
+    mockChrome()
+    apiMock.listInboxFeed.mockImplementation(async (params: { filter?: string }) =>
+      params.filter === "unread"
+        ? feedPage(read ? [emailFeedItem(NOTICE)] : [QUESTION_FEED, emailFeedItem(NOTICE)])
+        : feedPage([PRESS_FEED, QUESTION_FEED, emailFeedItem(NOTICE)]),
+    )
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    mockInboxMessages(QUESTION, PRESS, NOTICE)
+    apiMock.setInboxStatus.mockImplementation(async () => {
+      read = true
+      return { ok: true }
+    })
+    renderWithQuery(<MailPage focusId={null} />)
+    await openInbox()
+    await within(detailCard()).findByText("Body of Press inquiry")
+    await userEvent.click(screen.getByRole("button", { name: "Unread" }))
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Press inquiry")).not.toBeInTheDocument(),
+    )
+
+    await userEvent.click(within(listCard()).getByText("Question about my report"))
+
+    await waitFor(() =>
+      expect(apiMock.setInboxStatus).toHaveBeenCalledWith({ id: "i-1", status: "read" }),
+    )
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Question about my report")).not.toBeInTheDocument(),
+    )
+    expect(within(detailCard()).getByText("Body of Question about my report")).toBeInTheDocument()
+    expect(apiMock.getInboxMessage).not.toHaveBeenCalledWith({ id: "i-3" })
+  })
+
+  it("still clears a message the operator archives out of the list after opening it", async () => {
+    let status = "unread"
+    mockChrome()
+    apiMock.listInboxFeed.mockImplementation(async () =>
+      feedPage(
+        status === "archived"
+          ? [PRESS_FEED]
+          : [PRESS_FEED, { ...QUESTION_FEED, unread: status === "unread" }],
+      ),
+    )
+    apiMock.listMail.mockResolvedValue(mailPage([]))
+    mockInboxMessages(QUESTION, PRESS)
+    apiMock.setInboxStatus.mockImplementation(async (input: { status: string }) => {
+      status = input.status
+      return { ok: true }
+    })
+    renderWithQuery(<MailPage focusId={null} />)
+    await openInbox()
+    await within(detailCard()).findByText("Body of Press inquiry")
+
+    await userEvent.click(within(listCard()).getByText("Question about my report"))
+    await waitFor(() =>
+      expect(apiMock.setInboxStatus).toHaveBeenCalledWith({ id: "i-1", status: "read" }),
+    )
+    const archive = await within(detailCard()).findByRole("button", { name: /Archive/ })
+    await waitFor(() => expect(archive).toBeEnabled())
+    await userEvent.click(archive)
+
+    await waitFor(() =>
+      expect(within(listCard()).queryByText("Question about my report")).not.toBeInTheDocument(),
+    )
+    expect(await within(detailCard()).findByText("No message selected")).toBeInTheDocument()
+    expect(within(detailCard()).queryByText("Body of Press inquiry")).not.toBeInTheDocument()
   })
 
   it("opens the first row for an inbox: deep link that names no message", async () => {

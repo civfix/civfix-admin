@@ -561,6 +561,15 @@ export function MailPage({ focusId }: SectionPageProps) {
     () => (outreach ? mailItems.map((t) => t.id) : [...feedByKey.keys()]),
     [outreach, mailItems, feedByKey],
   )
+  const activeUnread = React.useMemo(
+    () =>
+      new Set(
+        outreach
+          ? mailItems.filter((t) => t.unread).map((t) => t.id)
+          : [...feedByKey].filter(([, item]) => item.unread).map(([key]) => key),
+      ),
+    [outreach, mailItems, feedByKey],
+  )
   const selFeedItem = outreach ? undefined : resolveFeedSelection(feedByKey, selItem, selId)
 
   const statsQuery = useMailStats()
@@ -580,10 +589,13 @@ export function MailPage({ focusId }: SectionPageProps) {
   // Only a fresh load of a folder picks a message on the operator's behalf, and a deep-linked message
   // is never replaced. A pick that a filter or search leaves out stays open through its by-id reader; a
   // pick that drops out of the same list after a refetch clears, so the pane never jumps to another
-  // message. Decided only on data fetched for the current folder and filters.
+  // message. Opening an unread message reads it, which is not the operator's action: until the list
+  // shows it read, dropping out (the Unread or Needs attention chip) counts as a filter drop-out and
+  // the message stays open. Decided only on data fetched for the current folder and filters.
   const listKey = JSON.stringify([folder, box, q ?? null])
   const [autoPick, setAutoPick] = React.useState(initial.id === null)
   const seenIn = React.useRef<{ id: string; list: string } | null>(null)
+  const readOnOpen = React.useRef<string | null>(null)
   React.useEffect(() => {
     if (!activeListQuery.isSuccess || activeListQuery.isFetching) return
     if (selId === null) {
@@ -591,9 +603,26 @@ export function MailPage({ focusId }: SectionPageProps) {
       return
     }
     setAutoPick(false)
-    if (activeIds.includes(selId)) seenIn.current = { id: selId, list: listKey }
-    else if (seenIn.current?.id === selId && seenIn.current.list === listKey) setSelId(null)
-  }, [activeListQuery.isSuccess, activeListQuery.isFetching, activeIds, selId, listKey, autoPick])
+    if (activeIds.includes(selId)) {
+      seenIn.current = { id: selId, list: listKey }
+      if (readOnOpen.current === selId && !activeUnread.has(selId)) readOnOpen.current = null
+    } else if (seenIn.current?.id === selId && seenIn.current.list === listKey) {
+      if (readOnOpen.current === selId) {
+        readOnOpen.current = null
+        seenIn.current = null
+      } else {
+        setSelId(null)
+      }
+    }
+  }, [
+    activeListQuery.isSuccess,
+    activeListQuery.isFetching,
+    activeIds,
+    activeUnread,
+    selId,
+    listKey,
+    autoPick,
+  ])
 
   const openFresh = (next: Folder) => {
     setFolder(next)
@@ -611,14 +640,23 @@ export function MailPage({ focusId }: SectionPageProps) {
 
   const select = (id: string) => {
     setSelId(id)
+    readOnOpen.current = null
+    const readFailed = {
+      onError: () => {
+        if (readOnOpen.current === id) readOnOpen.current = null
+      },
+    }
     if (outreach) {
       const row = mailItems.find((t) => t.id === id)
-      if (row?.unread) markRead.mutate({ id })
+      if (!row?.unread) return
+      readOnOpen.current = id
+      markRead.mutate({ id }, readFailed)
     } else {
       const item = feedByKey.get(id)
       if (!item?.unread) return
-      if (item.source === "email") setInboxStatus.mutate({ id: item.id, status: "read" })
-      else markRead.mutate({ id: item.threadId })
+      readOnOpen.current = id
+      if (item.source === "email") setInboxStatus.mutate({ id: item.id, status: "read" }, readFailed)
+      else markRead.mutate({ id: item.threadId }, readFailed)
     }
   }
 
