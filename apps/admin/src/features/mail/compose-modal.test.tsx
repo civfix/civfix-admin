@@ -6,12 +6,13 @@ import type {
   MailListResponse,
   MailStatsResponse,
 } from "@civfix/shared"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { AppShell } from "@/components/shell/app-shell"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { waitForSectionPage } from "@/test/shell"
 import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -38,7 +39,8 @@ async function openMail() {
   apiMock.listMail.mockResolvedValue({ items: [], nextCursor: null } satisfies MailListResponse)
   const user = userEvent.setup()
   renderWithQuery(<AppShell />)
-  const opener = await screen.findByRole("button", { name: "Compose" })
+  await waitForSectionPage()
+  const opener = screen.getByRole("button", { name: "Compose" })
   return { user, opener }
 }
 
@@ -53,6 +55,12 @@ function overlayOf(dialog: HTMLElement): HTMLElement {
   if (!overlay) throw new Error("dialog has no overlay")
   return overlay
 }
+
+// The section page is a React.lazy chunk: the first render in this worker would otherwise pay the cold
+// module transform inside the first wait's 1000 ms budget, which a loaded machine overruns.
+beforeAll(async () => {
+  await import("@/features/mail/mail-page")
+})
 
 beforeEach(() => {
   window.history.replaceState(null, "", "#/mail")

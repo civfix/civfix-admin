@@ -7,12 +7,13 @@ import type {
   AdminReportListItemDTO,
   AdminReportListResponse,
 } from "@civfix/shared"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
 import { AppShell } from "@/components/shell/app-shell"
 import { apiMock } from "@/test/api-mock"
 import { renderWithQuery } from "@/test/render"
+import { waitForSectionPage } from "@/test/shell"
 import { useUiStore } from "@/store/ui-store"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -78,7 +79,11 @@ async function openPicker() {
   } as AdminReportListResponse)
   const user = userEvent.setup()
   renderWithQuery(<AppShell />)
-  const opener = await screen.findByRole("button", { name: "Link reports" })
+  await waitForSectionPage()
+  // Wait on cheap text, then query the role once: a role query walks the whole shell on every DOM
+  // mutation, and on a loaded machine those walks starve the renders it is waiting for.
+  await screen.findByText("About the sweep")
+  const opener = screen.getByRole("button", { name: "Link reports" })
   await user.click(opener)
   const dialog = screen.getByRole("dialog", { name: TITLE })
   await within(dialog).findByText(REPORT.title)
@@ -94,6 +99,12 @@ function overlayOf(dialog: HTMLElement): HTMLElement {
 function reportRow(dialog: HTMLElement): HTMLElement {
   return within(dialog).getByRole("button", { name: new RegExp(REPORT.title) })
 }
+
+// The section page is a React.lazy chunk: the first render in this worker would otherwise pay the cold
+// module transform inside the first wait's 1000 ms budget, which a loaded machine overruns.
+beforeAll(async () => {
+  await import("@/features/events/events-page")
+})
 
 beforeEach(() => {
   window.history.replaceState(null, "", "#/events")
