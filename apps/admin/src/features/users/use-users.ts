@@ -57,28 +57,39 @@ export function useUser(id: string | null) {
   })
 }
 
-export function useUserReports(id: string | null) {
-  return useQuery<UserReportsResponse>({
-    queryKey: queryKeys.users.reports(id ?? ""),
-    queryFn: () => api.getUserReports({ id: id as string }),
+// A profile tab's badge counts everything the user has, so each tab pages through the whole history
+// rather than stopping at the API's first page.
+function useUserSubList<T extends { nextCursor?: string | null }>(
+  queryKey: readonly unknown[],
+  id: string | null,
+  fetchPage: (input: { id: string; cursor?: string }) => Promise<T>,
+) {
+  return useInfiniteQuery<T>({
+    queryKey,
+    queryFn: ({ pageParam }) =>
+      fetchPage({ id: id as string, ...(typeof pageParam === "string" ? { cursor: pageParam } : {}) }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: !!id,
   })
+}
+
+export function useUserReports(id: string | null) {
+  return useUserSubList<UserReportsResponse>(queryKeys.users.reports(id ?? ""), id, (input) =>
+    api.getUserReports(input),
+  )
 }
 
 export function useUserEvents(id: string | null) {
-  return useQuery<UserEventsResponse>({
-    queryKey: queryKeys.users.events(id ?? ""),
-    queryFn: () => api.getUserEvents({ id: id as string }),
-    enabled: !!id,
-  })
+  return useUserSubList<UserEventsResponse>(queryKeys.users.events(id ?? ""), id, (input) =>
+    api.getUserEvents(input),
+  )
 }
 
 export function useUserMessages(id: string | null) {
-  return useQuery<UserMessagesResponse>({
-    queryKey: queryKeys.users.messages(id ?? ""),
-    queryFn: () => api.getUserMessages({ id: id as string }),
-    enabled: !!id,
-  })
+  return useUserSubList<UserMessagesResponse>(queryKeys.users.messages(id ?? ""), id, (input) =>
+    api.getUserMessages(input),
+  )
 }
 
 function invalidateUsers(qc: ReturnType<typeof useQueryClient>, id: string) {

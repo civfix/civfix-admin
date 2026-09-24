@@ -41,24 +41,29 @@ export interface RoleChangeCopy {
 }
 
 /**
- * Keyboard navigation inside a `role="menu"`: the index of the item to focus after `key`, given the
- * currently focused index (-1 when none) and the item count, or null when the key is not a menu key.
- * Arrows wrap; Home/End jump.
+ * Arrow-key navigation for a composite widget with a roving focus (a `role="menu"`, a tablist, a
+ * radiogroup): the index of the item to move to after `key`, given the current index (-1 when none)
+ * and the item count, or null when the key is not a navigation key. A vertical menu answers Up/Down, a
+ * horizontal tablist Left/Right, a radiogroup both. Arrows wrap; Home/End jump.
  */
-export function menuFocusIndex(key: string, current: number, count: number): number | null {
+export function menuFocusIndex(
+  key: string,
+  current: number,
+  count: number,
+  orientation: "vertical" | "horizontal" | "both" = "vertical",
+): number | null {
   if (count === 0) return null
-  switch (key) {
-    case "ArrowDown":
-      return current < 0 ? 0 : (current + 1) % count
-    case "ArrowUp":
-      return current < 0 ? count - 1 : (current - 1 + count) % count
-    case "Home":
-      return 0
-    case "End":
-      return count - 1
-    default:
-      return null
+  const vertical = orientation !== "horizontal"
+  const horizontal = orientation !== "vertical"
+  if ((vertical && key === "ArrowDown") || (horizontal && key === "ArrowRight")) {
+    return current < 0 ? 0 : (current + 1) % count
   }
+  if ((vertical && key === "ArrowUp") || (horizontal && key === "ArrowLeft")) {
+    return current < 0 ? count - 1 : (current - 1 + count) % count
+  }
+  if (key === "Home") return 0
+  if (key === "End") return count - 1
+  return null
 }
 
 /**

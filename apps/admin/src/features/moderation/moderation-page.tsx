@@ -18,7 +18,11 @@ import { Icons, type IconComponent } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
+import { LightboxSync, openLightbox, type LightboxImage } from "@/components/shared/lightbox"
 import { useDebounced } from "@/hooks/use-debounced"
+import { isNotFound } from "@/lib/api"
+import { menuFocusIndex } from "@/features/orgs/org-members"
 import { getModerationDestination } from "@/features/moderation/moderation-navigation"
 import {
   useApproveModeration,
@@ -91,7 +95,18 @@ function ModerationRow({
   const KindIco = KIND_ICON[item.kind] ?? Icons.Shield
   const priority = PRIORITY_VIEW[item.priority] ?? PRIORITY_VIEW.low
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={() => onSelect(item.id)}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onSelect(item.id)
+      }}
+    >
       <span className="prow-ico hue-lilac" title={MODERATION_KIND_LABELS[item.kind]}>
         <KindIco size={15} />
       </span>
@@ -126,6 +141,14 @@ function SignalCell({ signal }: { signal: ModerationSignal }) {
   )
 }
 
+// Signals carry no id and the backend does not promise unique labels, so a repeated label is told
+// apart by how many times it appeared before.
+function signalKey(signals: readonly ModerationSignal[], index: number): string {
+  const label = signals[index]!.label
+  const earlier = signals.slice(0, index).filter((s) => s.label === label).length
+  return `${label}#${earlier}`
+}
+
 function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: (id: string) => void }) {
   const q = useModerationItem(itemId)
   const toast = useToast()
@@ -139,7 +162,9 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
   const busy = approve.isPending || remove.isPending || hold.isPending || appeal.isPending
 
   if (q.isLoading) return <LoadingState label="Loading item..." />
-  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  if (q.isError && !isNotFound(q.error)) {
+    return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  }
   const item: ModerationItemDTO | undefined = q.data
   if (!item)
     return (
@@ -153,10 +178,16 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
   const priority = PRIORITY_VIEW[item.priority] ?? PRIORITY_VIEW.low
   const isUserReport = item.kind === "user_report"
   const destination = getModerationDestination(item.destinationKind, item.destinationId)
+  const approveVerb = isUserReport ? "Keep" : "Approve"
+  const heldImages: LightboxImage[] = item.media
+    .filter((m) => m.kind === "image")
+    .map((m, i, images) => ({ id: m.id, url: m.url, alt: `Held image ${i + 1} of ${images.length}` }))
+  const heldVideoIds = item.media.filter((m) => m.kind === "video").map((m) => m.id)
+  const refreshMedia = () => void q.refetch()
 
   const onApprove = async () => {
     const note = await promptDialog({
-      title: isUserReport ? "Dismiss report" : "Approve",
+      title: `${approveVerb} ${item.flag}`,
       label: "Note (optional)",
     })
     if (note === null) return
@@ -164,7 +195,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
       { id: item.id, ...(note ? { note } : {}) },
       {
         onSuccess: () => {
-          toast(`${item.flag} · ${isUserReport ? "report dismissed" : "approved"}`)
+          toast(`${item.flag} · ${isUserReport ? "kept" : "approved"}`)
           onResolved(item.id)
         },
       },
@@ -173,14 +204,14 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
   const onRemove = async () => {
     const ok = await confirmDialog({
-      title: "Remove content",
+      title: `Remove ${item.flag}`,
       body: "This takes the reported content down.",
       danger: true,
       confirmLabel: "Remove",
     })
     if (!ok) return
     const reason = await promptDialog({
-      title: "Remove content",
+      title: `Remove ${item.flag}`,
       label: "Reason (optional)",
     })
     if (reason === null) return
@@ -197,7 +228,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
 
   const onHold = async () => {
     const note = await promptDialog({
-      title: "Hold for review",
+      title: `Hold ${item.flag} for review`,
       label: "Note (optional)",
     })
     if (note === null) return
@@ -306,17 +337,45 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
               <div className="sub-head">Media</div>
               <div className="sub-body" style={{ padding: 10 }}>
                 <div className="dsc-msg-media">
+                  <LightboxSync images={heldImages} />
                   {item.media.map((m) => {
-                    const thumb = m.kind === "image" ? (m.thumbUrl ?? m.url) : m.thumbUrl
+                    if (m.kind === "image") {
+                      const index = heldImages.findIndex((img) => img.id === m.id)
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className="dsc-msg-thumb dsc-msg-thumb-open"
+                          title="Expand this image"
+                          onClick={() => openLightbox(heldImages, index, refreshMedia)}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={m.thumbUrl ?? m.url}
+                            alt={heldImages[index]?.alt ?? ""}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </button>
+                      )
+                    }
                     return (
-                      <span key={m.id} className="dsc-msg-thumb">
-                        {thumb ? (
+                      <a
+                        key={m.id}
+                        className="dsc-msg-thumb"
+                        href={m.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open this video in a new tab"
+                        aria-label={`Held video ${heldVideoIds.indexOf(m.id) + 1} of ${heldVideoIds.length}`}
+                      >
+                        {m.thumbUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumb} alt="" />
+                          <img src={m.thumbUrl} alt="" loading="lazy" decoding="async" />
                         ) : (
                           <Icons.FileText size={14} />
                         )}
-                      </span>
+                      </a>
                     )
                   })}
                 </div>
@@ -330,9 +389,8 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
               <div className="sub-head">Signals</div>
               <div className="sub-body">
                 <div className="user-meta-rows">
-                  {item.signals.map((s, i) => (
-                    // eslint-disable-next-line react/no-array-index-key
-                    <SignalCell key={i} signal={s} />
+                  {item.signals.map((s, i, all) => (
+                    <SignalCell key={signalKey(all, i)} signal={s} />
                   ))}
                 </div>
               </div>
@@ -353,7 +411,9 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
                     title="Open this moderation item"
                     onClick={() => nav("moderation", s.id)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") nav("moderation", s.id)
+                      if (!isKeyboardActivationKey(e.key)) return
+                      e.preventDefault()
+                      nav("moderation", s.id)
                     }}
                   >
                     <span className="prow-ico hue-lilac">
@@ -405,7 +465,9 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
                     title={`Open ${item.user.name}'s profile`}
                     onClick={() => nav("users", userId)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") nav("users", userId)
+                      if (!isKeyboardActivationKey(e.key)) return
+                      e.preventDefault()
+                      nav("users", userId)
                     }}
                   >
                     {head}
@@ -455,7 +517,7 @@ function ModerationDetail({ itemId, onResolved }: { itemId: string; onResolved: 
           </>
         ) : (
           <button className="btn sm primary" disabled={busy} onClick={onApprove}>
-            <Icons.Check size={11} /> {isUserReport ? "Keep" : "Approve"}
+            <Icons.Check size={11} /> {approveVerb}
           </button>
         )}
         <button className="btn sm" disabled={busy} onClick={onHold}>
@@ -480,18 +542,31 @@ function GovClaimsSection() {
     ...(filter === "all" ? {} : { filter }),
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
+  const listKey = JSON.stringify(listParams)
   const listQuery = useGovClaimListInfinite(listParams)
   const items = React.useMemo(
     () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
     [listQuery.data],
   )
 
+  const reconciledFor = React.useRef(listKey)
+  const keepEmpty = React.useRef(false)
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
-  }, [items, selId])
+    if (!items.length) return
+    const listChanged = reconciledFor.current !== listKey
+    reconciledFor.current = listKey
+    if (listChanged) keepEmpty.current = false
+    if (!selId) {
+      if (!keepEmpty.current) setSelId(items[0]!.id)
+      return
+    }
+    if (listChanged && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
+  }, [items, selId, listKey])
 
+  // Until the refetch lands the list still shows the decided claim, so picking from it would put live
+  // Approve and Reject buttons on a claim the operator never chose.
   const onDecided = (id: string) => {
+    keepEmpty.current = true
     setSelId((cur) => (cur === id ? null : cur))
   }
 
@@ -513,6 +588,7 @@ function GovClaimsSection() {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search gov claims"
             placeholder="Search name or organization…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -591,6 +667,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
     ...(filter === "all" ? {} : { filter }),
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
+  const listKey = JSON.stringify(listParams)
   const listQuery = useModerationListInfinite(listParams)
   const items = React.useMemo(
     () => listQuery.data?.pages.flatMap((p) => p.items) ?? [],
@@ -600,12 +677,28 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
   React.useEffect(() => {
     if (focusId) setSelId(focusId)
   }, [focusId])
+  // A deep-linked item stays selected even when it is not on the loaded page; only a new filter or
+  // search replaces a selection that is missing from the list.
+  const reconciledFor = React.useRef(listKey)
+  const keepEmpty = React.useRef(false)
   React.useEffect(() => {
-    if (!selId && items.length) setSelId(items[0]!.id)
-    if (selId && items.length && !items.some((x) => x.id === selId)) setSelId(items[0]!.id)
-  }, [items, selId])
+    if (!items.length) return
+    const listChanged = reconciledFor.current !== listKey
+    reconciledFor.current = listKey
+    if (listChanged) keepEmpty.current = false
+    if (!selId) {
+      if (!focusId && !keepEmpty.current) setSelId(items[0]!.id)
+      return
+    }
+    if (listChanged && selId !== focusId && !items.some((x) => x.id === selId)) {
+      setSelId(items[0]!.id)
+    }
+  }, [items, selId, focusId, listKey])
 
+  // Until the refetch lands the list still shows the resolved item, so picking from it would put live
+  // decision buttons on that item or on one the operator never chose.
   const onResolved = (id: string) => {
+    keepEmpty.current = true
     setSelId((cur) => (cur === id ? null : cur))
   }
 
@@ -631,6 +724,7 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
           <Icons.Search size={14} />
           <input
             type="text"
+            aria-label="Search the moderation queue"
             placeholder="Search flag, reporter, reason…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -698,9 +792,23 @@ function ModerationQueueSection({ focusId }: SectionPageProps) {
   )
 }
 
+const SECTION_OPTIONS: { id: Section; label: string; Icon: IconComponent }[] = [
+  { id: "queue", label: "Queue", Icon: Icons.Shield },
+  { id: "gov_claims", label: "Gov claims", Icon: Icons.Building },
+]
+
 export function ModerationPage({ focusId }: SectionPageProps) {
   const [section, setSection] = React.useState<Section>("queue")
   const queue = section === "queue"
+  const nav = useNav()
+  const radioRefs = React.useRef<(HTMLButtonElement | null)[]>([])
+
+  const switchTo = (next: Section) => {
+    if (next === section) return
+    // The deep link names a queue item; leaving the queue ends it, so coming back opens the queue fresh.
+    if (focusId) nav("moderation")
+    setSection(next)
+  }
 
   return (
     <>
@@ -723,22 +831,32 @@ export function ModerationPage({ focusId }: SectionPageProps) {
       />
 
       <div className="mailbox-switch" role="radiogroup" aria-label="Moderation section">
-        <button
-          className={`mbx ${queue ? "active" : ""}`}
-          role="radio"
-          aria-checked={queue}
-          onClick={() => setSection("queue")}
-        >
-          <Icons.Shield size={13} /> Queue
-        </button>
-        <button
-          className={`mbx ${!queue ? "active" : ""}`}
-          role="radio"
-          aria-checked={!queue}
-          onClick={() => setSection("gov_claims")}
-        >
-          <Icons.Building size={13} /> Gov claims
-        </button>
+        {SECTION_OPTIONS.map(({ id, label, Icon }, i) => {
+          const checked = section === id
+          return (
+            <button
+              key={id}
+              ref={(el) => {
+                radioRefs.current[i] = el
+              }}
+              type="button"
+              className={`mbx ${checked ? "active" : ""}`}
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              onClick={() => switchTo(id)}
+              onKeyDown={(e) => {
+                const next = menuFocusIndex(e.key, i, SECTION_OPTIONS.length, "both")
+                if (next === null) return
+                e.preventDefault()
+                switchTo(SECTION_OPTIONS[next]!.id)
+                radioRefs.current[next]?.focus()
+              }}
+            >
+              <Icon size={13} /> {label}
+            </button>
+          )
+        })}
       </div>
 
       {queue ? <ModerationQueueSection focusId={focusId} /> : <GovClaimsSection />}

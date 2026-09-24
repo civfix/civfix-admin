@@ -70,4 +70,16 @@ describe("menuFocusIndex", () => {
     expect(menuFocusIndex("Enter", 0, 3)).toBeNull()
     expect(menuFocusIndex("ArrowDown", 0, 0)).toBeNull()
   })
+
+  it("answers only the arrows of its orientation", () => {
+    expect(menuFocusIndex("ArrowRight", 0, 3)).toBeNull()
+    expect(menuFocusIndex("ArrowRight", 0, 3, "horizontal")).toBe(1)
+    expect(menuFocusIndex("ArrowLeft", 0, 3, "horizontal")).toBe(2)
+    expect(menuFocusIndex("ArrowDown", 0, 3, "horizontal")).toBeNull()
+    expect(menuFocusIndex("End", 0, 3, "horizontal")).toBe(2)
+    expect(menuFocusIndex("ArrowDown", 0, 2, "both")).toBe(1)
+    expect(menuFocusIndex("ArrowRight", 1, 2, "both")).toBe(0)
+    expect(menuFocusIndex("ArrowUp", 0, 2, "both")).toBe(1)
+    expect(menuFocusIndex("ArrowLeft", 1, 2, "both")).toBe(0)
+  })
 })

@@ -6,6 +6,8 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
+import { isNotFound } from "@/lib/api"
 import { isHttpsUrl } from "@/lib/external-url"
 import {
   GOV_CHECKS,
@@ -36,7 +38,18 @@ export function GovClaimRow({
 }) {
   const status = GOV_CLAIM_STATUS_VIEW[item.status] ?? GOV_CLAIM_STATUS_VIEW.pending
   return (
-    <div className={`qrow ${selected ? "selected" : ""}`} onClick={() => onSelect(item.id)}>
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={() => onSelect(item.id)}
+      onKeyDown={(e) => {
+        if (!isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onSelect(item.id)
+      }}
+    >
       <span className="prow-ico hue-slate" title={GOV_METHOD_LABEL[item.method]}>
         <Icons.Building size={15} />
       </span>
@@ -99,6 +112,7 @@ function CheckRow({
       <button
         className="btn sm"
         disabled={busy}
+        aria-label={`Mark ${govCheckLabel(check)} ${verified ? "pending" : "verified"}`}
         onClick={() => onToggle(check, verified ? "pending" : "verified")}
       >
         {verified ? (
@@ -132,7 +146,9 @@ export function GovClaimDetail({
   const busy = verifyCheck.isPending || approve.isPending || reject.isPending
 
   if (q.isLoading) return <LoadingState label="Loading claim..." />
-  if (q.isError) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  if (q.isError && !isNotFound(q.error)) {
+    return <ErrorState error={q.error} onRetry={() => q.refetch()} />
+  }
   const claim = q.data
   if (!claim)
     return (

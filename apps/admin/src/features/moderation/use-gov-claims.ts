@@ -61,6 +61,7 @@ export function useApproveGovClaim() {
   const toast = useToast()
   return useMutation({
     mutationFn: (input: ApproveGovClaimRequest) => api.approveGovClaim(input),
+    meta: { errorToast: false },
     onError: (error) => toast(govClaimApproveErrorMessage(error)),
     onSuccess: (_res, { id }) => {
       invalidateGovClaims(qc, id)
