@@ -168,14 +168,11 @@ export function useSetReportVerdict() {
   })
 }
 
-/**
- * The report CHAT history on the ADMIN plane (GET /admin/reports/:id/messages), so it resolves against
- * admin.civfix.org like every other operator read. Operators see exactly what neighbors see, including
- * sender-less SYSTEM status events, and can post into the same thread. Pages run newest first; each
- * `nextCursor` asks for the window before it, so older messages stay reachable for moderation.
- */
 const REPORT_CHAT_LIMIT = 50
 
+// Read through the admin plane so it resolves against admin.civfix.org like every other operator read.
+// Pages run newest first; each `nextCursor` asks for the window before it, so older messages stay
+// reachable for moderation.
 export function useReportChatHistory(id: string | null) {
   return useInfiniteQuery<ChatHistoryResponse>({
     queryKey: queryKeys.reports.chat(id ?? ""),
