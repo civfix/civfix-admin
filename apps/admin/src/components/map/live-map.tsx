@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import type { HomeMapPin } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
-import { useHomeMap } from "@/hooks/use-admin-home"
+import { useHomeMap } from "@/features/home/use-home"
 import { useNav } from "@/store/ui-store"
 import { categoryLabel } from "@/lib/category"
 import { EVENT_KIND_PIN_KIND, eventKindLabel } from "@/lib/event-kind"

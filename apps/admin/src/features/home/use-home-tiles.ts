@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { useHomeSummary } from "@/hooks/use-admin-home"
+import { useHomeSummary } from "@/features/home/use-home"
 import { useDiscoveryList } from "@/features/discovery/use-discovery"
 import { useReportList } from "@/features/reports/use-reports"
 import { useEventList } from "@/features/events/use-events"
