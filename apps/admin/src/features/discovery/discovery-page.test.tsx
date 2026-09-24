@@ -156,7 +156,7 @@ describe("DiscoveryPage", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent("Could not load this")
     expect(alert).toHaveTextContent("directory is down")
-    expect(chip(/^Needs mapping/)).toHaveTextContent(EMPTY_VALUE)
+    expect(chip(/^Needs mapping/)).toHaveTextContent(new RegExp(`^Needs mapping\\s*${EMPTY_VALUE}$`))
 
     apiMock.listJurisdictions.mockResolvedValue(page([LA]))
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }))

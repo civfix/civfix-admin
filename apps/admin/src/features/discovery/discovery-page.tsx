@@ -491,7 +491,7 @@ function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
                 <input
                   type="text"
                   value={handle}
-                  placeholder="e.g. sf, to tag this jurisdiction in a report discussion"
+                  placeholder="e.g. sf (tags this jurisdiction in a report discussion)"
                   onChange={(e) => setHandle(e.target.value)}
                   autoCapitalize="none"
                   autoCorrect="off"
