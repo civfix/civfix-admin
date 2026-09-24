@@ -39,6 +39,11 @@ declare module "@tanstack/react-query" {
        */
       // Method syntax keeps the parameters bivariant, so a hook can declare its own variables type.
       errorMessage?(error: unknown, variables: unknown): string | null
+      /**
+       * Copy for the success toast, built from the response and the variables so it still shows after
+       * the component that fired the mutation unmounts. Returning null shows nothing.
+       */
+      successMessage?(data: unknown, variables: unknown): string | null
     }
   }
 }
@@ -58,18 +63,29 @@ const NO_RETRY_CODES: ReadonlySet<ErrorCode> = new Set([
   ErrorCode.RATE_LIMITED,
 ])
 
-export function makeQueryClient(): QueryClient {
-  return new QueryClient({
+export function makeMutationCache(): MutationCache {
+  return new MutationCache({
     // The cache-level handler runs for every failed mutation, even one with its own onError, which
     // would silently replace a defaultOptions.mutations.onError.
-    mutationCache: new MutationCache({
-      onError: (error, variables, _onMutateResult, mutation) => {
-        const meta = mutation.meta
-        if (meta?.errorToast === false) return
-        const text = meta?.errorMessage ? meta.errorMessage(error, variables) : errorMessage(error)
-        if (text !== null) useUiStore.getState().showToast(text, "error")
-      },
-    }),
+    onError: (error, variables, _onMutateResult, mutation) => {
+      const meta = mutation.meta
+      if (meta?.errorToast === false) return
+      const text = meta?.errorMessage ? meta.errorMessage(error, variables) : errorMessage(error)
+      if (text !== null) useUiStore.getState().showToast(text, "error")
+    },
+    // Runs as soon as the server confirms, before the mutation's own onSuccess awaits its refetches, and
+    // whether or not anything still observes the mutation. A per-call onSuccess waits for those
+    // refetches and is dropped once its component unmounts, which a refetch that drops the item does.
+    onSuccess: (data, variables, _onMutateResult, mutation) => {
+      const text = mutation.meta?.successMessage?.(data, variables)
+      if (text) useUiStore.getState().showToast(text, "ok")
+    },
+  })
+}
+
+export function makeQueryClient(): QueryClient {
+  return new QueryClient({
+    mutationCache: makeMutationCache(),
     defaultOptions: {
       queries: {
         staleTime: 30_000,

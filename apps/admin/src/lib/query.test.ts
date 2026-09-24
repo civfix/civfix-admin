@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { MutationObserver, type QueryClient } from "@tanstack/react-query"
 import { AppError, ErrorCode } from "@civfix/shared"
 
@@ -156,6 +156,44 @@ describe("makeQueryClient mutation defaults", () => {
     })
     await observer.mutate().catch(() => undefined)
     expect(useUiStore.getState().toast).toBeNull()
+  })
+
+  it("toasts the mutation's success copy, built from the response and the variables, in the ok tone", async () => {
+    const observer = new MutationObserver<{ routedTo: string }, Error, { name: string }>(makeQueryClient(), {
+      mutationFn: () => Promise.resolve({ routedTo: "Oakland" }),
+      meta: {
+        successMessage: (data: { routedTo: string }, variables: { name: string }) =>
+          `${variables.name} sent to ${data.routedTo}`,
+      },
+    })
+    await observer.mutate({ name: "Pothole" })
+    expect(useUiStore.getState().toast).toMatchObject({ text: "Pothole sent to Oakland", tone: "ok" })
+  })
+
+  it("does not toast when the success copy returns null", async () => {
+    const observer = new MutationObserver(makeQueryClient(), {
+      mutationFn: () => Promise.resolve(1),
+      meta: { successMessage: () => null },
+    })
+    await observer.mutate()
+    expect(useUiStore.getState().toast).toBeNull()
+  })
+
+  it("toasts success before the mutation's own onSuccess settles, with nothing observing the mutation", async () => {
+    let settle!: () => void
+    const refetch = new Promise<void>((resolve) => {
+      settle = resolve
+    })
+    const observer = new MutationObserver(makeQueryClient(), {
+      mutationFn: () => Promise.resolve(1),
+      onSuccess: () => refetch,
+      meta: { successMessage: () => "Saved" },
+    })
+    const done = observer.mutate()
+    await vi.waitFor(() => expect(useUiStore.getState().toast?.text).toBe("Saved"))
+    expect(observer.hasListeners()).toBe(false)
+    settle()
+    await done
   })
 })
 

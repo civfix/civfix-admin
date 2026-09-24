@@ -2,8 +2,11 @@ import type { ReactElement } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render, type RenderResult } from "@testing-library/react"
 
+import { makeMutationCache } from "@/lib/query"
+
 export function makeTestQueryClient(): QueryClient {
   return new QueryClient({
+    mutationCache: makeMutationCache(),
     defaultOptions: {
       queries: { retry: false, gcTime: Infinity },
       mutations: { retry: false },
