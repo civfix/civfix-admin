@@ -599,8 +599,8 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
   white-space: nowrap;
 }
 .prow-meta.prow-note { white-space: normal; font-style: italic; }
-.prow.removed .prow-main { opacity: 0.6; }
-.prow.removed .prow-hours { text-decoration: line-through; }
+.prow.ledger-row.removed .prow-main { opacity: 0.6; }
+.prow.ledger-row.removed .prow-hours { text-decoration: line-through; }
 
 .dialog-list {
   margin: 0;

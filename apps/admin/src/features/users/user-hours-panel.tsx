@@ -73,7 +73,7 @@ function HoursEntryRow({
     </>
   )
   return (
-    <div className={`prow ${voided ? "removed" : ""}`}>
+    <div className={`prow ledger-row ${voided ? "removed" : ""}`}>
       {event ? (
         <button
           type="button"
