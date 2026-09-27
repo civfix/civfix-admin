@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { MAX_EVENT_HOURS, type AdminUserDTO, type AdminUserHoursEntryDTO } from "@civfix/shared"
+import { MAX_EVENT_HOURS, MIN_EVENT_HOURS, type AdminUserDTO, type AdminUserHoursEntryDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
@@ -258,8 +258,8 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
             type="number"
             inputMode="decimal"
             className="user-hours-amount"
-            step="0.25"
-            min="0.25"
+            step="any"
+            min={MIN_EVENT_HOURS}
             max={MAX_EVENT_HOURS}
             value={draft.hours}
             placeholder="2.5"
