@@ -602,7 +602,6 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .prow.removed .prow-main { opacity: 0.6; }
 .prow.removed .prow-hours { text-decoration: line-through; }
 
-/* A confirm dialog's itemised details (certificate codes, ...). */
 .dialog-list {
   margin: 0;
   padding-left: var(--space-5);
