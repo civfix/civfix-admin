@@ -86,6 +86,7 @@ export const queryKeys = {
     events: (id: string, params?: unknown) => ["admin", "users", id, "events", params ?? null] as const,
     messages: (id: string, params?: unknown) =>
       ["admin", "users", id, "messages", params ?? null] as const,
+    hours: (id: string, params?: unknown) => ["admin", "users", id, "hours", params ?? null] as const,
   },
 
   mail: {
