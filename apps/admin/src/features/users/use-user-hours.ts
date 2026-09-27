@@ -6,15 +6,21 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query"
-import type { AdminUserHoursResponse, AdminVoidUserHoursRequest } from "@civfix/shared"
+import type {
+  AdminCreditUserHoursRequest,
+  AdminUserHoursResponse,
+  AdminVoidUserHoursRequest,
+} from "@civfix/shared"
 
 import { confirmDialog } from "@/components/shared/dialog"
 import { api } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 import { queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 import {
   REVOKE_CERTIFICATE_COMMAND,
   affectedCertificateLine,
+  creditedToast,
   voidedToast,
 } from "@/features/users/user-hours"
 
@@ -29,6 +35,48 @@ export function useUserHours(id: string) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   })
+}
+
+function invalidateLedger(
+  qc: ReturnType<typeof useQueryClient>,
+  userId: string,
+  eventId: string | null,
+) {
+  qc.invalidateQueries({ queryKey: queryKeys.users.hours(userId) })
+  qc.invalidateQueries({ queryKey: queryKeys.users.detail(userId) })
+  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
+  if (eventId) qc.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+}
+
+/**
+ * Only `request` reaches the API. The toast runs here rather than in the form so a credit that lands
+ * after the form unmounted is still announced. `showsErrorInline` reports whether the form that sent
+ * the credit is still mounted to render a failure next to its fields; when it is not, the failure
+ * falls back to the toast instead of vanishing.
+ */
+export interface CreditUserHoursInput {
+  request: AdminCreditUserHoursRequest
+  userName: string
+  showsErrorInline: () => boolean
+}
+
+export function creditUserHoursOptions(qc: ReturnType<typeof useQueryClient>) {
+  return mutationOptions({
+    mutationFn: ({ request }: CreditUserHoursInput) => api.creditUserHours(request),
+    onSuccess: (_res, { request, userName }) => {
+      invalidateLedger(qc, request.id, request.kind === "event" ? request.eventId : null)
+      useUiStore.getState().showToast(creditedToast(userName, request.hours))
+    },
+    onError: (err, { showsErrorInline }) => {
+      if (showsErrorInline()) return
+      useUiStore.getState().showToast(errorMessage(err))
+    },
+  })
+}
+
+export function useCreditUserHours() {
+  const qc = useQueryClient()
+  return useMutation(creditUserHoursOptions(qc))
 }
 
 /**
@@ -48,10 +96,7 @@ export function voidUserHoursOptions(qc: ReturnType<typeof useQueryClient>) {
     mutationFn: ({ id, entryId, reason }: VoidUserHoursInput) =>
       api.voidUserHours({ id, entryId, reason }),
     onSuccess: (res, { id, eventId, userName, hours }) => {
-      qc.invalidateQueries({ queryKey: queryKeys.users.hours(id) })
-      qc.invalidateQueries({ queryKey: queryKeys.users.detail(id) })
-      qc.invalidateQueries({ queryKey: queryKeys.audit.all })
-      if (eventId) qc.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+      invalidateLedger(qc, id, eventId)
       useUiStore.getState().showToast(voidedToast(userName, hours))
       if (res.affectedCertificates.length === 0) return
       void confirmDialog({
