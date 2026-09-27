@@ -9,12 +9,12 @@ import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 
-import { voidUserHoursOptions } from "./use-user-hours"
+import { creditUserHoursOptions, voidUserHoursOptions } from "./use-user-hours"
 import { REVOKE_CERTIFICATE_COMMAND, affectedCertificateLine } from "./user-hours"
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof apiModule>()),
-  api: { voidUserHours: vi.fn() },
+  api: { voidUserHours: vi.fn(), creditUserHours: vi.fn() },
 }))
 
 vi.mock("@/components/shared/dialog", () => ({ confirmDialog: vi.fn() }))
@@ -179,5 +179,108 @@ describe("void user hours", () => {
     expect(promptCall).toContain("required: true")
     expect(promptCall).toContain("maxLength: VOID_REASON_MAX")
     expect(source).toContain("const VOID_REASON_MAX = 1000")
+  })
+})
+
+describe("credit user hours", () => {
+  const eventRequest = {
+    id: USER,
+    kind: "event" as const,
+    eventId: EVENT,
+    hours: 3.5,
+    reason: "Attended before signing up",
+  }
+  const manualRequest = {
+    id: USER,
+    kind: "manual" as const,
+    hours: 1.25,
+    serviceDate: "2026-09-20",
+    reason: "Staffed the sign-in table",
+  }
+
+  beforeEach(() => {
+    vi.mocked(api.creditUserHours).mockReset()
+    useUiStore.setState({ toast: null })
+  })
+
+  it("sends only the request and refreshes the ledger, profile, audit log and event", async () => {
+    vi.mocked(api.creditUserHours).mockResolvedValue({ entryId: ENTRY, totalHours: 6 })
+    const qc = new QueryClient()
+    const { touched, untouched } = seed(qc)
+
+    const res = await new MutationObserver(qc, creditUserHoursOptions(qc)).mutate({
+      request: eventRequest,
+      userName: "Rosa",
+      showsErrorInline: () => true,
+    })
+
+    expect(res).toEqual({ entryId: ENTRY, totalHours: 6 })
+    expect(api.creditUserHours).toHaveBeenCalledWith(eventRequest)
+    for (const key of touched) expect(qc.getQueryState(key)?.isInvalidated).toBe(true)
+    for (const key of untouched) expect(qc.getQueryState(key)?.isInvalidated).toBe(false)
+    expect(useUiStore.getState().toast?.text).toBe("Rosa · +3.5 h")
+  })
+
+  it("leaves every event alone for a manual adjustment", async () => {
+    vi.mocked(api.creditUserHours).mockResolvedValue({ entryId: ENTRY, totalHours: 1.25 })
+    const qc = new QueryClient()
+    seed(qc)
+
+    await new MutationObserver(qc, creditUserHoursOptions(qc)).mutate({
+      request: manualRequest,
+      userName: "Rosa",
+      showsErrorInline: () => true,
+    })
+
+    expect(api.creditUserHours).toHaveBeenCalledWith(manualRequest)
+    expect(qc.getQueryState(queryKeys.users.hours(USER))?.isInvalidated).toBe(true)
+    expect(qc.getQueryState(queryKeys.events.detail(EVENT))?.isInvalidated).toBe(false)
+    expect(useUiStore.getState().toast?.text).toBe("Rosa · +1.25 h")
+  })
+
+  it("stays quiet on failure while the form can show the error, invalidating nothing", async () => {
+    vi.mocked(api.creditUserHours).mockRejectedValue(new Error("already credited"))
+    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const { touched } = seed(qc)
+
+    await expect(
+      new MutationObserver(qc, creditUserHoursOptions(qc)).mutate({
+        request: eventRequest,
+        userName: "Rosa",
+        showsErrorInline: () => true,
+      }),
+    ).rejects.toThrow("already credited")
+    for (const key of touched) expect(qc.getQueryState(key)?.isInvalidated).toBe(false)
+    expect(useUiStore.getState().toast).toBeNull()
+  })
+
+  it("toasts the failure once the form that sent it is gone", async () => {
+    vi.mocked(api.creditUserHours).mockRejectedValue(new Error("already credited"))
+    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+
+    await expect(
+      new MutationObserver(qc, creditUserHoursOptions(qc)).mutate({
+        request: eventRequest,
+        userName: "Rosa",
+        showsErrorInline: () => false,
+      }),
+    ).rejects.toThrow("already credited")
+    expect(useUiStore.getState().toast?.text).toBe("already credited")
+  })
+
+  it("confirms a valid draft before crediting, one confirmation at a time", () => {
+    const source = readFileSync(new URL("./user-hours-panel.tsx", import.meta.url), "utf8")
+    const guard = source.indexOf("if (confirming.current || credit.isPending) return")
+    const build = source.indexOf("const request = buildCreditRequest(")
+    const invalid = source.indexOf("if (!request) return")
+    const confirm = source.indexOf("ok = await confirmDialog(")
+    const cancelled = source.indexOf("if (!ok) return")
+    const mutate = source.indexOf("credit.mutate(")
+    expect(guard).toBeGreaterThan(-1)
+    expect(build).toBeGreaterThan(guard)
+    expect(invalid).toBeGreaterThan(build)
+    expect(confirm).toBeGreaterThan(invalid)
+    expect(cancelled).toBeGreaterThan(confirm)
+    expect(mutate).toBeGreaterThan(cancelled)
   })
 })

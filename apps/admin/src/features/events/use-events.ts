@@ -1,6 +1,12 @@
 "use client"
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import type {
   AdminEventListQuery,
   AdminEventListResponse,
@@ -16,10 +22,11 @@ import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"
 
 
-export function useEventList(params: AdminEventListQuery) {
+export function useEventList(params: AdminEventListQuery, opts: { keepPreviousData?: boolean } = {}) {
   return useQuery<AdminEventListResponse>({
-    queryKey: queryKeys.events.list(params),
+    queryKey: queryKeys.events.page(params),
     queryFn: () => api.listAdminEvents(params),
+    ...(opts.keepPreviousData ? { placeholderData: keepPreviousData } : {}),
   })
 }
 

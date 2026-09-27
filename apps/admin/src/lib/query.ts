@@ -73,6 +73,8 @@ export const queryKeys = {
   events: {
     all: ["admin", "events"] as const,
     list: (params?: unknown) => ["admin", "events", "list", params ?? null] as const,
+    /** One flat page (home preview, event picker) — kept apart from the infinite `list` cache entries. */
+    page: (params?: unknown) => ["admin", "events", "page", params ?? null] as const,
     detail: (id: string) => ["admin", "events", "detail", id] as const,
   },
 
