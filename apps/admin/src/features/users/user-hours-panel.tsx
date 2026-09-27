@@ -6,18 +6,15 @@ import { type AdminUserDTO, type AdminUserHoursEntryDTO } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { confirmDialog, promptDialog } from "@/components/shared/dialog"
+import { promptDialog } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
-import { useNav, useToast } from "@/store/ui-store"
+import { useNav } from "@/store/ui-store"
 import { useUserHours, useVoidUserHours } from "@/features/users/use-user-hours"
 import {
-  REVOKE_CERTIFICATE_COMMAND,
-  affectedCertificateLine,
   formatHours,
   hoursEntryMeta,
   hoursEntryTitle,
   hoursEntryVoidDetail,
-  voidedToast,
 } from "@/features/users/user-hours"
 
 const VOID_REASON_MAX = 1000
@@ -108,7 +105,6 @@ function HoursEntryRow({
 export function UserHoursPanel({ user }: { user: AdminUserDTO }) {
   const q = useUserHours(user.id)
   const voidHours = useVoidUserHours()
-  const toast = useToast()
   // Guards a second click while the reason prompt is already open.
   const prompting = React.useRef(false)
 
@@ -130,22 +126,14 @@ export function UserHoursPanel({ user }: { user: AdminUserDTO }) {
       prompting.current = false
     }
     if (reason === null) return
-    voidHours.mutate(
-      { id: user.id, entryId: entry.id, reason: reason.trim(), eventId: entry.event?.id ?? null },
-      {
-        onSuccess: (res) => {
-          toast(voidedToast(user.name, entry.hours))
-          if (res.affectedCertificates.length === 0) return
-          void confirmDialog({
-            title: "Issued transcripts still list this entry",
-            body: `These transcripts still verify with the old total until they are revoked. Revoke each one from the backend with: ${REVOKE_CERTIFICATE_COMMAND}`,
-            details: res.affectedCertificates.map(affectedCertificateLine),
-            confirmLabel: "Done",
-            acknowledgeOnly: true,
-          })
-        },
-      },
-    )
+    voidHours.mutate({
+      id: user.id,
+      entryId: entry.id,
+      reason: reason.trim(),
+      eventId: entry.event?.id ?? null,
+      userName: user.name,
+      hours: entry.hours,
+    })
   }
 
   if (q.isLoading) {

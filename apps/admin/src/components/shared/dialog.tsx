@@ -13,9 +13,7 @@ interface ConfirmRequest {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
-  /** Rendered as a monospace list under the body, one line per item. */
   details?: string[]
-  /** A notice with nothing to decline: only the confirm button renders. */
   acknowledgeOnly?: boolean
   resolve: (ok: boolean) => void
 }
