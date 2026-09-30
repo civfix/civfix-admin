@@ -41,6 +41,7 @@ import {
   userOrganizationsView,
   type UserOrganization,
 } from "@/features/users/user-organizations"
+import { UserHoursPanel } from "@/features/users/user-hours-panel"
 import { getUserMessageDestination } from "./profile-activity-navigation"
 import { useNav, useToast, type PageId } from "@/store/ui-store"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -218,9 +219,10 @@ function ProfileMessageRow({
   )
 }
 
-type TabId = "reports" | "events" | "messages"
+type TabId = "reports" | "events" | "messages" | "hours"
+type ActivityTabId = Exclude<TabId, "hours">
 
-function UserActivity({ userId, tab }: { userId: string; tab: TabId }) {
+function UserActivity({ userId, tab }: { userId: string; tab: ActivityTabId }) {
   const nav = useNav()
   const reports = useUserReports(tab === "reports" ? userId : null)
   const events = useUserEvents(tab === "events" ? userId : null)
@@ -353,10 +355,11 @@ function UserOrganizationRow({ org, nav }: { org: UserOrganization; nav: NavFn }
   )
 }
 
-function tabCount(user: AdminUserDTO, id: TabId): number {
+function tabCount(user: AdminUserDTO, id: TabId): number | null {
   if (id === "reports") return user.reports
   if (id === "events") return user.cleanups
-  return user.messages
+  if (id === "messages") return user.messages
+  return null
 }
 
 function UserDetail({ userId }: { userId: string }) {
@@ -389,6 +392,7 @@ function UserDetail({ userId }: { userId: string }) {
     { id: "reports", label: "Reports" },
     { id: "events", label: "Events" },
     { id: "messages", label: "Messages" },
+    { id: "hours", label: "Hours" },
   ]
 
   const onFlag = () => {
@@ -552,15 +556,19 @@ function UserDetail({ userId }: { userId: string }) {
               onClick={() => setTab(t.id)}
             >
               {t.label}
-              <span className="profile-tab-n">{n}</span>
+              {n !== null && <span className="profile-tab-n">{n}</span>}
             </button>
           )
         })}
       </div>
 
-      <div className="profile-list">
-        <UserActivity userId={user.id} tab={tab} />
-      </div>
+      {tab === "hours" ? (
+        <UserHoursPanel user={user} />
+      ) : (
+        <div className="profile-list">
+          <UserActivity userId={user.id} tab={tab} />
+        </div>
+      )}
 
       <div className="user-actions">
         {deleted && (

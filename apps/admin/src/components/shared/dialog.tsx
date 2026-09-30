@@ -13,6 +13,8 @@ interface ConfirmRequest {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
+  details?: string[]
+  acknowledgeOnly?: boolean
   resolve: (ok: boolean) => void
 }
 
@@ -25,6 +27,7 @@ interface PromptRequest {
   defaultValue?: string
   confirmLabel?: string
   required?: boolean
+  maxLength?: number
   danger?: boolean
   resolve: (value: string | null) => void
 }
@@ -121,6 +124,15 @@ export function DialogHost() {
         </div>
         <div className="dialog-body">
           {current.body && <p className="dialog-text">{current.body}</p>}
+          {current.kind === "confirm" && current.details && current.details.length > 0 && (
+            <ul className="dialog-list">
+              {current.details.map((line) => (
+                <li key={line} className="mono">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          )}
           {current.kind === "prompt" && (
             <>
               {current.label && <label className="dialog-label">{current.label}</label>}
@@ -130,15 +142,18 @@ export function DialogHost() {
                 rows={3}
                 value={value}
                 placeholder={current.placeholder}
+                maxLength={current.maxLength}
                 onChange={(e) => setValue(e.target.value)}
               />
             </>
           )}
         </div>
         <div className="modal-foot dialog-foot">
-          <button className="btn ghost" onClick={cancel}>
-            {current.kind === "confirm" ? (current.cancelLabel ?? "Cancel") : "Cancel"}
-          </button>
+          {!(current.kind === "confirm" && current.acknowledgeOnly) && (
+            <button className="btn ghost" onClick={cancel}>
+              {current.kind === "confirm" ? (current.cancelLabel ?? "Cancel") : "Cancel"}
+            </button>
+          )}
           <button
             className={`btn ${current.danger ? "danger" : "primary"}`}
             onClick={accept}
