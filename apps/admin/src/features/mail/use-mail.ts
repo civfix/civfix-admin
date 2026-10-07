@@ -29,6 +29,7 @@ import type {
 import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { PUBLISH_TOAST } from "@/features/mail/mail-presentation"
 import { api } from "@/lib/api"
+import { errorMessage } from "@/lib/error-messages"
 import { infiniteListOptions } from "@/lib/infinite"
 import { invalidateKeys, queryKeys } from "@/lib/query"
 
@@ -74,12 +75,20 @@ export function invalidateMail(qc: QueryClient, id?: string) {
   ])
 }
 
+// The action's own copy for a failure that carries no message, such as a thrown non-error value.
+function errorOr(fallback: string) {
+  return (error: unknown) => errorMessage(error, {}, { fallback })
+}
+
 export function useComposeMail() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: ComposeRequest) => api.composeMail(input),
     onSuccess: () => invalidateMail(qc),
-    meta: { successMessage: (_res: unknown, { to }: ComposeRequest) => `Message sent to ${to}` },
+    meta: {
+      successMessage: (_res: unknown, { to }: ComposeRequest) => `Message sent to ${to}`,
+      errorMessage: errorOr("Couldn't send the message. Please try again."),
+    },
   })
 }
 
@@ -96,6 +105,7 @@ export function useReplyMail() {
     onSuccess: (_res, { request }) => invalidateMail(qc, request.id),
     meta: {
       successMessage: (_res: unknown, { recipient }: ReplyMailVariables) => `Reply sent to ${recipient}`,
+      errorMessage: errorOr("Couldn't send the reply. Please try again."),
     },
   })
 }
@@ -116,6 +126,7 @@ export function useSetMailStatus() {
     meta: {
       successMessage: (_res: unknown, { status }: SetMailStatusRequest) =>
         status === "replied" ? "Marked replied" : null,
+      errorMessage: errorOr("Couldn't update the thread."),
     },
   })
 }
@@ -125,7 +136,10 @@ export function useResendMail() {
   return useMutation({
     mutationFn: (input: ResendRequest) => api.resendMail(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
-    meta: { successMessage: () => "Message resent" },
+    meta: {
+      successMessage: () => "Message resent",
+      errorMessage: errorOr("Couldn't resend the message."),
+    },
   })
 }
 
@@ -140,6 +154,7 @@ export function publishMailReplyOptions(qc: QueryClient) {
       ]),
     meta: {
       successMessage: (res: PublishMailReplyResponse) => PUBLISH_TOAST[res.publication],
+      errorMessage: errorOr("Couldn't publish the reply. Please try again."),
     },
   })
 }

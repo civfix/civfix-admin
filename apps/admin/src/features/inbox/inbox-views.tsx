@@ -13,7 +13,7 @@ import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { formatPreciseDateTime } from "@/lib/dates"
+import { preciseDateTimeTitle } from "@/lib/dates"
 import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { useInboxMessage, useSetInboxStatus } from "@/features/inbox/use-inbox"
 import { replyOriginLabel } from "@/features/inbox/inbox-feed"
@@ -59,7 +59,7 @@ export function InboxRow({
           <span className="mail-from">
             {(isEmail ? item.from : item.org || item.from) || "(unknown sender)"}
           </span>
-          <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
+          <span className="mail-ts mono" title={preciseDateTimeTitle(item.ts)}>
             {relativeAgo(item.ts, now)}
           </span>
         </div>

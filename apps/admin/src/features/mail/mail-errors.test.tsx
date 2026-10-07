@@ -100,58 +100,100 @@ function spyToasts() {
 
 const REJECTED = new Error("Mail provider rejected the message")
 
-describe("mail mutation failures", () => {
-  it("shows one error toast when a reply fails", async () => {
-    const toasts = spyToasts()
-    apiMock.replyMail.mockRejectedValue(REJECTED)
-    renderPage(threadOf({}))
-    const reply = await within(detailCard()).findByPlaceholderText("Reply to Oakland Public Works…")
+interface FailingAction {
+  name: string
+  fail: (error: unknown) => void
+  thread: () => MailThreadDTO
+  run: () => Promise<void>
+  /** The action's own copy for a failure that carries no message, such as a thrown non-error value. */
+  copy: string
+}
 
-    await userEvent.type(reply, "Thanks")
-    await userEvent.click(within(detailCard()).getByRole("button", { name: /^Reply/ }))
+function withheldThread(): MailThreadDTO {
+  const thread = threadOf({})
+  thread.messages = [{ ...thread.messages[0]!, authVerdict: "fail", publication: "withheld" }]
+  return thread
+}
+
+const FAILING_ACTIONS: FailingAction[] = [
+  {
+    name: "a reply",
+    fail: (error) => apiMock.replyMail.mockRejectedValue(error),
+    thread: () => threadOf({}),
+    run: async () => {
+      const reply = await within(detailCard()).findByPlaceholderText("Reply to Oakland Public Works…")
+      await userEvent.type(reply, "Thanks")
+      await userEvent.click(within(detailCard()).getByRole("button", { name: /^Reply/ }))
+    },
+    copy: "Couldn't send the reply. Please try again.",
+  },
+  {
+    name: "Mark replied",
+    fail: (error) => apiMock.setMailStatus.mockRejectedValue(error),
+    thread: () => threadOf({}),
+    run: async () => {
+      await userEvent.click(await within(detailCard()).findByRole("button", { name: /Mark replied/ }))
+    },
+    copy: "Couldn't update the thread.",
+  },
+  {
+    name: "a resend",
+    fail: (error) => apiMock.resendMail.mockRejectedValue(error),
+    thread: () => threadOf({ status: "bounced" }),
+    run: async () => {
+      await userEvent.click(await within(detailCard()).findByRole("button", { name: /Resend/ }))
+    },
+    copy: "Couldn't resend the message.",
+  },
+  {
+    name: "composing",
+    fail: (error) => apiMock.composeMail.mockRejectedValue(error),
+    thread: () => threadOf({}),
+    run: async () => {
+      await within(detailCard()).findByText("Can your crew take a look?", { selector: "p" })
+      await userEvent.click(screen.getByRole("button", { name: /Compose/ }))
+      const dialog = screen.getByRole("dialog", { name: "New message" })
+      await userEvent.type(within(dialog).getByLabelText("To"), "works@oaklandca.gov")
+      await userEvent.type(within(dialog).getByLabelText("Subject"), "Pothole")
+      await userEvent.type(within(dialog).getByLabelText("Message"), "Please take a look")
+      await userEvent.click(within(dialog).getByRole("button", { name: /Send/ }))
+    },
+    copy: "Couldn't send the message. Please try again.",
+  },
+  {
+    name: "publishing a withheld reply",
+    fail: (error) => apiMock.publishMailReply.mockRejectedValue(error),
+    thread: withheldThread,
+    run: async () => {
+      await userEvent.click(await within(detailCard()).findByRole("button", { name: /Publish reply/ }))
+      await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Publish reply" }))
+    },
+    copy: "Couldn't publish the reply. Please try again.",
+  },
+]
+
+describe("mail mutation failures", () => {
+  it.each(FAILING_ACTIONS)("shows one error toast when $name fails", async (action) => {
+    const toasts = spyToasts()
+    action.fail(REJECTED)
+    renderPage(action.thread())
+
+    await action.run()
 
     await waitFor(() => expect(toasts).toHaveBeenCalled())
     expect(toasts).toHaveBeenCalledTimes(1)
     expect(toasts).toHaveBeenCalledWith(REJECTED.message, "error")
   })
 
-  it("shows one error toast when Mark replied fails", async () => {
+  it.each(FAILING_ACTIONS)("toasts its own copy when $name fails with no message", async (action) => {
     const toasts = spyToasts()
-    apiMock.setMailStatus.mockRejectedValue(REJECTED)
-    renderPage(threadOf({}))
+    action.fail({ status: "failed" })
+    renderPage(action.thread())
 
-    await userEvent.click(await within(detailCard()).findByRole("button", { name: /Mark replied/ }))
+    await action.run()
 
     await waitFor(() => expect(toasts).toHaveBeenCalled())
-    expect(toasts).toHaveBeenCalledTimes(1)
-  })
-
-  it("shows one error toast when a resend fails", async () => {
-    const toasts = spyToasts()
-    apiMock.resendMail.mockRejectedValue(REJECTED)
-    renderPage(threadOf({ status: "bounced" }))
-
-    await userEvent.click(await within(detailCard()).findByRole("button", { name: /Resend/ }))
-
-    await waitFor(() => expect(toasts).toHaveBeenCalled())
-    expect(toasts).toHaveBeenCalledTimes(1)
-  })
-
-  it("shows one error toast when composing fails", async () => {
-    const toasts = spyToasts()
-    apiMock.composeMail.mockRejectedValue(REJECTED)
-    renderPage(threadOf({}))
-    await within(detailCard()).findByText("Can your crew take a look?", { selector: "p" })
-
-    await userEvent.click(screen.getByRole("button", { name: /Compose/ }))
-    const dialog = screen.getByRole("dialog", { name: "New message" })
-    await userEvent.type(within(dialog).getByLabelText("To"), "works@oaklandca.gov")
-    await userEvent.type(within(dialog).getByLabelText("Subject"), "Pothole")
-    await userEvent.type(within(dialog).getByLabelText("Message"), "Please take a look")
-    await userEvent.click(within(dialog).getByRole("button", { name: /Send/ }))
-
-    await waitFor(() => expect(toasts).toHaveBeenCalled())
-    expect(toasts).toHaveBeenCalledTimes(1)
+    expect(toasts).toHaveBeenCalledWith(action.copy, "error")
   })
 
   it("shows one error toast when saving the default template fails", async () => {
@@ -165,20 +207,6 @@ describe("mail mutation failures", () => {
     const dialog = screen.getByRole("dialog", { name: "Default forwarding email" })
     await userEvent.type(within(dialog).getByLabelText("Subject"), "Report forwarded")
     await userEvent.click(within(dialog).getByRole("button", { name: /Save/ }))
-
-    await waitFor(() => expect(toasts).toHaveBeenCalled())
-    expect(toasts).toHaveBeenCalledTimes(1)
-  })
-
-  it("shows one error toast when publishing a withheld reply fails", async () => {
-    const toasts = spyToasts()
-    apiMock.publishMailReply.mockRejectedValue(REJECTED)
-    const withheld = threadOf({})
-    withheld.messages = [{ ...withheld.messages[0]!, authVerdict: "fail", publication: "withheld" }]
-    renderPage(withheld)
-
-    await userEvent.click(await within(detailCard()).findByRole("button", { name: /Publish reply/ }))
-    await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Publish reply" }))
 
     await waitFor(() => expect(toasts).toHaveBeenCalled())
     expect(toasts).toHaveBeenCalledTimes(1)

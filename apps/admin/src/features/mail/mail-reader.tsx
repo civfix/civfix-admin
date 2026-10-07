@@ -11,7 +11,7 @@ import {
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
-import { formatPreciseDateTime } from "@/lib/dates"
+import { preciseDateTimeTitle } from "@/lib/dates"
 import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { correspondent } from "@/features/mail/mail-page-state"
@@ -130,7 +130,7 @@ function ThreadMessage({ thread, message }: { thread: MailThreadDTO; message: Ma
         <span className="mail-msg-who">{message.who}</span>
         {address && <span className="mail-msg-addr mono">{address}</span>}
         <span className="spacer" />
-        <span className="mail-msg-ts mono" title={formatPreciseDateTime(message.ts)}>
+        <span className="mail-msg-ts mono" title={preciseDateTimeTitle(message.ts)}>
           {relativeAgo(message.ts)}
         </span>
         {isOut ? (

@@ -77,9 +77,11 @@ describe("InboxRow", () => {
     expect(screen.getByText("support")).not.toHaveStyle({ opacity: "0.6" })
   })
 
-  it("leaves the timestamp tooltip empty for an unparseable time", () => {
-    renderWithQuery(<InboxRow item={{ ...EMAIL, ts: "" }} selected={false} onClick={() => {}} />)
-    expect(screen.queryByTitle("Invalid Date")).not.toBeInTheDocument()
+  it.each(["", "not a date"])("gives the timestamp no tooltip for the unparseable time %j", (ts) => {
+    const { container } = renderWithQuery(
+      <InboxRow item={{ ...EMAIL, ts }} selected={false} onClick={() => {}} />,
+    )
+    expect(container.querySelector(".mail-ts")).not.toHaveAttribute("title")
   })
 })
 

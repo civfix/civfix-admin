@@ -65,6 +65,15 @@ export function needsAttention(dto: JurisdictionDirectoryDTO): boolean {
   return dto.reportsWaiting > 0 && dto.method === "none"
 }
 
+// en-US whatever the browser locale, unlike the shared date helpers: the Routed column has always read
+// this way.
+const ROUTED_DATE_FORMAT = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
+
+export function formatRoutedDate(iso: string | null): string {
+  if (!iso || Number.isNaN(Date.parse(iso))) return EMPTY_VALUE
+  return ROUTED_DATE_FORMAT.format(new Date(iso))
+}
+
 // Reports can wait months, so past a week this keeps counting in days, then weeks, months and years
 // where the shared compact age would switch to an ever-growing week count.
 function longWaitingAge(days: number): string {

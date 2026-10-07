@@ -9,12 +9,12 @@ import {
   LAYER_LABEL,
   UNMAPPED_GEOID,
   dominantCategory,
+  formatRoutedDate,
   formatWaitingAge,
   isOverdue,
 } from "@/features/discovery/jurisdiction-view"
 import { RoutingStatusPill } from "@/features/discovery/routing-status-pill"
 import { categoryPinSrc } from "@/lib/category"
-import { formatMonthDay } from "@/lib/dates"
 import { formatCompactCount } from "@/lib/display"
 
 function MappedLeading({ item }: { item: JurisdictionDirectoryDTO }) {
@@ -80,7 +80,7 @@ function RowAge({
     return <WaitingAge oldestReportAt={item.oldestReportAt} now={now} />
   }
   if (unmapped) return null
-  return <span className="age">{formatMonthDay(item.lastRouted)}</span>
+  return <span className="age">{formatRoutedDate(item.lastRouted)}</span>
 }
 
 export const JurisdictionRow = React.memo(function JurisdictionRow({

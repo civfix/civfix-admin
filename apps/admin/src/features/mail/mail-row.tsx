@@ -5,7 +5,7 @@ import { MAIL_STATUS_LABELS, relativeAgo, type MailThreadListItemDTO } from "@ci
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { formatPreciseDateTime } from "@/lib/dates"
+import { preciseDateTimeTitle } from "@/lib/dates"
 import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
 
 function rowCorrespondent(item: MailThreadListItemDTO): string {
@@ -43,7 +43,7 @@ export const MailRow = React.memo(function MailRow({
       <div className="mail-row-body">
         <div className="mail-row-top">
           <span className="mail-from">{rowCorrespondent(item)}</span>
-          <span className="mail-ts mono" title={formatPreciseDateTime(item.ts)}>
+          <span className="mail-ts mono" title={preciseDateTimeTitle(item.ts)}>
             {relativeAgo(item.ts, now)}
           </span>
         </div>

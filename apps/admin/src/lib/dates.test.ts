@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatDate, formatDateTime, formatMonthDay, formatPreciseDateTime } from "./dates"
+import { formatDate, formatDateTime, formatPreciseDateTime, preciseDateTimeTitle } from "./dates"
 import { EMPTY_VALUE } from "./empty-value"
 
 describe("formatDate", () => {
@@ -39,20 +39,6 @@ describe("formatDateTime", () => {
   })
 })
 
-describe("formatMonthDay", () => {
-  it.each([null, undefined, ""])("renders the placeholder for %j", (value) => {
-    expect(formatMonthDay(value)).toBe(EMPTY_VALUE)
-  })
-
-  it("formats a short local month and day", () => {
-    expect(formatMonthDay("2026-09-23T14:05:00.000Z")).toBe("Sep 23")
-  })
-
-  it("returns an unparseable string unchanged", () => {
-    expect(formatMonthDay("not a date")).toBe("not a date")
-  })
-})
-
 describe("formatPreciseDateTime", () => {
   it.each([null, undefined, ""])("renders the placeholder for %j", (value) => {
     expect(formatPreciseDateTime(value)).toBe(EMPTY_VALUE)
@@ -64,5 +50,15 @@ describe("formatPreciseDateTime", () => {
 
   it("returns an unparseable string unchanged", () => {
     expect(formatPreciseDateTime("not a date")).toBe("not a date")
+  })
+})
+
+describe("preciseDateTimeTitle", () => {
+  it("titles a parseable time with seconds", () => {
+    expect(preciseDateTimeTitle("2026-09-23T14:05:07.000Z")).toBe("Sep 23, 2026, 2:05:07 PM")
+  })
+
+  it.each(["", "not a date"])("gives no title for %j", (value) => {
+    expect(preciseDateTimeTitle(value)).toBeUndefined()
   })
 })

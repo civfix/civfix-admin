@@ -5,6 +5,7 @@ import { EMPTY_VALUE } from "@/lib/empty-value"
 import {
   LAYER_LABEL,
   dominantCategory,
+  formatRoutedDate,
   formatWaitingAge,
   isOverdue,
 } from "./jurisdiction-view"
@@ -54,5 +55,15 @@ describe("jurisdiction row formatting", () => {
       federal: "Federal land",
       tribal: "Tribal",
     })
+  })
+})
+
+describe("formatRoutedDate", () => {
+  it("shows the month and day", () => {
+    expect(formatRoutedDate("2026-09-01T12:00:00.000Z")).toBe("Sep 1")
+  })
+
+  it.each([null, "", "not a date"])("shows the placeholder for %j", (value) => {
+    expect(formatRoutedDate(value)).toBe(EMPTY_VALUE)
   })
 })
