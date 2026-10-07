@@ -666,7 +666,7 @@ describe("ModerationPage selection after a decision", () => {
     await waitFor(() => expect(useUiStore.getState().toast?.text).toBe("MOD-101 · kept"))
   })
 
-  it("names the item in the remove dialogs", async () => {
+  it("names the item in the remove and hold dialogs", async () => {
     apiMock.listModeration.mockResolvedValue(modPage([COMMENT_REPORT]))
     mockModDetails(COMMENT_REPORT)
     renderWithQuery(
@@ -681,6 +681,13 @@ describe("ModerationPage selection after a decision", () => {
     expect(
       within(await screen.findByRole("dialog")).getByRole("heading", { name: "Remove MOD-101" }),
     ).toBeInTheDocument()
+    await userEvent.keyboard("{Escape}")
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: "Hold" }))
+    expect(
+      within(await screen.findByRole("dialog")).getByRole("heading", { name: "Hold MOD-101 for review" }),
+    ).toBeInTheDocument()
+    await userEvent.keyboard("{Escape}")
   })
 
   it("clears the selection once a gov claim decision drops the claim from the list, never opening another", async () => {

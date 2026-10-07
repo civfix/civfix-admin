@@ -80,6 +80,29 @@ describe("ProfilePanel editor", () => {
       description: "We clean the river and its banks.",
     })
   })
+  it("words the save prompt against the org as editing started when a refetch changes its slug", async () => {
+    const { client, rerender } = renderWithQuery(
+      <>
+        <ProfilePanel org={RIVER} />
+        <DialogHost />
+      </>,
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: /Edit profile/ }))
+    await userEvent.type(screen.getByLabelText(/^Description/), " And its banks.")
+    rerender(
+      <QueryClientProvider client={client}>
+        <ProfilePanel org={{ ...RIVER, slug: "river-keepers-la" }} />
+        <DialogHost />
+      </QueryClientProvider>,
+    )
+
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/ }))
+    const dialog = await screen.findByRole("dialog")
+    expect(dialog).toHaveTextContent("The change is visible on the public page immediately.")
+    expect(dialog).not.toHaveTextContent("The slug changes")
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }))
+  })
 })
 
 describe("ProfilePanel editor save errors", () => {

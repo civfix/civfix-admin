@@ -15,7 +15,7 @@ import {
   useHoldModeration,
   useRemoveModeration,
 } from "@/features/moderation/use-moderation"
-import { useApproveGovClaim } from "@/features/moderation/use-gov-claims"
+import { useApproveGovClaim, useVerifyGovClaimCheck } from "@/features/moderation/use-gov-claims"
 import { govClaimApproveErrorMessage } from "@/features/moderation/gov-claim-presentation"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -112,5 +112,16 @@ describe("gov claim approval", () => {
       tone: "error",
     })
     expect(useUiStore.getState().toast?.text).toMatch(/^That contact email belongs to an operator account\./)
+  })
+})
+
+describe("gov claim checks", () => {
+  it.each([
+    ["verified", "LinkedIn · verified"],
+    ["pending", "LinkedIn · back to pending"],
+  ] as const)("confirms a check moved to %s", async (status, text) => {
+    apiMock.verifyGovClaim.mockResolvedValue({ ok: true })
+    await invalidatedBy(() => useVerifyGovClaimCheck(), { id: "gc-1", check: "linkedin", status })
+    expect(useUiStore.getState().toast).toMatchObject({ text, tone: "ok" })
   })
 })

@@ -121,6 +121,16 @@ describe("Mail compose modal", () => {
     expect(opener).toHaveFocus()
   })
 
+  it("closes an empty draft on Escape from inside its empty To field", async () => {
+    const { user, dialog } = await openCompose()
+    expect(within(dialog).getByLabelText("To")).toHaveFocus()
+
+    await user.keyboard("{Escape}")
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(useUiStore.getState().page).toBe("mail")
+  })
+
   it("closes an empty draft on a backdrop click", async () => {
     const { user, dialog } = await openCompose()
     await user.click(overlayOf(dialog))

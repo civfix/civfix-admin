@@ -667,6 +667,14 @@ describe("ReportsPage chat", () => {
     }
   })
 
+  function chatHead(card: HTMLElement): HTMLElement {
+    const head = [...card.querySelectorAll<HTMLElement>(".sub-head")].find((el) =>
+      el.textContent?.startsWith("Chat"),
+    )
+    if (!head) throw new Error("no Chat section in the detail card")
+    return head
+  }
+
   function renderWithChat(chat: (params: { before?: string }) => ChatHistoryResponse) {
     apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
     mockDetails(COUCH)
@@ -741,10 +749,12 @@ describe("ReportsPage chat", () => {
       before === OLDER.id ? { items: [OLDER], nextCursor: null } : { items: [NEWER], nextCursor: OLDER.id },
     )
     await within(card).findByText("Still there")
+    expect(chatHead(card)).toHaveTextContent(/^Chat 1\+$/)
 
     await userEvent.click(within(card).getByRole("button", { name: "Load older messages" }))
 
     expect(await within(card).findByText("First sighting last week")).toBeInTheDocument()
+    expect(chatHead(card)).toHaveTextContent(/^Chat 2$/)
     expect(apiMock.adminReportMessages).toHaveBeenLastCalledWith({
       id: COUCH.id,
       limit: 50,

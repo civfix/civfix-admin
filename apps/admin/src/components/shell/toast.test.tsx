@@ -156,4 +156,22 @@ describe("Toast", () => {
     })
     expect(useUiStore.getState().toast).toBeNull()
   })
+
+  it("holds the toast while focus is inside it", async () => {
+    const user = startFakeTimersWithUser()
+    render(<Toast />)
+    show("Saved")
+
+    act(() => screen.getByRole("button", { name: "Dismiss" }).focus())
+    act(() => {
+      vi.advanceTimersByTime(SUCCESS_TOAST_MS * 3)
+    })
+    expect(screen.getByRole("status")).toHaveTextContent("Saved")
+
+    await user.tab()
+    act(() => {
+      vi.advanceTimersByTime(SUCCESS_TOAST_MS)
+    })
+    expect(useUiStore.getState().toast).toBeNull()
+  })
 })

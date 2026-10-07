@@ -69,6 +69,15 @@ describe("UserPicker", () => {
     expect(apiMock.listAdminUsers).toHaveBeenLastCalledWith({ q: "member", limit: 16 })
   })
 
+  it("never asks for more users than the API's page maximum, however many members are left out", async () => {
+    apiMock.listAdminUsers.mockResolvedValue(page([ADA]))
+    const members = new Set(Array.from({ length: 150 }, (_, i) => `m${i}`))
+    renderWithQuery(<UserPicker value={null} onChange={() => {}} excludeIds={members} />)
+
+    await userEvent.type(screen.getByRole("textbox"), "ada")
+    await waitFor(() => expect(apiMock.listAdminUsers).toHaveBeenLastCalledWith({ q: "ada", limit: 100 }))
+  })
+
   it("keeps at most eight results after leaving out members", async () => {
     const members = [person({ id: "m0", name: "Member 0" })]
     const others = Array.from({ length: 9 }, (_, i) => person({ id: `o${i}`, name: `Other ${i}` }))

@@ -388,6 +388,61 @@ describe("DialogHost", () => {
     await expect(result).resolves.toBe("again")
   })
 
+  it("leaves an auto-repeated Enter in the prompt field to the field, without submitting", async () => {
+    let result: Promise<string | null> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = promptDialog({ title: "Reason", confirmLabel: "Save" })
+    })
+    await user.click(opener)
+    const field = screen.getByRole("textbox")
+    await user.type(field, "spam")
+
+    expect(fireEvent.keyDown(field, { key: "Enter", repeat: true })).toBe(true)
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(await settledYet(result!)).toBe(false)
+  })
+
+  it.each(["{Control>}{Enter}{/Control}", "{Meta>}{Enter}{/Meta}"])(
+    "does not submit a prompt on %s pressed on its focused Cancel button",
+    async (keys) => {
+      let result: Promise<string | null> | undefined
+      const { user, opener } = renderDialog(() => {
+        result = promptDialog({ title: "Reason", confirmLabel: "Save" })
+      })
+      await user.click(opener)
+      await user.type(screen.getByRole("textbox"), "spam")
+      screen.getByRole("button", { name: "Cancel" }).focus()
+
+      await user.keyboard(keys)
+      const pending = Symbol("pending")
+      expect(await Promise.race([result!, Promise.resolve(pending)])).not.toBe("spam")
+    },
+  )
+
+  it("cancels a confirm on a click on the backdrop", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Remove report?", confirmLabel: "Remove" })
+    })
+    await user.click(opener)
+
+    await user.click(overlayOf(screen.getByRole("dialog")))
+    await expect(result).resolves.toBe(false)
+    expect(screen.queryByRole("dialog")).toBeNull()
+  })
+
+  it("keeps a confirm open when a press inside it is released over the backdrop", async () => {
+    let result: Promise<boolean> | undefined
+    const { user, opener } = renderDialog(() => {
+      result = confirmDialog({ title: "Remove report?", body: "The reporter is notified." })
+    })
+    await user.click(opener)
+
+    dragOutToBackdrop(screen.getByText("The reporter is notified."), overlayOf(screen.getByRole("dialog")))
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(await settledYet(result!)).toBe(false)
+  })
+
   it("cancels a prompt on a click on the backdrop", async () => {
     let result: Promise<string | null> | undefined
     const { user, opener } = renderDialog(() => {

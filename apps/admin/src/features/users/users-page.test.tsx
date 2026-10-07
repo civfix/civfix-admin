@@ -546,6 +546,32 @@ describe("UsersPage account detail", () => {
     expect(within(detailCard()).getByText(/1 neighbor joined/)).toBeInTheDocument()
   })
 
+  it("words every event role with its own verb and pill", async () => {
+    apiMock.listAdminUsers.mockResolvedValue(page([ANA]))
+    mockDetails(ANA)
+    apiMock.getUserEvents.mockResolvedValue({
+      items: [
+        eventItem({ id: "ev-1", title: "River sweep", role: "organizer" }),
+        eventItem({ id: "ev-2", title: "Park day", role: "coordinator" }),
+        eventItem({ id: "ev-3", title: "Alley cleanup", role: "staff" }),
+        eventItem({ id: "ev-4", title: "Beach day", role: "member" }),
+      ],
+      nextCursor: null,
+    })
+    renderWithQuery(<UsersPage focusId={null} />)
+    await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
+
+    await openActivityTab("Events")
+    const card = detailCard()
+    expect(await within(card).findByText("Organized the River sweep")).toBeInTheDocument()
+    expect(within(card).getByText("Coordinated the Park day")).toBeInTheDocument()
+    expect(within(card).getByText("Staffed the Alley cleanup")).toBeInTheDocument()
+    expect(within(card).getByText("Joined the Beach day")).toBeInTheDocument()
+    for (const pill of ["Organizer", "Coordinator", "Staff"]) {
+      expect(within(card).getByText(pill)).toBeInTheDocument()
+    }
+  })
+
   it("labels a removed message neutrally and keeps block content out of the row button", async () => {
     apiMock.listAdminUsers.mockResolvedValue(page([ANA]))
     mockDetails(ANA)
