@@ -143,3 +143,25 @@ describe("uploadOrgLogo", () => {
     expect(finalizeMedia).not.toHaveBeenCalled()
   })
 })
+
+describe("putLogoBytes timeout", () => {
+  it("aborts a stalled PUT after the size-scaled timeout and shows the connection copy", async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchImpl = vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")))
+          }),
+      ) as unknown as typeof fetch
+      const pending = putLogoBytes("https://storage/put", {}, imageBlob("image/png"), 4, fetchImpl)
+      const outcome = expect(pending).rejects.toThrow(
+        "Upload failed. Please check your connection and try again.",
+      )
+      await vi.advanceTimersByTimeAsync(logoPutTimeoutMs(4))
+      await outcome
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

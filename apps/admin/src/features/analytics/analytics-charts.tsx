@@ -1,26 +1,27 @@
 "use client"
 
-/**
- * Analytics chart helpers, ported from the design (metrics.jsx BarChart and pages-operations.jsx
- * Spark). Class names + DOM mirror the prototype so they render pixel-faithfully against the ported
- * admin.css (`.barchart*`, `.hub-spark*`). Used by the Analytics cards (pins-per-week + cleanup
- * events use BarChart; Spark is available for compact inline trends).
- */
+import type { CSSProperties } from "react"
 
-/** A column bar chart with an optional label row; the last bar gets the `now` accent. */
+import { barHeightPcts, sparkHeightPcts } from "@/features/analytics/chart-geometry"
+import { formatCompactCount } from "@/lib/display"
+
+// Class names and DOM match the `.barchart*` and `.hub-spark*` rules in admin.css.
+
+// The `.hue-*` classes admin.css defines; any other value paints nothing.
+export type Hue = "slate" | "lilac" | "sun" | "sky" | "moss" | "bloom"
+
 export function BarChart({ values, labels }: { values: number[]; labels?: string[] }) {
-  const max = Math.max(...values, 1)
+  const heights = barHeightPcts(values)
   return (
     <div className="barchart">
       {values.map((v, i) => (
-        // eslint-disable-next-line react/no-array-index-key
         <div key={i} className="barchart-col">
           <div className="barchart-bar-wrap">
             <div
               className={`barchart-bar ${i === values.length - 1 ? "now" : ""}`}
-              style={{ height: `${(v / max) * 100}%` }}
+              style={{ height: `${heights[i]}%` }}
             >
-              <span className="barchart-val">{v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}</span>
+              <span className="barchart-val">{formatCompactCount(v)}</span>
             </div>
           </div>
           {labels && <div className="barchart-label">{labels[i]}</div>}
@@ -30,22 +31,27 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
   )
 }
 
-/** A compact sparkline (the design's hub spark): min/max-normalized bars, last bar accented. */
-export function Spark({ values, hue = "moss" }: { values: number[]; hue?: string }) {
-  const max = Math.max(...values)
-  const min = Math.min(...values)
+export function Spark({
+  values,
+  label,
+  hue = "moss",
+}: {
+  values: number[]
+  label: string
+  hue?: Hue
+}) {
+  const heights = sparkHeightPcts(values)
   return (
-    <div className="hub-spark">
-      {values.map((v, i) => (
+    <div className={`hub-spark hue-${hue}`} role="img" aria-label={label}>
+      {heights.map((height, i) => (
         <span
-          // eslint-disable-next-line react/no-array-index-key
           key={i}
-          className={`hub-spark-bar ${i === values.length - 1 ? "now" : ""}`}
+          className={`hub-spark-bar ${i === heights.length - 1 ? "now" : ""}`}
           style={
             {
-              height: `${10 + ((v - min) / (max - min || 1)) * 88}%`,
-              "--sh": `var(--${hue})`,
-            } as React.CSSProperties
+              height: `${height}%`,
+              "--sh": "var(--hue)",
+            } as CSSProperties
           }
         />
       ))}

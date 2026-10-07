@@ -36,12 +36,11 @@ export function parseFeedKey(key: string): { source: FeedSource; id: string } | 
 
 export function resolveFeedSelection<T extends { source: FeedSource; id: string }>(
   feedByKey: ReadonlyMap<string, T>,
-  picked: { item: T; view: string } | null,
+  picked: T | null,
   selKey: string | null,
-  view: string,
 ): T | undefined {
   const listed = selKey ? feedByKey.get(selKey) : undefined
-  return listed ?? (picked?.view === view && feedKey(picked.item) === selKey ? picked.item : undefined)
+  return listed ?? (picked && feedKey(picked) === selKey ? picked : undefined)
 }
 
 export function isInboxFeedFilter(value: string): value is InboxFeedFilter {

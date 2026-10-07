@@ -14,12 +14,18 @@ import {
 } from "@civfix/shared"
 
 import { toAppError } from "@/lib/api"
-import { slugProblem } from "@/features/orgs/org-slug"
+import { normalizeSlug, slugProblem } from "@/features/orgs/org-slug"
 
-export { MAX_ORG_DESCRIPTION, MAX_ORG_NAME, SOCIAL_PLATFORMS }
-export type { SocialPlatform }
+// Mirror SocialHandleSchema / WhatsAppNumberSchema in @civfix/shared, which export no constants.
+const SOCIAL_HANDLE_MAX = 30
+const WHATSAPP_DIGITS_MIN = 7
+const WHATSAPP_DIGITS_MAX = 15
+const LEADING_AT_SIGNS = /^@+/
+const SOCIAL_LINKS_FIELD_PREFIX = /^socialLinks\./
+const SOCIAL_HANDLE_PROBLEM = `Letters, digits, dots and underscores only (max ${SOCIAL_HANDLE_MAX}).`
+const WHATSAPP_PROBLEM = `Digits only, with country code (${WHATSAPP_DIGITS_MIN}–${WHATSAPP_DIGITS_MAX} digits, no leading 0).`
 
-/** The editable profile fields, as the form holds them (strings; "" means empty). */
+/** Form state: text fields are strings and "" means empty. */
 export interface OrgProfileDraft {
   name: string
   slug: string
@@ -30,14 +36,23 @@ export interface OrgProfileDraft {
   logoPreviewUrl: string | null
 }
 
-export type OrgProfileField =
-  | "name"
-  | "slug"
-  | "description"
-  | "websiteUrl"
-  | "logoMediaId"
-  | SocialPlatform
+const ORG_PROFILE_SCALAR_FIELDS = ["name", "slug", "description", "websiteUrl", "logoMediaId"] as const
+
+type OrgProfileField = (typeof ORG_PROFILE_SCALAR_FIELDS)[number] | SocialPlatform
 export type OrgProfileErrors = Partial<Record<OrgProfileField | "ownerUserId" | "reason", string>>
+
+const SERVER_ERROR_FIELDS = [
+  ...ORG_PROFILE_SCALAR_FIELDS,
+  "ownerUserId",
+  "reason",
+  ...SOCIAL_PLATFORMS,
+] as const
+
+/** The fields the profile editor renders; a server error on anything else (the reason, say) is toasted. */
+const PROFILE_EDITOR_FIELDS: readonly (keyof OrgProfileErrors)[] = [
+  ...ORG_PROFILE_SCALAR_FIELDS,
+  ...SOCIAL_PLATFORMS,
+]
 
 export const SOCIAL_PLACEHOLDER: Record<SocialPlatform, string> = {
   facebook: "pagename",
@@ -47,7 +62,11 @@ export const SOCIAL_PLACEHOLDER: Record<SocialPlatform, string> = {
   whatsapp: "12135550123",
 }
 
-export function emptySocial(): Record<SocialPlatform, string> {
+function isOneOf<T extends string>(values: readonly T[], value: unknown): value is T {
+  return (values as readonly unknown[]).includes(value)
+}
+
+function emptySocial(): Record<SocialPlatform, string> {
   return { facebook: "", instagram: "", tiktok: "", x: "", whatsapp: "" }
 }
 
@@ -61,6 +80,15 @@ export function emptyProfileDraft(): OrgProfileDraft {
     logoMediaId: null,
     logoPreviewUrl: null,
   }
+}
+
+/** The preview url is left out: it only ever accompanies a logoMediaId. */
+export function isEmptyProfileDraft(draft: OrgProfileDraft): boolean {
+  const empty = emptyProfileDraft()
+  return (
+    ORG_PROFILE_SCALAR_FIELDS.every((field) => draft[field] === empty[field]) &&
+    SOCIAL_PLATFORMS.every((p) => draft.social[p] === "")
+  )
 }
 
 export function draftFromOrg(org: AdminOrgDTO): OrgProfileDraft {
@@ -77,12 +105,11 @@ export function draftFromOrg(org: AdminOrgDTO): OrgProfileDraft {
   }
 }
 
-/** The social links object the API accepts, or null when every handle is blank. */
 export function socialLinksFromDraft(social: Record<SocialPlatform, string>): SocialLinks | null {
   const out: SocialLinks = {}
   let any = false
   for (const p of SOCIAL_PLATFORMS) {
-    const v = social[p].trim().replace(/^@+/, "")
+    const v = social[p].trim().replace(LEADING_AT_SIGNS, "")
     if (v !== "") {
       out[p] = v
       any = true
@@ -91,10 +118,19 @@ export function socialLinksFromDraft(social: Record<SocialPlatform, string>): So
   return any ? out : null
 }
 
-/**
- * Client-side validation mirroring the create/update request schemas, so the operator sees inline
- * errors before a round-trip. Returns an empty object when the draft is acceptable.
- */
+function socialLinkErrors(links: SocialLinks): OrgProfileErrors {
+  const parsed = SocialLinksSchema.safeParse(links)
+  if (parsed.success) return {}
+  const errors: OrgProfileErrors = {}
+  for (const issue of parsed.error.issues) {
+    const key = issue.path[0]
+    if (!isOneOf(SOCIAL_PLATFORMS, key)) continue
+    errors[key] = key === "whatsapp" ? WHATSAPP_PROBLEM : SOCIAL_HANDLE_PROBLEM
+  }
+  return errors
+}
+
+/** Mirrors the create/update request schemas so the operator sees inline errors before a round-trip. */
 export function validateProfileDraft(draft: OrgProfileDraft): OrgProfileErrors {
   const errors: OrgProfileErrors = {}
   const name = draft.name.trim()
@@ -110,20 +146,17 @@ export function validateProfileDraft(draft: OrgProfileDraft): OrgProfileErrors {
     errors.websiteUrl = "Must be a full https:// address."
   }
   const links = socialLinksFromDraft(draft.social)
-  if (links) {
-    const parsed = SocialLinksSchema.safeParse(links)
-    if (!parsed.success) {
-      for (const issue of parsed.error.issues) {
-        const key = issue.path[0]
-        if (typeof key === "string" && (SOCIAL_PLATFORMS as readonly string[]).includes(key)) {
-          errors[key as SocialPlatform] =
-            key === "whatsapp"
-              ? "Digits only, with country code (7–15 digits, no leading 0)."
-              : "Letters, digits, dots and underscores only (max 30)."
-        }
-      }
-    }
-  }
+  return links ? { ...errors, ...socialLinkErrors(links) } : errors
+}
+
+export function validateCreateDraft(
+  draft: OrgProfileDraft,
+  owner: { id: string } | null,
+  reason: string,
+): OrgProfileErrors {
+  const errors = validateProfileDraft(draft)
+  if (!owner) errors.ownerUserId = "Pick the person who owns this organization."
+  if (reason.trim() === "") errors.reason = "A reason is required."
   return errors
 }
 
@@ -136,7 +169,7 @@ export function buildCreateRequest(
   const socialLinks = socialLinksFromDraft(draft.social)
   return {
     name: draft.name.trim(),
-    slug: draft.slug.trim().toLowerCase(),
+    slug: normalizeSlug(draft.slug),
     ...(description !== "" ? { description } : {}),
     ...(websiteUrl !== "" ? { websiteUrl } : {}),
     ...(socialLinks ? { socialLinks } : {}),
@@ -171,7 +204,7 @@ export function buildUpdateRequest(
     body.name = name
     changed = true
   }
-  const slug = draft.slug.trim().toLowerCase()
+  const slug = normalizeSlug(draft.slug)
   if (slug !== org.slug) {
     body.slug = slug
     changed = true
@@ -198,11 +231,15 @@ export function buildUpdateRequest(
   return changed ? body : null
 }
 
+export function hasProfileChanges(org: AdminOrgDTO, draft: OrgProfileDraft): boolean {
+  return buildUpdateRequest(org, draft, "") !== null
+}
+
 /**
- * Map a failed create/update to inline field errors. A CONFLICT is the slug (the only unique field an
- * operator supplies) — but only when the request actually carried a slug, which an edit that leaves
- * the slug alone does not; a VALIDATION error carries `fields` keyed by request field. Anything else
- * returns an empty object so the caller falls back to the error toast.
+ * A CONFLICT is the slug (the only unique field an operator supplies), but only when the request
+ * actually carried a slug, which an edit that leaves the slug alone does not. A VALIDATION error
+ * carries `fields` keyed by request field. Anything else returns an empty object so the caller falls
+ * back to the error toast.
  */
 export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }): OrgProfileErrors {
   if (!(raw instanceof Error)) return {}
@@ -212,45 +249,28 @@ export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }):
       ? { slug: "This slug is already taken." }
       : {}
   }
-  if (err.code === ErrorCode.VALIDATION && err.fields) {
-    const out: OrgProfileErrors = {}
-    for (const [key, message] of Object.entries(err.fields)) {
-      const field = key.replace(/^socialLinks\./, "")
-      if (
-        field === "name" ||
-        field === "slug" ||
-        field === "description" ||
-        field === "websiteUrl" ||
-        field === "logoMediaId" ||
-        field === "ownerUserId" ||
-        field === "reason" ||
-        (SOCIAL_PLATFORMS as readonly string[]).includes(field)
-      ) {
-        out[field as keyof OrgProfileErrors] = message
-      }
-    }
-    return out
+  if (err.code !== ErrorCode.VALIDATION || !err.fields) return {}
+  const out: OrgProfileErrors = {}
+  for (const [key, message] of Object.entries(err.fields)) {
+    const field = key.replace(SOCIAL_LINKS_FIELD_PREFIX, "")
+    if (isOneOf(SERVER_ERROR_FIELDS, field)) out[field] = message
   }
-  return {}
+  return out
 }
 
 /**
- * Drop the server-reported errors for every profile field whose value changed between two drafts:
- * the operator is fixing that field, so the stale server message must not stick to it. Returns the
- * same object when nothing was cleared, so callers can skip a state update.
+ * A changed field is one the operator is fixing, so its stale server message must not stick to it.
+ * Returns the same object when nothing was cleared, so callers can skip a state update.
  */
 export function clearChangedFieldErrors(
   errors: OrgProfileErrors,
   prev: OrgProfileDraft,
   next: OrgProfileDraft,
 ): OrgProfileErrors {
-  const changed: OrgProfileField[] = []
-  if (prev.name !== next.name) changed.push("name")
-  if (prev.slug !== next.slug) changed.push("slug")
-  if (prev.description !== next.description) changed.push("description")
-  if (prev.websiteUrl !== next.websiteUrl) changed.push("websiteUrl")
-  if (prev.logoMediaId !== next.logoMediaId) changed.push("logoMediaId")
-  for (const p of SOCIAL_PLATFORMS) if (prev.social[p] !== next.social[p]) changed.push(p)
+  const changed: OrgProfileField[] = [
+    ...ORG_PROFILE_SCALAR_FIELDS.filter((field) => prev[field] !== next[field]),
+    ...SOCIAL_PLATFORMS.filter((p) => prev.social[p] !== next.social[p]),
+  ]
   const stale = changed.filter((key) => errors[key] !== undefined)
   if (stale.length === 0) return errors
   const out = { ...errors }
@@ -258,7 +278,6 @@ export function clearChangedFieldErrors(
   return out
 }
 
-/** Keep only the errors under `keys` — the fields a given form actually renders. */
 export function pickFieldErrors(
   errors: OrgProfileErrors,
   keys: readonly (keyof OrgProfileErrors)[],
@@ -266,4 +285,8 @@ export function pickFieldErrors(
   const out: OrgProfileErrors = {}
   for (const key of keys) if (errors[key] !== undefined) out[key] = errors[key]
   return out
+}
+
+export function updateFieldErrors(raw: unknown, request: AdminUpdateOrgRequest): OrgProfileErrors {
+  return pickFieldErrors(fieldErrorsFromError(raw, request), PROFILE_EDITOR_FIELDS)
 }

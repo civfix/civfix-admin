@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { confirmDialog } from "@/components/shared/dialog"
 import type * as apiModule from "@/lib/api"
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
+import { makeQueryClient, queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 
 import { creditUserHoursOptions, voidUserHoursOptions } from "./use-user-hours"
@@ -240,7 +240,7 @@ describe("credit user hours", () => {
 
   it("stays quiet on failure while the form can show the error, invalidating nothing", async () => {
     vi.mocked(api.creditUserHours).mockRejectedValue(new Error("already credited"))
-    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const qc = makeQueryClient()
     const { touched } = seed(qc)
 
     await expect(
@@ -254,9 +254,13 @@ describe("credit user hours", () => {
     expect(useUiStore.getState().toast).toBeNull()
   })
 
-  it("toasts the failure once the form that sent it is gone", async () => {
+  it("toasts the failure once, after the form that sent it is gone", async () => {
     vi.mocked(api.creditUserHours).mockRejectedValue(new Error("already credited"))
-    const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const qc = makeQueryClient()
+    const toasts: string[] = []
+    const unsubscribe = useUiStore.subscribe((state, prev) => {
+      if (state.toast && state.toast !== prev.toast) toasts.push(state.toast.text)
+    })
 
     await expect(
       new MutationObserver(qc, creditUserHoursOptions(qc)).mutate({
@@ -265,7 +269,8 @@ describe("credit user hours", () => {
         showsErrorInline: () => false,
       }),
     ).rejects.toThrow("already credited")
-    expect(useUiStore.getState().toast?.text).toBe("already credited")
+    unsubscribe()
+    expect(toasts).toEqual(["already credited"])
   })
 
   it("confirms a valid draft before crediting, one confirmation at a time", () => {

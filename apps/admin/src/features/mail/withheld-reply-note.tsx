@@ -5,14 +5,7 @@ import type { MailMessageDTO } from "@civfix/shared"
 import { Icons } from "@/components/icons"
 import { confirmDialog } from "@/components/shared/dialog"
 import { usePublishMailReply } from "@/features/mail/use-mail"
-import {
-  PUBLISH_TOAST,
-  publishConfirmBody,
-  withheldNote,
-  withheldReason,
-} from "@/features/mail/mail-presentation"
-import { errorMessage } from "@/lib/error-messages"
-import { useToast } from "@/store/ui-store"
+import { publishConfirmBody, withheldNote, withheldReason } from "@/features/mail/mail-presentation"
 
 export function WithheldReplyNote({
   threadId,
@@ -24,7 +17,6 @@ export function WithheldReplyNote({
   isReport: boolean
 }) {
   const publish = usePublishMailReply()
-  const toast = useToast()
   const auth = withheldReason(msg.authVerdict) === "auth"
 
   const onPublish = async () => {
@@ -36,14 +28,7 @@ export function WithheldReplyNote({
       danger: auth,
     })
     if (!ok) return
-    publish.mutate(
-      { id: threadId, messageId: msg.id },
-      {
-        onSuccess: (res) => toast(PUBLISH_TOAST[res.publication]),
-        onError: (err) =>
-          toast(errorMessage(err, {}, { fallback: "Couldn't publish the reply. Please try again." })),
-      },
-    )
+    publish.mutate({ id: threadId, messageId: msg.id })
   }
 
   return (

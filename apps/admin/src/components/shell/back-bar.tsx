@@ -2,7 +2,7 @@
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { PAGE_LABEL, useNav, type SectionId } from "@/store/ui-store"
-import { useAdminLogout, useOperatorSession } from "@/hooks/use-admin-auth"
+import { useOperatorLogout, useOperatorSession } from "@/hooks/use-admin-auth"
 
 const SECTION_ICON: Record<SectionId, IconComponent> = {
   discovery: Icons.Pin,
@@ -33,9 +33,9 @@ const SECTION_HUE: Record<SectionId, string> = {
 export function BackBar({ page }: { page: SectionId }) {
   const nav = useNav()
   const { operator } = useOperatorSession()
-  const logout = useAdminLogout()
-  const Ico = SECTION_ICON[page] ?? Icons.Layers
-  const hue = SECTION_HUE[page] ?? "bloom"
+  const logout = useOperatorLogout()
+  const SectionIcon = SECTION_ICON[page]
+  const hue = SECTION_HUE[page]
   return (
     <div className="backbar">
       <button className="backbar-btn" onClick={() => nav("home")}>
@@ -45,7 +45,7 @@ export function BackBar({ page }: { page: SectionId }) {
       <span className="backbar-div" />
       <span className={`backbar-here hue-${hue}`}>
         <span className="backbar-ico">
-          <Ico size={14} />
+          <SectionIcon size={14} />
         </span>
         {PAGE_LABEL[page]}
       </span>

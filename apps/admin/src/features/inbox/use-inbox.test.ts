@@ -58,7 +58,7 @@ describe("inbox feed query", () => {
     const options = inboxFeedQueryOptions({ filter: "all" })
     await qc.fetchInfiniteQuery(options)
 
-    invalidateMail(qc, "t1")
+    void invalidateMail(qc, "t1")
 
     expect(qc.getQueryState(options.queryKey)?.isInvalidated).toBe(true)
   })

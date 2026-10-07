@@ -9,7 +9,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"
 import { formatDateTime } from "@/lib/dates"
 import { useNav } from "@/store/ui-store"
-import { FieldError, ReasonField } from "@/features/orgs/org-form-fields"
+import { FieldError, ReasonField, fieldErrorId } from "@/features/orgs/org-form-fields"
 import { EventPicker } from "@/features/users/event-picker"
 import {
   useCreditUserHours,
@@ -215,7 +215,7 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
               disabled={pending}
             />
             {errors.event ? (
-              <FieldError text={errors.event} />
+              <FieldError id={fieldErrorId("user-hours-event")} text={errors.event} />
             ) : (
               <span className="hint">
                 Only events that have ended can be credited. Each credit is at most the
@@ -239,7 +239,7 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
               onChange={(e) => change({ serviceDate: e.target.value })}
             />
             {errors.serviceDate ? (
-              <FieldError text={errors.serviceDate} />
+              <FieldError id={fieldErrorId("user-hours-date")} text={errors.serviceDate} />
             ) : (
               <span className="hint">
                 Counts toward the neighbor&apos;s total but toward no jurisdiction&apos;s
@@ -266,7 +266,7 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
             disabled={pending}
             onChange={(e) => change({ hours: e.target.value })}
           />
-          <FieldError text={errors.hours} />
+          <FieldError id={fieldErrorId("user-hours-amount")} text={errors.hours} />
         </div>
 
         <ReasonField
@@ -278,7 +278,7 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
           disabled={pending}
         />
 
-        <FieldError text={errors.form} />
+        <FieldError id={fieldErrorId("user-hours-form")} text={errors.form} />
         <div className="form-actions">
           <button type="button" className="btn ghost" onClick={onDone} disabled={pending}>
             Cancel

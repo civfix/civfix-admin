@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest"
+import { QueryClient } from "@tanstack/react-query"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   EVIDENCE_URL_MAX_CACHE_MS,
+  evidenceStaleTime,
   evidenceUrlLifetimeMs,
   evidenceUrlRemainingMs,
   isEvidenceUrlExpired,
@@ -34,5 +36,29 @@ describe("evidence signed-url lifetime", () => {
     expect(evidenceUrlRemainingMs("2026-09-06T13:00:00.000Z", NOW)).toBe(3_595_000)
     expect(evidenceUrlRemainingMs("2026-09-06T11:00:00.000Z", NOW)).toBe(0)
     expect(isEvidenceUrlExpired("2026-09-06T13:00:00.000Z", NOW)).toBe(false)
+  })
+})
+
+describe("evidence query staleness as TanStack applies it", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("stays fresh until the signed url is about to expire, measured from the fetch", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(NOW)
+    const client = new QueryClient()
+    const queryFn = vi.fn(async () => ({ expiresAt: new Date(NOW + 300_000).toISOString() }))
+    const fetchEvidence = () =>
+      client.fetchQuery({ queryKey: ["evidence"], queryFn, staleTime: evidenceStaleTime })
+
+    await fetchEvidence()
+    vi.setSystemTime(NOW + 200_000)
+    await fetchEvidence()
+    expect(queryFn).toHaveBeenCalledTimes(1)
+
+    vi.setSystemTime(NOW + 296_000)
+    await fetchEvidence()
+    expect(queryFn).toHaveBeenCalledTimes(2)
   })
 })

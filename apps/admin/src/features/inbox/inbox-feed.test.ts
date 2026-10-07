@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
 import { INBOX_FEED_FILTER_LABELS, InboxFeedFilterSchema } from "@civfix/shared"
@@ -27,19 +27,17 @@ describe("inbox feed keys", () => {
 })
 
 describe("selected feed item", () => {
-  const picked = { item: { source: "reply" as const, id: "m1", unread: true }, view: "unread:" }
-  const listed = { ...picked.item, unread: false }
+  const picked = { source: "reply" as const, id: "m1", unread: true }
+  const listed = { ...picked, unread: false }
 
-  it("reads the listed row, and keeps the picked row once marking it read drops it", () => {
-    expect(resolveFeedSelection(new Map([["reply:m1", listed]]), picked, "reply:m1", "unread:")).toBe(listed)
-    expect(resolveFeedSelection(new Map(), picked, "reply:m1", "unread:")).toBe(picked.item)
+  it("reads the listed row, and keeps the picked row once a filter or an action drops it", () => {
+    expect(resolveFeedSelection(new Map([["reply:m1", listed]]), picked, "reply:m1")).toBe(listed)
+    expect(resolveFeedSelection(new Map(), picked, "reply:m1")).toBe(picked)
   })
 
-  it("resolves nothing for an unlisted key unless it was picked under the same filter and search", () => {
-    expect(resolveFeedSelection(new Map(), picked, "reply:m1", "replies:")).toBeUndefined()
-    expect(resolveFeedSelection(new Map(), picked, "reply:m1", "unread:city")).toBeUndefined()
-    expect(resolveFeedSelection(new Map(), picked, "reply:m2", "unread:")).toBeUndefined()
-    expect(resolveFeedSelection(new Map(), null, "email:e1", "unread:")).toBeUndefined()
+  it("resolves nothing for a key that was neither listed nor picked", () => {
+    expect(resolveFeedSelection(new Map(), picked, "reply:m2")).toBeUndefined()
+    expect(resolveFeedSelection(new Map(), null, "email:e1")).toBeUndefined()
   })
 })
 
@@ -69,11 +67,13 @@ describe("reply rows", () => {
 
 describe("inbound mail rendering", () => {
   it("renders sender-controlled mail as text, never as markup", () => {
-    const sources = [
-      "./inbox-views.tsx",
-      "../mail/mail-page.tsx",
-      "../mail/mail-badges.tsx",
-    ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+    const sources = ["./", "../mail/"].flatMap((dir) => {
+      const url = new URL(dir, import.meta.url)
+      return readdirSync(url)
+        .filter((name) => name.endsWith(".tsx") && !name.includes(".test."))
+        .map((name) => readFileSync(new URL(name, url), "utf8"))
+    })
+    expect(sources.length).toBeGreaterThan(5)
     for (const source of sources) {
       expect(source).not.toMatch(/dangerouslySetInnerHTML|innerHTML|bodyHtml/)
     }

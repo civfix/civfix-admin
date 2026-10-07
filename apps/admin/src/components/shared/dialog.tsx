@@ -4,6 +4,7 @@ import * as React from "react"
 import { create } from "zustand"
 
 import { Icons } from "@/components/icons"
+import { useBackdropDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
 
 interface ConfirmRequest {
@@ -40,9 +41,20 @@ interface DialogState {
   close: () => void
 }
 
-const useDialogStore = create<DialogState>((set) => ({
+function dismissed(req: DialogRequest): void {
+  if (req.kind === "prompt") req.resolve(null)
+  else req.resolve(false)
+}
+
+const useDialogStore = create<DialogState>((set, get) => ({
   current: null,
-  open: (req) => set({ current: req }),
+  // One dialog shows at a time; a replaced request answers as dismissed so its caller's await (and the
+  // busy flag it clears in finally) never hangs.
+  open: (req) => {
+    const replaced = get().current
+    if (replaced) dismissed(replaced)
+    set({ current: req })
+  },
   close: () => set({ current: null }),
 }))
 
@@ -60,20 +72,131 @@ export function promptDialog(
   })
 }
 
+const REASON_LABEL = "Reason (required)"
+
+export async function promptReason(
+  opts: Omit<PromptRequest, "kind" | "resolve" | "label" | "required">,
+): Promise<string | null> {
+  const reason = await promptDialog({ ...opts, label: REASON_LABEL, required: true })
+  const trimmed = reason?.trim() ?? ""
+  return trimmed === "" ? null : trimmed
+}
+
+const PROMPT_FIELD_ROWS = 3
+
+const NATIVE_ENTER_TAGS = new Set(["BUTTON", "A", "SELECT"])
+
+// The window listener sees Enter from every focused control. A focused button, link or select keeps
+// its own activation (Enter on Close or Cancel must not confirm). A confirm is accepted only by
+// activating its own button: many confirms grant access or email a city irreversibly, so a stray or
+// doubled Enter must never commit one.
+function enterAccepts({
+  request,
+  targetTag,
+  modified,
+}: {
+  request: DialogRequest
+  targetTag: string | undefined
+  modified: boolean
+}): boolean {
+  if (targetTag && NATIVE_ENTER_TAGS.has(targetTag)) return false
+  if (targetTag === "TEXTAREA" && !modified) return false
+  if (request.kind === "confirm") return false
+  return modified
+}
+
+function useDialogKeys(
+  current: DialogRequest | null,
+  cancel: () => void,
+  accept: () => void,
+): void {
+  React.useEffect(() => {
+    if (!current) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        cancel()
+        return
+      }
+      if (e.key !== "Enter") return
+      const targetTag = (e.target as HTMLElement | null)?.tagName
+      if (e.repeat) {
+        // A held key's repeats must not answer the dialog its first press opened, neither here nor by
+        // natively clicking whichever button now has focus. A textarea keeps them as newlines.
+        if (targetTag !== "TEXTAREA") e.preventDefault()
+      } else if (enterAccepts({ request: current, targetTag, modified: e.metaKey || e.ctrlKey })) {
+        e.preventDefault()
+        accept()
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [current, cancel, accept])
+}
+
+function PromptField({
+  request,
+  fieldId,
+  titleId,
+  fieldRef,
+  value,
+  onChange,
+}: {
+  request: PromptRequest
+  fieldId: string
+  titleId: string
+  fieldRef: React.RefObject<HTMLTextAreaElement | null>
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <>
+      {request.label && (
+        <label className="dialog-label" htmlFor={fieldId}>
+          {request.label}
+        </label>
+      )}
+      <textarea
+        ref={fieldRef}
+        id={fieldId}
+        aria-labelledby={request.label ? undefined : titleId}
+        className="dialog-input"
+        rows={PROMPT_FIELD_ROWS}
+        value={value}
+        placeholder={request.placeholder}
+        maxLength={request.maxLength}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </>
+  )
+}
+
 export function DialogHost() {
   const current = useDialogStore((s) => s.current)
   const close = useDialogStore((s) => s.close)
   const [value, setValue] = React.useState("")
   const modalRef = useModalFocus<HTMLDivElement>(current !== null)
+  const cancelRef = React.useRef<HTMLButtonElement>(null)
+  const fieldRef = React.useRef<HTMLTextAreaElement>(null)
+  const titleId = React.useId()
+  const bodyId = React.useId()
+  const fieldId = React.useId()
 
   React.useEffect(() => {
     if (current?.kind === "prompt") setValue(current.defaultValue ?? "")
   }, [current])
 
+  // Runs after useModalFocus's effect, so that hook has already recorded the opener to restore; an
+  // autoFocus on the field would land first and be recorded as the opener instead.
+  React.useEffect(() => {
+    if (!current) return
+    if (current.kind === "prompt") fieldRef.current?.focus()
+    else cancelRef.current?.focus()
+  }, [current])
+
   const cancel = React.useCallback(() => {
     if (!current) return
-    if (current.kind === "prompt") current.resolve(null)
-    else current.resolve(false)
+    dismissed(current)
     close()
   }, [current, close])
 
@@ -88,42 +211,36 @@ export function DialogHost() {
     close()
   }, [current, value, close])
 
-  React.useEffect(() => {
-    if (!current) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        cancel()
-      } else if (e.key === "Enter" && (current.kind === "confirm" || e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        accept()
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [current, cancel, accept])
+  useDialogKeys(current, cancel, accept)
+
+  const backdrop = useBackdropDismiss(cancel)
 
   if (!current) return null
   const confirmDisabled =
     current.kind === "prompt" && current.required === true && value.trim() === ""
 
   return (
-    <div className="modal-overlay" onClick={cancel}>
+    <div className="modal-overlay" {...backdrop}>
       <div
         ref={modalRef}
         className="modal dialog-modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={current.body ? bodyId : undefined}
       >
         <div className="modal-head">
-          <h3>{current.title}</h3>
+          <h3 id={titleId}>{current.title}</h3>
           <button className="closebtn" onClick={cancel} aria-label="Close">
             <Icons.X size={16} />
           </button>
         </div>
         <div className="dialog-body">
-          {current.body && <p className="dialog-text">{current.body}</p>}
+          {current.body && (
+            <p id={bodyId} className="dialog-text">
+              {current.body}
+            </p>
+          )}
           {current.kind === "confirm" && current.details && current.details.length > 0 && (
             <ul className="dialog-list">
               {current.details.map((line) => (
@@ -134,23 +251,19 @@ export function DialogHost() {
             </ul>
           )}
           {current.kind === "prompt" && (
-            <>
-              {current.label && <label className="dialog-label">{current.label}</label>}
-              <textarea
-                className="dialog-input"
-                autoFocus
-                rows={3}
-                value={value}
-                placeholder={current.placeholder}
-                maxLength={current.maxLength}
-                onChange={(e) => setValue(e.target.value)}
-              />
-            </>
+            <PromptField
+              request={current}
+              fieldId={fieldId}
+              titleId={titleId}
+              fieldRef={fieldRef}
+              value={value}
+              onChange={setValue}
+            />
           )}
         </div>
         <div className="modal-foot dialog-foot">
           {!(current.kind === "confirm" && current.acknowledgeOnly) && (
-            <button className="btn ghost" onClick={cancel}>
+            <button ref={cancelRef} className="btn ghost" onClick={cancel}>
               {current.kind === "confirm" ? (current.cancelLabel ?? "Cancel") : "Cancel"}
             </button>
           )}
