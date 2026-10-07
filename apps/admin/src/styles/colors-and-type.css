@@ -63,6 +63,7 @@
 
   /* Type scale - built on 1.25 (major third), tightened at small end */
   --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
   --fs-14: 0.875rem;
   --fs-16: 1rem;
   --fs-20: 1.25rem;
@@ -79,8 +80,11 @@
   --tracking-snug:  -0.01em;
   --tracking-wide:   0.06em;
 
+  --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
 
   --radius-xs: 6px;
   --radius-sm: 10px;

@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  keepPreviousData,
   queryOptions,
   useInfiniteQuery,
   useMutation,
@@ -30,10 +31,11 @@ function eventMessage(id: string, text: string): string {
   return `${shortRef(id)} · ${text}`
 }
 
-export function useEventList(params: AdminEventListQuery) {
+export function useEventList(params: AdminEventListQuery, opts: { keepPreviousData?: boolean } = {}) {
   return useQuery<AdminEventListResponse>({
     queryKey: queryKeys.events.page(params),
     queryFn: () => api.listAdminEvents(params),
+    ...(opts.keepPreviousData ? { placeholderData: keepPreviousData } : {}),
   })
 }
 

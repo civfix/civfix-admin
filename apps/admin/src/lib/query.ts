@@ -157,6 +157,7 @@ export const queryKeys = {
       ["admin", "users", id, "events", params ?? null] as const,
     messages: (id: string, params?: UserSubPageParams) =>
       ["admin", "users", id, "messages", params ?? null] as const,
+    hours: (id: string) => ["admin", "users", id, "hours"] as const,
   },
 
   mail: {

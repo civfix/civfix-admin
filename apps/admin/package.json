@@ -1,6 +1,6 @@
 {
   "name": "admin",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "civfix admin / operator dashboard (admin.civfix.org): static-exported Next.js SPA over the civfix admin API.",
@@ -16,7 +16,7 @@
     "dup": "jscpd -c .jscpd.json && jscpd -c .jscpd.tests.json"
   },
   "dependencies": {
-    "@civfix/shared": "^0.57.0",
+    "@civfix/shared": "0.59.0-b-chore-cleanup-integration.gcf0a8d9",
     "@tanstack/react-query": "^5.62.7",
     "leaflet": "^1.9.4",
     "next": "15.5.25",

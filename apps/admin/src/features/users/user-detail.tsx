@@ -14,20 +14,25 @@ import { useUser } from "@/features/users/use-users"
 import { UserActionsBar, useUserAccountMutations } from "@/features/users/user-actions-bar"
 import { UserActivity, type ProfileTab } from "@/features/users/user-activity"
 import { UserAvatar } from "@/features/users/user-avatar"
+import { UserHoursPanel } from "@/features/users/user-hours-panel"
 import { isMissing, userStatusView } from "@/features/users/user-display"
 import { UserOrganizations } from "@/features/users/user-organizations-card"
 import { useNav, useToast } from "@/store/ui-store"
 
-const PROFILE_TABS: readonly { id: ProfileTab; label: string }[] = [
+type DetailTab = ProfileTab | "hours"
+
+const PROFILE_TABS: readonly { id: DetailTab; label: string }[] = [
   { id: "reports", label: "Reports" },
   { id: "events", label: "Events" },
   { id: "messages", label: "Messages" },
+  { id: "hours", label: "Hours" },
 ]
 
-function tabCount(user: AdminUserDTO, tab: ProfileTab): number {
+function tabCount(user: AdminUserDTO, tab: DetailTab): number | null {
   if (tab === "reports") return user.reports
   if (tab === "events") return user.cleanups
-  return user.messages
+  if (tab === "messages") return user.messages
+  return null
 }
 
 function UserDetailHeader({ user }: { user: AdminUserDTO }) {
@@ -124,8 +129,8 @@ function UserActivityTabs({
   onTabChange,
 }: {
   user: AdminUserDTO
-  tab: ProfileTab
-  onTabChange: (tab: ProfileTab) => void
+  tab: DetailTab
+  onTabChange: (tab: DetailTab) => void
 }) {
   const tabsId = React.useId()
   const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([])
@@ -135,6 +140,7 @@ function UserActivityTabs({
       <div className="profile-tabs" role="tablist" aria-label="Activity">
         {PROFILE_TABS.map((t, i) => {
           const selected = tab === t.id
+          const count = tabCount(user, t.id)
           return (
             <button
               key={t.id}
@@ -158,19 +164,24 @@ function UserActivityTabs({
               }}
             >
               {t.label}
-              <span className="profile-tab-n">{tabCount(user, t.id)}</span>
+              {count !== null && <span className="profile-tab-n">{count}</span>}
             </button>
           )
         })}
       </div>
 
+      {/* The hours panel lays out its own totals, credit form and profile-list. */}
       <div
-        className="profile-list"
+        className={tab === "hours" ? undefined : "profile-list"}
         role="tabpanel"
         id={`${tabsId}-panel`}
         aria-labelledby={`${tabsId}-tab-${tab}`}
       >
-        <UserActivity userId={user.id} tab={tab} />
+        {tab === "hours" ? (
+          <UserHoursPanel user={user} />
+        ) : (
+          <UserActivity userId={user.id} tab={tab} />
+        )}
       </div>
     </>
   )
@@ -180,7 +191,7 @@ export function UserDetail({ userId }: { userId: string }) {
   const userQuery = useUser(userId)
   const nav = useNav()
   const mutations = useUserAccountMutations()
-  const [tab, setTab] = React.useState<ProfileTab>("reports")
+  const [tab, setTab] = React.useState<DetailTab>("reports")
 
   if (userQuery.isLoading) return <LoadingState label="Loading account..." />
   if (userQuery.isError && !isNotFound(userQuery.error)) {

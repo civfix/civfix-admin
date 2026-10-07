@@ -483,6 +483,11 @@ describe("UsersPage account detail", () => {
     apiMock.listAdminUsers.mockResolvedValue(page([ANA]))
     mockDetails(ANA)
     apiMock.getUserEvents.mockResolvedValue({ items: [], nextCursor: null })
+    apiMock.getUserHours.mockResolvedValue({
+      items: [],
+      nextCursor: null,
+      totals: { totalHours: 0, liveEntries: 0, voidedEntries: 0 },
+    })
     renderWithQuery(<UsersPage focusId={null} />)
     await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
 
@@ -501,7 +506,9 @@ describe("UsersPage account detail", () => {
     expect(await within(detailCard()).findByText("No cleanup events yet")).toBeInTheDocument()
 
     await userEvent.keyboard("{ArrowLeft}{ArrowLeft}")
-    expect(within(tablist).getByRole("tab", { name: /^Messages/ })).toHaveAttribute("aria-selected", "true")
+    const hoursTab = within(tablist).getByRole("tab", { name: "Hours" })
+    expect(hoursTab).toHaveAttribute("aria-selected", "true")
+    expect(await within(detailCard()).findByText("No hours yet")).toBeInTheDocument()
   })
 
   it("opens a profile report row with the Space key", async () => {

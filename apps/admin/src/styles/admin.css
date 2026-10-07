@@ -1069,6 +1069,31 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .user-name { font-weight: 700; font-size: 14px; color: var(--ink); }
 .user-handle { font-size: 11.5px; color: var(--ink-3); }
 
+.user-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.ustat {
+  text-align: center;
+  padding: 10px 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+}
+.ustat-n {
+  display: block;
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 24, "wdth" 90;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-feature-settings: "tnum" 1;
+}
+.ustat-l { font-size: 10.5px; color: var(--ink-3); font-weight: 600; }
+
 .user-meta-rows { display: flex; flex-direction: column; gap: 1px; }
 .umr {
   display: grid;
@@ -1392,7 +1417,7 @@ img.user-av { object-fit: cover; background: var(--paper-2); }
 .udh-sub { font-size: 12.5px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; margin-top: 3px; }
 .udh-sub .sep { color: var(--ink-4); }
 .udh-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.user-detail .user-meta-rows { margin-left: 16px; margin-right: 16px; }
+.user-detail .user-stats, .user-detail .user-meta-rows { margin-left: 16px; margin-right: 16px; }
 
 .profile-meta {
   display: flex; flex-wrap: wrap; gap: 6px 18px;
@@ -1654,6 +1679,17 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 }
 .compose-field textarea { resize: vertical; min-height: 100px; }
 .compose-field input:focus, .compose-field textarea:focus { border-color: var(--sky); box-shadow: var(--ring); }
+.seg { display: inline-flex; background: var(--paper-2); border: 1px solid var(--border-soft); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.seg-btn.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-1); }
 .modal-foot {
   display: flex; align-items: center; gap: 8px;
   padding: 14px 18px;
