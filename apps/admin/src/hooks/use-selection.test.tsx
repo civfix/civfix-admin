@@ -8,6 +8,8 @@ type Row = { id: string; label?: string }
 const A: Row = { id: "a" }
 const B: Row = { id: "b" }
 const C: Row = { id: "c" }
+// One array across rerenders, as the pages memoize their rows: a fresh array would re-run the list effect.
+const ONLY_A: Row[] = [A]
 
 const SETTLED = { isSuccess: true, isFetching: false }
 const FETCHING = { isSuccess: true, isFetching: true }
@@ -88,6 +90,24 @@ describe("useSelection", () => {
     hook.rerender({ focusId: null, items: [A] })
     hook.rerender({ focusId: "b", items: [A] })
     expect(hook.result.current.selectedId).toBe("b")
+  })
+
+  it.each<[string, Props, (hook: ReturnType<typeof setup>) => void]>([
+    ["a clicked row a deep link then names", {}, (hook) => {
+      act(() => hook.result.current.setSelectedId("b"))
+      hook.rerender({ focusId: "b" })
+    }],
+    ["a deep-linked row whose link goes and comes back", { focusId: "b" }, (hook) => {
+      hook.rerender({ focusId: null })
+      hook.rerender({ focusId: "b" })
+    }],
+  ])("still clears %s once it drops out of the list", (_name, initial, relink) => {
+    const hook = setup(initial)
+    relink(hook)
+    expect(hook.result.current.selectedId).toBe("b")
+
+    hook.rerender({ focusId: "b", items: ONLY_A })
+    expect(hook.result.current.selectedId).toBeNull()
   })
 
   it("does not judge a drop-out on a list still refetching", () => {

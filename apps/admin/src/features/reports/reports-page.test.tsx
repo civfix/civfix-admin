@@ -1,5 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { QueryClientProvider } from "@tanstack/react-query"
 import {
   AppError,
   ErrorCode,
@@ -515,6 +516,36 @@ describe("ReportsPage correctness and accessibility", () => {
     )
     expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
+  })
+
+  it("clears a verdict drop-out after a deep link to the report already open", async () => {
+    let rejected = false
+    apiMock.listAdminReports.mockImplementation(async () => page(rejected ? [TAG] : [COUCH, TAG]))
+    mockDetails(COUCH, TAG)
+    apiMock.setReportVerdict.mockImplementation(async () => {
+      rejected = true
+      return { ok: true }
+    })
+    const { client, rerender } = renderWithQuery(
+      <>
+        <ReportsPage focusId={null} />
+        <DialogHost />
+      </>,
+    )
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+    rerender(
+      <QueryClientProvider client={client}>
+        <ReportsPage focusId={COUCH.id} />
+        <DialogHost />
+      </QueryClientProvider>,
+    )
+    await within(detailCard()).findByRole("heading", { name: COUCH.title })
+
+    await userEvent.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+
+    await waitFor(() => expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument())
+    expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
   })
 
   it("still confirms a Reject when the list refetch drops the report before its detail refetch lands", async () => {

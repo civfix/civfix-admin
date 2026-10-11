@@ -70,11 +70,17 @@ export function useSelection<T, Id extends string>({
   const seenIn = React.useRef<{ id: Id; list: string } | null>(null)
   const readOnOpen = React.useRef<Id | null>(null)
 
+  const currentPick = React.useRef(selectedId)
+  React.useEffect(() => {
+    currentPick.current = selectedId
+  }, [selectedId])
+
   React.useEffect(() => {
     if (!syncFocus || !focusId) return
+    // A deep link that changes the pick wins even over an earlier drop-out of that row from this
+    // list; one naming the row already open keeps its drop-out tracking.
+    if (currentPick.current !== focusId) seenIn.current = null
     setSelectedId(focusId)
-    // A new deep link wins even over an earlier drop-out of the same row from this list.
-    seenIn.current = null
   }, [syncFocus, focusId])
 
   const selectedItem = resolveSelected(items, selectedId, keepLastSeen ? lastSeen : null, getId)
