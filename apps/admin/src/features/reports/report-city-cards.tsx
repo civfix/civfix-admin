@@ -150,7 +150,7 @@ export function CityMessageCard({
           <Icons.Send size={13} /> Send to city
         </button>
         {followupBlocked && (
-          <div id={followupBlockedId} className="hint">
+          <div id={followupBlockedId} className="evt-post-hint">
             {followupBlocked}
           </div>
         )}

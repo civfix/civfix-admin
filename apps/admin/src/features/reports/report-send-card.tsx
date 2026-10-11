@@ -77,7 +77,7 @@ function RouteOpener({ panel, onOpen }: { panel: SendPanelView; onOpen: () => vo
         <Icons.Send size={13} /> {panel.routeLabel}
       </button>
       {panel.routeBlocked && (
-        <div id={routeBlockedId} className="hint">
+        <div id={routeBlockedId} className="evt-post-hint">
           {panel.routeBlocked}
         </div>
       )}
@@ -169,7 +169,7 @@ function VerdictButtons({ panel, actions }: { panel: SendPanelView; actions: Ver
         </button>
       </div>
       {panel.rejectBlocked && (
-        <div id={rejectBlockedId} className="hint">
+        <div id={rejectBlockedId} className="evt-post-hint">
           {panel.rejectBlocked}
         </div>
       )}
