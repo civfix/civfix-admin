@@ -80,6 +80,16 @@ describe("useSelection", () => {
     expect(hook.result.current.selectedId).toBeNull()
   })
 
+  it("opens a deep link to a pick that already dropped out of the list", () => {
+    const hook = setup({ focusId: "b" })
+    hook.rerender({ focusId: "b", items: [A] })
+    expect(hook.result.current.selectedId).toBeNull()
+
+    hook.rerender({ focusId: null, items: [A] })
+    hook.rerender({ focusId: "b", items: [A] })
+    expect(hook.result.current.selectedId).toBe("b")
+  })
+
   it("does not judge a drop-out on a list still refetching", () => {
     const hook = setup()
     act(() => hook.result.current.setSelectedId("b"))
