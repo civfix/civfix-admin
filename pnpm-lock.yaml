@@ -25,8 +25,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/shared':
-        specifier: 0.59.0-b-chore-cleanup-integration.gcf0a8d9
-        version: 0.59.0-b-chore-cleanup-integration.gcf0a8d9
+        specifier: 0.60.0-b-chore-cleanup-integration.g032498a
+        version: 0.60.0-b-chore-cleanup-integration.g032498a
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.101.0(react@19.0.0)
@@ -131,8 +131,8 @@ packages:
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
-  '@civfix/shared@0.59.0-b-chore-cleanup-integration.gcf0a8d9':
-    resolution: {integrity: sha512-EEv3TXhYwJMHn3E3fau/8z3tBNt/l8Gl07Un827s84y5aJnbr+v9oF6bSnScjQfQgxefdJYYwWyibdcnclFq+w==}
+  '@civfix/shared@0.60.0-b-chore-cleanup-integration.g032498a':
+    resolution: {integrity: sha512-Kxkj5oYUldMxMwQGCUrBwtyxjWaTEuLDG94Mm4LZ6VDS1TbgXWk3wwU6RZEBVeSDbmLrDcz17B+z3iOKMeg1Mg==}
     engines: {node: '>=20'}
 
   '@csstools/color-helpers@5.1.0':
@@ -3092,7 +3092,7 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
-  '@civfix/shared@0.59.0-b-chore-cleanup-integration.gcf0a8d9':
+  '@civfix/shared@0.60.0-b-chore-cleanup-integration.g032498a':
     dependencies:
       zod: 3.25.76
 

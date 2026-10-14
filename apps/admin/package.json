@@ -16,7 +16,7 @@
     "dup": "jscpd -c .jscpd.json && jscpd -c .jscpd.tests.json"
   },
   "dependencies": {
-    "@civfix/shared": "0.59.0-b-chore-cleanup-integration.gcf0a8d9",
+    "@civfix/shared": "0.60.0-b-chore-cleanup-integration.g032498a",
     "@tanstack/react-query": "^5.62.7",
     "leaflet": "^1.9.4",
     "next": "15.5.25",
