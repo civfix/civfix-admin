@@ -11,10 +11,10 @@ import {
   GOV_CHECKS,
   GOV_CLAIM_STATUS_VIEW,
   govCheckLabel,
-  govClaimApproveBlockedFor,
+  govClaimApproveBlockedMessage,
   govClaimApproveConfirmBody,
   govClaimApproveErrorMessage,
-  govClaimDecisionBlockedFor,
+  govClaimDecisionBlockedMessage,
 } from "./gov-claim-presentation"
 
 const PENDING_CHECK = { status: "pending", evidence: null, note: null } as const
@@ -55,21 +55,21 @@ describe("gov claim presentation", () => {
 
 describe("gov claim decision availability", () => {
   it("blocks a second decision, matching the API's 409 on a non-pending claim", () => {
-    expect(govClaimDecisionBlockedFor("approved")).toBe("This claim was already approved.")
-    expect(govClaimDecisionBlockedFor("rejected")).toBe("This claim was already rejected.")
+    expect(govClaimDecisionBlockedMessage("approved")).toBe("This claim was already approved.")
+    expect(govClaimDecisionBlockedMessage("rejected")).toBe("This claim was already rejected.")
   })
 
   it("allows the decision while the claim is still pending", () => {
-    expect(govClaimDecisionBlockedFor("pending")).toBeNull()
+    expect(govClaimDecisionBlockedMessage("pending")).toBeNull()
   })
 
   it("blocks approve when the claim has no contact email to grant access on", () => {
-    expect(govClaimApproveBlockedFor(claim({ contactEmail: "" }))).toBe(
+    expect(govClaimApproveBlockedMessage(claim({ contactEmail: "" }))).toBe(
       "This claim has no contact email, so there is no account to grant government access to.",
     )
-    expect(govClaimApproveBlockedFor(claim({ contactEmail: "   " }))).not.toBeNull()
-    expect(govClaimApproveBlockedFor(claim())).toBeNull()
-    expect(govClaimApproveBlockedFor(claim({ status: "approved" }))).toBe(
+    expect(govClaimApproveBlockedMessage(claim({ contactEmail: "   " }))).not.toBeNull()
+    expect(govClaimApproveBlockedMessage(claim())).toBeNull()
+    expect(govClaimApproveBlockedMessage(claim({ status: "approved" }))).toBe(
       "This claim was already approved.",
     )
   })

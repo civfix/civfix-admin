@@ -34,7 +34,6 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_COMMIT_SHA: resolveCommitSha(),
   },
-  // The @civfix/shared package ships ESM + CJS from the workspace; let Next transpile it.
   transpilePackages: ["@civfix/shared"],
 }
 

@@ -26,3 +26,13 @@ export function isEvidenceUrlExpired(
 ): boolean {
   return evidenceUrlRemainingMs(expiresAt, now) === 0
 }
+
+interface EvidenceQueryLike {
+  state: { data?: { expiresAt?: string | null } | undefined; dataUpdatedAt: number }
+}
+
+// TanStack treats data as stale once `dataUpdatedAt + staleTime` has passed, so the lifetime must be
+// measured from the fetch, not from whenever the observer happens to ask.
+export function evidenceStaleTime(query: EvidenceQueryLike): number {
+  return evidenceUrlLifetimeMs(query.state.data?.expiresAt, query.state.dataUpdatedAt)
+}

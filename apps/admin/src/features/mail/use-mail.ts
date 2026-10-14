@@ -6,6 +6,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
+  type QueryClient,
 } from "@tanstack/react-query"
 import type {
   ComposeRequest,
@@ -18,34 +19,31 @@ import type {
   PreviewForwardTemplateRequest,
   PreviewForwardTemplateResponse,
   PublishMailReplyRequest,
+  PublishMailReplyResponse,
   ReplyRequest,
   ResendRequest,
   SetForwardTemplateDefaultRequest,
   SetMailStatusRequest,
 } from "@civfix/shared"
 
+import { attachmentRefreshInterval } from "@/features/inbox/attachments"
+import { PUBLISH_TOAST } from "@/features/mail/mail-presentation"
 import { api } from "@/lib/api"
-import { queryKeys } from "@/lib/query"
-
+import { errorMessage } from "@/lib/error-messages"
+import { infiniteListOptions } from "@/lib/infinite"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 
 export function useMailList(params: MailListQuery) {
   return useQuery<MailListResponse>({
-    queryKey: queryKeys.mail.list(params),
+    queryKey: queryKeys.mail.page(params),
     queryFn: () => api.listMail(params),
   })
 }
 
 export function useMailListInfinite(params: MailListQuery) {
-  return useInfiniteQuery<MailListResponse>({
-    queryKey: queryKeys.mail.list(params),
-    queryFn: ({ pageParam }) =>
-      api.listMail({
-        ...params,
-        ...(typeof pageParam === "string" ? { cursor: pageParam } : {}),
-      }),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-  })
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.mail.list(params), params, (input) => api.listMail(input)),
+  )
 }
 
 export function useMailThread(id: string | null) {
@@ -53,6 +51,10 @@ export function useMailThread(id: string | null) {
     queryKey: queryKeys.mail.detail(id ?? ""),
     queryFn: () => api.getMailThread({ id: id as string }),
     enabled: !!id,
+    refetchInterval: (query) =>
+      attachmentRefreshInterval(
+        query.state.data?.messages.reduce((n, m) => n + m.attachments.length, 0) ?? 0,
+      ),
   })
 }
 
@@ -63,12 +65,19 @@ export function useMailStats() {
   })
 }
 
-export function invalidateMail(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  if (id) qc.invalidateQueries({ queryKey: queryKeys.mail.detail(id) })
-  qc.invalidateQueries({ queryKey: queryKeys.mail.all })
-  qc.invalidateQueries({ queryKey: queryKeys.mail.stats })
-  qc.invalidateQueries({ queryKey: queryKeys.inbox.all })
-  qc.invalidateQueries({ queryKey: queryKeys.home.all })
+export function invalidateMail(qc: QueryClient, id?: string) {
+  return invalidateKeys(qc, [
+    id ? queryKeys.mail.detail(id) : null,
+    queryKeys.mail.all,
+    queryKeys.mail.stats,
+    queryKeys.inbox.all,
+    queryKeys.home.all,
+  ])
+}
+
+// The action's own copy for a failure that carries no message, such as a thrown non-error value.
+function errorOr(fallback: string) {
+  return (error: unknown) => errorMessage(error, {}, { fallback })
 }
 
 export function useComposeMail() {
@@ -76,14 +85,28 @@ export function useComposeMail() {
   return useMutation({
     mutationFn: (input: ComposeRequest) => api.composeMail(input),
     onSuccess: () => invalidateMail(qc),
+    meta: {
+      successMessage: (_res: unknown, { to }: ComposeRequest) => `Message sent to ${to}`,
+      errorMessage: errorOr("Couldn't send the message. Please try again."),
+    },
   })
+}
+
+export interface ReplyMailVariables {
+  request: ReplyRequest
+  /** Who the reply goes to, as the thread names them. */
+  recipient: string
 }
 
 export function useReplyMail() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: ReplyRequest) => api.replyMail(input),
-    onSuccess: (_res, { id }) => invalidateMail(qc, id),
+    mutationFn: ({ request }: ReplyMailVariables) => api.replyMail(request),
+    onSuccess: (_res, { request }) => invalidateMail(qc, request.id),
+    meta: {
+      successMessage: (_res: unknown, { recipient }: ReplyMailVariables) => `Reply sent to ${recipient}`,
+      errorMessage: errorOr("Couldn't send the reply. Please try again."),
+    },
   })
 }
 
@@ -100,6 +123,11 @@ export function useSetMailStatus() {
   return useMutation({
     mutationFn: (input: SetMailStatusRequest) => api.setMailStatus(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
+    meta: {
+      successMessage: (_res: unknown, { status }: SetMailStatusRequest) =>
+        status === "replied" ? "Marked replied" : null,
+      errorMessage: errorOr("Couldn't update the thread."),
+    },
   })
 }
 
@@ -108,16 +136,25 @@ export function useResendMail() {
   return useMutation({
     mutationFn: (input: ResendRequest) => api.resendMail(input),
     onSuccess: (_res, { id }) => invalidateMail(qc, id),
+    meta: {
+      successMessage: () => "Message resent",
+      errorMessage: errorOr("Couldn't resend the message."),
+    },
   })
 }
 
-export function publishMailReplyOptions(qc: ReturnType<typeof useQueryClient>) {
+export function publishMailReplyOptions(qc: QueryClient) {
   return mutationOptions({
     mutationFn: (input: PublishMailReplyRequest) => api.publishMailReply(input),
-    onSuccess: (_res, { id }) => {
-      invalidateMail(qc, id)
-      qc.invalidateQueries({ queryKey: queryKeys.reports.all })
-      qc.invalidateQueries({ queryKey: queryKeys.events.all })
+    onSuccess: (_res, { id }) =>
+      Promise.all([
+        invalidateMail(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
+        qc.invalidateQueries({ queryKey: queryKeys.events.all }),
+      ]),
+    meta: {
+      successMessage: (res: PublishMailReplyResponse) => PUBLISH_TOAST[res.publication],
+      errorMessage: errorOr("Couldn't publish the reply. Please try again."),
     },
   })
 }
@@ -141,11 +178,13 @@ export function useSetForwardTemplateDefault() {
     onSuccess: (res) => {
       qc.setQueryData(queryKeys.mail.forwardTemplate, res)
     },
+    meta: { successMessage: () => "Default template saved" },
   })
 }
 
 export function usePreviewForwardTemplate() {
   return useMutation<PreviewForwardTemplateResponse, unknown, PreviewForwardTemplateRequest>({
     mutationFn: (input) => api.previewForwardTemplate(input),
+    meta: { errorToast: false },
   })
 }

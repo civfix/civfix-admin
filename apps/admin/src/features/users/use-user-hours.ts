@@ -15,7 +15,7 @@ import type {
 import { confirmDialog } from "@/components/shared/dialog"
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"
-import { queryKeys } from "@/lib/query"
+import { invalidateKeys, queryKeys } from "@/lib/query"
 import { useUiStore } from "@/store/ui-store"
 import {
   REVOKE_CERTIFICATE_COMMAND,
@@ -42,10 +42,12 @@ function invalidateLedger(
   userId: string,
   eventId: string | null,
 ) {
-  qc.invalidateQueries({ queryKey: queryKeys.users.hours(userId) })
-  qc.invalidateQueries({ queryKey: queryKeys.users.detail(userId) })
-  qc.invalidateQueries({ queryKey: queryKeys.audit.all })
-  if (eventId) qc.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) })
+  return invalidateKeys(qc, [
+    queryKeys.users.hours(userId),
+    queryKeys.users.detail(userId),
+    queryKeys.audit.all,
+    eventId ? queryKeys.events.detail(eventId) : null,
+  ])
 }
 
 /**
@@ -64,12 +66,12 @@ export function creditUserHoursOptions(qc: ReturnType<typeof useQueryClient>) {
   return mutationOptions({
     mutationFn: ({ request }: CreditUserHoursInput) => api.creditUserHours(request),
     onSuccess: (_res, { request, userName }) => {
-      invalidateLedger(qc, request.id, request.kind === "event" ? request.eventId : null)
+      void invalidateLedger(qc, request.id, request.kind === "event" ? request.eventId : null)
       useUiStore.getState().showToast(creditedToast(userName, request.hours))
     },
-    onError: (err, { showsErrorInline }) => {
-      if (showsErrorInline()) return
-      useUiStore.getState().showToast(errorMessage(err))
+    meta: {
+      errorMessage: (err: unknown, { showsErrorInline }: CreditUserHoursInput) =>
+        showsErrorInline() ? null : errorMessage(err),
     },
   })
 }
@@ -96,7 +98,7 @@ export function voidUserHoursOptions(qc: ReturnType<typeof useQueryClient>) {
     mutationFn: ({ id, entryId, reason }: VoidUserHoursInput) =>
       api.voidUserHours({ id, entryId, reason }),
     onSuccess: (res, { id, eventId, userName, hours }) => {
-      invalidateLedger(qc, id, eventId)
+      void invalidateLedger(qc, id, eventId)
       useUiStore.getState().showToast(voidedToast(userName, hours))
       if (res.affectedCertificates.length === 0) return
       void confirmDialog({

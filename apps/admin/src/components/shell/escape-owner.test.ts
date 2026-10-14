@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import { ESCAPE_OWNER_SELECTOR, hasEscapeOwner, shellEscapeGoesHome } from "./escape-owner"
 
-/** A document stub that reports a match for the escape-owner selector when `open` is true. */
 function doc(open: boolean): Pick<Document, "querySelector"> {
   return {
     querySelector: ((selector: string) =>
@@ -32,7 +31,7 @@ describe("shellEscapeGoesHome", () => {
     expect(shellEscapeGoesHome({ ...base, targetTag: undefined })).toBe(true)
   })
 
-  it("stays put while a panel, menu or dialog is open — even with focus on a button", () => {
+  it("stays put while a panel, menu or dialog is open, even with focus on a button", () => {
     expect(shellEscapeGoesHome({ ...base, doc: doc(true) })).toBe(false)
   })
 

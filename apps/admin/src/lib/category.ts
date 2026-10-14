@@ -8,7 +8,6 @@ import {
   type ReportCategory,
 } from "@civfix/shared"
 
-/** The canonical report categories, in the order the contract enum defines them. */
 export const REPORT_CATEGORIES: readonly ReportCategory[] = ReportCategorySchema.options
 
 export const CATEGORY_GLYPHS: Record<ReportCategory, string> = {
@@ -55,10 +54,9 @@ function buildCategoryReportTypeLabels(): Record<ReportCategory, string[]> {
 }
 
 /**
- * The resident-facing report types that fold into each canonical category, derived from the contract's
- * type -> category mapping plus the web picker's finer types. Lets the operator read a routing contact
- * against what a neighbor actually picked. Keyed by report type, so the web picker's resident-facing
- * label replaces the contract label for the same type instead of listing both.
+ * What residents actually pick under each category, so an operator can judge a routing contact against
+ * it. Keyed by report type, so the web picker's label replaces the contract's for the same type instead
+ * of listing both.
  */
 export const CATEGORY_REPORT_TYPE_LABELS: Record<ReportCategory, readonly string[]> =
   buildCategoryReportTypeLabels()

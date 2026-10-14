@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { queryKeys } from "@/lib/query"
-import { routeActionFor, routeSendLabel, type RoutableReport } from "./route-action"
+import { routeActionView, routeSendLabel, type RoutableReport } from "./route-action"
 
 function makeReport(over: Partial<RoutableReport> = {}): RoutableReport {
   return {
@@ -12,28 +12,28 @@ function makeReport(over: Partial<RoutableReport> = {}): RoutableReport {
   }
 }
 
-describe("routeActionFor", () => {
+describe("routeActionView", () => {
   it("offers the send when a contact is on file and nothing has gone out", () => {
-    expect(routeActionFor(makeReport()).kind).toBe("send")
+    expect(routeActionView(makeReport()).kind).toBe("send")
   })
 
   it("blocks the send when the jurisdiction has no contact", () => {
-    expect(routeActionFor(makeReport({ city: { ...makeReport().city, contact: null } })).kind).toBe(
+    expect(routeActionView(makeReport({ city: { ...makeReport().city, contact: null } })).kind).toBe(
       "no_contact",
     )
-    expect(routeActionFor(makeReport({ city: { ...makeReport().city, contact: "" } })).kind).toBe(
+    expect(routeActionView(makeReport({ city: { ...makeReport().city, contact: "" } })).kind).toBe(
       "no_contact",
     )
   })
 
   it("reports a missing jurisdiction separately from a missing contact", () => {
     const report = makeReport({ geoid: null, city: { ...makeReport().city, contact: null } })
-    expect(routeActionFor(report).kind).toBe("no_jurisdiction")
+    expect(routeActionView(report).kind).toBe("no_jurisdiction")
   })
 
   it("marks already-sent outreach and carries the routed timestamp", () => {
     for (const status of ["sent", "delivered", "replied"] as const) {
-      const action = routeActionFor(
+      const action = routeActionView(
         makeReport({
           outreach: {
             status,
@@ -49,7 +49,7 @@ describe("routeActionFor", () => {
   })
 
   it("re-enables the send after a bounce", () => {
-    const action = routeActionFor(
+    const action = routeActionView(
       makeReport({
         outreach: {
           status: "bounced",
@@ -63,7 +63,7 @@ describe("routeActionFor", () => {
   })
 
   it("re-enables the send when the last attempt was rejected by the provider", () => {
-    const action = routeActionFor(
+    const action = routeActionView(
       makeReport({
         outreach: {
           status: "sent",

@@ -6,30 +6,33 @@ import {
   type GovClaimStatus,
   type GovMethod,
   type GovVerificationCheck,
+  type VerifyCheckRequest,
 } from "@civfix/shared"
 
 import { errorMessage } from "@/lib/error-messages"
 
-/** Pill treatment per claim lifecycle status. */
 export const GOV_CLAIM_STATUS_VIEW: Record<GovClaimStatus, { cls: string; label: string }> = {
   pending: { cls: "status-new", label: "Pending" },
   approved: { cls: "status-ok", label: "Approved" },
   rejected: { cls: "status-flag", label: "Rejected" },
 }
 
-/** Pill treatment per verification check state. */
+// The fallbacks cover a status newer than this build, which the client passes through.
+export function govClaimStatusView(status: GovClaimStatus): { cls: string; label: string } {
+  return GOV_CLAIM_STATUS_VIEW[status] ?? GOV_CLAIM_STATUS_VIEW.pending
+}
+
 export const GOV_CHECK_STATUS_VIEW: Record<GovCheckStatus, { cls: string; label: string }> = {
   verified: { cls: "status-ok", label: "Verified" },
   pending: { cls: "status-new", label: "Pending" },
 }
 
-/** How the applicant reached us. */
 export const GOV_METHOD_LABEL: Record<GovMethod, string> = {
   email: "Emailed us",
   cold_outreach: "Cold outreach",
 }
 
-/** The three verification checks, in the order the detail panel lists them. */
+/** In the order the detail panel lists them. */
 export const GOV_CHECKS: readonly GovVerificationCheck[] = ["linkedin", "directory", "callback"]
 
 export function govCheckLabel(check: GovVerificationCheck): string {
@@ -37,17 +40,39 @@ export function govCheckLabel(check: GovVerificationCheck): string {
 }
 
 /**
+ * The request that moves one check to `next`. Going back to pending keeps the stored evidence; marking
+ * verified records what the operator typed (trimmed, omitted when blank). The stored note rides along
+ * either way, because the endpoint stores an omitted field as null.
+ */
+export function verifyCheckRequest(
+  claim: Pick<GovClaimDTO, "id" | "checks">,
+  check: GovVerificationCheck,
+  next: GovCheckStatus,
+  typedEvidence = "",
+): VerifyCheckRequest {
+  const stored = claim.checks[check]
+  const evidence = next === "pending" ? stored.evidence : typedEvidence.trim()
+  return {
+    id: claim.id,
+    check,
+    status: next,
+    ...(evidence ? { evidence } : {}),
+    ...(stored.note ? { note: stored.note } : {}),
+  }
+}
+
+/**
  * Why approve / reject are unavailable, or null when the claim can still be decided. The API refuses a
  * decision on a claim that is no longer pending (409), so the buttons say so rather than failing.
  */
-export function govClaimDecisionBlockedFor(status: GovClaimStatus): string | null {
+export function govClaimDecisionBlockedMessage(status: GovClaimStatus): string | null {
   if (status === "approved") return "This claim was already approved."
   if (status === "rejected") return "This claim was already rejected."
   return null
 }
 
-export function govClaimApproveBlockedFor(claim: GovClaimDTO): string | null {
-  const lifecycle = govClaimDecisionBlockedFor(claim.status)
+export function govClaimApproveBlockedMessage(claim: GovClaimDTO): string | null {
+  const lifecycle = govClaimDecisionBlockedMessage(claim.status)
   if (lifecycle !== null) return lifecycle
   if (claim.contactEmail.trim() === "") {
     return "This claim has no contact email, so there is no account to grant government access to."
@@ -74,7 +99,7 @@ export function govClaimApproveErrorMessage(error: unknown): string {
     error,
     {
       [ErrorCode.FORBIDDEN]:
-        "That contact email belongs to an operator account. Operator accounts are managed through ADMIN_EMAILS and cannot be re-roled here — the applicant needs a different address.",
+        "That contact email belongs to an operator account. Operator accounts are managed through ADMIN_EMAILS and cannot be re-roled here, so the applicant needs a different address.",
     },
     {
       fields: {

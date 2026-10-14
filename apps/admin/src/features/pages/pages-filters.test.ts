@@ -58,7 +58,7 @@ describe("deep-linked page row", () => {
     expect(pageRowFromDTO(page({ seo: { title: "Echo Park cleanup", noindex: false } })).title).toBe(
       "Echo Park cleanup",
     )
-    expect(pageRowFromDTO(page({})).title).toBe("/echo-park-cleanup")
+    expect(pageRowFromDTO(page({})).title).toBe("/e/echo-park-cleanup")
     expect(pageRowFromDTO(page({ slug: null })).title).toBe("Signup page")
   })
 

@@ -44,6 +44,12 @@ describe("roleChangeCopy", () => {
     expect(copy.confirmLabel).toBeUndefined()
   })
 
+  it("names the target role when demoting the owner to admin", () => {
+    const copy = roleChangeCopy({ memberName: "Grace", from: "owner", to: "admin", orgName: "X" })
+    expect(copy.title).toBe("Demote Grace to admin?")
+    expect(copy.confirmLabel).toBeUndefined()
+  })
+
   it("describes a plain promotion or demotion", () => {
     expect(
       roleChangeCopy({ memberName: "Ada", from: "member", to: "admin", orgName: "X" }).title,
@@ -69,5 +75,17 @@ describe("menuFocusIndex", () => {
     expect(menuFocusIndex("End", 0, 3)).toBe(2)
     expect(menuFocusIndex("Enter", 0, 3)).toBeNull()
     expect(menuFocusIndex("ArrowDown", 0, 0)).toBeNull()
+  })
+
+  it("answers only the arrows of its orientation", () => {
+    expect(menuFocusIndex("ArrowRight", 0, 3)).toBeNull()
+    expect(menuFocusIndex("ArrowRight", 0, 3, "horizontal")).toBe(1)
+    expect(menuFocusIndex("ArrowLeft", 0, 3, "horizontal")).toBe(2)
+    expect(menuFocusIndex("ArrowDown", 0, 3, "horizontal")).toBeNull()
+    expect(menuFocusIndex("End", 0, 3, "horizontal")).toBe(2)
+    expect(menuFocusIndex("ArrowDown", 0, 2, "both")).toBe(1)
+    expect(menuFocusIndex("ArrowRight", 1, 2, "both")).toBe(0)
+    expect(menuFocusIndex("ArrowUp", 0, 2, "both")).toBe(1)
+    expect(menuFocusIndex("ArrowLeft", 1, 2, "both")).toBe(0)
   })
 })

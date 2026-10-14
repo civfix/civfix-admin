@@ -5,6 +5,8 @@ import type {
   EventPageStatus,
 } from "@civfix/shared"
 
+import { publicPagePath } from "@/features/pages/page-path"
+
 export const PAGE_FILTERS = ["all", "published", "unpublished", "draft", "flagged"] as const
 export type PageFilter = (typeof PAGE_FILTERS)[number]
 
@@ -16,17 +18,17 @@ export function pageListParams(
   filter: string,
   search: string,
 ): Pick<AdminEventPageListQuery, "status" | "flagged" | "q"> {
-  const q = search.trim() === "" ? undefined : search.trim()
-  if (!isPageFilter(filter) || filter === "all") return { q }
-  if (filter === "flagged") return { flagged: true, q }
-  return { status: filter satisfies EventPageStatus, q }
+  const searchTerm = search.trim() || undefined
+  if (!isPageFilter(filter) || filter === "all") return { q: searchTerm }
+  if (filter === "flagged") return { flagged: true, q: searchTerm }
+  return { status: filter satisfies EventPageStatus, q: searchTerm }
 }
 
 export function pageRowFromDTO(page: EventPageDTO): AdminEventPageListItemDTO {
   return {
     cleanupId: page.cleanupId,
     slug: page.slug,
-    title: page.seo.title ?? (page.slug === null ? "Signup page" : `/${page.slug}`),
+    title: page.seo.title ?? (page.slug === null ? "Signup page" : publicPagePath(page.slug)),
     status: page.status,
     visibility: page.visibility,
     organizer: null,

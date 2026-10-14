@@ -1,0 +1,92 @@
+"use client"
+
+import * as React from "react"
+import type { AdminEventListItemDTO } from "@civfix/shared"
+
+import { Icons } from "@/components/icons"
+import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
+import { eventStatusView } from "@/lib/event-status"
+import { eventKindView } from "@/lib/event-kind"
+import { firstName, shortRef } from "@/lib/display"
+import { useNav } from "@/store/ui-store"
+
+function OrganizerLink({ organizer }: { organizer: AdminEventListItemDTO["organizer"] }) {
+  const nav = useNav()
+  return (
+    <button
+      type="button"
+      className="lnk-inline"
+      title={`Open ${organizer.name}'s profile`}
+      onClick={(e) => {
+        e.stopPropagation()
+        nav("users", organizer.id)
+      }}
+    >
+      {firstName(organizer.name)}
+    </button>
+  )
+}
+
+export const EventRow = React.memo(function EventRow({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: AdminEventListItemDTO
+  selected: boolean
+  onSelect: (id: string) => void
+}) {
+  const kindView = eventKindView(item.eventKind)
+  const KindIcon = kindView.icon
+  const statusPill = eventStatusView(item.status)
+  return (
+    <div
+      className={`qrow ${selected ? "selected" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-current={selected ? "true" : undefined}
+      onClick={() => onSelect(item.id)}
+      onKeyDown={(e) => {
+        // A key pressed on the nested organizer link bubbles here; it must stay that link's activation.
+        if (e.target !== e.currentTarget || !isKeyboardActivationKey(e.key)) return
+        e.preventDefault()
+        onSelect(item.id)
+      }}
+    >
+      <div className="leading">
+        <span
+          className="evt-row-ico hue-sun"
+          role="img"
+          aria-label={kindView.label}
+          title={kindView.label}
+        >
+          <KindIcon size={15} />
+        </span>
+      </div>
+      <div className="body">
+        <div className="top">
+          <span className="title">{item.title}</span>
+          {item.flagged && (
+            <span className="rep-flag-dot" role="img" aria-label="Flagged" title="Flagged">
+              <Icons.Flag size={10} />
+            </span>
+          )}
+          <span className="ident" title={item.id}>
+            {shortRef(item.id)}
+          </span>
+        </div>
+        <div className="sub">
+          <span className="strong">{item.place}</span>
+          <span className="sep">·</span>
+          <span>{item.attendees} attending</span>
+          <span className="sep">·</span>
+          <OrganizerLink organizer={item.organizer} />
+        </div>
+      </div>
+      <div className="trailing">
+        <span className={`pill ${statusPill.cls} tight`}>{statusPill.label}</span>
+        <span className="age">{item.date.abs}</span>
+      </div>
+    </div>
+  )
+})

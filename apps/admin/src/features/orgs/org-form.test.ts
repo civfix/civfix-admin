@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { AppError, ErrorCode, type AdminOrgDTO, type AdminUpdateOrgRequest } from "@civfix/shared"
+import {
+  AppError,
+  ErrorCode,
+  MAX_ORG_DESCRIPTION,
+  MAX_ORG_NAME,
+  type AdminOrgDTO,
+  type AdminUpdateOrgRequest,
+} from "@civfix/shared"
 
 import {
   buildCreateRequest,
@@ -8,8 +15,11 @@ import {
   draftFromOrg,
   emptyProfileDraft,
   fieldErrorsFromError,
+  hasProfileChanges,
+  isEmptyProfileDraft,
   pickFieldErrors,
   socialLinksFromDraft,
+  validateCreateDraft,
   validateProfileDraft,
 } from "./org-form"
 
@@ -253,5 +263,86 @@ describe("pickFieldErrors", () => {
     expect(pickFieldErrors({ name: "a", reason: "b", ownerUserId: "c" }, ["name", "slug"])).toEqual({
       name: "a",
     })
+  })
+})
+
+/** Errors thrown by the API client come from its own bundle's AppError class, so they fail instanceof. */
+function foreignAppError(code: ErrorCode, fields?: Record<string, string>): Error {
+  const err = new Error("from the client bundle") as Error & {
+    code: ErrorCode
+    httpStatus: number
+    fields?: Record<string, string>
+  }
+  err.name = "AppError"
+  err.code = code
+  err.httpStatus = code === ErrorCode.CONFLICT ? 409 : 400
+  if (fields) err.fields = fields
+  return err
+}
+
+describe("fieldErrorsFromError with a client-bundle AppError", () => {
+  it("maps a foreign conflict to the slug", () => {
+    expect(fieldErrorsFromError(foreignAppError(ErrorCode.CONFLICT), { slug: "taken" })).toEqual({
+      slug: "This slug is already taken.",
+    })
+  })
+
+  it("maps foreign VALIDATION.fields, social keys included", () => {
+    expect(
+      fieldErrorsFromError(foreignAppError(ErrorCode.VALIDATION, { "socialLinks.x": "bad" })),
+    ).toEqual({ x: "bad" })
+  })
+})
+
+describe("validateProfileDraft length limits", () => {
+  it("rejects a name longer than the contract allows", () => {
+    const draft = { ...draftFromOrg(org), name: "x".repeat(MAX_ORG_NAME + 1) }
+    expect(validateProfileDraft(draft).name).toBe(`At most ${MAX_ORG_NAME} characters.`)
+  })
+
+  it("rejects a description longer than the contract allows", () => {
+    const draft = { ...draftFromOrg(org), description: "x".repeat(MAX_ORG_DESCRIPTION + 1) }
+    expect(validateProfileDraft(draft).description).toBe(`At most ${MAX_ORG_DESCRIPTION} characters.`)
+  })
+})
+
+describe("validateCreateDraft", () => {
+  const owner = { id: "44444444-4444-4444-8444-444444444444" }
+
+  it("requires an owner and a reason on top of the profile rules", () => {
+    expect(validateCreateDraft(emptyProfileDraft(), null, "  ")).toMatchObject({
+      name: "A name is required.",
+      ownerUserId: "Pick the person who owns this organization.",
+      reason: "A reason is required.",
+    })
+  })
+
+  it("accepts a complete draft with an owner and a reason", () => {
+    expect(validateCreateDraft(draftFromOrg(org), owner, "Onboarded")).toEqual({})
+  })
+})
+
+describe("isEmptyProfileDraft", () => {
+  it("is true for a fresh draft", () => {
+    expect(isEmptyProfileDraft(emptyProfileDraft())).toBe(true)
+  })
+
+  it("is false once any field, social handle or logo is set", () => {
+    const empty = emptyProfileDraft()
+    expect(isEmptyProfileDraft({ ...empty, websiteUrl: "h" })).toBe(false)
+    expect(isEmptyProfileDraft({ ...empty, social: { ...empty.social, tiktok: "t" } })).toBe(false)
+    expect(isEmptyProfileDraft({ ...empty, logoMediaId: LOGO_A })).toBe(false)
+  })
+})
+
+describe("hasProfileChanges", () => {
+  it("is false for an untouched draft and true after an edit", () => {
+    const draft = draftFromOrg(org)
+    expect(hasProfileChanges(org, draft)).toBe(false)
+    expect(hasProfileChanges(org, { ...draft, websiteUrl: "https://new.example.org" })).toBe(true)
+  })
+
+  it("ignores case and whitespace in the slug", () => {
+    expect(hasProfileChanges(org, { ...draftFromOrg(org), slug: " River-Friends " })).toBe(false)
   })
 })

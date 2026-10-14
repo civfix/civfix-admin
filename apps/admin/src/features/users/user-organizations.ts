@@ -4,7 +4,7 @@ import { orgFocus } from "@/features/orgs/org-focus"
 
 export type UserOrganization = NonNullable<AdminUserDTO["organizations"]>[number]
 
-export interface UserOrganizationsView {
+interface UserOrganizationsView {
   reported: boolean
   items: UserOrganization[]
 }

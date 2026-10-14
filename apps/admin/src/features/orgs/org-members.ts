@@ -1,6 +1,6 @@
 import type { OrganizationMemberRole } from "@civfix/shared"
 
-export const ORG_ROLES: readonly OrganizationMemberRole[] = ["owner", "admin", "member"] as const
+export const ORG_ROLES: readonly OrganizationMemberRole[] = ["owner", "admin", "member"]
 
 export const ORG_ROLE_LABEL: Record<OrganizationMemberRole, string> = {
   owner: "Owner",
@@ -14,11 +14,7 @@ export const ORG_ROLE_PILL: Record<OrganizationMemberRole, string> = {
   member: "priority-low",
 }
 
-/**
- * The roles a member can be moved to from their current one. Every role but the current one is a
- * legal target — including `owner`, which is an ownership transfer (DECISIONS §32) — so the menu
- * offers all the others.
- */
+// `owner` is a legal target too: choosing it is an ownership transfer (DECISIONS §32).
 export function roleTargets(current: OrganizationMemberRole): OrganizationMemberRole[] {
   return ORG_ROLES.filter((r) => r !== current)
 }
@@ -31,7 +27,7 @@ export function canRemoveMember(role: OrganizationMemberRole): boolean {
   return role !== "owner"
 }
 
-export interface RoleChangeCopy {
+interface RoleChangeCopy {
   title: string
   body: string
   /** Absent when the change cannot proceed (demoting the owner): the dialog only explains. */
@@ -41,24 +37,29 @@ export interface RoleChangeCopy {
 }
 
 /**
- * Keyboard navigation inside a `role="menu"`: the index of the item to focus after `key`, given the
- * currently focused index (-1 when none) and the item count, or null when the key is not a menu key.
- * Arrows wrap; Home/End jump.
+ * Arrow-key navigation for a composite widget with a roving focus (a `role="menu"`, a tablist, a
+ * radiogroup): the index of the item to move to after `key`, given the current index (-1 when none)
+ * and the item count, or null when the key is not a navigation key. A vertical menu answers Up/Down, a
+ * horizontal tablist Left/Right, a radiogroup both. Arrows wrap; Home/End jump.
  */
-export function menuFocusIndex(key: string, current: number, count: number): number | null {
+export function menuFocusIndex(
+  key: string,
+  current: number,
+  count: number,
+  orientation: "vertical" | "horizontal" | "both" = "vertical",
+): number | null {
   if (count === 0) return null
-  switch (key) {
-    case "ArrowDown":
-      return current < 0 ? 0 : (current + 1) % count
-    case "ArrowUp":
-      return current < 0 ? count - 1 : (current - 1 + count) % count
-    case "Home":
-      return 0
-    case "End":
-      return count - 1
-    default:
-      return null
+  const vertical = orientation !== "horizontal"
+  const horizontal = orientation !== "vertical"
+  if ((vertical && key === "ArrowDown") || (horizontal && key === "ArrowRight")) {
+    return current < 0 ? 0 : (current + 1) % count
   }
+  if ((vertical && key === "ArrowUp") || (horizontal && key === "ArrowLeft")) {
+    return current < 0 ? count - 1 : (current - 1 + count) % count
+  }
+  if (key === "Home") return 0
+  if (key === "End") return count - 1
+  return null
 }
 
 /**

@@ -98,7 +98,7 @@ export interface CreditHoursDraft {
   reason: string
 }
 
-export type CreditHoursField = "event" | "hours" | "serviceDate" | "reason"
+type CreditHoursField = "event" | "hours" | "serviceDate" | "reason"
 export type CreditHoursErrors = Partial<Record<CreditHoursField | "form", string>>
 
 /**
@@ -111,7 +111,7 @@ export function todayLocalIsoDate(now: Date = new Date()): string {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
-export function hoursDraftError(hours: string): string | null {
+function hoursDraftError(hours: string): string | null {
   const text = hours.trim()
   if (text === "") return "Enter the hours to credit."
   const value = Number(text)

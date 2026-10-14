@@ -32,9 +32,12 @@ export const PAGE_LABEL: Record<PageId, string> = {
   pages: "Signup pages",
 }
 
-export interface Toast {
+export type ToastTone = "ok" | "error"
+
+interface Toast {
   id: number
   text: string
+  tone: ToastTone
 }
 
 interface UiState {
@@ -44,23 +47,44 @@ interface UiState {
 
   nav: (page: PageId, focusId?: string | null) => void
   syncFromHash: () => void
-  showToast: (text: string) => void
+  showToast: (text: string, tone?: ToastTone) => void
   dismissToast: () => void
 }
 
 let toastSeq = 0
 
-function parseHash(): { page: PageId; focusId: string | null } {
-  if (typeof window === "undefined") return { page: "home", focusId: null }
-  const raw = window.location.hash.replace(/^#\/?/, "")
-  const [seg = "", ...rest] = raw.split("/")
+interface Route {
+  page: PageId
+  focusId: string | null
+}
+
+const HOME_ROUTE: Route = { page: "home", focusId: null }
+const HOME_HASH = "#/"
+const HASH_ROUTE_PREFIX = /^#\/?/
+
+// The hash comes from whatever link the operator opened, and this runs at import and on popstate, so a
+// malformed escape must degrade to home rather than throw and leave the app unrendered.
+function decodeFocus(encoded: string): string | null {
+  try {
+    return decodeURIComponent(encoded)
+  } catch {
+    return null
+  }
+}
+
+function parseHash(): Route {
+  if (typeof window === "undefined") return HOME_ROUTE
+  const [path = ""] = window.location.hash.replace(HASH_ROUTE_PREFIX, "").split("?")
+  const [seg = "", ...rest] = path.split("/")
   const page: PageId = (SECTIONS as readonly string[]).includes(seg) ? (seg as PageId) : "home"
-  const focusId = page !== "home" && rest.length > 0 ? decodeURIComponent(rest.join("/")) : null
-  return { page, focusId }
+  const encodedFocus = rest.join("/")
+  if (page === "home" || encodedFocus === "") return { page, focusId: null }
+  const focusId = decodeFocus(encodedFocus)
+  return focusId === null ? HOME_ROUTE : { page, focusId }
 }
 
 function hashFor(page: PageId, focusId: string | null): string {
-  if (page === "home") return "#/"
+  if (page === "home") return HOME_HASH
   return focusId ? `#/${page}/${encodeURIComponent(focusId)}` : `#/${page}`
 }
 
@@ -71,7 +95,8 @@ export const useUiStore = create<UiState>((set) => ({
   focusId: initialRoute.focusId,
   toast: null,
 
-  nav: (page, focusId = null) => {
+  nav: (page, requestedFocus = null) => {
+    const focusId = page === "home" ? null : requestedFocus || null
     set({ page, focusId })
     if (typeof window !== "undefined") {
       const next = hashFor(page, focusId)
@@ -82,7 +107,7 @@ export const useUiStore = create<UiState>((set) => ({
 
   syncFromHash: () => set(parseHash()),
 
-  showToast: (text) => set({ toast: { id: ++toastSeq, text } }),
+  showToast: (text, tone = "ok") => set({ toast: { id: ++toastSeq, text, tone } }),
 
   dismissToast: () => set({ toast: null }),
 }))
@@ -91,6 +116,6 @@ export function useNav(): UiState["nav"] {
   return useUiStore((s) => s.nav)
 }
 
-export function useToast(): (text: string) => void {
+export function useToast(): UiState["showToast"] {
   return useUiStore((s) => s.showToast)
 }

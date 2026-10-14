@@ -16,6 +16,10 @@ describe("external url guard", () => {
     expect(isHttpsUrl("data:text/html,<script>alert(1)</script>")).toBe(false)
   })
 
+  it("still requires a parseable url", () => {
+    expect(isHttpsUrl("https://example.org:99999/")).toBe(false)
+  })
+
   it("treats a missing url as unsafe", () => {
     expect(isHttpsUrl(null)).toBe(false)
     expect(isHttpsUrl(undefined)).toBe(false)

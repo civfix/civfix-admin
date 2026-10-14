@@ -1,33 +1,39 @@
 "use client"
 
 import * as React from "react"
-import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
+import { OrgVerificationKindSchema, type AdminOrgDTO } from "@civfix/shared"
 
 import { Icons } from "@/components/icons"
+import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"
+import { useModalFocus } from "@/components/shared/modal-focus"
+import type { OrgProfileErrors } from "@/features/orgs/org-form"
 import {
-  buildCreateRequest,
-  clearChangedFieldErrors,
-  emptyProfileDraft,
-  fieldErrorsFromError,
-  validateProfileDraft,
-  type OrgProfileDraft,
-  type OrgProfileErrors,
-} from "@/features/orgs/org-form"
-import { OrgProfileFields, ReasonField, FieldError } from "@/features/orgs/org-form-fields"
-import { toastUnlessShownInline, useCreateOrg } from "@/features/orgs/use-orgs"
+  FieldError,
+  OrgProfileFields,
+  ReasonField,
+  fieldErrorId,
+  fieldHintId,
+} from "@/features/orgs/org-form-fields"
 import { UserPicker, type PickedUser } from "@/features/orgs/user-picker"
-import { ORG_KIND_LABEL } from "@/features/orgs/verification-panel"
+import { ORG_KIND_LABEL } from "@/features/orgs/org-verification"
+import { useCreateOrgForm, type VerifiedKindChoice } from "@/features/orgs/use-create-org-form"
 
-const VERIFICATION_OPTIONS: { value: "" | OrgVerificationKind; label: string }[] = [
+const OWNER_FIELD_ID = "org-create-owner"
+const OWNER_LABEL_ID = "org-create-owner-label"
+const TITLE_ID = "org-create-title"
+const VERIFIED_KIND_ID = "org-verified-kind"
+
+const VERIFICATION_OPTIONS: { value: VerifiedKindChoice; label: string }[] = [
   { value: "", label: "Leave unverified" },
-  { value: "nonprofit", label: `Verified as ${ORG_KIND_LABEL.nonprofit.toLowerCase()}` },
-  { value: "government", label: `Verified as ${ORG_KIND_LABEL.government.toLowerCase()}` },
-  { value: "community", label: `Verified as ${ORG_KIND_LABEL.community.toLowerCase()}` },
+  ...OrgVerificationKindSchema.options.map((kind) => ({
+    value: kind,
+    label: `Verified as ${ORG_KIND_LABEL[kind].toLowerCase()}`,
+  })),
 ]
 
 /**
- * The "New organization" slide-over (`.panel`). The form only exists while the panel is open, so
- * closing it discards the draft, the submitted flag and every error: reopening always starts clean.
+ * The form only exists while the panel is open, so closing it discards the draft, the submitted flag
+ * and every error: reopening always starts clean.
  */
 export function CreateOrgPanel({
   open,
@@ -42,25 +48,87 @@ export function CreateOrgPanel({
   return <CreateOrgSlideOver onClose={onClose} onCreated={onCreated} />
 }
 
-/** The local checks the create form runs before a request: the profile, the owner and the reason. */
-function validateCreate(
-  draft: OrgProfileDraft,
-  owner: PickedUser | null,
-  reason: string,
-): OrgProfileErrors {
-  const errors = validateProfileDraft(draft)
-  if (!owner) errors.ownerUserId = "Pick the person who owns this organization."
-  if (reason.trim() === "") errors.reason = "A reason is required."
-  return errors
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="sub">
+      <div className="sub-head">{title}</div>
+      <div className="sub-body">{children}</div>
+    </div>
+  )
 }
 
-/**
- * Everything the create request needs lives here: the profile fields, the owner picker (resolves a
- * person to a userId), the verification shortcut for operator-onboarded partners (DECISIONS §32) and
- * the audit reason. Local validation errors are recomputed live once the operator has tried to
- * submit; server errors (slug conflict, VALIDATION.fields) are held apart and cleared per field as
- * that field changes, so a message never outlives the value it was about.
- */
+function OwnerSection({
+  owner,
+  onChange,
+  errors,
+}: {
+  owner: PickedUser | null
+  onChange: (next: PickedUser | null) => void
+  errors: OrgProfileErrors
+}) {
+  return (
+    <FormSection title="Owner">
+      <div
+        className={`field ${errors.ownerUserId ? "has-error" : ""}`}
+        role="group"
+        aria-labelledby={OWNER_LABEL_ID}
+        aria-describedby={
+          errors.ownerUserId ? fieldErrorId(OWNER_FIELD_ID) : fieldHintId(OWNER_FIELD_ID)
+        }
+      >
+        <span className="lbl" id={OWNER_LABEL_ID}>
+          Owner
+          <span className="opt">an existing civfix account</span>
+        </span>
+        <UserPicker value={owner} onChange={onChange} />
+        <FieldError id={fieldErrorId(OWNER_FIELD_ID)} text={errors.ownerUserId} />
+        <span className="hint" id={fieldHintId(OWNER_FIELD_ID)}>
+          The owner can edit the organization, manage its members and host under its name.
+          Ownership can be transferred later from the Members tab.
+        </span>
+      </div>
+    </FormSection>
+  )
+}
+
+/** The verification shortcut is for operator-onboarded partners (DECISIONS §32). */
+function VerificationSection({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: VerifiedKindChoice
+  onChange: (next: VerifiedKindChoice) => void
+  disabled: boolean
+}) {
+  return (
+    <FormSection title="Verification">
+      <div className="field">
+        <label className="lbl" htmlFor={VERIFIED_KIND_ID}>
+          Status at creation
+        </label>
+        <select
+          id={VERIFIED_KIND_ID}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value as VerifiedKindChoice)}
+        >
+          {VERIFICATION_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <span className="hint">
+          {value === ""
+            ? "The organization can apply for verification itself from its settings."
+            : "Created already verified, with no evidence round-trip. Use for partners you onboard directly (a city department, a known nonprofit)."}
+        </span>
+      </div>
+    </FormSection>
+  )
+}
+
 function CreateOrgSlideOver({
   onClose,
   onCreated,
@@ -68,111 +136,28 @@ function CreateOrgSlideOver({
   onClose: () => void
   onCreated: (org: AdminOrgDTO) => void
 }) {
-  const create = useCreateOrg()
-  const [draft, setDraft] = React.useState<OrgProfileDraft>(emptyProfileDraft)
-  const [owner, setOwnerState] = React.useState<PickedUser | null>(null)
-  const [verifiedKind, setVerifiedKind] = React.useState<"" | OrgVerificationKind>("")
-  const [reason, setReasonState] = React.useState("")
-  const [serverErrors, setServerErrors] = React.useState<OrgProfileErrors>({})
-  const [submitted, setSubmitted] = React.useState(false)
-  const [logoUploading, setLogoUploading] = React.useState(false)
-  // Set synchronously on submit, before React has re-rendered with `create.isPending`, so a second
-  // Enter in the same frame cannot start a second POST.
-  const inFlight = React.useRef(false)
-
-  const pending = create.isPending
-  // Overlay click, Escape, the close button and Cancel all come through here: none of them may
-  // dismiss the form while the request is in flight.
-  const close = React.useCallback(() => {
-    if (inFlight.current || pending) return
-    onClose()
-  }, [onClose, pending])
-
-  // Escape dismisses an untouched panel; once there is a draft it is ignored (closing discards the
-  // draft, and Escape is too easy a reflex — dismissing the owner search, say — to make destructive).
-  // Cancel and the close button remain the deliberate way out.
-  const pristine =
-    owner === null &&
-    draft.logoMediaId === null &&
-    verifiedKind === "" &&
-    reason === "" &&
-    Object.values(draft.social).every((v) => v === "") &&
-    draft.name === "" &&
-    draft.slug === "" &&
-    draft.description === "" &&
-    draft.websiteUrl === ""
-  React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && pristine) close()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [close, pristine])
-
-  const localErrors = React.useMemo(
-    () => (submitted ? validateCreate(draft, owner, reason) : {}),
-    [submitted, draft, owner, reason],
-  )
-  const errors = React.useMemo(
-    () => ({ ...localErrors, ...serverErrors }),
-    [localErrors, serverErrors],
-  )
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (inFlight.current || pending || logoUploading) return
-    setSubmitted(true)
-    if (Object.keys(validateCreate(draft, owner, reason)).length > 0 || !owner) return
-    const request = buildCreateRequest(draft, {
-      ownerUserId: owner.id,
-      verifiedKind: verifiedKind === "" ? null : verifiedKind,
-      reason,
-    })
-    inFlight.current = true
-    setServerErrors({})
-    create.mutate(request, {
-      onSuccess: (org) => onCreated(org),
-      onError: (err) => {
-        // Every key fieldErrorsFromError can produce has a field in this form, so whatever it maps is
-        // shown inline; anything else (unknown field, non-validation failure) goes to the toast.
-        const fields = fieldErrorsFromError(err, request)
-        setServerErrors(fields)
-        toastUnlessShownInline(err, fields)
-      },
-      onSettled: () => {
-        inFlight.current = false
-      },
-    })
-  }
-
-  const onDraftChange = (next: OrgProfileDraft) => {
-    setServerErrors((prev) => clearChangedFieldErrors(prev, draft, next))
-    setDraft(next)
-  }
-  const setOwner = (next: PickedUser | null) => {
-    setOwnerState(next)
-    setServerErrors(({ ownerUserId: _o, ...rest }) => rest)
-  }
-  const setReason = (next: string) => {
-    setReasonState(next)
-    setServerErrors(({ reason: _r, ...rest }) => rest)
-  }
+  const form = useCreateOrgForm({ onClose, onCreated })
+  const { errors, pending, logoUploading, close } = form
+  const backdrop = usePristineDismiss(close, form.pristine)
+  const panelRef = useModalFocus<HTMLElement>(true)
+  const locked = pending || logoUploading
 
   return (
     <>
-      <div className="panel-overlay open" onClick={close} />
+      <div className="panel-overlay open" {...backdrop} />
       <aside
+        ref={panelRef}
         className="panel org-create-panel open"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="org-create-title"
+        aria-labelledby={TITLE_ID}
         aria-busy={pending}
       >
-        <form onSubmit={submit} className="org-create-form">
+        <form onSubmit={form.submit} className="org-create-form">
           <div className="panel-head">
             <div className="panel-head-titles">
               <div className="crumb">Organizations</div>
-              <h2 id="org-create-title">New organization</h2>
+              <h2 id={TITLE_ID}>New organization</h2>
             </div>
             <div className="spacer" />
             <button
@@ -180,7 +165,7 @@ function CreateOrgSlideOver({
               className="closebtn"
               onClick={close}
               aria-label="Close"
-              disabled={pending}
+              disabled={locked}
             >
               <Icons.X size={16} />
             </button>
@@ -189,79 +174,33 @@ function CreateOrgSlideOver({
           <div className="panel-body">
             <div className="panel-top">
               <div className="col">
-                <div className="sub">
-                  <div className="sub-head">Profile</div>
-                  <div className="sub-body">
-                    <OrgProfileFields
-                      draft={draft}
-                      errors={errors}
-                      onChange={onDraftChange}
-                      mode="create"
-                      disabled={pending}
-                      onLogoUploadingChange={setLogoUploading}
-                    />
-                  </div>
-                </div>
+                <FormSection title="Profile">
+                  <OrgProfileFields
+                    draft={form.draft}
+                    errors={errors}
+                    onChange={form.changeDraft}
+                    mode="create"
+                    disabled={pending}
+                    onLogoUploadingChange={form.setLogoUploading}
+                  />
+                </FormSection>
               </div>
               <div className="col">
-                <div className="sub">
-                  <div className="sub-head">Owner</div>
-                  <div className="sub-body">
-                    <div className={`field ${errors.ownerUserId ? "has-error" : ""}`}>
-                      <span className="lbl">
-                        Owner
-                        <span className="opt">an existing civfix account</span>
-                      </span>
-                      <UserPicker value={owner} onChange={setOwner} />
-                      <FieldError text={errors.ownerUserId} />
-                      <span className="hint">
-                        The owner can edit the organization, manage its members and host under its
-                        name. Ownership can be transferred later from the Members tab.
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sub">
-                  <div className="sub-head">Verification</div>
-                  <div className="sub-body">
-                    <div className="field">
-                      <label className="lbl" htmlFor="org-verified-kind">
-                        Status at creation
-                      </label>
-                      <select
-                        id="org-verified-kind"
-                        value={verifiedKind}
-                        disabled={pending}
-                        onChange={(e) => setVerifiedKind(e.target.value as "" | OrgVerificationKind)}
-                      >
-                        {VERIFICATION_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="hint">
-                        {verifiedKind === ""
-                          ? "The organization can apply for verification itself from its settings."
-                          : "Created already verified — no evidence round-trip. Use for partners you onboard directly (a city department, a known nonprofit)."}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sub">
-                  <div className="sub-head">Audit</div>
-                  <div className="sub-body">
-                    <ReasonField
-                      value={reason}
-                      onChange={setReason}
-                      error={errors.reason}
-                      placeholder="Onboarded at the Council District 4 partner meeting…"
-                      disabled={pending}
-                    />
-                  </div>
-                </div>
+                <OwnerSection owner={form.owner} onChange={form.setOwner} errors={errors} />
+                <VerificationSection
+                  value={form.verifiedKind}
+                  onChange={form.setVerifiedKind}
+                  disabled={pending}
+                />
+                <FormSection title="Audit">
+                  <ReasonField
+                    value={form.reason}
+                    onChange={form.setReason}
+                    error={errors.reason}
+                    placeholder="Onboarded at the Council District 4 partner meeting…"
+                    disabled={pending}
+                  />
+                </FormSection>
               </div>
             </div>
           </div>
@@ -269,10 +208,10 @@ function CreateOrgSlideOver({
           <div className="panel-foot">
             {logoUploading && <span className="hint">Uploading the logo…</span>}
             <div className="spacer" />
-            <button type="button" className="btn ghost" onClick={close} disabled={pending}>
+            <button type="button" className="btn ghost" onClick={close} disabled={locked}>
               Cancel
             </button>
-            <button type="submit" className="btn primary" disabled={pending || logoUploading}>
+            <button type="submit" className="btn primary" disabled={locked}>
               <Icons.Plus size={14} /> {pending ? "Creating…" : "Create organization"}
             </button>
           </div>

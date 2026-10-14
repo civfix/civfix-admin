@@ -2,7 +2,7 @@ import type { ModerationDestinationKind } from "@civfix/shared"
 
 import type { PageId } from "@/store/ui-store"
 
-export function getModerationDestination(
+export function moderationDestination(
   kind: ModerationDestinationKind | null | undefined,
   id: string | null | undefined,
 ): { page: PageId; id: string } | null {
