@@ -1,10 +1,6 @@
 "use client"
 
-import type {
-  AdminBroadcastListItemDTO,
-  BroadcastKind,
-  BroadcastStatus,
-} from "@civfix/shared"
+import type { AdminBroadcastListItemDTO, BroadcastKind, BroadcastStatus } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

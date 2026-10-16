@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { act, renderHook } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { AppError, ErrorCode } from "@civfix/contract"
 
 import type * as ApiModule from "@/lib/api"
 import { makeQueryClient, queryKeys } from "@/lib/query"

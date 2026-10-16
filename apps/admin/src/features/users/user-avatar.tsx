@@ -1,6 +1,6 @@
 "use client"
 
-import { avatarColor, monogram, type AdminUserListItemDTO } from "@civfix/shared"
+import { avatarColor, monogram, type AdminUserListItemDTO } from "@civfix/contract"
 
 export function UserAvatar({
   user,

@@ -3,7 +3,7 @@ import {
   type InboxFeedFilter,
   type InboxFeedItemDTO,
   type InboxFeedReplyItemDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 type FeedSource = InboxFeedItemDTO["source"]
 

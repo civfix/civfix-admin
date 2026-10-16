@@ -1,5 +1,5 @@
 import { screen } from "@testing-library/react"
-import type { InboundEmailDTO } from "@civfix/shared"
+import type { InboundEmailDTO } from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

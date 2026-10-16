@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { HomeMapPin } from "@civfix/shared"
+import type { HomeMapPin } from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

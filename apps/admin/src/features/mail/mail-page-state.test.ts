@@ -1,5 +1,5 @@
 import { hashKey } from "@tanstack/react-query"
-import type { MailMessageDTO, MailThreadDTO } from "@civfix/shared"
+import type { MailMessageDTO, MailThreadDTO } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { EMPTY_VALUE } from "@/lib/empty-value"

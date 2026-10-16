@@ -9,7 +9,7 @@ import {
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportsResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

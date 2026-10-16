@@ -1,6 +1,6 @@
 "use client"
 
-import type { ModerationItemDTO, ModerationSignal } from "@civfix/shared"
+import type { ModerationItemDTO, ModerationSignal } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"

@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss"
-import { tokens } from "@civfix/shared/tokens"
+import { tokens } from "@civfix/tokens"
 
 /**
  * Tailwind supplies only its base reset (preflight) here: the markup uses no intended Tailwind utilities,

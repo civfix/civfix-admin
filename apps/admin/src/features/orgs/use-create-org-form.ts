@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
+import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/contract"
 
 import {
   buildCreateRequest,

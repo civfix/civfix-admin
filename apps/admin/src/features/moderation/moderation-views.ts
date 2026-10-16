@@ -4,7 +4,7 @@ import {
   type ModerationListItemDTO,
   type ModerationTone,
   type Priority,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons, type IconComponent } from "@/components/icons"
 

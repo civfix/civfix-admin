@@ -1,5 +1,5 @@
 import { Icons, type IconComponent } from "@/components/icons"
-import { EVENT_KIND_LABELS, type EventKind } from "@civfix/shared"
+import { EVENT_KIND_LABELS, type EventKind } from "@civfix/contract"
 
 // The one source of an event kind's label, icon and pin for the events list, event detail and live
 // map, so they never disagree.

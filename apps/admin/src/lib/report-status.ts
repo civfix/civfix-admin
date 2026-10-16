@@ -1,5 +1,5 @@
 import { Icons, type IconComponent } from "@/components/icons"
-import type { AdminReportStatus } from "@civfix/shared"
+import type { AdminReportStatus } from "@civfix/contract"
 
 /**
  * The one status-to-bucket map every admin surface reads, so pill labels never disagree. A report is

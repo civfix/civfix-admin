@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { MAIL_STATUS_LABELS, relativeAgo, type MailThreadListItemDTO } from "@civfix/shared"
+import { MAIL_STATUS_LABELS, relativeAgo, type MailThreadListItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"

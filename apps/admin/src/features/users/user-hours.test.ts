@@ -1,4 +1,4 @@
-import { AppError, ErrorCode, type AdminUserHoursEntryDTO } from "@civfix/shared"
+import { AppError, ErrorCode, type AdminUserHoursEntryDTO } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { formatDate } from "@/lib/dates"

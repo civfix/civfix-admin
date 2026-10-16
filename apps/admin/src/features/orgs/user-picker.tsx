@@ -7,7 +7,7 @@ import {
   avatarColor,
   monogram,
   type AdminUserListItemDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LoadingState } from "@/components/shared/data-states"

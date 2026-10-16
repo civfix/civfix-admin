@@ -4,7 +4,7 @@ import {
   type JurisdictionLayer,
   type PerCategoryCounts,
   type ReportCategory,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { REPORT_CATEGORIES, categoryLabel, categoryPinSrc, categoryReportTypes } from "@/lib/category"
 import { EMPTY_VALUE } from "@/lib/empty-value"

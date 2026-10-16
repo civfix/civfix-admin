@@ -1,6 +1,6 @@
 "use client"
 
-import type { AdminReportDTO } from "@civfix/shared"
+import type { AdminReportDTO } from "@civfix/contract"
 
 import { toReporterProfileId } from "@/features/reports/reporter-navigation"
 import { initials } from "@/lib/display"

@@ -1,6 +1,6 @@
 "use client"
 
-import type { JurisdictionDirectoryDTO } from "@civfix/shared"
+import type { JurisdictionDirectoryDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { needsAttention } from "@/features/discovery/jurisdiction-view"

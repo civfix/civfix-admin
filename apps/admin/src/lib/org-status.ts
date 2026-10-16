@@ -1,4 +1,4 @@
-import type { OrgVerificationStatus } from "@civfix/shared"
+import type { OrgVerificationStatus } from "@civfix/contract"
 
 export const ORG_STATUS_VIEW: Record<OrgVerificationStatus, { label: string; cls: string }> = {
   unverified: { label: "Unverified", cls: "priority-low" },

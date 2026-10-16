@@ -1,4 +1,4 @@
-import type { AdminReportDTO } from "@civfix/shared"
+import type { AdminReportDTO } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { reportMediaView } from "./report-media"

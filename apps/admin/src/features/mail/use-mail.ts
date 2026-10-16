@@ -24,7 +24,7 @@ import type {
   ResendRequest,
   SetForwardTemplateDefaultRequest,
   SetMailStatusRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { PUBLISH_TOAST } from "@/features/mail/mail-presentation"

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminEventPageListItemDTO } from "@civfix/shared"
+import type { AdminEventPageListItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"

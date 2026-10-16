@@ -1,6 +1,6 @@
 "use client"
 
-import type { AdminEventDTO } from "@civfix/shared"
+import type { AdminEventDTO } from "@civfix/contract"
 
 import { initials } from "@/lib/display"
 import { useNav } from "@/store/ui-store"

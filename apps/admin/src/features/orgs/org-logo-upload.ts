@@ -1,5 +1,5 @@
-import { MAX_IMAGE_BYTES, type CreateMediaUploadRequest } from "@civfix/shared"
-import type { ApiClient } from "@civfix/shared/client"
+import { MAX_IMAGE_BYTES, type CreateMediaUploadRequest } from "@civfix/contract"
+import type { ApiClient } from "@civfix/contract/client"
 
 import { BYTES_PER_MB } from "@/lib/bytes"
 import { errorMessage } from "@/lib/error-messages"

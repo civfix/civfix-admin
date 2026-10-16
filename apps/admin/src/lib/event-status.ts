@@ -1,4 +1,4 @@
-import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/shared"
+import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/contract"
 
 export const EVENT_STATUS_VIEW: Record<EventStatus, { cls: string; label: string }> = {
   upcoming: { cls: "status-new", label: EVENT_STATUS_LABELS.upcoming },

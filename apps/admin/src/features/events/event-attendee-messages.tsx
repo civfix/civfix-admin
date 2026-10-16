@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { PostMessageRequestSchema, type AdminEventDTO } from "@civfix/shared"
+import { PostMessageRequestSchema, type AdminEventDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { usePostEventMessage } from "@/features/events/use-events"

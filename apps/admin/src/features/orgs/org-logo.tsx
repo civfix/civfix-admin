@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import { monogram, type AdminOrgDTO } from "@civfix/shared"
+import { monogram, type AdminOrgDTO } from "@civfix/contract"
 
 const ORG_LOGO_ROW_SIZE = 32
 export const ORG_LOGO_HEADER_SIZE = 36

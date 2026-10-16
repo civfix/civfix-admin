@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AppError, ErrorCode } from "@civfix/shared"
+import { AppError, ErrorCode } from "@civfix/contract"
 
 import { ErrorBoundary, isChunkLoadError } from "@/components/shell/error-boundary"
 

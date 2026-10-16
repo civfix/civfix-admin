@@ -19,7 +19,7 @@ import type {
   AdminUpdateOrgRequest,
   DecideOrgVerificationRequest,
   GetAdminOrgResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"

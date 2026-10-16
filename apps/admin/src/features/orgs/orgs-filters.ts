@@ -1,4 +1,4 @@
-import type { AdminOrgCounts, AdminOrgListQuery } from "@civfix/shared"
+import type { AdminOrgCounts, AdminOrgListQuery } from "@civfix/contract"
 
 /**
  * The organization list chips. The four verification statuses map onto the `verified` facet of

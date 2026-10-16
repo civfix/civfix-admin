@@ -1,12 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  MAIL_STATUS_LABELS,
-  relativeAgo,
-  type MailMessageDTO,
-  type MailThreadDTO,
-} from "@civfix/shared"
+import { MAIL_STATUS_LABELS, relativeAgo, type MailMessageDTO, type MailThreadDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

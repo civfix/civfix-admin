@@ -12,7 +12,7 @@ import type {
   MailStatsResponse,
   MailThreadDTO,
   MailThreadListItemDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

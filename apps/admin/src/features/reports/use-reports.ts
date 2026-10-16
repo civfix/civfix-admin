@@ -22,7 +22,7 @@ import {
   type SendFollowupRequest,
   type SetReportStatusRequest,
   type SetReportVerdictRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { shortRef } from "@/lib/display"

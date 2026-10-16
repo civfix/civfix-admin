@@ -28,7 +28,7 @@ import {
   type MailListQuery,
   type ModerationListQuery,
   type UserSubListQuery,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { useUiStore } from "@/store/ui-store"
 import { toAppError } from "@/lib/api"
 import { errorMessage } from "@/lib/error-messages"

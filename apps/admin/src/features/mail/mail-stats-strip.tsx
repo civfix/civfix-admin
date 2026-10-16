@@ -1,6 +1,6 @@
 "use client"
 
-import type { MailStatsResponse } from "@civfix/shared"
+import type { MailStatsResponse } from "@civfix/contract"
 import type { UseQueryResult } from "@tanstack/react-query"
 
 import { LoadingState, ErrorState } from "@/components/shared/data-states"

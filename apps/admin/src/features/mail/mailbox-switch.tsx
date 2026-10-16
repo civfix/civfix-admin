@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { MailStatsResponse } from "@civfix/shared"
+import type { MailStatsResponse } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { FOLDERS, type Folder } from "@/features/mail/mail-page-state"

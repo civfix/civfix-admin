@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { InboundEmailDTO, InboxFeedEmailItemDTO } from "@civfix/shared"
+import type { InboundEmailDTO, InboxFeedEmailItemDTO } from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

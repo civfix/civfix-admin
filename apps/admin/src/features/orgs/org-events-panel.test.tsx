@@ -1,5 +1,5 @@
 import { screen, within } from "@testing-library/react"
-import type { AdminOrgEventListResponse } from "@civfix/shared"
+import type { AdminOrgEventListResponse } from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

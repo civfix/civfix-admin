@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminEventDTO } from "@civfix/shared"
+import type { AdminEventDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { parseBags } from "@/features/events/event-outcome"

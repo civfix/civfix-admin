@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { MODERATION_KIND_LABELS, type ModerationListItemDTO } from "@civfix/shared"
+import { MODERATION_KIND_LABELS, type ModerationListItemDTO } from "@civfix/contract"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { kindIcon, moderationKindLabel, priorityView } from "@/features/moderation/moderation-views"

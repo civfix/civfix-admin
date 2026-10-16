@@ -1,8 +1,4 @@
-import type {
-  AdminBroadcastListItemDTO,
-  AdminBroadcastListQuery,
-  AdminHostListQuery,
-} from "@civfix/shared"
+import type { AdminBroadcastListItemDTO, AdminBroadcastListQuery, AdminHostListQuery } from "@civfix/contract"
 
 import { MINUTE_MS } from "@/lib/timing"
 

@@ -1,9 +1,4 @@
-import type {
-  InboxFeedFilter,
-  InboxFeedQuery,
-  MailListQuery,
-  MailThreadDTO,
-} from "@civfix/shared"
+import type { InboxFeedFilter, InboxFeedQuery, MailListQuery, MailThreadDTO } from "@civfix/contract"
 
 import { emailFocusKey, isInboxFeedFilter } from "@/features/inbox/inbox-feed"
 import { EMPTY_VALUE } from "@/lib/empty-value"

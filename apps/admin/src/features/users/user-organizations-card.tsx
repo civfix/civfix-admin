@@ -1,6 +1,6 @@
 "use client"
 
-import { monogram, type AdminUserDTO } from "@civfix/shared"
+import { monogram, type AdminUserDTO } from "@civfix/contract"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { ORG_ROLE_LABEL, ORG_ROLE_PILL } from "@/features/orgs/org-members"

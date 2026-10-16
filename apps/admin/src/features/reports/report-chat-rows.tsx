@@ -1,6 +1,6 @@
 "use client"
 
-import type { ChatMessageDTO } from "@civfix/shared"
+import type { ChatMessageDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LightboxSync, type LightboxImage } from "@/components/shared/lightbox"

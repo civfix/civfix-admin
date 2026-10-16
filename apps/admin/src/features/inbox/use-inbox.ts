@@ -13,7 +13,7 @@ import type {
   InboxListQuery,
   InboxListResponse,
   SetInboxStatusRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { attachmentRefreshInterval } from "@/features/inbox/attachments"
 import { api } from "@/lib/api"

@@ -5,7 +5,7 @@ import type {
   AdminEventPageListItemDTO,
   AdminEventPageListResponse,
   AdminGetEventPageResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { DialogHost } from "@/components/shared/dialog"
 import { Toast } from "@/components/shell/toast"

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { MAX_IMAGE_BYTES } from "@civfix/shared"
+import { MAX_IMAGE_BYTES } from "@civfix/contract"
 
 import {
   MAX_ORG_LOGO_BYTES,

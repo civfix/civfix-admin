@@ -1,4 +1,4 @@
-import { ORG_SLUG_MAX, ORG_SLUG_MIN, OrgSlugSchema } from "@civfix/shared"
+import { ORG_SLUG_MAX, ORG_SLUG_MIN, OrgSlugSchema } from "@civfix/contract"
 
 const PUBLIC_ORG_HOST = "civfix.org"
 const PUBLIC_ORG_ORIGIN = `https://${PUBLIC_ORG_HOST}`

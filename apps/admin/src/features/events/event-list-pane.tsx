@@ -1,6 +1,6 @@
 "use client"
 
-import type { AdminEventListItemDTO } from "@civfix/shared"
+import type { AdminEventListItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

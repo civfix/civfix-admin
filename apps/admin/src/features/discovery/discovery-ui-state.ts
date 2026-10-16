@@ -1,4 +1,4 @@
-import type { JurisdictionLayer, JurisdictionListQuery } from "@civfix/shared"
+import type { JurisdictionLayer, JurisdictionListQuery } from "@civfix/contract"
 
 import { resolveSelected } from "@/hooks/use-selection"
 import { EMPTY_VALUE } from "@/lib/empty-value"

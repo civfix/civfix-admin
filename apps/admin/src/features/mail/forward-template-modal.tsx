@@ -9,7 +9,7 @@ import {
   type ForwardTemplateSource,
   type PreviewForwardTemplateRequest,
   type PreviewForwardTemplateResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"

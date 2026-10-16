@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { OrgVerificationKindSchema, type AdminOrgDTO } from "@civfix/shared"
+import { OrgVerificationKindSchema, type AdminOrgDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { usePristineDismiss } from "@/components/shared/backdrop-dismiss"

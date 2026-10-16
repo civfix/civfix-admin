@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminEventCounts } from "@civfix/shared"
+import type { AdminEventCounts } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-primitives"

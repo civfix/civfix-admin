@@ -3,7 +3,7 @@
 Workspace for the civfix ADMIN / OPERATOR dashboard, served at `admin.civfix.org`. A pnpm + Turbo
 monorepo. This is the internal tool operators use to triage reports, route jurisdiction contacts,
 moderate content, run mail outreach, provision government accounts, and read analytics. Its siblings
-are `civfix-app` (community web + mobile, and the `@civfix/shared` contract), `civfix-backend` (the
+are `civfix-contract` (the `@civfix/contract` API contract), `civfix-app` (community web + mobile, and the `@civfix/tokens` design tokens), `civfix-backend` (the
 API it calls) and `civfix-infra` (the edge that serves it).
 
 ## Layout
@@ -11,22 +11,23 @@ API it calls) and `civfix-infra` (the edge that serves it).
 ```
 civfix-admin/
   apps/admin/           # the operator dashboard (Next.js 15 static-export SPA). See its source.
-  .npmrc                # @civfix:registry=https://repo.civfix.org/ (installs @civfix/shared)
+  .npmrc                # @civfix:registry=https://repo.civfix.org/ (installs @civfix/contract and @civfix/tokens)
   pnpm-workspace.yaml   # workspace packages: apps/*
   turbo.json            # build/typecheck/lint task graph
   wrangler.jsonc        # Cloudflare Pages project "civfix-admin" -> apps/admin/out -> admin.civfix.org
 ```
 
-`@civfix/shared` (the shared contract package) is installed from the private Verdaccio registry at
-`https://repo.civfix.org`. The repo-root `.npmrc` scopes `@civfix` to it and the app depends on a
-published version by caret range (see `apps/admin/package.json`); the registry allows anonymous read, so
-no credentials are needed. After cloning, `pnpm install` fetches it. The published tarball already
-contains the built `dist`, so no local build of the contract is required.
+`@civfix/contract` (the API contract, from civfix-contract) and `@civfix/tokens` (the design tokens,
+from civfix-app) are installed from the private Verdaccio registry at `https://repo.civfix.org`. The
+repo-root `.npmrc` scopes `@civfix` to it and the app depends on published versions by caret range (see
+`apps/admin/package.json`); the registry allows anonymous read, so no credentials are needed. After
+cloning, `pnpm install` fetches them. The published tarballs already contain the built `dist`, so no
+local build is required.
 
 ## Commands (from this root)
 
 ```
-pnpm install      # fetches @civfix/shared from repo.civfix.org
+pnpm install      # fetches @civfix/contract and @civfix/tokens from repo.civfix.org
 pnpm build        # admin (next build, static export -> apps/admin/out)
 pnpm typecheck
 pnpm lint         # eslint (flat config, typed rules) over apps/admin
@@ -51,7 +52,7 @@ Cookies, CSRF and `x-client: web` are sent exactly as the public web app sends t
 ## Deploy
 
 Cloudflare Pages (Direct Upload). GitHub Actions builds the static export (a plain checkout +
-`pnpm install`, which fetches `@civfix/shared` from `repo.civfix.org`; pinned Node 22 + pnpm 9.12.0)
+`pnpm install`, which fetches `@civfix/contract` and `@civfix/tokens` from `repo.civfix.org`; pinned Node 22 + pnpm 9.12.0)
 and ships the prebuilt `apps/admin/out` via `wrangler pages deploy`. The Pages project name and output
 dir come from the repo-root `wrangler.jsonc`
 (`civfix-admin` -> `apps/admin/out`). A push to `main` deploys staging (`admin.civfix.dev`); a published

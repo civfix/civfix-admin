@@ -1,6 +1,6 @@
 "use client"
 
-import type { AdminUserDTO, SetUserStatusRequest } from "@civfix/shared"
+import type { AdminUserDTO, SetUserStatusRequest } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { confirmDialog } from "@/components/shared/dialog"

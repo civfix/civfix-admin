@@ -1,6 +1,6 @@
 "use client"
 
-import type { LinkedEventRef } from "@civfix/shared"
+import type { LinkedEventRef } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { formatDate } from "@/lib/dates"

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { MutationObserver, QueryObserver, type QueryClient } from "@tanstack/react-query"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { AppError, ErrorCode } from "@civfix/contract"
 
 import { invalidateKeys, makeQueryClient, queryKeys } from "./query"
 import { useUiStore } from "@/store/ui-store"

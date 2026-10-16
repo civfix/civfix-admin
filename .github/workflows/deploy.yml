@@ -17,7 +17,7 @@ name: Deploy (Cloudflare Pages)
 #
 # The project name + prebuilt output directory come from wrangler.jsonc, so the deploy step is just
 # `pages deploy` (no args). The project is created automatically by the first run. We use Direct Upload
-# (build here, ship the prebuilt out/) rather than Cloudflare's native Git build; @civfix/shared installs
+# (build here, ship the prebuilt out/) rather than Cloudflare's native Git build; @civfix/contract installs
 # from the public-read private registry via the committed .npmrc.
 # SPA deep links and security/cache headers are handled by the app's public/{_redirects,_headers}
 # (copied into out/).

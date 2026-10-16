@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { JurisdictionDirectoryDTO } from "@civfix/shared"
+import type { JurisdictionDirectoryDTO } from "@civfix/contract"
 
 import { promptDialog } from "@/components/shared/dialog"
 import {

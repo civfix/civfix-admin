@@ -1,4 +1,4 @@
-import { SetEventOutcomeRequestSchema } from "@civfix/shared"
+import { SetEventOutcomeRequestSchema } from "@civfix/contract"
 
 export function parseBags(input: string): number | null {
   if (input.trim() === "") return null

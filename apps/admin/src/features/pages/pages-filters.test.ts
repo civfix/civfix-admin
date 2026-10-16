@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { EventPageDTO } from "@civfix/shared"
+import type { EventPageDTO } from "@civfix/contract"
 
 import { pageListParams, pageRowFromDTO } from "./pages-filters"
 

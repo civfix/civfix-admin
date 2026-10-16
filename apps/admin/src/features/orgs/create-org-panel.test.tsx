@@ -1,7 +1,7 @@
 import * as React from "react"
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { AppError, ErrorCode } from "@civfix/contract"
 import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

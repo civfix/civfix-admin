@@ -5,7 +5,7 @@ import {
   MailAuthVerdictSchema,
   MailReplyPublicationSchema,
   MailStatusSchema,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import {
   AUTH_VERDICT_VIEW,

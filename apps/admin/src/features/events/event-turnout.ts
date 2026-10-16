@@ -1,4 +1,4 @@
-import type { AdminEventDTO } from "@civfix/shared"
+import type { AdminEventDTO } from "@civfix/contract"
 
 const FULL_PERCENT = 100
 

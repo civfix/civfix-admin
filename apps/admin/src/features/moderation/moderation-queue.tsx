@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { ModerationListQuery } from "@civfix/shared"
+import type { ModerationListQuery } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { FilterChips, EmptyState } from "@/components/shared/page-primitives"

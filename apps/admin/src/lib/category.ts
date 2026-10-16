@@ -6,7 +6,7 @@ import {
   ReportCategorySchema,
   WEB_REPORT_TYPES,
   type ReportCategory,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 export const REPORT_CATEGORIES: readonly ReportCategory[] = ReportCategorySchema.options
 

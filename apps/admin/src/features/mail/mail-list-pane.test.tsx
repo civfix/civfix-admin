@@ -1,5 +1,5 @@
 import { act, render, screen } from "@testing-library/react"
-import type { InboxFeedEmailItemDTO, MailThreadListItemDTO } from "@civfix/shared"
+import type { InboxFeedEmailItemDTO, MailThreadListItemDTO } from "@civfix/contract"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MINUTE_MS } from "@/lib/timing"

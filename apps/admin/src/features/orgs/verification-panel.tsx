@@ -1,10 +1,6 @@
 "use client"
 
-import {
-  OrgVerificationKindSchema,
-  type AdminOrgDTO,
-  type OrgVerificationKind,
-} from "@civfix/shared"
+import { OrgVerificationKindSchema, type AdminOrgDTO, type OrgVerificationKind } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"

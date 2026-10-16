@@ -1,7 +1,7 @@
 "use client"
 
 import { create } from "zustand"
-import type { AdminOperatorDTO } from "@civfix/shared"
+import type { AdminOperatorDTO } from "@civfix/contract"
 
 // The session cookie is httpOnly, so the store never holds the session token; it holds only the CSRF
 // token mutations must echo, and the operator identity.

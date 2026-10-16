@@ -16,7 +16,7 @@ import type {
   ModerationListQuery,
   ModerationListResponse,
   RemoveModerationRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { infiniteListOptions } from "@/lib/infinite"

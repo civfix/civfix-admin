@@ -11,12 +11,12 @@ import {
   type OrgVerificationKind,
   type SocialLinks,
   type SocialPlatform,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { toAppError } from "@/lib/api"
 import { normalizeSlug, slugProblem } from "@/features/orgs/org-slug"
 
-// Mirror SocialHandleSchema / WhatsAppNumberSchema in @civfix/shared, which export no constants.
+// Mirror SocialHandleSchema / WhatsAppNumberSchema in @civfix/contract, which export no constants.
 const SOCIAL_HANDLE_MAX = 30
 const WHATSAPP_DIGITS_MIN = 7
 const WHATSAPP_DIGITS_MAX = 15

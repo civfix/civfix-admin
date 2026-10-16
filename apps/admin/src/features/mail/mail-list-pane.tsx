@@ -7,7 +7,7 @@ import {
   type InboxFeedItemDTO,
   type MailStatsResponse,
   type MailThreadListItemDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

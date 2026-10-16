@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { AdminOrgMemberListResponse, GetAdminOrgResponse } from "@civfix/shared"
+import type { AdminOrgMemberListResponse, GetAdminOrgResponse } from "@civfix/contract"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

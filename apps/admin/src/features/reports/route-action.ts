@@ -1,4 +1,4 @@
-import type { AdminReportDTO, ReportOutreachStatus } from "@civfix/shared"
+import type { AdminReportDTO, ReportOutreachStatus } from "@civfix/contract"
 
 type RouteActionKind =
   | "send"

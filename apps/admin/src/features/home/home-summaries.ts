@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import type { HomeSummaryResponse } from "@civfix/shared"
+import type { HomeSummaryResponse } from "@civfix/contract"
 
 import type { Hue } from "@/features/analytics/analytics-charts"
 import {

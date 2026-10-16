@@ -1,4 +1,4 @@
-import type { AdminUserDTO } from "@civfix/shared"
+import type { AdminUserDTO } from "@civfix/contract"
 
 export interface UserStatusActions {
   flag: boolean

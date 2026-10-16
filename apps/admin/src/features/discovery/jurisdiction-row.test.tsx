@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react"
-import type { JurisdictionDirectoryDTO } from "@civfix/shared"
+import type { JurisdictionDirectoryDTO } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { MINUTE_MS } from "@/lib/timing"

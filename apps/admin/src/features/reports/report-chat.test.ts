@@ -1,4 +1,4 @@
-import { REACTION_EMOJIS, type AdminReportStatus, type ChatMessageDTO } from "@civfix/shared"
+import { REACTION_EMOJIS, type AdminReportStatus, type ChatMessageDTO } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { reactionLabel, sortChatOldestFirst, systemLabel } from "./report-chat"

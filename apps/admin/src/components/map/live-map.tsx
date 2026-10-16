@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
-import type { HomeMapPin } from "@civfix/shared"
+import type { HomeMapPin } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { useHomeMap } from "@/features/home/use-home"

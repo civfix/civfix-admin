@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { InboxFeedItemDTO } from "@civfix/shared"
+import type { InboxFeedItemDTO } from "@civfix/contract"
 
 import { feedKey, resolveFeedSelection } from "@/features/inbox/inbox-feed"
 import { useInboxFeedInfinite, useSetInboxStatus } from "@/features/inbox/use-inbox"

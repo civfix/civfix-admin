@@ -17,7 +17,7 @@ import type {
   RemoveUserMessageRequest,
   SetUserReportVerifiedRequest,
   SetUserStatusRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { infiniteListOptions, type CursorPage } from "@/lib/infinite"

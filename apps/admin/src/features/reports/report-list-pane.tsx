@@ -1,6 +1,6 @@
 "use client"
 
-import type { AdminReportListItemDTO } from "@civfix/shared"
+import type { AdminReportListItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

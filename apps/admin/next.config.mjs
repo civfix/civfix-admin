@@ -34,7 +34,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_COMMIT_SHA: resolveCommitSha(),
   },
-  transpilePackages: ["@civfix/shared"],
+  transpilePackages: ["@civfix/contract", "@civfix/tokens"],
 }
 
 export default nextConfig

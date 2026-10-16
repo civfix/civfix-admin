@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminOrgDTO, AdminOrgEventListResponse, AdminOrgEventWhen } from "@civfix/shared"
+import type { AdminOrgDTO, AdminOrgEventListResponse, AdminOrgEventWhen } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
