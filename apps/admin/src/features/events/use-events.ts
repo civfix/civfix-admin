@@ -18,7 +18,7 @@ import type {
   LinkEventReportsRequest,
   PostMessageRequest,
   SetEventOutcomeRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { shortRef } from "@/lib/display"

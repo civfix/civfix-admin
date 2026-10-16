@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { RouteReportRequestSchema, type AdminReportDTO } from "@civfix/shared"
+import { RouteReportRequestSchema, type AdminReportDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { formatPreciseDateTime } from "@/lib/dates"

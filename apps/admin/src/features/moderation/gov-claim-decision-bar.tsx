@@ -1,6 +1,6 @@
 "use client"
 
-import type { GovClaimDTO } from "@civfix/shared"
+import type { GovClaimDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { confirmDialog, promptReason } from "@/components/shared/dialog"

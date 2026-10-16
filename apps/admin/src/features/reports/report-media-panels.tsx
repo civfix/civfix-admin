@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import type { AdminReportDTO, ReportCategory } from "@civfix/shared"
+import type { AdminReportDTO, ReportCategory } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LightboxSync } from "@/components/shared/lightbox"

@@ -24,9 +24,12 @@ importers:
 
   apps/admin:
     dependencies:
-      '@civfix/shared':
-        specifier: ^0.61.0
-        version: 0.61.0
+      '@civfix/contract':
+        specifier: ^0.62.0
+        version: 0.62.0
+      '@civfix/tokens':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.101.0(react@19.0.0)
@@ -131,8 +134,12 @@ packages:
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
-  '@civfix/shared@0.61.0':
-    resolution: {integrity: sha512-USoDJUMxZy9Xi0PHcmJAxekPwTE0or2va7SDcAjQABrXrBmBAi+3uU3jcHjJoIGTYH0q1+4OfnzNDJNT34ZG1Q==}
+  '@civfix/contract@0.62.0':
+    resolution: {integrity: sha512-GiToTBdd1L7/Lktq9rNW0Qm5NzVptB0cBzsP4XgaSs8ccwlDkNX3lNhoYuUo+azW02vvli7RwuvCu9IcVNAkUg==}
+    engines: {node: '>=20'}
+
+  '@civfix/tokens@0.1.0':
+    resolution: {integrity: sha512-CSwCLbNl0ojkG6oUBL2SSM73Kw8n+8J2G3GN06ptyjiKVQ0G5KybWIxPXIG0uumtu3iTrMBBh/b7RAx2GjqFpg==}
     engines: {node: '>=20'}
 
   '@csstools/color-helpers@5.1.0':
@@ -3092,9 +3099,11 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
-  '@civfix/shared@0.61.0':
+  '@civfix/contract@0.62.0':
     dependencies:
       zod: 3.25.76
+
+  '@civfix/tokens@0.1.0': {}
 
   '@csstools/color-helpers@5.1.0': {}
 

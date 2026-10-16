@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs"
 
 import { describe, expect, it } from "vitest"
-import { INBOX_FEED_FILTER_LABELS, InboxFeedFilterSchema } from "@civfix/shared"
+import { INBOX_FEED_FILTER_LABELS, InboxFeedFilterSchema } from "@civfix/contract"
 
 import {
   INBOX_EMPTY_COPY,

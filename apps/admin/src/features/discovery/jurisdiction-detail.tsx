@@ -6,7 +6,7 @@ import {
   DEFAULT_FORWARD_SUBJECT_TEMPLATE,
   type GetForwardTemplateDefaultResponse,
   type JurisdictionDirectoryDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import {
   BoundaryPanel,

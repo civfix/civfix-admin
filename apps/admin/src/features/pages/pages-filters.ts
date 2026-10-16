@@ -3,7 +3,7 @@ import type {
   AdminEventPageListQuery,
   EventPageDTO,
   EventPageStatus,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { publicPagePath } from "@/features/pages/page-path"
 

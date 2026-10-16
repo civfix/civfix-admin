@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { SendFollowupRequestSchema, type AdminReportDTO } from "@civfix/shared"
+import { SendFollowupRequestSchema, type AdminReportDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import type { OutreachView } from "@/features/reports/report-outreach"

@@ -6,7 +6,7 @@ import {
   type InboxListResponse,
   type MailListResponse,
   type MailStatsResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

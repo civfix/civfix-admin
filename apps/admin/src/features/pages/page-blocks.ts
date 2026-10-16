@@ -1,5 +1,5 @@
-import type { EventPageBlock, EventPageBlockKind } from "@civfix/shared"
-import { markdownToPlainText, parseMarkdownSubset } from "@civfix/shared/markdown"
+import type { EventPageBlock, EventPageBlockKind } from "@civfix/contract"
+import { markdownToPlainText, parseMarkdownSubset } from "@civfix/contract/markdown"
 
 const PAGE_BLOCK_LABEL: Record<EventPageBlockKind, string> = {
   hero: "Hero",

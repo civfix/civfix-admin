@@ -1,7 +1,7 @@
 "use client"
 
-import { createApiClient, type ApiClient } from "@civfix/shared/client"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { createApiClient, type ApiClient } from "@civfix/contract/client"
+import { AppError, ErrorCode } from "@civfix/contract"
 
 import { getCsrfToken, useAuthStore } from "@/store/auth-store"
 
@@ -48,7 +48,7 @@ export const api: ApiClient = getApiClient()
 
 export function toAppError(err: unknown): AppError {
   if (err instanceof AppError) return err
-  // `@civfix/shared/client` bundles its own AppError class, so its errors fail `instanceof` against the
+  // `@civfix/contract/client` bundles its own AppError class, so its errors fail `instanceof` against the
   // root export; recognize them by shape and re-wrap them so `code`/`fields` checks work everywhere.
   if (isAppErrorLike(err)) {
     return new AppError(err.code, err.message, {

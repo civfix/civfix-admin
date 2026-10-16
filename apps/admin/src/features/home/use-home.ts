@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import type { HomeSummaryResponse, HomeMapResponse } from "@civfix/shared"
+import type { HomeSummaryResponse, HomeMapResponse } from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"

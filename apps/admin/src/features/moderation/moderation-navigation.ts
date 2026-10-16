@@ -1,4 +1,4 @@
-import type { ModerationDestinationKind } from "@civfix/shared"
+import type { ModerationDestinationKind } from "@civfix/contract"
 
 import type { PageId } from "@/store/ui-store"
 

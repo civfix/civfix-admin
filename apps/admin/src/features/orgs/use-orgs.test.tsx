@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { AdminOrgDTO } from "@civfix/shared"
+import type { AdminOrgDTO } from "@civfix/contract"
 
 import type * as ApiModule from "@/lib/api"
 import { useUiStore } from "@/store/ui-store"

@@ -1,4 +1,4 @@
-import type { ErrorCode } from "@civfix/shared"
+import type { ErrorCode } from "@civfix/contract"
 
 import { toAppError } from "@/lib/api"
 

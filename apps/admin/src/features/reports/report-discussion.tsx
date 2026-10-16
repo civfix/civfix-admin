@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { MESSAGE_BODY_MAX, type ChatMessageDTO } from "@civfix/shared"
+import { MESSAGE_BODY_MAX, type ChatMessageDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

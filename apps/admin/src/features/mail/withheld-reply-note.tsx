@@ -1,6 +1,6 @@
 "use client"
 
-import type { MailMessageDTO } from "@civfix/shared"
+import type { MailMessageDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { confirmDialog } from "@/components/shared/dialog"

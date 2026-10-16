@@ -1,7 +1,7 @@
 "use client"
 
 import type * as React from "react"
-import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
+import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/contract"
 
 import { formatDateTime } from "@/lib/dates"
 import { EMPTY_VALUE } from "@/lib/empty-value"

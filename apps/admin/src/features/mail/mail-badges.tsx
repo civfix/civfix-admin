@@ -5,7 +5,7 @@ import {
   MAIL_REPLY_PUBLICATION_LABELS,
   type MailAuthVerdict,
   type MailReplyPublication,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import {
   AUTH_VERDICT_VIEW,

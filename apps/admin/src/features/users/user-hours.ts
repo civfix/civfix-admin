@@ -8,7 +8,7 @@ import {
   type AdminUserDTO,
   type AdminUserHoursEntryDTO,
   type AdminVoidUserHoursResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { toAppError } from "@/lib/api"
 import { formatDate } from "@/lib/dates"

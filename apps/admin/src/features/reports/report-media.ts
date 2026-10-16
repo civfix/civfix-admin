@@ -1,4 +1,4 @@
-import type { AdminReportDTO } from "@civfix/shared"
+import type { AdminReportDTO } from "@civfix/contract"
 
 import type { LightboxImage } from "@/components/shared/lightbox"
 

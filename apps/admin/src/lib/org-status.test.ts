@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { OrgVerificationStatus } from "@civfix/shared"
+import type { OrgVerificationStatus } from "@civfix/contract"
 
 import { ORG_STATUS_VIEW, orgStatusView } from "./org-status"
 

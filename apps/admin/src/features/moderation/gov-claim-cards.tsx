@@ -1,6 +1,6 @@
 "use client"
 
-import type { GovCheckStatus, GovClaimDTO, GovVerificationCheck } from "@civfix/shared"
+import type { GovCheckStatus, GovClaimDTO, GovVerificationCheck } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { promptDialog } from "@/components/shared/dialog"

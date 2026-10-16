@@ -1,7 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import type { JurisdictionDirectoryDTO, PerCategoryCounts } from "@civfix/shared"
+import type { JurisdictionDirectoryDTO, PerCategoryCounts } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { useJurisdictionGeometry } from "@/features/discovery/use-discovery"

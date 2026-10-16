@@ -1,5 +1,5 @@
 import { screen } from "@testing-library/react"
-import type { AdminOrgDTO, AdminOrgListResponse, GetAdminOrgResponse } from "@civfix/shared"
+import type { AdminOrgDTO, AdminOrgListResponse, GetAdminOrgResponse } from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

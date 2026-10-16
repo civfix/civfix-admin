@@ -1,4 +1,4 @@
-import type { EventPageStatus, EventVisibility } from "@civfix/shared"
+import type { EventPageStatus, EventVisibility } from "@civfix/contract"
 
 interface PageStatusView {
   label: string

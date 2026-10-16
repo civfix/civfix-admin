@@ -5,7 +5,7 @@ import {
   type AnalyticsByCategoryResponse,
   type AnalyticsEventsResponse,
   type AnalyticsKpi,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { downloadCsv } from "@/lib/csv"
 import { isPercentKpi } from "@/features/analytics/analytics-kpis"

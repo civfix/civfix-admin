@@ -1,4 +1,4 @@
-import type { OrganizationMemberRole } from "@civfix/shared"
+import type { OrganizationMemberRole } from "@civfix/contract"
 
 export const ORG_ROLES: readonly OrganizationMemberRole[] = ["owner", "admin", "member"]
 

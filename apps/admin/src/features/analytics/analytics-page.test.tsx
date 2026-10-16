@@ -10,7 +10,7 @@ import type {
   AnalyticsResolutionByCategoryResponse,
   AnalyticsTopContributorsResponse,
   AnalyticsTopJurisdictionsResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Toast } from "@/components/shell/toast"

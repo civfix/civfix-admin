@@ -1,4 +1,4 @@
-import { USER_STATUS_LABELS, type UserStatus } from "@civfix/shared"
+import { USER_STATUS_LABELS, type UserStatus } from "@civfix/contract"
 
 import type { useNav } from "@/store/ui-store"
 

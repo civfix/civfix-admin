@@ -7,7 +7,7 @@ import type {
   JurisdictionDirectoryDTO,
   JurisdictionDirectoryResponse,
   JurisdictionGeometryResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import type * as ApiModule from "@/lib/api"
 import { categoryLabel } from "@/lib/category"

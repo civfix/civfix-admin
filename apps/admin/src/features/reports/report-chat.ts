@@ -1,8 +1,4 @@
-import {
-  ADMIN_REPORT_STATUS_LABELS,
-  type ChatMessageDTO,
-  type ReactionEmoji,
-} from "@civfix/shared"
+import { ADMIN_REPORT_STATUS_LABELS, type ChatMessageDTO, type ReactionEmoji } from "@civfix/contract"
 
 export function systemLabel(msg: ChatMessageDTO): string {
   const status = msg.system?.status

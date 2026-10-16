@@ -7,7 +7,7 @@ import {
   type UserEventItemDTO,
   type UserMessageItemDTO,
   type UserReportItemDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"

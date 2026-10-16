@@ -7,7 +7,7 @@ import {
   relativeAgo,
   type InboundEmailStatus,
   type InboxFeedItemDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

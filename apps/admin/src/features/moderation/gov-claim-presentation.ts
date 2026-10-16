@@ -7,7 +7,7 @@ import {
   type GovMethod,
   type GovVerificationCheck,
   type VerifyCheckRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { errorMessage } from "@/lib/error-messages"
 

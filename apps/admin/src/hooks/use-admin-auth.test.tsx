@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, renderHook } from "@testing-library/react"
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query"
-import { AppError, ErrorCode, type AdminLoginResponse, type AdminOperatorDTO } from "@civfix/shared"
+import { AppError, ErrorCode, type AdminLoginResponse, type AdminOperatorDTO } from "@civfix/contract"
 
 import { apiMock } from "@/test/api-mock"
 import { makeTestQueryClient } from "@/test/render"

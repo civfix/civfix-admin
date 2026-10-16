@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminReportDTO } from "@civfix/shared"
+import type { AdminReportDTO } from "@civfix/contract"
 
 import { confirmDialog } from "@/components/shared/dialog"
 import { useRouteReport, useSetReportVerdict } from "@/features/reports/use-reports"

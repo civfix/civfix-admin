@@ -1,6 +1,6 @@
 "use client"
 
-import type { ModerationItemDTO } from "@civfix/shared"
+import type { ModerationItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { confirmDialog, promptDialog } from "@/components/shared/dialog"

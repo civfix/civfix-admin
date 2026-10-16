@@ -10,7 +10,7 @@ import {
   type MailThreadListItemDTO,
   type ModerationListItemDTO,
   type ReportCategory,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import type { Hue } from "@/features/analytics/analytics-charts"

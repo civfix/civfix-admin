@@ -7,7 +7,7 @@ import {
   REPORT_CATEGORY_LABELS,
   type AdminReportDTO,
   type AdminReportStatus,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"

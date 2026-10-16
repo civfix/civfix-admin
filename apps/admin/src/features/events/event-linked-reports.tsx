@@ -1,6 +1,6 @@
 "use client"
 
-import { REPORT_CATEGORY_LABELS, type AdminEventDTO, type LinkedReportRef } from "@civfix/shared"
+import { REPORT_CATEGORY_LABELS, type AdminEventDTO, type LinkedReportRef } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

@@ -7,7 +7,7 @@ import {
   INBOX_FEED_FILTER_LABELS,
   type GetForwardTemplateDefaultResponse,
   type MailStatsResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { PageHead, FilterChips, type FilterOption } from "@/components/shared/page-primitives"

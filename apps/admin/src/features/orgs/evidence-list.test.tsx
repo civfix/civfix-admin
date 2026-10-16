@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { AdminGetMediaResponse } from "@civfix/shared"
+import type { AdminGetMediaResponse } from "@civfix/contract"
 import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

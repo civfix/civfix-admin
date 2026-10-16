@@ -44,7 +44,7 @@
 
   --danger:   var(--bloom-600);
 
-  /* These mirror tokens.color.category plus tokens.color.cleanup (light scheme) in @civfix/shared -
+  /* These mirror tokens.color.category plus tokens.color.cleanup (light scheme) in @civfix/tokens -
      keep the two identical. */
   --cat-trash:      #776C60;
   --cat-recycling:  #63A45A;

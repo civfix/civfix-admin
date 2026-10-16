@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/shared"
+import { EVENT_STATUS_LABELS, type EventStatus } from "@civfix/contract"
 
 import { cancelBlockedMessage, EVENT_STATUS_VIEW, eventStatusView } from "./event-status"
 

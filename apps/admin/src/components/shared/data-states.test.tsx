@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { AppError, ErrorCode } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { ErrorState } from "@/components/shared/data-states"

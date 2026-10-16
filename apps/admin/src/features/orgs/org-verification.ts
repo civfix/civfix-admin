@@ -1,4 +1,4 @@
-import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/shared"
+import type { AdminOrgDTO, OrgVerificationKind } from "@civfix/contract"
 
 export const ORG_KIND_LABEL: Record<OrgVerificationKind, string> = {
   nonprofit: "Nonprofit",

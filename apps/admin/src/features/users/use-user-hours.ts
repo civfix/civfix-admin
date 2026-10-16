@@ -10,7 +10,7 @@ import type {
   AdminCreditUserHoursRequest,
   AdminUserHoursResponse,
   AdminVoidUserHoursRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { confirmDialog } from "@/components/shared/dialog"
 import { api } from "@/lib/api"

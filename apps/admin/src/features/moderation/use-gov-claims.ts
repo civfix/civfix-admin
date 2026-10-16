@@ -14,7 +14,7 @@ import type {
   GovClaimListQuery,
   RejectGovClaimRequest,
   VerifyCheckRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { infiniteListOptions } from "@/lib/infinite"

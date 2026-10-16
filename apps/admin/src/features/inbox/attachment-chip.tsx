@@ -1,6 +1,6 @@
 "use client"
 
-import type { MailAttachment } from "@civfix/shared"
+import type { MailAttachment } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { formatBytes } from "@/features/inbox/attachments"

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { AppError, ErrorCode } from "@civfix/shared"
+import { AppError, ErrorCode } from "@civfix/contract"
 
 import { isNotFound, toAppError } from "./api"
 
 /**
- * `@civfix/shared/client` ships its own copy of the AppError class, so errors thrown by the API client
+ * `@civfix/contract/client` ships its own copy of the AppError class, so errors thrown by the API client
  * fail `instanceof AppError` against the root export. toAppError must recognize them by shape.
  */
 function foreignAppError(code: ErrorCode, message: string, fields?: Record<string, string>): Error {

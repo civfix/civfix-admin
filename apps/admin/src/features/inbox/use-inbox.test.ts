@@ -1,6 +1,6 @@
 import { QueryClient } from "@tanstack/react-query"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import type { InboxFeedResponse } from "@civfix/shared"
+import type { InboxFeedResponse } from "@civfix/contract"
 
 import type * as apiModule from "@/lib/api"
 import { api } from "@/lib/api"

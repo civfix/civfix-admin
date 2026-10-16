@@ -8,7 +8,7 @@ import {
   SOCIAL_PLATFORMS,
   monogram,
   type SocialPlatform,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import {
@@ -31,7 +31,7 @@ import {
 } from "@/features/orgs/org-slug"
 import { useUploadOrgLogo } from "@/features/orgs/use-orgs"
 
-// Mirrors AdminReasonSchema in @civfix/shared, which exports no constant for it.
+// Mirrors AdminReasonSchema in @civfix/contract, which exports no constant for it.
 const ADMIN_REASON_MAX_LENGTH = 1000
 const DESCRIPTION_ROWS = 4
 const REASON_ROWS = 2

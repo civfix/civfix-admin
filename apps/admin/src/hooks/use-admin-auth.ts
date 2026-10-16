@@ -7,7 +7,7 @@ import {
   type AdminLoginResponse,
   type AdminOperatorDTO,
   type AdminSessionResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api, toAppError } from "@/lib/api"
 import { navigateToAccessLogout } from "@/lib/access-auth"

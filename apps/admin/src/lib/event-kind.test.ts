@@ -1,4 +1,4 @@
-import { EVENT_KIND_LABELS, type EventKind } from "@civfix/shared"
+import { EVENT_KIND_LABELS, type EventKind } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { Icons } from "@/components/icons"

@@ -1,7 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { MAX_EVENT_HOURS, MIN_EVENT_HOURS, type AdminUserDTO, type AdminUserHoursEntryDTO } from "@civfix/shared"
+import {
+  MAX_EVENT_HOURS,
+  MIN_EVENT_HOURS,
+  type AdminUserDTO,
+  type AdminUserHoursEntryDTO,
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

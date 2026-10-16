@@ -5,7 +5,7 @@ import type {
   AdminBroadcastListResponse,
   AdminHostListItemDTO,
   AdminHostListResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { DialogHost } from "@/components/shared/dialog"

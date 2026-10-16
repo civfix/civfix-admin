@@ -1,4 +1,4 @@
-import { JurisdictionHandleSchema, type ReportCategory } from "@civfix/shared"
+import { JurisdictionHandleSchema, type ReportCategory } from "@civfix/contract"
 
 import { REPORT_CATEGORIES } from "@/lib/category"
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { EventPageBlock } from "@civfix/shared"
+import type { EventPageBlock } from "@civfix/contract"
 
 import { pageBlockView, pageBlockViews } from "./page-blocks"
 

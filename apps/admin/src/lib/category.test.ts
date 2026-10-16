@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 
-import { REPORT_CATEGORY_LABELS, ReportCategorySchema } from "@civfix/shared"
+import { REPORT_CATEGORY_LABELS, ReportCategorySchema } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import {

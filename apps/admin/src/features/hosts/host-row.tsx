@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { AdminHostListItemDTO } from "@civfix/shared"
+import type { AdminHostListItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"

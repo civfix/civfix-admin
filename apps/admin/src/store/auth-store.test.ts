@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import type { AdminOperatorDTO } from "@civfix/shared"
+import type { AdminOperatorDTO } from "@civfix/contract"
 
 import { getCsrfToken, selectIsOperator, useAuthStore, type AuthState } from "./auth-store"
 

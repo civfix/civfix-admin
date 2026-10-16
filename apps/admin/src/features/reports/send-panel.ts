@@ -1,4 +1,4 @@
-import type { AdminReportDTO } from "@civfix/shared"
+import type { AdminReportDTO } from "@civfix/contract"
 
 import { formatPreciseDateTime } from "@/lib/dates"
 import {

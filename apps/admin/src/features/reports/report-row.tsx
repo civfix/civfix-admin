@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { REPORT_CATEGORY_LABELS, type AdminReportListItemDTO } from "@civfix/shared"
+import { REPORT_CATEGORY_LABELS, type AdminReportListItemDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"

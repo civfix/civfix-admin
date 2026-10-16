@@ -1,4 +1,4 @@
-import type { GovClaimDTO } from "@civfix/shared"
+import type { GovClaimDTO } from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import { verifyCheckRequest } from "./gov-claim-presentation"

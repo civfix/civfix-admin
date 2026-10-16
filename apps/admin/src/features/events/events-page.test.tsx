@@ -6,7 +6,7 @@ import type {
   AdminEventListResponse,
   AdminReportListItemDTO,
   AdminReportListResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"

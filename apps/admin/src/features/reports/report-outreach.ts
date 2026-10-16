@@ -1,4 +1,4 @@
-import type { ReportOutreachStatus } from "@civfix/shared"
+import type { ReportOutreachStatus } from "@civfix/contract"
 
 import { Icons, type IconComponent } from "@/components/icons"
 

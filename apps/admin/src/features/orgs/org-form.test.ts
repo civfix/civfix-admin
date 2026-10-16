@@ -6,7 +6,7 @@ import {
   MAX_ORG_NAME,
   type AdminOrgDTO,
   type AdminUpdateOrgRequest,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import {
   buildCreateRequest,

@@ -1,4 +1,4 @@
-import type { AdminUserDTO, OrganizationMemberRole } from "@civfix/shared"
+import type { AdminUserDTO, OrganizationMemberRole } from "@civfix/contract"
 
 import { orgFocus } from "@/features/orgs/org-focus"
 

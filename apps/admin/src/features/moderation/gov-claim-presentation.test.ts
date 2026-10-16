@@ -4,7 +4,7 @@ import {
   GOV_VERIFICATION_CHECK_LABELS,
   GovClaimStatusSchema,
   type GovClaimDTO,
-} from "@civfix/shared"
+} from "@civfix/contract"
 import { describe, expect, it } from "vitest"
 
 import {

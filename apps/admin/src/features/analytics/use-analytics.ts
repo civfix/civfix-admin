@@ -11,7 +11,7 @@ import type {
   AnalyticsResolutionByCategoryResponse,
   AnalyticsTopContributorsResponse,
   AnalyticsTopJurisdictionsResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
 import { queryKeys } from "@/lib/query"

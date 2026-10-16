@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type { GovClaimDTO } from "@civfix/shared"
+import type { GovClaimDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

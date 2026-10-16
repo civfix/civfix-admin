@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { RISK_LABELS, type AdminUserDTO } from "@civfix/shared"
+import { RISK_LABELS, type AdminUserDTO } from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"

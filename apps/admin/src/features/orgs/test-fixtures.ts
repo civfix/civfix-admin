@@ -3,7 +3,7 @@ import type {
   AdminOrgMemberDTO,
   AdminUserListItemDTO,
   GetAdminOrgResponse,
-} from "@civfix/shared"
+} from "@civfix/contract"
 
 import { apiMock } from "@/test/api-mock"
 

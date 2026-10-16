@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Bricolage_Grotesque, Manrope, JetBrains_Mono } from "next/font/google"
-import { tokens } from "@civfix/shared/tokens"
+import { tokens } from "@civfix/tokens"
 
 import { Providers } from "@/components/providers"
 import "./globals.css"

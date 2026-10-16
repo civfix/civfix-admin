@@ -1,4 +1,4 @@
-import type { MailAuthVerdict, MailReplyPublication, MailStatus } from "@civfix/shared"
+import type { MailAuthVerdict, MailReplyPublication, MailStatus } from "@civfix/contract"
 
 export const MAIL_STATUS_CLS: Record<MailStatus, string> = {
   replied: "status-ok",

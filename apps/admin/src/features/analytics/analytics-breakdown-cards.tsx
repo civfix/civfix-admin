@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { REPORT_CATEGORY_LABELS, type ReportCategory } from "@civfix/shared"
+import { REPORT_CATEGORY_LABELS, type ReportCategory } from "@civfix/contract"
 
 import { categoryCssVar } from "@/lib/category"
 import { EMPTY_VALUE } from "@/lib/empty-value"

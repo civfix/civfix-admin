@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
-import type { AdminEventDTO } from "@civfix/shared"
+import type { AdminEventDTO } from "@civfix/contract"
 
 import { Icons, type IconComponent } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
