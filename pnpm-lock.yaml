@@ -25,8 +25,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: ^0.62.0
-        version: 0.62.0
+        specifier: ^0.63.0
+        version: 0.63.0
       '@civfix/tokens':
         specifier: ^0.1.0
         version: 0.1.0
@@ -134,8 +134,8 @@ packages:
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
-  '@civfix/contract@0.62.0':
-    resolution: {integrity: sha512-GiToTBdd1L7/Lktq9rNW0Qm5NzVptB0cBzsP4XgaSs8ccwlDkNX3lNhoYuUo+azW02vvli7RwuvCu9IcVNAkUg==}
+  '@civfix/contract@0.63.0':
+    resolution: {integrity: sha512-6cyQPVeLPI7gH3hsF/wDtaFdvhZgnLb6U3bL+xNAAOuhZ/LddC7wMSWuGfmTNoUQb03Q2c9D0VmCVsqc1Rjt6A==}
     engines: {node: '>=20'}
 
   '@civfix/tokens@0.1.0':
@@ -3099,7 +3099,7 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
-  '@civfix/contract@0.62.0':
+  '@civfix/contract@0.63.0':
     dependencies:
       zod: 3.25.76
 
