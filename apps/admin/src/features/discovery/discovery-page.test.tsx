@@ -98,6 +98,7 @@ function mockDetailQueries(): void {
     bodyTemplate: null,
     updatedAt: null,
   } satisfies GetForwardTemplateDefaultResponse)
+  apiMock.listFilingRoutes.mockResolvedValue({ routes: [] })
 }
 
 function listCalls(): Record<string, unknown>[] {
