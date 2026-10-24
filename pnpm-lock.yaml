@@ -25,8 +25,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: 0.64.0-b-feat-notification-center-contract.gc3da707
-        version: 0.64.0-b-feat-notification-center-contract.gc3da707
+        specifier: 0.64.0-b-feat-notification-center-contract.g1a68e0e
+        version: 0.64.0-b-feat-notification-center-contract.g1a68e0e
       '@civfix/tokens':
         specifier: ^0.1.0
         version: 0.1.0
@@ -134,8 +134,8 @@ packages:
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
-  '@civfix/contract@0.64.0-b-feat-notification-center-contract.gc3da707':
-    resolution: {integrity: sha512-fYVy67bnuPXOKflobzK8NDu68sLIKxvkGLEH6xFuicTxYxeZGwUBxP7R366heQEIYurhON9FZB+K5GAfouFMPA==}
+  '@civfix/contract@0.64.0-b-feat-notification-center-contract.g1a68e0e':
+    resolution: {integrity: sha512-NliyuqaDwZR+5iaXHXYgVKrCInuaF3GMnQddH1ZmoBQp3P/DLG5DhycNHv2z9YnnYgq/BogETAMYc55myAg9eA==}
     engines: {node: '>=20'}
 
   '@civfix/tokens@0.1.0':
@@ -3099,7 +3099,7 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
-  '@civfix/contract@0.64.0-b-feat-notification-center-contract.gc3da707':
+  '@civfix/contract@0.64.0-b-feat-notification-center-contract.g1a68e0e':
     dependencies:
       zod: 3.25.76
 
