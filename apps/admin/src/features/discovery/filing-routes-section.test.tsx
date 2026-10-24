@@ -1,24 +1,23 @@
 import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   AppError,
   ErrorCode,
   FilingRouteInputSchema,
   type FilingRouteDTO,
   type FilingRouteHealth,
-  type GetForwardTemplateDefaultResponse,
   type JurisdictionDirectoryDTO,
-  type JurisdictionGeometryResponse,
 } from "@civfix/contract"
 
 import type * as ApiModule from "@/lib/api"
 import { REPORT_CATEGORIES, categoryLabel } from "@/lib/category"
 import { preciseDateTimeTitle } from "@/lib/dates"
 import { errorMessage } from "@/lib/error-messages"
-import { useUiStore, type ToastTone } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
+import { jurisdiction, mockDetailQueries } from "@/test/discovery"
 import { renderWithQuery } from "@/test/render"
+import { spyToasts } from "@/test/toasts"
 import {
   healthText,
   parseRows,
@@ -367,31 +366,6 @@ describe("rowErrorsFromError", () => {
   })
 })
 
-function jurisdiction(overrides: Partial<JurisdictionDirectoryDTO> = {}): JurisdictionDirectoryDTO {
-  return {
-    geoid: "0644000",
-    org: "Los Angeles",
-    dept: null,
-    email: null,
-    form: null,
-    method: "none",
-    status: "pending",
-    coverage: "City limits",
-    lastRouted: null,
-    layer: "place",
-    population: 3_898_747,
-    reportsWaiting: 4,
-    perCategoryCounts: { trash: 3, graffiti: 1 },
-    contacts: [],
-    flaggedAt: null,
-    handle: null,
-    oldestReportAt: null,
-    forwardSubjectTemplate: null,
-    forwardBodyTemplate: null,
-    ...overrides,
-  } satisfies JurisdictionDirectoryDTO
-}
-
 const LA = jurisdiction()
 
 const UNMAPPED = jurisdiction({
@@ -400,31 +374,6 @@ const UNMAPPED = jurisdiction({
   layer: "place",
   population: 0,
 })
-
-const GEOMETRY = {
-  geoid: "0644000",
-  layer: "place",
-  geometry: { type: "Polygon", coordinates: [] },
-  bbox: [-118.7, 33.7, -118.1, 34.3],
-  point: { lat: 34.05, lng: -118.25 },
-} as unknown as JurisdictionGeometryResponse
-
-function mockDetailQueries(): void {
-  apiMock.getJurisdictionGeometry.mockResolvedValue(GEOMETRY)
-  apiMock.getForwardTemplateDefault.mockResolvedValue({
-    subjectTemplate: null,
-    bodyTemplate: null,
-    updatedAt: null,
-  } satisfies GetForwardTemplateDefaultResponse)
-}
-
-function spyToasts() {
-  const original = useUiStore.getState().showToast
-  const showToast = vi.fn<(text: string, tone?: ToastTone) => void>()
-  useUiStore.setState({ showToast })
-  onTestFinished(() => useUiStore.setState({ showToast: original }))
-  return showToast
-}
 
 const ROW_LABELS = ["Default", ...REPORT_CATEGORIES.map(categoryLabel)]
 
