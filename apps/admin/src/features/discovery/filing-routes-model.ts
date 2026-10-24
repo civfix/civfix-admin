@@ -1,5 +1,4 @@
 import {
-  ErrorCode,
   FilingRouteInputSchema,
   type FilingChannel,
   type FilingRouteDTO,
@@ -8,7 +7,7 @@ import {
   type ReportCategory,
 } from "@civfix/contract"
 
-import { toAppError } from "@/lib/api"
+import { validationFields } from "@/lib/api"
 import { REPORT_CATEGORIES, categoryLabel } from "@/lib/category"
 import { formatAgo } from "@/lib/dates"
 import { errorMessage } from "@/lib/error-messages"
@@ -169,11 +168,11 @@ export function rowErrorsFromError(
   raw: unknown,
   sentKeys: readonly RouteRowKey[],
 ): { rows: RouteRowErrors; general: string | null } {
-  const err = toAppError(raw)
-  if (err.code !== ErrorCode.VALIDATION || !err.fields) return { rows: {}, general: errorMessage(raw) }
+  const fields = validationFields(raw)
+  if (!fields) return { rows: {}, general: errorMessage(raw) }
   const rows: RouteRowErrors = {}
   let unmapped = false
-  for (const [field, message] of Object.entries(err.fields)) {
+  for (const [field, message] of Object.entries(fields)) {
     const index = ROUTE_FIELD_KEY.exec(field)?.[1]
     const key = index === undefined ? undefined : sentKeys[Number(index)]
     if (key === undefined) unmapped = true
