@@ -48,3 +48,7 @@ export function preciseDateTimeTitle(value: string): string | undefined {
   const date = new Date(value)
   return value === "" || Number.isNaN(date.getTime()) ? undefined : PRECISE_DATE_TIME_FORMAT.format(date)
 }
+
+export function formatAgo(_value: string, _now: number = Date.now()): string {
+  throw new Error("not implemented")
+}
