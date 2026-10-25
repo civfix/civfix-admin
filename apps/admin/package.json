@@ -16,7 +16,7 @@
     "dup": "jscpd -c .jscpd.json && jscpd -c .jscpd.tests.json"
   },
   "dependencies": {
-    "@civfix/contract": "^0.64.0",
+    "@civfix/contract": "0.67.0-b-feat-dev-console-contract.gee137fa",
     "@civfix/tokens": "^0.1.0",
     "@tanstack/react-query": "^5.62.7",
     "leaflet": "^1.9.4",
