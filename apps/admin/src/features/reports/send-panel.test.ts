@@ -11,6 +11,7 @@ function report(over: Partial<SendPanelReport> = {}): SendPanelReport {
   return {
     city: CITY,
     outreach: { status: "not_sent", threadId: null, routedTo: null, routedAt: null },
+    status: "published",
     verificationVerdict: null,
     ...over,
   }
@@ -20,16 +21,23 @@ const SENT = { status: "sent", threadId: "t-1", routedTo: CITY.contact, routedAt
 const NO_CONTACT = { ...CITY, contact: null }
 
 describe("sendPanelView", () => {
-  it.each<[string, Verdict, boolean, { approved: boolean; pill: string }]>([
-    ["unreviewed", null, false, { approved: false, pill: "Not yet reviewed" }],
-    ["approved on the server", "approved", false, { approved: true, pill: "Approved" }],
-    ["approved locally", null, true, { approved: true, pill: "Approved" }],
-    ["rejected", "rejected", false, { approved: false, pill: "Rejected" }],
-    ["rejected on the server, approved locally since", "rejected", true, { approved: true, pill: "Approved" }],
+  it.each<[string, Verdict, boolean, { approved: boolean; pill: string; fileable: boolean }]>([
+    ["unreviewed", null, false, { approved: false, pill: "Not yet reviewed", fileable: true }],
+    ["approved on the server", "approved", false, { approved: true, pill: "Approved", fileable: true }],
+    ["approved locally", null, true, { approved: true, pill: "Approved", fileable: true }],
+    ["rejected", "rejected", false, { approved: false, pill: "Rejected", fileable: false }],
+    ["rejected on the server, approved locally since", "rejected", true, { approved: true, pill: "Approved", fileable: true }],
   ])("a report that is %s", (_name, verdict, approvedLocally, want) => {
     const view = sendPanelView(report({ verificationVerdict: verdict }), approvedLocally)
     expect(view.verdictApproved).toBe(want.approved)
     expect(view.verdictPill.label).toBe(want.pill)
+    expect(view.fileable).toBe(want.fileable)
+  })
+
+  it("is not fileable once the report's status is rejected, whatever the verdict", () => {
+    expect(sendPanelView(report({ status: "rejected", verificationVerdict: "approved" }), false).fileable).toBe(
+      false,
+    )
   })
 
   it("blocks a follow-up until the first send opened a thread", () => {

@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import {
   hashKey,
   useInfiniteQuery,
@@ -11,9 +12,13 @@ import {
 import type {
   AdminFilingDTO,
   AdminReportDTO,
+  CancelFilingRequest,
+  FileReportRequest,
   FilingGroup,
   FilingStatus,
   GetFilingResponse,
+  RecordManualFilingRequest,
+  RetryFilingRequest,
   SetFilingSettingsRequest,
 } from "@civfix/contract"
 
@@ -28,6 +33,14 @@ const FILING_POLL_MS = 5 * SECOND_MS
 
 function isFilingActive(status: FilingStatus): boolean {
   return status === "queued" || status === "running"
+}
+
+function invalidateFiling(qc: QueryClient, reportId: string) {
+  return invalidateKeys(qc, [
+    queryKeys.reports.detail(reportId),
+    queryKeys.filings.all,
+    queryKeys.home.all,
+  ])
 }
 
 // The poll that saw the filing settle already holds its fresh row, and refetching that query from
@@ -69,6 +82,70 @@ export function useFiling(filing: ReportFiling | null) {
     },
   })
 }
+
+// Each response is the filing as it now is: writing it into the detail cache before the refetch lets
+// that refetch compare against the new status, so a filing this mutation settled is not taken for
+// one a poll settled.
+function useFilingMutation<I>(
+  mutationFn: (input: I) => Promise<{ filing: AdminFilingDTO }>,
+  meta: { successMessage: () => string; errorToast?: false },
+) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn,
+    onSuccess: ({ filing }) => {
+      qc.setQueryData<GetFilingResponse>(queryKeys.filings.detail(filing.id), (old) => ({
+        filing: { ...filing, evidence: old?.filing.evidence ?? [] },
+      }))
+      return invalidateFiling(qc, filing.reportId)
+    },
+    meta,
+  })
+}
+
+export interface ManualDraft {
+  caseId: string
+  caseUrl: string
+  note: string
+}
+
+const EMPTY_MANUAL_DRAFT: ManualDraft = { caseId: "", caseUrl: "", note: "" }
+
+export function useFilingControls() {
+  // The card's inline forms show these errors themselves.
+  const file = useFilingMutation((input: FileReportRequest) => api.fileReport(input), {
+    successMessage: () => "Filing created",
+    errorToast: false,
+  })
+  const retry = useFilingMutation((input: RetryFilingRequest) => api.retryFiling(input), {
+    successMessage: () => "Filing queued again",
+  })
+  const cancel = useFilingMutation((input: CancelFilingRequest) => api.cancelFiling(input), {
+    successMessage: () => "Filing cancelled",
+  })
+  const manual = useFilingMutation(
+    (input: RecordManualFilingRequest) => api.recordManualFiling(input),
+    { successMessage: () => "Manual filing recorded", errorToast: false },
+  )
+  const [form, setForm] = React.useState<"file" | "manual" | null>(null)
+  const [fileNote, setFileNote] = React.useState("")
+  const [manualDraft, setManualDraft] = React.useState(EMPTY_MANUAL_DRAFT)
+  return {
+    file,
+    retry,
+    cancel,
+    manual,
+    form,
+    setForm,
+    fileNote,
+    setFileNote,
+    manualDraft,
+    setManualDraft,
+    busy: file.isPending || retry.isPending || cancel.isPending || manual.isPending,
+  }
+}
+
+export type FilingControls = ReturnType<typeof useFilingControls>
 
 export function useFilingList(group: FilingGroup) {
   return useInfiniteQuery(
