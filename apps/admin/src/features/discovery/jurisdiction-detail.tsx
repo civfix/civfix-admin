@@ -8,6 +8,7 @@ import {
   type JurisdictionDirectoryDTO,
 } from "@civfix/contract"
 
+import { FilingRoutesSection } from "@/features/discovery/filing-routes-section"
 import {
   BoundaryPanel,
   CategoryContactsGrid,
@@ -77,6 +78,7 @@ export function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             loading={defaultTemplate.isLoading}
             onEdit={openTemplate}
           />
+          <FilingRoutesSection dto={dto} />
         </div>
       </div>
 
