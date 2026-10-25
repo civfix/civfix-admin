@@ -21,6 +21,7 @@ import {
   type AuditListQuery,
   type ChatHistoryQuery,
   type DiscoveryListQuery,
+  type FilingGroup,
   type GovClaimListQuery,
   type InboxFeedQuery,
   type InboxListQuery,
@@ -237,6 +238,13 @@ export const queryKeys = {
   audit: {
     all: ["admin", "audit"] as const,
     list: (params?: AuditListQuery) => ["admin", "audit", "list", params ?? null] as const,
+  },
+
+  filings: {
+    all: ["admin", "filings"] as const,
+    list: (group: FilingGroup) => ["admin", "filings", "list", group] as const,
+    detail: (id: string) => ["admin", "filings", "detail", id] as const,
+    settings: ["admin", "filings", "settings"] as const,
   },
 }
 

@@ -1,29 +1,43 @@
 "use client"
 
-import * as React from "react"
 import type { AdminReportDTO } from "@civfix/contract"
 
 import { confirmDialog } from "@/components/shared/dialog"
-import { useRouteReport, useSetReportVerdict } from "@/features/reports/use-reports"
-import { useToast } from "@/store/ui-store"
+import { filingRouteLine } from "@/features/filings/filing-labels"
+import type { ReportFiling } from "@/features/filings/use-filings"
+import { useSetReportVerdict } from "@/features/reports/use-reports"
 
-function approveBody(sendAttempted: boolean): string {
-  return [
-    "This approves this report's verification.",
-    sendAttempted ? null : "It is not sent to the city.",
+function sentences(parts: (string | null)[]): string {
+  return parts.filter((part): part is string => part !== null).join(" ")
+}
+
+function approveBody(routeLine: string | null): string {
+  return sentences([
+    "This approves this report's verification and files it with the city.",
+    routeLine ? `Route: ${routeLine}.` : null,
     "Once this reporter has two approved reports, their account is marked report-verified.",
-  ]
-    .filter((line): line is string => line !== null)
-    .join(" ")
+  ])
+}
+
+// Reject cancels a queued or needs-human filing (D1); a running one finishes, and the city may have it.
+function rejectBody(report: AdminReportDTO, filing: ReportFiling | null): string {
+  const status = filing?.status
+  const filed = report.outreach.routedAt !== null || status === "submitted" || status === "linked_existing"
+  const cancels = status === "queued" || status === "needs_human"
+  return sentences([
+    "This rejects the report's verification verdict.",
+    filed
+      ? "It was already filed with the city, and rejecting does not withdraw it."
+      : status === undefined || status === "cancelled"
+        ? "It is not sent to the city."
+        : null,
+    cancels ? "This also cancels its city filing." : null,
+  ])
 }
 
 export function useReportVerdictControls() {
-  const toast = useToast()
-  const routeMutation = useRouteReport()
   const verdictMutation = useSetReportVerdict()
-  const [routeOpen, setRouteOpen] = React.useState(false)
-  const [routeNote, setRouteNote] = React.useState("")
-  return { toast, routeMutation, verdictMutation, routeOpen, setRouteOpen, routeNote, setRouteNote }
+  return { verdictMutation }
 }
 
 export type ReportVerdictControls = ReturnType<typeof useReportVerdictControls>
@@ -31,56 +45,17 @@ export type ReportVerdictControls = ReturnType<typeof useReportVerdictControls>
 export function reportVerdictActions(
   controls: ReportVerdictControls,
   report: AdminReportDTO,
-  approvesOnSend: boolean,
+  filing: ReportFiling | null,
   onApprovedChange: (approved: boolean) => void,
 ) {
-  const { toast, routeMutation, verdictMutation, routeOpen, setRouteOpen, routeNote, setRouteNote } =
-    controls
-  const sendAttempted = report.outreach.routedAt !== null
-
-  const openRoute = () => {
-    setRouteNote("")
-    setRouteOpen(true)
-  }
-
-  // Awaited rather than chained through per-call callbacks: those are dropped once the operator opens
-  // another report (this pane remounts), which would leave a report approved but never sent.
-  const routeToJurisdiction = async (note: string) => {
-    const res = await routeMutation.mutateAsync({ id: report.id, ...(note ? { note } : {}) })
-    setRouteOpen(false)
-    setRouteNote("")
-    toast(`Sent to ${res.routedTo}`)
-  }
-
-  const sendToJurisdiction = async () => {
-    const contact = report.city.contact
-    if (!contact || routeMutation.isPending || verdictMutation.isPending) return
-    const note = routeNote.trim()
-    const ok = await confirmDialog({
-      title: approvesOnSend ? "Verify and send to the city?" : "Send to the city?",
-      body: approvesOnSend
-        ? `This approves this report's verification. It emails the report and its attached photos to ${contact}. Once this reporter has two approved reports, their account is marked report-verified.`
-        : `This emails the report and its attached photos to ${contact}.`,
-      confirmLabel: approvesOnSend ? "Verify and send" : "Send",
-    })
-    if (!ok) return
-    try {
-      if (approvesOnSend) {
-        await verdictMutation.mutateAsync({ id: report.id, verdict: "approved" })
-        onApprovedChange(true)
-      }
-      await routeToJurisdiction(note)
-    } catch {
-      // The query client already toasted the failure; a failed approve must stop before the send.
-    }
-  }
+  const { verdictMutation } = controls
 
   const approve = async () => {
     if (verdictMutation.isPending) return
     const ok = await confirmDialog({
-      title: "Approve report",
-      body: approveBody(sendAttempted),
-      confirmLabel: "Approve",
+      title: "Approve and file?",
+      body: approveBody(filingRouteLine(report.filingRoute)),
+      confirmLabel: "Approve and file",
     })
     if (!ok) return
     verdictMutation.mutate(
@@ -92,9 +67,7 @@ export function reportVerdictActions(
   const reject = async () => {
     const ok = await confirmDialog({
       title: "Reject report",
-      body: sendAttempted
-        ? "This rejects the report's verification verdict. It was already emailed to the city, and rejecting does not recall that email."
-        : "This rejects the report's verification verdict. It is not sent to the city.",
+      body: rejectBody(report, filing),
       danger: true,
       confirmLabel: "Reject",
     })
@@ -105,16 +78,5 @@ export function reportVerdictActions(
     )
   }
 
-  return {
-    routeOpen,
-    routeNote,
-    setRouteNote,
-    openRoute,
-    closeRoute: () => setRouteOpen(false),
-    sendToJurisdiction,
-    approve,
-    reject,
-    routeBusy: routeMutation.isPending || verdictMutation.isPending,
-    verdictPending: verdictMutation.isPending,
-  }
+  return { approve, reject, verdictPending: verdictMutation.isPending }
 }
