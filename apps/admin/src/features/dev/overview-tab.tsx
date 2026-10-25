@@ -27,7 +27,7 @@ const STATUS_TONE: Record<SystemService["status"], string> = {
   not_deployed: "is-off",
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+export function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="card">
       <div className="card-head">
@@ -38,7 +38,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   )
 }
 
-function Fields({ rows }: { rows: { label: string; value: React.ReactNode }[] }) {
+export function Fields({ rows }: { rows: { label: string; value: React.ReactNode }[] }) {
   return (
     <dl className="dev-kv">
       {rows.map(({ label, value }) => (
