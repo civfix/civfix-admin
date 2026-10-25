@@ -28,6 +28,7 @@ const SECTION_MODULES: Record<PageId, SectionModule> = {
   home: sectionModule(() => import("@/features/home/home-page"), "HomePage"),
   discovery: sectionModule(() => import("@/features/discovery/discovery-page"), "DiscoveryPage"),
   reports: sectionModule(() => import("@/features/reports/reports-page"), "ReportsPage"),
+  filings: sectionModule(() => import("@/features/filings/filings-page"), "FilingsPage"),
   events: sectionModule(() => import("@/features/events/events-page"), "EventsPage"),
   mail: sectionModule(() => import("@/features/mail/mail-page"), "MailPage"),
   users: sectionModule(() => import("@/features/users/users-page"), "UsersPage"),

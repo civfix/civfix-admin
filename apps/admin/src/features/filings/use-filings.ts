@@ -1,9 +1,24 @@
 "use client"
 
-import { hashKey, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
-import type { AdminFilingDTO, AdminReportDTO, FilingStatus, GetFilingResponse } from "@civfix/contract"
+import {
+  hashKey,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query"
+import type {
+  AdminFilingDTO,
+  AdminReportDTO,
+  FilingGroup,
+  FilingStatus,
+  GetFilingResponse,
+  SetFilingSettingsRequest,
+} from "@civfix/contract"
 
 import { api } from "@/lib/api"
+import { infiniteListOptions } from "@/lib/infinite"
 import { invalidateKeys, queryKeys } from "@/lib/query"
 import { SECOND_MS } from "@/lib/timing"
 
@@ -51,6 +66,35 @@ export function useFiling(filing: ReportFiling | null) {
     refetchInterval: (query) => {
       const status = query.state.data?.filing.status
       return status && isFilingActive(status) ? FILING_POLL_MS : false
+    },
+  })
+}
+
+export function useFilingList(group: FilingGroup) {
+  return useInfiniteQuery(
+    infiniteListOptions(queryKeys.filings.list(group), { group }, (input) => api.listFilings(input)),
+  )
+}
+
+export function useFilingSettings() {
+  return useQuery({
+    queryKey: queryKeys.filings.settings,
+    queryFn: () => api.getFilingSettings({}),
+  })
+}
+
+export function useSetFilingSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SetFilingSettingsRequest) => api.setFilingSettings(input),
+    onSuccess: (settings) => {
+      qc.setQueryData(queryKeys.filings.settings, settings)
+      // Resuming starts the queued filings at once, so the lists and the Home count move too.
+      return invalidateKeys(qc, [queryKeys.filings.all, queryKeys.home.all])
+    },
+    meta: {
+      successMessage: (_res: unknown, { paused }: SetFilingSettingsRequest) =>
+        paused ? "Automatic filing paused" : "Automatic filing resumed",
     },
   })
 }
