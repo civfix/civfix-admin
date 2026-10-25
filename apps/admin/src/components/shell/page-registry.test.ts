@@ -6,6 +6,7 @@ const LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
   home: () => import("@/features/home/home-page"),
   discovery: () => import("@/features/discovery/discovery-page"),
   reports: () => import("@/features/reports/reports-page"),
+  filings: () => import("@/features/filings/filings-page"),
   events: () => import("@/features/events/events-page"),
   mail: () => import("@/features/mail/mail-page"),
   users: () => import("@/features/users/users-page"),
@@ -19,6 +20,10 @@ const LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
 describe("page registry", () => {
   it("covers every lazy section with a loader", () => {
     expect(Object.keys(LOADERS).sort()).toEqual(Object.keys(EXPECTED_EXPORTS).sort())
+  })
+
+  it("T32: maps filings to FilingsPage", () => {
+    expect(EXPECTED_EXPORTS.filings).toBe("FilingsPage")
   })
 
   it.each(Object.entries(EXPECTED_EXPORTS))(

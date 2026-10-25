@@ -88,3 +88,12 @@ describe("sendPanelView", () => {
     expect(sendPanelView(report(), false).rejectBlocked).toBeNull()
   })
 })
+
+describe("sendPanelView follow-up gate", () => {
+  it("T29: keeps today's followupBlocked text", () => {
+    expect(sendPanelView(report({ city: NO_CONTACT }), false).followupBlocked).toBe("No city contact on file")
+    expect(sendPanelView(report({ outreach: { ...SENT, threadId: null } }), false).followupBlocked).toBe(
+      "Send the report to the city first. A follow-up goes on that conversation.",
+    )
+  })
+})

@@ -564,3 +564,42 @@ describe("HomePage", () => {
     expect(screen.getByText(COMMIT.toLowerCase().slice(0, 7))).toBeInTheDocument()
   })
 })
+
+describe("HomePage Filings tile", () => {
+  function filingsCell(container: HTMLElement): HTMLElement {
+    const cell = container.querySelector<HTMLElement>(".bt-filings")
+    if (!cell) throw new Error("Filings tile is not rendered")
+    return cell
+  }
+
+  it("T30: leads with the filings that need a human and opens the Filings section", async () => {
+    mockAllLoaded()
+    apiMock.adminHomeSummary.mockResolvedValue({ ...summary, filingsNeedsHuman: 3 })
+    const { container } = renderWithQuery(<HomePage focusId={null} />)
+
+    const cell = filingsCell(container)
+    expect(await within(cell).findByText("3")).toBeInTheDocument()
+    expect(within(cell).getByText("need a human")).toBeInTheDocument()
+    fireEvent.click(within(cell).getByRole("button", { name: /^Filings/ }))
+    expect(window.location.hash).toBe("#/filings")
+  })
+
+  it("T31: shows its loading state, then its error state with a retry that refetches the summary", async () => {
+    mockAllLoaded()
+    apiMock.adminHomeSummary.mockImplementation(never)
+    const loading = renderWithQuery(<HomePage focusId={null} />)
+    expect(within(filingsCell(loading.container)).getByRole("status")).toBeInTheDocument()
+    loading.unmount()
+
+    apiMock.adminHomeSummary.mockReset()
+    apiMock.adminHomeSummary.mockRejectedValue(new Error("summary exploded"))
+    const { container } = renderWithQuery(<HomePage focusId={null} />)
+    const alert = await within(filingsCell(container)).findByRole("alert")
+    expect(alert).toHaveTextContent("summary exploded")
+
+    apiMock.adminHomeSummary.mockResolvedValue({ ...summary, filingsNeedsHuman: 3 })
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }))
+    expect(await within(filingsCell(container)).findByText("need a human")).toBeInTheDocument()
+    expect(apiMock.adminHomeSummary).toHaveBeenCalledTimes(2)
+  })
+})
