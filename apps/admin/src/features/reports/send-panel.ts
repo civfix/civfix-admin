@@ -1,6 +1,6 @@
 import type { AdminReportDTO } from "@civfix/contract"
 
-export type SendPanelReport = Pick<AdminReportDTO, "city" | "outreach" | "verificationVerdict">
+export type SendPanelReport = Pick<AdminReportDTO, "city" | "outreach" | "status" | "verificationVerdict">
 
 const VERDICT_PILL = {
   approved: { cls: "status-ok", label: "Approved" },
@@ -11,6 +11,8 @@ const VERDICT_PILL = {
 export interface SendPanelView {
   verdictApproved: boolean
   verdictPill: { cls: string; label: string }
+  /** Whether the server would file it (D6's re-check), as far as this report shows. */
+  fileable: boolean
   followupBlocked: string | null
   rejectBlocked: string | null
 }
@@ -27,6 +29,7 @@ export function sendPanelView(report: SendPanelReport, approvedLocally: boolean)
       : verdictRejected
         ? VERDICT_PILL.rejected
         : VERDICT_PILL.unreviewed,
+    fileable: !verdictRejected && report.status !== "rejected",
     followupBlocked: !report.city.contact
       ? "No city contact on file"
       : report.outreach.threadId === null
