@@ -8,7 +8,7 @@ import {
   type FilingEvidenceDTO,
   type GetFilingResponse,
 } from "@civfix/contract"
-import type { QueryClient } from "@tanstack/react-query"
+import { partialMatchKey, type QueryClient, type QueryKey } from "@tanstack/react-query"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
@@ -24,8 +24,8 @@ import {
   filingDTO,
   getFilingResponse,
   reportDetail,
-  type ReportFiling,
 } from "@/test/filings"
+import type { ReportFiling } from "@/features/filings/use-filings"
 import { makeTestQueryClient, renderWithQuery } from "@/test/render"
 import { spyToasts } from "@/test/toasts"
 import { ReportDetail } from "@/features/reports/report-detail"
@@ -117,8 +117,15 @@ function invalidatedKeys(client: QueryClient) {
 
 const THREE_KEYS = [queryKeys.reports.detail(REPORT_ID), queryKeys.filings.all, queryKeys.home.all]
 
+// invalidateKeys skips a key that a broader one in the same batch covers (reports.all covers a report's
+// detail), so a key counts as invalidated when any invalidated key is a prefix of it.
 function expectThreeKeys(keys: unknown[]) {
-  expect(keys).toEqual(expect.arrayContaining(THREE_KEYS))
+  for (const key of THREE_KEYS) {
+    expect(
+      keys.some((k) => Array.isArray(k) && partialMatchKey(key, k as QueryKey)),
+      JSON.stringify(key),
+    ).toBe(true)
+  }
 }
 
 function withFiling(filing: Partial<ReportFiling>, over: Partial<AdminReportDTO> = {}) {

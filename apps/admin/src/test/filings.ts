@@ -1,6 +1,6 @@
 import type { AdminFilingDTO, AdminReportDTO, FilingEvidenceDTO, GetFilingResponse } from "@civfix/contract"
 
-export type ReportFiling = NonNullable<AdminReportDTO["filing"]>
+import type { ReportFiling } from "@/features/filings/use-filings"
 
 export const REPORT_ID = "r1a2b3c4-0000-4000-8000-000000000001"
 export const FILING_ID = "f1a2b3c4-0000-4000-8000-000000000001"

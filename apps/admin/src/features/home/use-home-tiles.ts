@@ -144,6 +144,7 @@ export function useHomeTiles() {
   return {
     summaryQuery,
     analytics: summary ? sections.analytics : undefined,
+    filings: summary ? sections.filings : undefined,
     tiles,
   }
 }

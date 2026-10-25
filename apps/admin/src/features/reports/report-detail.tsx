@@ -15,6 +15,8 @@ import { confirmDialog } from "@/components/shared/dialog"
 import { categoryPinSrc } from "@/lib/category"
 import { shortRef } from "@/lib/display"
 import { reportStatusView } from "@/lib/report-status"
+import { useFilingControls } from "@/features/filings/use-filings"
+import { CityFilingCard } from "@/features/reports/city-filing-card"
 import { ReportActivity } from "@/features/reports/report-activity"
 import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
 import { ReportDiscussion } from "@/features/reports/report-discussion"
@@ -23,7 +25,6 @@ import { reportMediaView } from "@/features/reports/report-media"
 import { ReportLocation, ReportPhotos } from "@/features/reports/report-media-panels"
 import { outreachView, type OutreachView } from "@/features/reports/report-outreach"
 import { ReporterCard } from "@/features/reports/report-reporter-card"
-import { SendToJurisdictionCard } from "@/features/reports/report-send-card"
 import { sendPanelView } from "@/features/reports/send-panel"
 import { useReportVerdictControls } from "@/features/reports/use-report-verdict-actions"
 import {
@@ -204,6 +205,7 @@ export function ReportDetail({
   const quickActions = useReportQuickActions()
   const followup = useCityFollowup()
   const verdictControls = useReportVerdictControls()
+  const filingControls = useFilingControls()
   const [approvedLocally, setApprovedLocally] = React.useState(false)
 
   if (reportQuery.isLoading) return <LoadingState label="Loading report..." />
@@ -238,10 +240,11 @@ export function ReportDetail({
         <div className="rep-col">
           <ReporterCard reporter={report.reporter} />
           <RoutedToCard report={report} outreach={outreach} />
-          <SendToJurisdictionCard
+          <CityFilingCard
             report={report}
             panel={panel}
             controls={verdictControls}
+            filingControls={filingControls}
             onApprovedChange={setApprovedLocally}
           />
           <CityMessageCard

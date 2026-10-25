@@ -275,16 +275,19 @@ describe("HomePage", () => {
     expect(screen.getByRole("link", { name: /Source code \(AGPL-3\.0\)/ })).toBeInTheDocument()
   })
 
-  it("keeps every preview tile when the summary fails and shows one retryable summary error", async () => {
+  it("keeps every preview tile when the summary fails and shows a retryable error in each summary tile", async () => {
     mockAllLoaded()
     apiMock.adminHomeSummary.mockRejectedValue(new Error("summary exploded"))
 
     renderWithQuery(<HomePage focusId={null} />)
 
-    const alert = await screen.findByRole("alert")
-    expect(alert).toHaveTextContent("Could not load the dashboard summary")
+    const alerts = await screen.findAllByRole("alert")
+    expect(alerts.map((a) => a.querySelector(".state-error-title")?.textContent)).toEqual([
+      "Could not load the dashboard summary",
+      "Could not load the filings count",
+    ])
+    const alert = alerts[0]!
     expect(alert).toHaveTextContent("summary exploded")
-    expect(screen.getAllByRole("alert")).toHaveLength(1)
     expect(await within(tileOf(/^Jurisdictions$/)).findByText("Los Angeles")).toBeInTheDocument()
     expect(await within(tileOf(/^Reports$/)).findByText("Broken streetlight")).toBeInTheDocument()
     expect(await within(tileOf(/^Mail$/)).findByText("LA Public Works")).toBeInTheDocument()

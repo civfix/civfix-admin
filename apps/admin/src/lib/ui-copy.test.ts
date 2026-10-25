@@ -8,6 +8,8 @@ const SRC = fileURLToPath(new URL("..", import.meta.url))
 
 // Main's Hours tab (#47) landed after the copy sweep; its void prompt title keeps main's wording.
 const KEPT_FROM_MAIN = new Set(["features/users/user-hours-panel.tsx"])
+// The founders fixed the filing route and reason words, em dashes included (epic #164, D14).
+const FOUNDER_WORDS = new Set(["features/filings/filing-labels.ts"])
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -25,7 +27,7 @@ describe("UI copy", () => {
   it("uses no em dash", () => {
     for (const file of sourceFiles(SRC)) {
       const name = relative(SRC, file)
-      if (KEPT_FROM_MAIN.has(name)) continue
+      if (KEPT_FROM_MAIN.has(name) || FOUNDER_WORDS.has(name)) continue
       expect(withoutComments(readFileSync(file, "utf8")), name).not.toContain("—")
     }
   })
