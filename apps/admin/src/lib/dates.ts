@@ -1,4 +1,8 @@
 import { EMPTY_VALUE } from "./empty-value"
+import { MINUTE_MS } from "./timing"
+
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
 
 const MONTH_DAY_PARTS: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" }
 const DATE_PARTS: Intl.DateTimeFormatOptions = { ...MONTH_DAY_PARTS, year: "numeric" }
@@ -47,4 +51,15 @@ export function formatPreciseDateTime(value: string | null | undefined): string 
 export function preciseDateTimeTitle(value: string): string | undefined {
   const date = new Date(value)
   return value === "" || Number.isNaN(date.getTime()) ? undefined : PRECISE_DATE_TIME_FORMAT.format(date)
+}
+
+// A time slightly ahead of this clock is skew between the two machines, not a future event.
+export function formatAgo(value: string, now: number = Date.now()): string {
+  const at = new Date(value).getTime()
+  if (Number.isNaN(at)) return value
+  const elapsed = now - at
+  if (elapsed < MINUTE_MS) return "just now"
+  if (elapsed < HOUR_MS) return `${Math.floor(elapsed / MINUTE_MS)} min ago`
+  if (elapsed < DAY_MS) return `${Math.floor(elapsed / HOUR_MS)} h ago`
+  return `${Math.floor(elapsed / DAY_MS)} d ago`
 }

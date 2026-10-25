@@ -128,6 +128,7 @@ export const queryKeys = {
     list: (params?: Partial<JurisdictionListQuery>) =>
       ["admin", "jurisdictions", "list", params ?? null] as const,
     geometry: (geoid: string) => ["admin", "jurisdictions", "geometry", geoid] as const,
+    filingRoutes: (geoid: string) => ["admin", "jurisdictions", geoid, "filing-routes"] as const,
   },
 
   reports: {
