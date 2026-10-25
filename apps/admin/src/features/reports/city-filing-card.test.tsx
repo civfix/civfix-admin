@@ -1,8 +1,6 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
-  AppError,
-  ErrorCode,
   type AdminReportDTO,
   type AdminReportFilingRoute,
   type FilingEvidenceDTO,
@@ -27,7 +25,6 @@ import {
 } from "@/test/filings"
 import type { ReportFiling } from "@/features/filings/use-filings"
 import { makeTestQueryClient, renderWithQuery } from "@/test/render"
-import { spyToasts } from "@/test/toasts"
 import { ReportDetail } from "@/features/reports/report-detail"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -47,16 +44,6 @@ vi.mock("@/components/shared/lightbox", async (importOriginal) => ({
 afterEach(() => {
   vi.mocked(openLightbox).mockReset()
 })
-
-const ACTIONS = [
-  "Approve and file",
-  "File",
-  "File again",
-  "Retry",
-  "Cancel filing",
-  "Record manual filing",
-  "Copy report text",
-] as const
 
 const SCREENSHOT: FilingEvidenceDTO = {
   id: "e-1",
@@ -331,203 +318,6 @@ describe("CityFilingCard", () => {
     )
     await waitFor(() => expectThreeKeys(keys()))
     expect(apiMock.routeReport).not.toHaveBeenCalled()
-  })
-
-  const STATES: [string, AdminReportDTO, (typeof ACTIONS)[number][]][] = [
-    ["verdict approved, no filing", reportDetail({ verificationVerdict: "approved", filing: null }), ["File"]],
-    ["verdict null, no filing", reportDetail({ verificationVerdict: null, filing: null }), ["Approve and file"]],
-    ["queued", withFiling({ status: "queued" }), ["Cancel filing", "Record manual filing", "Copy report text"]],
-    ["running", withFiling({ status: "running" }), ["Copy report text"]],
-    [
-      "needs_human no_route",
-      withFiling({ status: "needs_human", reason: "no_route" }),
-      ["Retry", "Cancel filing", "Record manual filing", "Copy report text"],
-    ],
-    [
-      "needs_human city_needs_info",
-      withFiling({ status: "needs_human", reason: "city_needs_info", caseId: "1-111" }),
-      ["Record manual filing", "Copy report text"],
-    ],
-    ["submitted, city open", withFiling({ status: "submitted", caseId: "1-111" }), ["Copy report text"]],
-    [
-      "submitted, city closed",
-      withFiling({ status: "submitted", caseId: "1-111", cityClosedAt: "2026-10-22T00:00:00.000Z" }),
-      ["File again", "Copy report text"],
-    ],
-    [
-      "linked_existing, city closed",
-      withFiling({ status: "linked_existing", caseId: "1-111", cityClosedAt: "2026-10-22T00:00:00.000Z" }),
-      ["File again", "Copy report text"],
-    ],
-    ["cancelled", withFiling({ status: "cancelled" }), ["File again", "Copy report text"]],
-    [
-      "cancelled on a rejected report",
-      withFiling({ status: "cancelled" }, { verificationVerdict: "rejected", status: "rejected" }),
-      ["Approve and file", "Copy report text"],
-    ],
-    [
-      "city closed on a report whose status is rejected",
-      withFiling(
-        { status: "submitted", caseId: "1-111", cityClosedAt: "2026-10-22T00:00:00.000Z" },
-        { status: "rejected" },
-      ),
-      ["Copy report text"],
-    ],
-  ]
-
-  it.each(STATES)("T19: offers exactly the allowed actions: %s", async (_name, report, offered) => {
-    renderDetail(report)
-    const c = await findCard()
-    if (report.filing) await waitFor(() => expect(apiMock.getFiling).toHaveBeenCalled())
-    for (const action of ACTIONS) {
-      const present = within(c).queryByRole("button", { name: action }) !== null
-      expect(present, action).toBe(offered.includes(action))
-    }
-  })
-
-  it("T20: files with the note, then without one, under the schema's note limit", async () => {
-    const client = makeTestQueryClient()
-    const keys = invalidatedKeys(client)
-    renderDetail(reportDetail({ verificationVerdict: "approved" }), client)
-    apiMock.fileReport.mockResolvedValue({ filing: filingDTO() })
-    const user = userEvent.setup()
-    const c = await findCard()
-
-    await user.click(within(c).getByRole("button", { name: "File" }))
-    const note = within(c).getByRole("textbox", { name: "Note for the city" })
-    expect(note).toHaveAttribute("maxlength", "500")
-    await user.type(note, "Call first")
-    await user.click(within(c).getByRole("button", { name: "File" }))
-    await waitFor(() => expect(apiMock.fileReport).toHaveBeenCalledWith({ id: REPORT_ID, note: "Call first" }))
-    await waitFor(() => expectThreeKeys(keys()))
-
-    await user.click(await within(c).findByRole("button", { name: "File" }))
-    await user.click(within(c).getByRole("button", { name: "File" }))
-    await waitFor(() => expect(apiMock.fileReport).toHaveBeenCalledTimes(2))
-    expect(apiMock.fileReport.mock.calls[1]![0]).toEqual({ id: REPORT_ID })
-  })
-
-  it("T21: says why File was refused on a conflict", async () => {
-    renderDetail(reportDetail({ verificationVerdict: "approved" }))
-    apiMock.fileReport.mockRejectedValue(new AppError(ErrorCode.CONFLICT, "Report has an open filing"))
-    const user = userEvent.setup()
-    const c = await findCard()
-    await user.click(within(c).getByRole("button", { name: "File" }))
-    await user.click(within(c).getByRole("button", { name: "File" }))
-    expect(
-      await within(c).findByText("This report already has an active or open filing"),
-    ).toBeInTheDocument()
-  })
-
-  it.each([
-    ["Retry", "needs_human", "retryFiling"],
-    ["Cancel filing", "queued", "cancelFiling"],
-  ] as const)("T22: %s calls the API with the filing id and refreshes", async (button, status, method) => {
-    const client = makeTestQueryClient()
-    const keys = invalidatedKeys(client)
-    const report = withFiling({ status, reason: status === "needs_human" ? "captcha" : null })
-    renderDetail(report, client)
-    apiMock[method].mockResolvedValue({ filing: filingDTO({ status: "queued" }) })
-    const c = await findCard()
-    await userEvent.click(within(c).getByRole("button", { name: button }))
-    await waitFor(() => expect(apiMock[method]).toHaveBeenCalledWith({ id: FILING_ID }))
-    await waitFor(() => expectThreeKeys(keys()))
-  })
-
-  async function openManualForm(report: AdminReportDTO) {
-    renderDetail(report)
-    const user = userEvent.setup()
-    const c = await findCard()
-    await user.click(within(c).getByRole("button", { name: "Record manual filing" }))
-    const form = within(c).getByRole("group", { name: "Record manual filing" })
-    return { user, form }
-  }
-
-  it("T23: records a manual filing without an empty note and refreshes", async () => {
-    const client = makeTestQueryClient()
-    const keys = invalidatedKeys(client)
-    renderDetail(withFiling({ status: "needs_human", reason: "captcha" }), client)
-    apiMock.recordManualFiling.mockResolvedValue({ filing: filingDTO({ status: "submitted" }) })
-    const user = userEvent.setup()
-    const c = await findCard()
-    await user.click(within(c).getByRole("button", { name: "Record manual filing" }))
-    const form = within(within(c).getByRole("group", { name: "Record manual filing" }))
-    await user.type(form.getByRole("textbox", { name: "Request number" }), "1-2345678901")
-    await user.type(form.getByRole("textbox", { name: "Link on the city site" }), "https://myla311.lacity.gov/s/")
-    await user.click(form.getByRole("button", { name: "Record" }))
-
-    await waitFor(() => expect(apiMock.recordManualFiling).toHaveBeenCalledTimes(1))
-    const input = apiMock.recordManualFiling.mock.calls[0]![0]
-    expect(input).toEqual({ id: FILING_ID, caseId: "1-2345678901", caseUrl: "https://myla311.lacity.gov/s/" })
-    expect(input).not.toHaveProperty("note")
-    await waitFor(() => expectThreeKeys(keys()))
-  })
-
-  it.each([
-    ["an empty number", "", ""],
-    ["a number starting with a dash", "-bad", ""],
-    ["a 65-character number", "1".repeat(65), ""],
-    ["an http link", "1-111", "http://x.org"],
-  ])("T24: sends nothing for %s and shows a field error", async (_name, number, link) => {
-    const { user, form } = await openManualForm(withFiling({ status: "needs_human", reason: "captcha" }))
-    const f = within(form)
-    if (number) await user.type(f.getByRole("textbox", { name: "Request number" }), number)
-    if (link) await user.type(f.getByRole("textbox", { name: "Link on the city site" }), link)
-    await user.click(f.getByRole("button", { name: "Record" }))
-    expect(await f.findByRole("alert")).toBeInTheDocument()
-    expect(apiMock.recordManualFiling).not.toHaveBeenCalled()
-  })
-
-  it("T25: shows a server error inside the form and keeps it open", async () => {
-    const { user, form } = await openManualForm(withFiling({ status: "queued" }))
-    apiMock.recordManualFiling.mockRejectedValue(new AppError(ErrorCode.CONFLICT, "Filing is running"))
-    const f = within(form)
-    await user.type(f.getByRole("textbox", { name: "Request number" }), "1-2345678901")
-    await user.click(f.getByRole("button", { name: "Record" }))
-    expect(await f.findByText("Filing is running")).toBeInTheDocument()
-    expect(f.getByRole("textbox", { name: "Request number" })).toBeInTheDocument()
-  })
-
-  it("T26: pre-fills the request number when the city asked for more information", async () => {
-    const { form } = await openManualForm(
-      withFiling({ status: "needs_human", reason: "city_needs_info", caseId: "1-111" }),
-    )
-    expect(within(form).getByRole("textbox", { name: "Request number" })).toHaveValue("1-111")
-  })
-
-  describe("T27: copying", () => {
-    const report = withFiling({ status: "submitted", caseId: "1-2345678901" })
-
-    function stubClipboard(clipboard: { writeText: (text: string) => Promise<void> } | undefined) {
-      Object.defineProperty(navigator, "clipboard", { value: clipboard, configurable: true })
-    }
-
-    afterEach(() => stubClipboard(undefined))
-
-    it("copies the report text and the request number", async () => {
-      const writeText = vi.fn(() => Promise.resolve())
-      stubClipboard({ writeText })
-      const toasts = spyToasts()
-      renderDetail(report)
-      const c = await findCard()
-
-      fireEvent.click(within(c).getByRole("button", { name: "Copy report text" }))
-      expect(writeText).toHaveBeenCalledWith(report.filing!.ticketText)
-      await waitFor(() => expect(toasts).toHaveBeenCalledWith("Report text copied"))
-
-      fireEvent.click(within(c).getByRole("button", { name: "Copy" }))
-      expect(writeText).toHaveBeenLastCalledWith("1-2345678901")
-    })
-
-    it("toasts an error and copies nothing without a clipboard", async () => {
-      stubClipboard(undefined)
-      const toasts = spyToasts()
-      renderDetail(report)
-      const c = await findCard()
-      fireEvent.click(within(c).getByRole("button", { name: "Copy report text" }))
-      expect(toasts).toHaveBeenCalledWith(expect.any(String), "error")
-      expect(toasts).not.toHaveBeenCalledWith("Report text copied")
-    })
   })
 
   it("T43: shows the filing area's error while the rest of the card renders, and retries", async () => {

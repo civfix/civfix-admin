@@ -2017,12 +2017,12 @@ button.prow-main { color: inherit; font: inherit; background: none; border: 0; p
 .bt-map .card { height: 100%; }
 .bt-discovery { grid-column: span 6; }
 .bt-analytics { grid-column: span 6; }
-.bt-moderation, .bt-mail, .bt-users, .bt-reports, .bt-events, .bt-filings { grid-column: span 3; }
+.bt-moderation, .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
 @media (max-width: 1100px) {
   .hub-bento { grid-template-columns: repeat(6, 1fr); }
   .bt-map { grid-column: span 6; grid-row: auto; min-height: 300px; }
   .bt-discovery, .bt-analytics { grid-column: span 6; }
-  .bt-moderation, .bt-mail, .bt-users, .bt-reports, .bt-events, .bt-filings { grid-column: span 3; }
+  .bt-moderation, .bt-mail, .bt-users, .bt-reports, .bt-events { grid-column: span 3; }
 }
 @media (max-width: 720px) {
   .hub-bento { grid-template-columns: 1fr; }

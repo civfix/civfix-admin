@@ -10,7 +10,6 @@ import { useNav, type PageId } from "@/store/ui-store"
 const HUB_ICON: Partial<Record<PageId, IconComponent>> = {
   discovery: Icons.Pin,
   reports: Icons.FileText,
-  filings: Icons.Inbox,
   events: Icons.Calendar,
   mail: Icons.Mail,
   users: Icons.Users,

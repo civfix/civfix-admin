@@ -1,4 +1,4 @@
-import type { AdminFilingDTO, AdminReportDTO, FilingEvidenceDTO, GetFilingResponse } from "@civfix/contract"
+import type { AdminReportDTO, FilingEvidenceDTO, GetFilingResponse } from "@civfix/contract"
 
 import type { ReportFiling } from "@/features/filings/use-filings"
 
@@ -39,10 +39,6 @@ export function getFilingResponse(
   evidence: FilingEvidenceDTO[] = [],
 ): GetFilingResponse {
   return { filing: { ...filing, evidence } }
-}
-
-export function filingRow(over: Partial<AdminFilingDTO> & { id: string }): AdminFilingDTO {
-  return { ...filingDTO(), ...over }
 }
 
 export function reportDetail(over: Partial<AdminReportDTO> = {}): AdminReportDTO {

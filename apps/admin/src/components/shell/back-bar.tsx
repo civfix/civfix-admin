@@ -7,7 +7,6 @@ import { useOperatorLogout, useOperatorSession } from "@/hooks/use-admin-auth"
 const SECTION_ICON: Record<SectionId, IconComponent> = {
   discovery: Icons.Pin,
   reports: Icons.FileText,
-  filings: Icons.Inbox,
   events: Icons.Calendar,
   mail: Icons.Mail,
   users: Icons.Users,
@@ -21,7 +20,6 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
 const SECTION_HUE: Record<SectionId, string> = {
   discovery: "slate",
   reports: "lilac",
-  filings: "bloom",
   events: "sun",
   mail: "sky",
   users: "sun",

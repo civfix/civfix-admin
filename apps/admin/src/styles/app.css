@@ -167,10 +167,9 @@
   }
 }
 
-/* The fourth bento row: the Filings tile (span 3) beside the host launcher. Rows are content-sized
-   (see the desktop note on .hub-bento in admin.css), so this row is never cut off by a viewport-height
-   lock. At 1100px and below the Filings tile fills the sixth small-tile slot instead. */
-.bt-host { grid-column: span 12; }
+/* Full-width fourth bento row. Rows are content-sized (see the desktop note on .hub-bento in
+   admin.css), so this row is never cut off by a viewport-height lock. */
+.bt-host { grid-column: span 15; }
 @media (max-width: 1100px) { .bt-host { grid-column: span 6; } }
 .host-launch {
   display: grid;

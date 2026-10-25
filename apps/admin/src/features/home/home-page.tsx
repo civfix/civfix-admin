@@ -5,7 +5,6 @@ import { LiveMap } from "@/components/map/live-map"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { HostPlatformLauncher } from "@/features/home/host-platform-launcher"
 import { PreviewList } from "@/features/home/preview-list"
-import type { SectionSummary } from "@/features/home/home-summaries"
 import { MetricSectionTile, PreviewSectionTile } from "@/features/home/section-tiles"
 import { useHomeTiles, type PreviewTileModel } from "@/features/home/use-home-tiles"
 import type { SectionPageProps } from "@/components/shell/page-registry"
@@ -20,39 +19,33 @@ function PreviewCell({ tile }: { tile: PreviewTileModel }) {
   )
 }
 
-// The tiles drawn from the summary alone show its loading and error states in their own cell.
-function SummaryCell({
-  cell,
+function AnalyticsCell({
   summaryQuery,
-  summary,
-  loadingLabel,
-  errorTitle,
-}: {
-  cell: string
-  summaryQuery: ReturnType<typeof useHomeTiles>["summaryQuery"]
-  summary: SectionSummary | undefined
-  loadingLabel: string
-  errorTitle: string
-}) {
+  analytics,
+}: Pick<ReturnType<typeof useHomeTiles>, "summaryQuery" | "analytics">) {
   return (
-    <div className={`bt-cell ${cell}`}>
+    <div className="bt-cell bt-analytics">
       {summaryQuery.isLoading ? (
         <section className="card">
-          <LoadingState label={loadingLabel} />
+          <LoadingState label="Loading summary..." />
         </section>
       ) : summaryQuery.isError ? (
         <section className="card">
-          <ErrorState error={summaryQuery.error} onRetry={() => summaryQuery.refetch()} title={errorTitle} />
+          <ErrorState
+            error={summaryQuery.error}
+            onRetry={() => summaryQuery.refetch()}
+            title="Could not load the dashboard summary"
+          />
         </section>
-      ) : summary ? (
-        <MetricSectionTile summary={summary} />
+      ) : analytics ? (
+        <MetricSectionTile summary={analytics} />
       ) : null}
     </div>
   )
 }
 
 export function HomePage(_props: SectionPageProps) {
-  const { summaryQuery, analytics, filings, tiles } = useHomeTiles()
+  const { summaryQuery, analytics, tiles } = useHomeTiles()
 
   return (
     <div className="hub">
@@ -62,25 +55,12 @@ export function HomePage(_props: SectionPageProps) {
         </div>
 
         <PreviewCell tile={tiles.discovery} />
-        <SummaryCell
-          cell="bt-analytics"
-          summaryQuery={summaryQuery}
-          summary={analytics}
-          loadingLabel="Loading summary..."
-          errorTitle="Could not load the dashboard summary"
-        />
+        <AnalyticsCell summaryQuery={summaryQuery} analytics={analytics} />
         <PreviewCell tile={tiles.moderation} />
         <PreviewCell tile={tiles.mail} />
         <PreviewCell tile={tiles.users} />
         <PreviewCell tile={tiles.reports} />
         <PreviewCell tile={tiles.events} />
-        <SummaryCell
-          cell="bt-filings"
-          summaryQuery={summaryQuery}
-          summary={filings}
-          loadingLabel="Loading filings..."
-          errorTitle="Could not load the filings count"
-        />
 
         <div className="bt-cell bt-host">
           <HostPlatformLauncher />

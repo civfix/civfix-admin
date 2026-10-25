@@ -15,7 +15,6 @@ import { confirmDialog } from "@/components/shared/dialog"
 import { categoryPinSrc } from "@/lib/category"
 import { shortRef } from "@/lib/display"
 import { reportStatusView } from "@/lib/report-status"
-import { useFilingControls } from "@/features/filings/use-filings"
 import { CityFilingCard } from "@/features/reports/city-filing-card"
 import { ReportActivity } from "@/features/reports/report-activity"
 import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
@@ -205,7 +204,6 @@ export function ReportDetail({
   const quickActions = useReportQuickActions()
   const followup = useCityFollowup()
   const verdictControls = useReportVerdictControls()
-  const filingControls = useFilingControls()
   const [approvedLocally, setApprovedLocally] = React.useState(false)
 
   if (reportQuery.isLoading) return <LoadingState label="Loading report..." />
@@ -244,7 +242,6 @@ export function ReportDetail({
             report={report}
             panel={panel}
             controls={verdictControls}
-            filingControls={filingControls}
             onApprovedChange={setApprovedLocally}
           />
           <CityMessageCard
