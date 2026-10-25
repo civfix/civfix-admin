@@ -14,6 +14,7 @@ export function SourceFooter() {
         <Icons.ExternalLink size={12} /> Source code (AGPL-3.0)
       </a>
       {SOURCE.commit ? <span className="hub-foot-commit">{SOURCE.commit.slice(0, SHORT_COMMIT_LENGTH)}</span> : null}
+      <a href="/dev/">Developer</a>
     </footer>
   )
 }

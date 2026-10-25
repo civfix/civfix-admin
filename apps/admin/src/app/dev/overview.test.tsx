@@ -1,5 +1,5 @@
 import { screen, within } from "@testing-library/react"
-import { AppError, ErrorCode } from "@civfix/contract"
+import { AppError, ErrorCode, type AdminDevOverviewResponse } from "@civfix/contract"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
@@ -24,7 +24,7 @@ const SEAMS_AND_SETTINGS = {
     { name: "geo_coder", mode: "fake" },
   ],
   settings: [{ key: "SMS_DAILY_CAP", value: "500" }],
-} as const
+} satisfies Partial<AdminDevOverviewResponse>
 
 function labelsOf(title: string): string[] {
   return within(card(title))

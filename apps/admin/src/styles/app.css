@@ -656,3 +656,46 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .prow-main .prow-meta {
   display: block;
 }
+
+/* The developer page (/dev/). */
+.dev-body { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.dev-tabs { align-self: flex-start; flex-wrap: wrap; }
+.dev-env-badge { font-size: 11px; padding: 2px 9px; }
+.dev-env-badge.env-prod { background: var(--danger); color: var(--fg-on-color); }
+.dev-env-badge.env-staging {
+  background: var(--sun-50);
+  color: var(--sun-700);
+  border-color: color-mix(in oklab, var(--sun) 30%, transparent);
+}
+.dev-env-badge.env-neutral { background: var(--paper-2); color: var(--ink-2); border-color: var(--border-soft); }
+.dev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--gutter);
+  align-items: start;
+}
+.dev-kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.dev-kv-row { display: contents; }
+.dev-kv dt { color: var(--ink-3); font-weight: 600; }
+.dev-kv dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.dev-health { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dev-health li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); }
+.dev-health-val { margin-left: auto; color: var(--ink-3); }
+.dev-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dev-dot.is-ok { background: var(--moss); }
+.dev-dot.is-warn { background: var(--sun-600); }
+.dev-dot.is-down { background: var(--danger); }
+.dev-dot.is-off { background: var(--ink-4); }
+.trow.dev-jobs {
+  grid-template-columns: 1.6fr 0.7fr 1.1fr repeat(5, 0.6fr) 0.9fr 1fr 0.9fr;
+  cursor: default;
+}
+/* Eleven columns need more room than the 640px every other scrolling table gets. */
+.table-scroll > .table.dev-jobs-table:has(> .trow.dev-jobs) { min-width: 1100px; }
+.dev-danger { color: var(--danger); font-weight: 700; }

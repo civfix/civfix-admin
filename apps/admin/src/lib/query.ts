@@ -237,6 +237,16 @@ export const queryKeys = {
     all: ["admin", "audit"] as const,
     list: (params?: AuditListQuery) => ["admin", "audit", "list", params ?? null] as const,
   },
+
+  dev: {
+    all: ["admin", "dev"] as const,
+    overview: ["admin", "dev", "overview"] as const,
+    jobs: ["admin", "dev", "jobs"] as const,
+    flags: ["admin", "dev", "flags"] as const,
+    forceUpdate: ["admin", "dev", "force-update"] as const,
+    systemHealth: ["admin", "dev", "system-health"] as const,
+    activity: ["admin", "dev", "activity"] as const,
+  },
 }
 
 type Invalidation = QueryKey | InvalidateQueryFilters | null
