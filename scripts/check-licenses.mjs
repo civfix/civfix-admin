@@ -1,28 +1,34 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process"
-import { pathToFileURL } from "node:url"
+import { realpathSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 
 // civfix-admin ships under AGPL-3.0-only, so every production dependency must carry a license that can
-// be combined with it. Anything not matched here fails, including licenses nobody has reviewed yet.
-const ALLOWED_LICENSES = [
-  /^MIT(-0)?$/i,
-  /^ISC$/i,
-  /^BSD-[0-9]-Clause(-.+)?$/i,
-  /^0BSD$/i,
-  /^Apache-2\.0$/i,
-  /^CC0-1\.0$/i,
-  /^CC-BY-4\.0$/i,
-  /^BlueOak-1\.0\.0$/i,
-  /^Python-2\.0$/i,
-  /^MPL-2\.0$/i,
-  /^LGPL-.+$/i,
-  /^GPL-2\.0(-or-later|\+)$/i,
-  /^GPL-3\.0(-only|-or-later|\+)?$/i,
-  /^AGPL-3\.0(-only|-or-later|\+)?$/i,
-  /^Unlicense$/i,
-  /^WTFPL$/i,
-  /^Zlib$/i,
-]
+// be combined with it. Exact SPDX ids only: a variant nobody has reviewed (BSD-4-Clause's advertising
+// clause, a field-of-use rider on BSD-3-Clause) fails until someone adds it here on purpose.
+const ALLOWED_LICENSES = new Set(
+  [
+    "MIT",
+    "MIT-0",
+    "ISC",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "Apache-2.0",
+    "CC0-1.0",
+    "CC-BY-4.0",
+    "BlueOak-1.0.0",
+    "Python-2.0",
+    "MPL-2.0",
+    ...["LGPL-2.0", "LGPL-2.1", "LGPL-3.0"].flatMap((id) => [id, `${id}-only`, `${id}-or-later`, `${id}+`]),
+    "GPL-2.0-or-later",
+    "GPL-2.0+",
+    ...["GPL-3.0", "AGPL-3.0"].flatMap((id) => [id, `${id}-only`, `${id}-or-later`, `${id}+`]),
+    "Unlicense",
+    "WTFPL",
+    "Zlib",
+  ].map((id) => id.toLowerCase()),
+)
 
 const DENIED_LICENSES = [
   /^SSPL/i,
@@ -109,7 +115,7 @@ function evaluate(node) {
   if ("and" in node) return node.and.every(evaluate)
   // An exception only ever grants extra permissions, except Commons Clause, which takes them away.
   if ("with" in node) return !matchesAny(DENIED_LICENSES, node.exception) && evaluate(node.with)
-  return !matchesAny(DENIED_LICENSES, node.id) && matchesAny(ALLOWED_LICENSES, node.id)
+  return !matchesAny(DENIED_LICENSES, node.id) && ALLOWED_LICENSES.has(node.id.toLowerCase())
 }
 
 export function isLicenseAllowed(expression) {
@@ -155,4 +161,6 @@ function main() {
   process.exitCode = 1
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) main()
+// realpath on both sides: through a symlinked path the comparison would otherwise miss, skip main() and
+// pass the gate without checking anything.
+if (process.argv[1] !== undefined && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main()

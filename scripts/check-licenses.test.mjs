@@ -35,7 +35,19 @@ describe("isLicenseAllowed", () => {
   })
 
   it("denies incompatible, unknown and missing licenses", () => {
-    for (const license of ["SSPL-1.0", "BUSL-1.1", "CC-BY-NC-4.0", "UNLICENSED", "Unknown", "GPL-2.0-only", "", undefined]) {
+    for (const license of [
+      "SSPL-1.0",
+      "BUSL-1.1",
+      "CC-BY-NC-4.0",
+      "UNLICENSED",
+      "Unknown",
+      "GPL-2.0-only",
+      "BSD-4-Clause",
+      "BSD-3-Clause-No-Military-License",
+      "LGPL-anything",
+      "",
+      undefined,
+    ]) {
       assert.equal(isLicenseAllowed(license), false, String(license))
     }
   })
