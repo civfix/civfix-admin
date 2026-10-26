@@ -121,7 +121,7 @@ function RecentActivity() {
 
 export function AuditTab() {
   return (
-    <div className="dev-stack">
+    <div className="dev-audit-stack">
       <AuditLog />
       <RecentActivity />
     </div>

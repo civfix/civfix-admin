@@ -699,18 +699,53 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 /* Eleven columns need more room than the 640px every other scrolling table gets. */
 .table-scroll > .table.dev-jobs-table:has(> .trow.dev-jobs) { min-width: 1100px; }
 .dev-danger { color: var(--danger); font-weight: 700; }
+.dev-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.dev-stack > p { margin: 0; }
+.dev-stack > .field { margin-bottom: 0; }
+.dev-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.dev-list li { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); overflow-wrap: anywhere; }
+.dev-list li .btn { margin-left: auto; }
+/* A two-state control: the knob sits right, on the moss track, when the flag is on. */
+.dev-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: calc(var(--space-5) * 2);
+  height: var(--space-5);
+  padding: 0;
+  border: none;
+  border-radius: var(--space-5);
+  background: var(--ink-4);
+  cursor: pointer;
+  transition: background 120ms var(--ease-out);
+}
+.dev-switch::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--space-1) / 2);
+  left: calc(var(--space-1) / 2);
+  width: calc(var(--space-5) - var(--space-1));
+  height: calc(var(--space-5) - var(--space-1));
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+  transition: transform 120ms var(--ease-out);
+}
+.dev-switch[aria-checked="true"] { background: var(--moss); }
+.dev-switch[aria-checked="true"]::after { transform: translateX(var(--space-5)); }
+.dev-switch:focus-visible { outline: none; box-shadow: var(--ring); }
+.dev-switch:disabled { opacity: 0.5; cursor: default; }
 /* The Audit tab stacks two list cards, so neither may stick to the top the way a master-detail list does. */
-.dev-stack { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
-.dev-stack .md-list { position: static; max-height: none; }
+.dev-audit-stack { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.dev-audit-stack .md-list { position: static; max-height: none; }
 .trow.dev-audit { grid-template-columns: 0.8fr 1fr 1.2fr 2fr; cursor: default; }
 .dev-activity { list-style: none; margin: 0; padding: 0; }
 .dev-activity li {
   display: flex;
-  gap: 12px;
-  padding: 11px 14px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-soft);
-  font-size: 12.5px;
+  font-size: var(--fs-13);
   color: var(--ink-2);
 }
 .dev-activity li:last-child { border-bottom: none; }
-.dev-activity-when { flex-shrink: 0; min-width: 72px; color: var(--ink-3); }
+.dev-activity-when { flex-shrink: 0; min-width: calc(var(--space-5) * 3.6); color: var(--ink-3); }
