@@ -1,10 +1,11 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AppError, ErrorCode } from "@civfix/contract"
 
 import { ErrorBoundary, isChunkLoadError } from "@/components/shell/error-boundary"
+import { expectConsoleError } from "@/test/console"
 
 const RENDER_FAILED_COPY = "This page hit an unexpected error. Try again, or reload the dashboard."
 
@@ -22,13 +23,7 @@ function Flaky() {
   return <p>Page content</p>
 }
 
-beforeEach(() => {
-  // React reports every error a boundary catches to console.error; keep the run output readable.
-  vi.spyOn(console, "error").mockImplementation(() => undefined)
-})
-
 afterEach(() => {
-  vi.restoreAllMocks()
   shouldThrow = NOTHING_THROWN
 })
 
@@ -68,6 +63,7 @@ describe("ErrorBoundary", () => {
     const user = userEvent.setup()
     const reload = vi.fn()
     shouldThrow = new TypeError("Cannot read properties of undefined (reading 'cls')")
+    expectConsoleError("Cannot read properties of undefined (reading 'cls')")
     render(
       <ErrorBoundary reload={reload}>
         <Flaky />
@@ -86,6 +82,7 @@ describe("ErrorBoundary", () => {
 
   it("shows an API error's own message", () => {
     shouldThrow = new AppError(ErrorCode.FORBIDDEN, "Operators only.")
+    expectConsoleError("Operators only.")
     render(
       <ErrorBoundary>
         <Flaky />
@@ -99,6 +96,7 @@ describe("ErrorBoundary", () => {
   it("remounts its children on Try again", async () => {
     const user = userEvent.setup()
     shouldThrow = new Error("transient")
+    expectConsoleError("transient")
     render(
       <ErrorBoundary>
         <Flaky />
@@ -116,6 +114,7 @@ describe("ErrorBoundary", () => {
     const user = userEvent.setup()
     const reload = vi.fn()
     shouldThrow = chunkLoadError()
+    expectConsoleError("Loading chunk 812 failed.")
     render(
       <ErrorBoundary reload={reload}>
         <Flaky />
@@ -133,6 +132,7 @@ describe("ErrorBoundary", () => {
 
   it("catches a thrown non-error value", () => {
     shouldThrow = "boom"
+    expectConsoleError("'boom'")
     render(
       <ErrorBoundary>
         <Flaky />

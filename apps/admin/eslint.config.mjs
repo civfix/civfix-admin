@@ -2,6 +2,7 @@ import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { FlatCompat } from "@eslint/eslintrc"
+import vitest from "@vitest/eslint-plugin"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 import reactHooks from "eslint-plugin-react-hooks"
 
@@ -10,7 +11,7 @@ const baseDirectory = dirname(fileURLToPath(import.meta.url))
 // eslint-config-next 15.x ships only eslintrc presets; FlatCompat is the supported bridge until 16.
 const compat = new FlatCompat({ baseDirectory })
 
-const TEST_FILES = ["src/**/*.test.{ts,tsx}", "src/test/**", "vitest.setup.ts"]
+const TEST_FILES = ["src/**/*.test.{ts,tsx}", "src/test/**", "vitest.setup.ts", "vitest.console-guard.ts"]
 
 const a11yRecommended = jsxA11y.flatConfigs.recommended.rules
 const [, controlLabelOptions] = a11yRecommended["jsx-a11y/control-has-associated-label"]
@@ -128,7 +129,16 @@ const config = [
   },
   {
     files: TEST_FILES,
+    plugins: { vitest },
     rules: {
+      "vitest/no-focused-tests": "error",
+      "vitest/no-disabled-tests": "error",
+      "vitest/valid-expect": ["error", { maxArgs: 2 }],
+      // The rule follows helpers declared in the same file on its own; these are the shared ones that assert.
+      "vitest/expect-expect": [
+        "error",
+        { assertFunctionNames: ["expect", "assert", "expectConsole*", "waitForSectionPage"] },
+      ],
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
