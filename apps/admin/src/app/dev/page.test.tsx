@@ -96,8 +96,15 @@ describe("the developer page tabs", () => {
   it.each([
     ["#flags", "Flags"],
     ["#test-tools", "Test tools"],
-    ["#audit", "Audit"],
-  ])("T6: %s opens %s, which is coming soon", (hash, name) => {
+  ])("T6: %s opens %s", (hash, name) => {
+    env("staging")
+    openAt(hash)
+    renderDevPage()
+
+    expect(tab(name)).toHaveAttribute("aria-selected", "true")
+  })
+
+  it.each([["#audit", "Audit"]])("T6: %s opens %s, which is coming soon", (hash, name) => {
     env("staging")
     openAt(hash)
     renderDevPage()

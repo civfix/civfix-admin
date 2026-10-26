@@ -12,10 +12,21 @@ import { useDevEnvironment } from "@/features/dev/use-dev"
 export function useDevConfirm() {
   const environment = useDevEnvironment()
   return React.useCallback(
-    ({ title, details, verb }: { title: string; details?: string[]; verb: "Run" | "Change" }) => {
+    ({
+      title,
+      body,
+      details,
+      verb,
+    }: {
+      title: string
+      body?: string
+      details?: string[]
+      verb: "Run" | "Change"
+    }) => {
       const onProduction = environment === "prod"
       return confirmDialog({
         title,
+        body,
         details,
         confirmLabel: onProduction ? `${verb} on production` : verb,
         danger: onProduction,
