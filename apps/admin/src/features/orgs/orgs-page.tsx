@@ -37,10 +37,7 @@ export function OrgsPage({ focusId }: SectionPageProps) {
     [filter, debouncedQuery],
   )
   const listQuery = useOrgListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
   const counts = listQuery.data?.pages[0]?.counts
   const pendingCount = counts?.pending
   const filterTotal = orgFilterCount(counts, filter)

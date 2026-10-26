@@ -27,7 +27,14 @@ afterEach(() => {
 })
 
 const PINS: MapPin[] = [
-  { id: "r1", lat: 34.05, lng: -118.25, category: "pothole", tip: "Deep pothole", place: "Los Angeles" },
+  {
+    id: "r1",
+    lat: 34.05,
+    lng: -118.25,
+    category: "pothole",
+    tip: "Deep pothole",
+    place: "Los Angeles",
+  },
   { id: "r2", lat: 34.06, lng: -118.24, category: "graffiti", draft: true, label: "Tagged wall" },
   { id: "e1", lat: 34.07, lng: -118.23, kind: "event", tip: "Park cleanup" },
 ]
@@ -106,7 +113,13 @@ describe("LeafletMap", () => {
 
   it("never runs markup from a citizen-authored title in the tooltip", () => {
     const payload = '<img src=x onerror="window.__pwned=1">'
-    const pin: MapPin = { id: "x", lat: 34, lng: -118, tip: payload, place: "<svg onload=alert(1)>" }
+    const pin: MapPin = {
+      id: "x",
+      lat: 34,
+      lng: -118,
+      tip: payload,
+      place: "<svg onload=alert(1)>",
+    }
     const { container } = render(<LeafletMap pins={[pin]} />)
 
     const tip = hoverAndReadTooltip(container, markerIcons(container)[0]!)
@@ -134,7 +147,9 @@ describe("LeafletMap", () => {
         />,
       )
 
-      const glyphs = markerIcons(container).map((el) => el.querySelector("g path")?.getAttribute("d"))
+      const glyphs = markerIcons(container).map((el) =>
+        el.querySelector("g path")?.getAttribute("d"),
+      )
       expect(glyphs[0]).toBe(glyphs[1])
     },
   )
@@ -162,7 +177,9 @@ describe("LeafletMap", () => {
     const { container, rerender } = render(<LeafletMap pins={[bare]} />)
 
     rerender(<LeafletMap pins={[{ ...bare, tip: "Now titled" }]} />)
-    expect(hoverAndReadTooltip(container, markerIcons(container)[0]!)?.textContent).toBe("Now titled")
+    expect(hoverAndReadTooltip(container, markerIcons(container)[0]!)?.textContent).toBe(
+      "Now titled",
+    )
 
     fireEvent.mouseOut(markerIcons(container)[0]!)
     rerender(<LeafletMap pins={[bare]} />)

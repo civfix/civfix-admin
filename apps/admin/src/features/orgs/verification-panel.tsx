@@ -1,6 +1,10 @@
 "use client"
 
-import { OrgVerificationKindSchema, type AdminOrgDTO, type OrgVerificationKind } from "@civfix/contract"
+import {
+  OrgVerificationKindSchema,
+  type AdminOrgDTO,
+  type OrgVerificationKind,
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { LoadingState, ErrorState } from "@/components/shared/data-states"
@@ -8,13 +12,7 @@ import { confirmDialog, promptReason } from "@/components/shared/dialog"
 import { formatDate, formatDateTime } from "@/lib/dates"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { EvidenceList } from "@/features/orgs/evidence-list"
-import {
-  DeletedFact,
-  Fact,
-  OrgStatusSubHead,
-  UrlFact,
-  kindLabel,
-} from "@/features/orgs/org-facts"
+import { DeletedFact, Fact, OrgStatusSubHead, UrlFact, kindLabel } from "@/features/orgs/org-facts"
 import { ORG_KIND_LABEL, canDecideVerification } from "@/features/orgs/org-verification"
 import { useOrg, useDecideOrgVerification } from "@/features/orgs/use-orgs"
 import { useNav } from "@/store/ui-store"
@@ -85,7 +83,11 @@ function OrgSummary({ org }: { org: AdminOrgDTO }) {
           <DeletedFact deletedAt={org.deletedAt} />
         </div>
         {owner && (
-          <button type="button" className="btn sm ghost full" onClick={() => nav("users", owner.id)}>
+          <button
+            type="button"
+            className="btn sm ghost full"
+            onClick={() => nav("users", owner.id)}
+          >
             Owner · {owner.name} →
           </button>
         )}

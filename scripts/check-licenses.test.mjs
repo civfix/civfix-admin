@@ -29,7 +29,15 @@ describe("parseLicenseExpression", () => {
 
 describe("isLicenseAllowed", () => {
   it("allows AGPL-compatible licenses", () => {
-    for (const license of ["MIT", "ISC", "BSD-2-Clause", "Apache-2.0", "LGPL-3.0-or-later", "AGPL-3.0-only", "mit"]) {
+    for (const license of [
+      "MIT",
+      "ISC",
+      "BSD-2-Clause",
+      "Apache-2.0",
+      "LGPL-3.0-or-later",
+      "AGPL-3.0-only",
+      "mit",
+    ]) {
       assert.equal(isLicenseAllowed(license), true, license)
     }
   })
@@ -70,11 +78,19 @@ describe("findViolations", () => {
   }
 
   it("reports every package with a disallowed license", () => {
-    assert.deepEqual(findViolations(report, {}), [{ name: "mislabelled", versions: ["2.0.0"], license: "Unknown" }])
+    assert.deepEqual(findViolations(report, {}), [
+      { name: "mislabelled", versions: ["2.0.0"], license: "Unknown" },
+    ])
   })
 
   it("skips an allow-listed package only while it reports the recorded license", () => {
-    assert.deepEqual(findViolations(report, { mislabelled: { license: "Unknown", reason: "MIT upstream" } }), [])
-    assert.equal(findViolations(report, { mislabelled: { license: "MIT", reason: "MIT upstream" } }).length, 1)
+    assert.deepEqual(
+      findViolations(report, { mislabelled: { license: "Unknown", reason: "MIT upstream" } }),
+      [],
+    )
+    assert.equal(
+      findViolations(report, { mislabelled: { license: "MIT", reason: "MIT upstream" } }).length,
+      1,
+    )
   })
 })

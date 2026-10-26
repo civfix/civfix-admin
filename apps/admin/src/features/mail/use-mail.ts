@@ -104,7 +104,8 @@ export function useReplyMail() {
     mutationFn: ({ request }: ReplyMailVariables) => api.replyMail(request),
     onSuccess: (_res, { request }) => invalidateMail(qc, request.id),
     meta: {
-      successMessage: (_res: unknown, { recipient }: ReplyMailVariables) => `Reply sent to ${recipient}`,
+      successMessage: (_res: unknown, { recipient }: ReplyMailVariables) =>
+        `Reply sent to ${recipient}`,
       errorMessage: errorOr("Couldn't send the reply. Please try again."),
     },
   })

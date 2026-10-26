@@ -94,14 +94,22 @@ describe("useSelection", () => {
   })
 
   it.each<[string, Props, (hook: ReturnType<typeof setup>) => void]>([
-    ["a clicked row a deep link then names", {}, (hook) => {
-      act(() => hook.result.current.setSelectedId("b"))
-      hook.rerender({ focusId: "b" })
-    }],
-    ["a deep-linked row whose link goes and comes back", { focusId: "b" }, (hook) => {
-      hook.rerender({ focusId: null })
-      hook.rerender({ focusId: "b" })
-    }],
+    [
+      "a clicked row a deep link then names",
+      {},
+      (hook) => {
+        act(() => hook.result.current.setSelectedId("b"))
+        hook.rerender({ focusId: "b" })
+      },
+    ],
+    [
+      "a deep-linked row whose link goes and comes back",
+      { focusId: "b" },
+      (hook) => {
+        hook.rerender({ focusId: null })
+        hook.rerender({ focusId: "b" })
+      },
+    ],
   ])("still clears %s once it drops out of the list", (_name, initial, relink) => {
     const hook = setup(initial)
     relink(hook)

@@ -18,7 +18,11 @@ export function HeldMediaCard({
   if (media.length === 0) return null
   const heldImages: LightboxImage[] = media
     .filter((m) => m.kind === "image")
-    .map((m, i, images) => ({ id: m.id, url: m.url, alt: `Held image ${i + 1} of ${images.length}` }))
+    .map((m, i, images) => ({
+      id: m.id,
+      url: m.url,
+      alt: `Held image ${i + 1} of ${images.length}`,
+    }))
   const heldVideoIds = media.filter((m) => m.kind === "video").map((m) => m.id)
   return (
     <div className="sub">

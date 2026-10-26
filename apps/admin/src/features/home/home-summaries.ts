@@ -2,10 +2,7 @@ import type { ReactNode } from "react"
 import type { HomeSummaryResponse } from "@civfix/contract"
 
 import type { Hue } from "@/features/analytics/analytics-charts"
-import {
-  mailPreviewView,
-  moderationPreviewView,
-} from "@/features/home/home-preview-presentation"
+import { mailPreviewView, moderationPreviewView } from "@/features/home/home-preview-presentation"
 import type { PageId } from "@/store/ui-store"
 
 interface SectionStat {
@@ -59,7 +56,11 @@ export function buildSections(data: HomeSummaryResponse | undefined): HomeSectio
         "Jurisdictions with reports waiting on routing setup. Work the queue so neighbors' reports reach the right city department.",
       stats: [
         { k: "Reports waiting", v: data?.discovery.reportsWaiting },
-        { k: "Over SLA", v: data?.discovery.overSla, tone: (data?.discovery.overSla ?? 0) > 0 ? "warn" : null },
+        {
+          k: "Over SLA",
+          v: data?.discovery.overSla,
+          tone: (data?.discovery.overSla ?? 0) > 0 ? "warn" : null,
+        },
       ],
       cta: "Open",
     },
@@ -97,7 +98,11 @@ export function buildSections(data: HomeSummaryResponse | undefined): HomeSectio
       blurb:
         "Two-way mail with municipal contacts: outbound routing and the replies that come back.",
       stats: [
-        { k: "Needs action", v: data?.mail.needsAction, tone: (data?.mail.needsAction ?? 0) > 0 ? "warn" : null },
+        {
+          k: "Needs action",
+          v: data?.mail.needsAction,
+          tone: (data?.mail.needsAction ?? 0) > 0 ? "warn" : null,
+        },
         { k: "Unread", v: data?.mail.unread },
       ],
       cta: "Open inbox",
@@ -107,9 +112,14 @@ export function buildSections(data: HomeSummaryResponse | undefined): HomeSectio
       label: "Users",
       hue: "sun",
       ...counted(data?.users.flagged, "accounts flagged"),
-      blurb: "Most neighbors never appear here. The queue surfaces the few who need a trust review.",
+      blurb:
+        "Most neighbors never appear here. The queue surfaces the few who need a trust review.",
       stats: [
-        { k: "High risk", v: data?.users.highRisk, tone: (data?.users.highRisk ?? 0) > 0 ? "alert" : null },
+        {
+          k: "High risk",
+          v: data?.users.highRisk,
+          tone: (data?.users.highRisk ?? 0) > 0 ? "alert" : null,
+        },
         { k: "Suspended", v: data?.users.suspended },
       ],
       cta: "Review accounts",

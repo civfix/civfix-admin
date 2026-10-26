@@ -29,7 +29,12 @@ export interface ReportStatusView {
 }
 
 const BUCKET_VIEW: Record<ReportBucket, ReportStatusView> = {
-  submitted: { cls: "status-new", icon: Icons.Inbox, label: "Needs verification", tone: "var(--ink-2)" },
+  submitted: {
+    cls: "status-new",
+    icon: Icons.Inbox,
+    label: "Needs verification",
+    tone: "var(--ink-2)",
+  },
   in_progress: {
     cls: "status-progress",
     icon: Icons.Clock,

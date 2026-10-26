@@ -25,7 +25,9 @@ function actor(id: string, name: string, handle: string) {
   return { id, name, handle, joined: "2025-01-01T00:00:00.000Z" }
 }
 
-function host(overrides: Partial<AdminHostListItemDTO> & { id: string; name: string; handle: string }): AdminHostListItemDTO {
+function host(
+  overrides: Partial<AdminHostListItemDTO> & { id: string; name: string; handle: string },
+): AdminHostListItemDTO {
   const { id, name, handle, ...rest } = overrides
   return {
     host: actor(id, name, handle),
@@ -61,11 +63,16 @@ const bob = host({
   eventsMessaged: 1,
 })
 
-function page(items: AdminHostListItemDTO[], nextCursor: string | null = null): AdminHostListResponse {
+function page(
+  items: AdminHostListItemDTO[],
+  nextCursor: string | null = null,
+): AdminHostListResponse {
   return { items, nextCursor } satisfies AdminHostListResponse
 }
 
-function broadcast(overrides: Partial<AdminBroadcastListItemDTO> & { id: string; cleanupId: string }): AdminBroadcastListItemDTO {
+function broadcast(
+  overrides: Partial<AdminBroadcastListItemDTO> & { id: string; cleanupId: string },
+): AdminBroadcastListItemDTO {
   return {
     eventTitle: "Park cleanup",
     kind: "host_broadcast",
@@ -83,7 +90,10 @@ function broadcast(overrides: Partial<AdminBroadcastListItemDTO> & { id: string;
   } satisfies AdminBroadcastListItemDTO
 }
 
-function broadcasts(items: AdminBroadcastListItemDTO[], nextCursor: string | null = null): AdminBroadcastListResponse {
+function broadcasts(
+  items: AdminBroadcastListItemDTO[],
+  nextCursor: string | null = null,
+): AdminBroadcastListResponse {
   return { items, nextCursor } satisfies AdminBroadcastListResponse
 }
 
@@ -149,7 +159,9 @@ describe("HostsPage list states", () => {
     expect(within(list).getByText("2")).toBeInTheDocument()
 
     const detail = detailSection()
-    expect(await within(detail).findByRole("heading", { name: "Ada Lovelace", level: 2 })).toBeInTheDocument()
+    expect(
+      await within(detail).findByRole("heading", { name: "Ada Lovelace", level: 2 }),
+    ).toBeInTheDocument()
     expect(within(detail).getByText("Messaging active")).toBeInTheDocument()
     expect(within(detail).getByText("last 30 days")).toBeInTheDocument()
     expect(within(detail).getByText("10 suppressed")).toBeInTheDocument()
@@ -208,7 +220,13 @@ describe("HostsPage detail pane", () => {
       params.createdBy === "h-bob"
         ? broadcasts([
             broadcast({ id: "b-1", cleanupId: "ev-1", eventTitle: "River sweep" }),
-            broadcast({ id: "b-2", cleanupId: "ev-1", eventTitle: null, status: "failed", channels: [] }),
+            broadcast({
+              id: "b-2",
+              cleanupId: "ev-1",
+              eventTitle: null,
+              status: "failed",
+              channels: [],
+            }),
           ])
         : broadcasts([]),
     )
@@ -217,9 +235,13 @@ describe("HostsPage detail pane", () => {
     await userEvent.click(await within(listSection()).findByText("Bob Builder"))
 
     const detail = detailSection()
-    expect(await within(detail).findByRole("heading", { name: "Bob Builder", level: 2 })).toBeInTheDocument()
+    expect(
+      await within(detail).findByRole("heading", { name: "Bob Builder", level: 2 }),
+    ).toBeInTheDocument()
     expect(within(detail).getByText("Messaging suspended")).toBeInTheDocument()
-    expect(within(detail).getByText(/by Olive Operator\. The mandatory reason is in the/)).toBeInTheDocument()
+    expect(
+      within(detail).getByText(/by Olive Operator\. The mandatory reason is in the/),
+    ).toBeInTheDocument()
     expect(within(detail).getByRole("button", { name: "Restore messaging" })).toBeInTheDocument()
 
     // The log row links the event and "Events reached" lists it once more, deduplicated by event.
@@ -289,12 +311,21 @@ describe("HostsPage detail pane", () => {
   it("pages the broadcast log with its cursor", async () => {
     apiMock.adminListHosts.mockResolvedValue(page([ada]))
     apiMock.adminListBroadcasts
-      .mockResolvedValueOnce(broadcasts([broadcast({ id: "b-1", cleanupId: "ev-1", eventTitle: "First event" })], "log-2"))
-      .mockResolvedValueOnce(broadcasts([broadcast({ id: "b-2", cleanupId: "ev-2", eventTitle: "Second event" })]))
+      .mockResolvedValueOnce(
+        broadcasts(
+          [broadcast({ id: "b-1", cleanupId: "ev-1", eventTitle: "First event" })],
+          "log-2",
+        ),
+      )
+      .mockResolvedValueOnce(
+        broadcasts([broadcast({ id: "b-2", cleanupId: "ev-2", eventTitle: "Second event" })]),
+      )
     renderWithQuery(<HostsPage focusId={null} />)
 
     const detail = detailSection()
-    await userEvent.click(await within(detail).findByRole("button", { name: "Load more broadcasts" }))
+    await userEvent.click(
+      await within(detail).findByRole("button", { name: "Load more broadcasts" }),
+    )
 
     expect(await within(detail).findAllByRole("button", { name: "Second event" })).toHaveLength(2)
     expect(apiMock.adminListBroadcasts).toHaveBeenLastCalledWith({
@@ -303,7 +334,9 @@ describe("HostsPage detail pane", () => {
       from: expect.any(String),
       cursor: "log-2",
     })
-    expect(within(detail).queryByRole("button", { name: "Load more broadcasts" })).not.toBeInTheDocument()
+    expect(
+      within(detail).queryByRole("button", { name: "Load more broadcasts" }),
+    ).not.toBeInTheDocument()
   })
 
   it("navigates to the event from both the log row and the events reached list", async () => {
@@ -371,11 +404,15 @@ describe("HostsPage detail pane", () => {
     await userEvent.type(within(dialog).getByRole("textbox"), "Spamming attendees")
     await userEvent.click(within(dialog).getByRole("button", { name: "Suspend messaging" }))
 
-    await waitFor(() => expect(within(listSection()).queryByText("Ada Lovelace")).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(listSection()).queryByText("Ada Lovelace")).not.toBeInTheDocument(),
+    )
     const detail = detailSection()
     expect(await within(detail).findByText("No host selected")).toBeInTheDocument()
     expect(within(detail).queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
-    expect(within(detail).queryByRole("button", { name: "Suspend messaging" })).not.toBeInTheDocument()
+    expect(
+      within(detail).queryByRole("button", { name: "Suspend messaging" }),
+    ).not.toBeInTheDocument()
   })
 
   it("confirms the suspension once the broadcast log refetch lands after the list dropped the host", async () => {
@@ -441,7 +478,9 @@ describe("HostsPage detail pane", () => {
     await userEvent.type(within(dialog).getByRole("textbox"), "Spamming attendees")
     await userEvent.click(within(dialog).getByRole("button", { name: "Suspend messaging" }))
 
-    await waitFor(() => expect(within(listSection()).queryByText("Ada Lovelace")).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(listSection()).queryByText("Ada Lovelace")).not.toBeInTheDocument(),
+    )
     const detail = detailSection()
     expect(await within(detail).findByText("No host selected")).toBeInTheDocument()
     expect(within(detail).queryByText("That host is not in this window")).not.toBeInTheDocument()
@@ -485,12 +524,20 @@ describe("HostsPage filters, search and paging", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Suspended" }))
     await waitFor(() =>
-      expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({ suspended: true, q: undefined, windowDays: 30 }),
+      expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({
+        suspended: true,
+        q: undefined,
+        windowDays: 30,
+      }),
     )
 
     await userEvent.click(screen.getByRole("button", { name: "Active" }))
     await waitFor(() =>
-      expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({ suspended: false, q: undefined, windowDays: 30 }),
+      expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({
+        suspended: false,
+        q: undefined,
+        windowDays: 30,
+      }),
     )
 
     await userEvent.click(screen.getByRole("button", { name: "All" }))
@@ -509,7 +556,9 @@ describe("HostsPage filters, search and paging", () => {
     await act(async () => {
       vi.advanceTimersByTime(249)
     })
-    expect(apiMock.adminListHosts).not.toHaveBeenCalledWith(expect.objectContaining({ q: expect.any(String) }))
+    expect(apiMock.adminListHosts).not.toHaveBeenCalledWith(
+      expect.objectContaining({ q: expect.any(String) }),
+    )
 
     await act(async () => {
       vi.advanceTimersByTime(1)
@@ -527,8 +576,14 @@ describe("HostsPage filters, search and paging", () => {
     await userEvent.click(await within(listSection()).findByRole("button", { name: "Load more" }))
 
     expect(await within(listSection()).findByText("Bob Builder")).toBeInTheDocument()
-    expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({ q: undefined, windowDays: 30, cursor: "cursor-2" })
-    expect(within(listSection()).queryByRole("button", { name: "Load more" })).not.toBeInTheDocument()
+    expect(apiMock.adminListHosts).toHaveBeenLastCalledWith({
+      q: undefined,
+      windowDays: 30,
+      cursor: "cursor-2",
+    })
+    expect(
+      within(listSection()).queryByRole("button", { name: "Load more" }),
+    ).not.toBeInTheDocument()
     expect(within(listSection()).getByText("2")).toBeInTheDocument()
   })
 })
@@ -583,6 +638,8 @@ describe("HostsPage deep link", () => {
     expect(within(detail).queryByRole("heading", { level: 2 })).not.toBeInTheDocument()
 
     await userEvent.click(within(listSection()).getByRole("button", { name: "Load more" }))
-    expect(await within(detail).findByRole("heading", { name: "Bob Builder", level: 2 })).toBeInTheDocument()
+    expect(
+      await within(detail).findByRole("heading", { name: "Bob Builder", level: 2 }),
+    ).toBeInTheDocument()
   })
 })

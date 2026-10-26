@@ -25,7 +25,9 @@ import { useForwardTemplateDefault } from "@/features/mail/use-mail"
 import { errorMessage } from "@/lib/error-messages"
 import { useToast } from "@/store/ui-store"
 
-function templateFallback(stored: GetForwardTemplateDefaultResponse | undefined): ForwardTemplatePair {
+function templateFallback(
+  stored: GetForwardTemplateDefaultResponse | undefined,
+): ForwardTemplatePair {
   if (stored && (stored.subjectTemplate !== null || stored.bodyTemplate !== null)) {
     return { subject: stored.subjectTemplate ?? "", body: stored.bodyTemplate ?? "" }
   }
@@ -58,7 +60,11 @@ export function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         </div>
 
         <div className="rep-col">
-          <HandleField handle={editor.handle} parsed={editor.parsedHandle} onChange={editor.setHandle} />
+          <HandleField
+            handle={editor.handle}
+            parsed={editor.parsedHandle}
+            onChange={editor.setHandle}
+          />
           <DefaultContactFields
             email={editor.defaultEmail}
             formUrl={editor.formUrl}
@@ -73,7 +79,9 @@ export function JurisdictionDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             onChange={editor.setCategoryContact}
           />
           <TemplateSection
-            hasCustomTemplate={dto.forwardSubjectTemplate !== null || dto.forwardBodyTemplate !== null}
+            hasCustomTemplate={
+              dto.forwardSubjectTemplate !== null || dto.forwardBodyTemplate !== null
+            }
             loading={defaultTemplate.isLoading}
             onEdit={openTemplate}
           />

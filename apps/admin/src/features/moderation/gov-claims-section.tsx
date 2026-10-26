@@ -31,10 +31,7 @@ export function GovClaimsSection() {
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
   const listQuery = useGovClaimListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
 
   // A decision clears its claim outright, since the list may still hold it (All) or never did.
   const { selectedId, setSelectedId, clearIfSelected } = useSelection({
@@ -77,7 +74,12 @@ export function GovClaimsSection() {
             }
           >
             {items.map((c) => (
-              <GovClaimRow key={c.id} item={c} selected={selectedId === c.id} onSelect={setSelectedId} />
+              <GovClaimRow
+                key={c.id}
+                item={c}
+                selected={selectedId === c.id}
+                onSelect={setSelectedId}
+              />
             ))}
             <LoadMoreButton query={listQuery} className="list-load-more" />
           </ListStates>

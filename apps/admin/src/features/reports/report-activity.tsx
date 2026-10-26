@@ -20,7 +20,9 @@ const TIMELINE_ICON: Record<ReportTimelineItem["kind"], IconComponent> = {
 }
 
 function TimelineRow({ item }: { item: ReportTimelineItem }) {
-  const TimelineIcon = Object.hasOwn(TIMELINE_ICON, item.kind) ? TIMELINE_ICON[item.kind] : Icons.Clock
+  const TimelineIcon = Object.hasOwn(TIMELINE_ICON, item.kind)
+    ? TIMELINE_ICON[item.kind]
+    : Icons.Clock
   return (
     <div className={`rep-tl-row kind-${item.kind}`}>
       <span className="rep-tl-ico">
