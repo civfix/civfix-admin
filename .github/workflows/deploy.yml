@@ -107,29 +107,15 @@ jobs:
         with:
           version: 9.12.0
 
+      # No dependency or build cache in this job: caches written by other workflows on main are readable
+      # here, so restoring one would let any of them poison what ships to admin.civfix.org.
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      # Persist the build caches between runs. Side-effect-free: Turbo validates every task by an input
-      # hash that already includes the NEXT_PUBLIC_* vars, so a changed API URL or source file rebuilds.
-      # The key is scoped by DEPLOY_ENV anyway: staging and production build the same commit, and
-      # `.next/cache` is restored underneath Turbo, so the two must never share one. (Admin happens to
-      # build identically in both environments today; this keeps that from becoming load-bearing.)
-      - name: Restore Turbo + Next.js build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .turbo
-            apps/admin/.next/cache
-          key: ${{ runner.os }}-build-${{ env.DEPLOY_ENV }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.DEPLOY_ENV }}-
 
       - name: Build static export
         # NEXT_PUBLIC_* values are inlined into the export here at build time.
@@ -139,8 +125,8 @@ jobs:
         run: pnpm build
 
       - name: Publish civfix-admin to Cloudflare Pages
-        # `pnpm dlx` fetches wrangler OUTSIDE the workspace (no root mutation). The project name +
-        # output dir are read from the repo-root wrangler.jsonc.
+        # wrangler comes from the lockfile (root devDependency), never resolved fresh next to the token.
+        # The project name + output dir are read from the repo-root wrangler.jsonc.
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -158,4 +144,4 @@ jobs:
               exit 1
               ;;
           esac
-          pnpm dlx wrangler@3 pages deploy --branch="$DEPLOY_BRANCH"
+          pnpm exec wrangler pages deploy --branch="$DEPLOY_BRANCH"
