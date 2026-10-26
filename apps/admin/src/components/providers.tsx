@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { QueryClientProvider, type QueryClient } from "@tanstack/react-query"
+import { QueryClientProvider } from "@tanstack/react-query"
 
 import { makeQueryClient } from "@/lib/query"
 import { AuthHydrator } from "@/components/auth/auth-hydrator"
@@ -11,11 +11,10 @@ import { OperatorLogin } from "@/features/auth/operator-login"
 import { useOperatorSession } from "@/hooks/use-admin-auth"
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const clientRef = React.useRef<QueryClient | null>(null)
-  clientRef.current ??= makeQueryClient()
+  const [client] = React.useState(makeQueryClient)
 
   return (
-    <QueryClientProvider client={clientRef.current}>
+    <QueryClientProvider client={client}>
       <ErrorBoundary>
         <AuthHydrator />
         <AuthGate>{children}</AuthGate>

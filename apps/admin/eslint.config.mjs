@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 
 import { FlatCompat } from "@eslint/eslintrc"
 import jsxA11y from "eslint-plugin-jsx-a11y"
+import reactHooks from "eslint-plugin-react-hooks"
 
 const baseDirectory = dirname(fileURLToPath(import.meta.url))
 
@@ -16,6 +17,24 @@ const [, controlLabelOptions] = a11yRecommended["jsx-a11y/control-has-associated
 // A list row's name is its title, which the shared .qrow markup nests four levels down.
 const CONTROL_LABEL_DEPTH = 4
 
+// eslint-config-next 15 depends on react-hooks v5, and which copy its preset loads is up to module
+// resolution, so its plugin and rules are dropped here and the pinned v7 below is the only one.
+function withoutReactHooks(entry) {
+  const { plugins, rules, ...rest } = entry
+  const { "react-hooks": _reactHooks, ...otherPlugins } = plugins ?? {}
+  return {
+    ...rest,
+    ...(plugins && { plugins: otherPlugins }),
+    ...(rules && {
+      rules: Object.fromEntries(
+        Object.entries(rules).filter(([name]) => !name.startsWith("react-hooks/")),
+      ),
+    }),
+  }
+}
+
+const reactHooksRecommended = reactHooks.configs.flat["recommended-latest"]
+
 const config = [
   {
     ignores: [".next/**", "out/**", "coverage/**", "next-env.d.ts"],
@@ -23,7 +42,14 @@ const config = [
   {
     linterOptions: { reportUnusedDisableDirectives: "error" },
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends("next/core-web-vitals", "next/typescript").map(withoutReactHooks),
+  // Every recommended rule at error, including the ones the preset ships as warnings.
+  {
+    plugins: reactHooksRecommended.plugins,
+    rules: Object.fromEntries(
+      Object.keys(reactHooksRecommended.rules).map((name) => [name, "error"]),
+    ),
+  },
   {
     rules: {
       // images.unoptimized is set for the static export, so next/image would render a plain <img> anyway.

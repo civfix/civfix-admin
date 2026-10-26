@@ -191,23 +191,25 @@ function useMemberActions(org: AdminOrgDTO, member: AdminOrgMemberDTO, ownerName
 
 function MemberActionsMenu({
   member,
-  menu,
+  position,
+  popRef,
+  onMenuKeyDown,
+  onMenuBlur,
   onChangeRole,
   onRemove,
-}: {
+}: Pick<RowMenu, "position" | "popRef" | "onMenuKeyDown" | "onMenuBlur"> & {
   member: AdminOrgMemberDTO
-  menu: RowMenu
   onChangeRole: (to: OrganizationMemberRole) => void
   onRemove: () => void
 }) {
-  if (!menu.position) return null
+  if (!position) return null
   return (
     <div
       className="row-menu-pop"
       role="menu"
       aria-label={`Actions for ${member.user.name}`}
-      ref={menu.popRef}
-      style={menu.position}
+      ref={popRef}
+      style={position}
     >
       <div className="row-menu-label" role="presentation">
         Change role
@@ -218,8 +220,8 @@ function MemberActionsMenu({
           type="button"
           role="menuitem"
           className="row-menu-item"
-          onKeyDown={menu.onMenuKeyDown}
-          onBlur={menu.onMenuBlur}
+          onKeyDown={onMenuKeyDown}
+          onBlur={onMenuBlur}
           onClick={() => onChangeRole(r)}
         >
           {r === "owner" ? (
@@ -236,8 +238,8 @@ function MemberActionsMenu({
         type="button"
         role="menuitem"
         className="row-menu-item danger"
-        onKeyDown={menu.onMenuKeyDown}
-        onBlur={menu.onMenuBlur}
+        onKeyDown={onMenuKeyDown}
+        onBlur={onMenuBlur}
         onClick={onRemove}
       >
         <Icons.Trash size={12} /> Remove
@@ -256,7 +258,18 @@ function MemberRow({
   ownerName: string | null
 }) {
   const nav = useNav()
-  const menu = useRowMenu()
+  const {
+    open,
+    position,
+    close,
+    toggle,
+    wrapRef,
+    popRef,
+    triggerRef,
+    onMenuKeyDown,
+    onMenuBlur,
+    onTriggerKeyDown,
+  } = useRowMenu()
   const actions = useMemberActions(org, member, ownerName)
   // The backend refuses every change to the owner's own membership: ownership moves by promoting
   // someone else, so the owner row has no actions.
@@ -299,29 +312,32 @@ function MemberRow({
         <span className={`pill ${ORG_ROLE_PILL[member.role]} tight`}>
           {isOwner && <Icons.Star size={9} />} {ORG_ROLE_LABEL[member.role]}
         </span>
-        <div className="row-menu" ref={menu.wrapRef}>
+        <div className="row-menu" ref={wrapRef}>
           <button
-            ref={menu.triggerRef}
+            ref={triggerRef}
             type="button"
             className="btn sm ghost icon"
             aria-label={`Actions for ${member.user.name}`}
             aria-haspopup="menu"
-            aria-expanded={menu.open}
+            aria-expanded={open}
             disabled={actions.busy || isOwner || !!org.deletedAt}
-            onClick={menu.toggle}
-            onKeyDown={menu.onTriggerKeyDown}
+            onClick={toggle}
+            onKeyDown={onTriggerKeyDown}
           >
             <Icons.MoreH size={14} />
           </button>
           <MemberActionsMenu
             member={member}
-            menu={menu}
+            position={position}
+            popRef={popRef}
+            onMenuKeyDown={onMenuKeyDown}
+            onMenuBlur={onMenuBlur}
             onChangeRole={(to) => {
-              menu.close(true)
+              close(true)
               void actions.changeRole(to)
             }}
             onRemove={() => {
-              menu.close(true)
+              close(true)
               void actions.removeMember()
             }}
           />

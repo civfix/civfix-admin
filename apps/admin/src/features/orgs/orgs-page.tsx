@@ -7,6 +7,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { ListCard, SearchBox } from "@/components/shared/section-list"
 import { useDebounced } from "@/hooks/use-debounced"
 import { idOf, useSelection } from "@/hooks/use-selection"
+import { useValueChanged } from "@/hooks/use-value-changed"
 import { flatPages } from "@/lib/infinite"
 import { CreateOrgPanel } from "@/features/orgs/create-org-panel"
 import { OrgDetail } from "@/features/orgs/org-detail"
@@ -55,10 +56,11 @@ export function OrgsPage({ focusId }: SectionPageProps) {
     getId: idOf,
     listKey: JSON.stringify(listParams),
   })
-  React.useEffect(() => {
+  const focusChanged = useValueChanged(focusId)
+  if (focusChanged) {
     if (focus.id) setSelId(focus.id)
     if (focus.tab) setTab(focus.tab)
-  }, [focus, setSelId])
+  }
 
   const pickFilter = (next: string) => {
     if (!isOrgFilter(next)) return

@@ -1,3 +1,4 @@
+import * as React from "react"
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
@@ -136,6 +137,12 @@ describe("useSelection", () => {
       hook.rerender({ listKey: "suspended", items: [A] })
       expect(hook.result.current.selectedId).toBe("z")
     })
+
+    it("opens a new unlisted deep link over an unlisted one", () => {
+      const hook = setup({ readableById: false, focusId: "z", items: [A] })
+      hook.rerender({ focusId: "y", items: [A] })
+      expect(hook.result.current.selectedId).toBe("y")
+    })
   })
 
   it("clearIfSelected clears only the matching pick", () => {
@@ -160,25 +167,61 @@ describe("useSelection", () => {
       const hook = setup({ items: [A, B], unreadIds: new Set(["a", "b"]) })
       act(() => {
         hook.result.current.setSelectedId("b")
-        hook.result.current.readOnOpen.current = "b"
+        hook.result.current.setReadOnOpen("b")
       })
       hook.rerender({ items: [A], unreadIds: new Set(["a"]) })
       expect(hook.result.current.selectedId).toBe("b")
-      expect(hook.result.current.readOnOpen.current).toBeNull()
+      expect(hook.result.current.readOnOpen).toBeNull()
     })
 
     it("clears it once the list has shown it read and it then drops out", () => {
       const hook = setup({ items: [A, B], unreadIds: new Set(["a", "b"]) })
       act(() => {
         hook.result.current.setSelectedId("b")
-        hook.result.current.readOnOpen.current = "b"
+        hook.result.current.setReadOnOpen("b")
       })
       hook.rerender({ items: [A, B], unreadIds: new Set(["a"]) })
-      expect(hook.result.current.readOnOpen.current).toBeNull()
+      expect(hook.result.current.readOnOpen).toBeNull()
 
       hook.rerender({ items: [A], unreadIds: new Set(["a"]) })
       expect(hook.result.current.selectedId).toBeNull()
     })
+
+    it("releases only the message it still holds", () => {
+      const hook = setup({ items: [A, B], unreadIds: new Set(["a", "b"]) })
+      act(() => hook.result.current.setReadOnOpen("b"))
+      act(() => hook.result.current.releaseReadOnOpen("a"))
+      expect(hook.result.current.readOnOpen).toBe("b")
+      act(() => hook.result.current.releaseReadOnOpen("b"))
+      expect(hook.result.current.readOnOpen).toBeNull()
+    })
+  })
+
+  it("never commits a pick the settled list has already overruled", () => {
+    const committed: (string | null)[] = []
+    const hook = renderHook(
+      (props: Props) => {
+        const selection = useSelection({
+          focusId: null,
+          list: SETTLED,
+          items: [A, B],
+          getId: idOf,
+          listKey: "all",
+          ...props,
+        })
+        React.useEffect(() => {
+          committed.push(selection.selectedId)
+        })
+        return selection
+      },
+      { initialProps: {} },
+    )
+    act(() => hook.result.current.setSelectedId("b"))
+    committed.length = 0
+
+    hook.rerender({ items: ONLY_A })
+
+    expect(committed).toEqual([null])
   })
 
   describe("keepLastSeen", () => {

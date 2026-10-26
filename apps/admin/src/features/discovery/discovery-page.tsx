@@ -8,6 +8,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
 import { useNow } from "@/hooks/use-now"
 import { useSelection } from "@/hooks/use-selection"
+import { useValueChanged } from "@/hooks/use-value-changed"
 import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
   directoryCounts,
@@ -45,13 +46,13 @@ function useDirectoryFilters(focusId: string | null) {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [query])
-  React.useEffect(() => {
-    if (!focusId) return
+  const focusChanged = useValueChanged(focusId)
+  if (focusChanged && focusId) {
     const next = initialDirectoryState(focusId)
     setFilter(next.filter)
     setQuery(next.query)
     setDebouncedQuery(next.query)
-  }, [focusId])
+  }
 
   return { filter, setFilter, layer, setLayer, sort, setSort, query, setQuery, debouncedQuery }
 }

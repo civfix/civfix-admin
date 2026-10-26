@@ -17,19 +17,22 @@ import {
 } from "@/features/moderation/moderation-evidence-cards"
 import { moderationDestination } from "@/features/moderation/moderation-navigation"
 import { UserContextCard } from "@/features/moderation/moderation-user-context"
-import { kindIcon, moderationKindLabel, priorityView } from "@/features/moderation/moderation-views"
+import {
+  ModerationKindIcon,
+  moderationKindLabel,
+  priorityView,
+} from "@/features/moderation/moderation-views"
 import { useModerationItem } from "@/features/moderation/use-moderation"
 import { useNav } from "@/store/ui-store"
 
 function ModerationHead({ item }: { item: ModerationItemDTO }) {
   const nav = useNav()
-  const KindIcon = kindIcon(item.kind)
   const priority = priorityView(item.priority)
   const reporterId = item.reporterId
   return (
     <div className="rep-head">
       <span className="rep-head-pin">
-        <KindIcon size={20} />
+        <ModerationKindIcon kind={item.kind} size={20} />
       </span>
       <div className="rep-head-text">
         <div className="crumb">

@@ -5,6 +5,7 @@ import L from "leaflet"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
 import { addCartoBasemap, setCartoTint, useLeafletMap, type CartoTint } from "@/components/map/leaflet-base"
+import { useLatestRef } from "@/hooks/use-latest-ref"
 import { CATEGORY_GLYPHS } from "@/lib/category"
 
 // Leaflet rather than community-web's MapLibre seam: a deliberate choice for this internal tool.
@@ -238,8 +239,7 @@ export function LeafletMap({
   // The latest pin per id: marker handlers are bound once, and a refetch replaces the pin objects.
   const pinsRef = React.useRef(new Map<string, MapPin>())
   // Keep the latest onPinTap without re-running the create effect.
-  const onPinTapRef = React.useRef(onPinTap)
-  onPinTapRef.current = onPinTap
+  const onPinTapRef = useLatestRef(onPinTap)
 
   const mapRef = useLeafletMap(
     elRef,
@@ -291,7 +291,7 @@ export function LeafletMap({
       latestPins: pinsRef.current,
       onTap: (pin) => onPinTapRef.current?.(pin),
     })
-  }, [mapRef, pins, activeId, interactive])
+  }, [mapRef, pins, activeId, interactive, onPinTapRef])
 
   return <div ref={elRef} className="pi-map-canvas" />
 }
