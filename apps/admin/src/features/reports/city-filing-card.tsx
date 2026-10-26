@@ -48,14 +48,20 @@ const CASE_URL_ERROR = "Enter an https link, or leave it empty."
 type VerdictActions = ReturnType<typeof reportVerdictActions>
 type FilingQuery = UseQueryResult<GetFilingResponse>
 
+// The Clipboard API is [SecureContext]: on plain http the property is missing, though lib.dom types it
+// as always present.
+function secureClipboard(): Clipboard | undefined {
+  return navigator.clipboard
+}
+
 function copyToClipboard(text: string, copied: string, toast: (text: string, tone?: ToastTone) => void) {
   const copyFailed = () => toast("Couldn't copy. Select the text manually.", "error")
-  // The Clipboard API exists only in a secure context; without it nothing is copied.
-  if (!navigator.clipboard) {
+  const clipboard = secureClipboard()
+  if (!clipboard) {
     copyFailed()
     return
   }
-  navigator.clipboard.writeText(text).then(() => toast(copied), copyFailed)
+  clipboard.writeText(text).then(() => toast(copied), copyFailed)
 }
 
 function ReporterVerification({ report }: { report: AdminReportDTO }) {

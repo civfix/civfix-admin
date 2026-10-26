@@ -118,8 +118,9 @@ export function FilingsPage(_props: SectionPageProps) {
   const pageCounts = listQuery.data?.pages.at(-1)?.counts
   const [counts, setCounts] = React.useState(pageCounts)
   if (pageCounts && pageCounts !== counts) setCounts(pageCounts)
-  const tab = TABS.find((t) => t.group === group)!
+  const tab = TABS.find((t) => t.group === group)
   const settings = settingsQuery.data
+  if (tab === undefined) return null
 
   return (
     <>

@@ -32,9 +32,8 @@ import { formatAgo, preciseDateTimeTitle } from "@/lib/dates"
 
 function withoutKey(errors: RouteRowErrors, key: RouteRowKey): RouteRowErrors {
   if (errors[key] === undefined) return errors
-  const out = { ...errors }
-  delete out[key]
-  return out
+  const { [key]: _cleared, ...rest } = errors
+  return rest
 }
 
 export function FilingRoutesSection({ dto }: { dto: JurisdictionDirectoryDTO }) {
