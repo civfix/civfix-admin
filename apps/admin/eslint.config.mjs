@@ -33,8 +33,7 @@ const config = [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       // next/core-web-vitals already registers the jsx-a11y plugin, so only its rules are taken here.
-      // recommended already errors on interactive-supports-focus, no-autofocus and img-redundant-alt;
-      // control-has-associated-label ships off there, with the options it is meant to run under.
+      // control-has-associated-label ships off in recommended, with the options it is meant to run under.
       ...a11yRecommended,
       "jsx-a11y/control-has-associated-label": [
         "error",
