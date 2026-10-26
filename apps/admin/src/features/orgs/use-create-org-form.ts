@@ -66,7 +66,7 @@ export function useCreateOrgForm({
     [localErrors, serverErrors],
   )
 
-  const submit = (e: React.FormEvent) => {
+  const submit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (inFlight.current || pending || logoUploading) return
     setSubmitted(true)

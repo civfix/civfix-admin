@@ -120,7 +120,7 @@ function MessageFooter({
   removing: boolean
   onRemove: (msg: ChatMessageDTO) => void
 }) {
-  const reactions = (msg.reactions ?? []).filter((r) => r.count > 0)
+  const reactions = msg.reactions.filter((r) => r.count > 0)
   return (
     <div className="dsc-msg-foot">
       {reactions.length > 0 && (

@@ -18,7 +18,7 @@ const STATUS_VIEW: Record<UserStatus, StatusView> = {
 
 // The client passes a status newer than this build through unvalidated; show it raw rather than crash.
 export function userStatusView(status: UserStatus): StatusView {
-  return STATUS_VIEW[status] ?? { cls: "priority-low", label: status }
+  return Object.hasOwn(STATUS_VIEW, status) ? STATUS_VIEW[status] : { cls: "priority-low", label: status }
 }
 
 // The API sends a lone dash for a profile field the user never filled in.

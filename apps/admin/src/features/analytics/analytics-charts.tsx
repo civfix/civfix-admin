@@ -19,7 +19,7 @@ export function BarChart({ values, labels }: { values: number[]; labels?: string
           <div className="barchart-bar-wrap">
             <div
               className={`barchart-bar ${i === values.length - 1 ? "now" : ""}`}
-              style={{ height: `${heights[i]}%` }}
+              style={{ height: `${heights[i] ?? 0}%` }}
             >
               <span className="barchart-val">{formatCompactCount(v)}</span>
             </div>

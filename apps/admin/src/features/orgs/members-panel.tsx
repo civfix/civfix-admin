@@ -208,8 +208,6 @@ function MemberActionsMenu({
       aria-label={`Actions for ${member.user.name}`}
       ref={menu.popRef}
       style={menu.position}
-      onKeyDown={menu.onMenuKeyDown}
-      onBlur={menu.onMenuBlur}
     >
       <div className="row-menu-label" role="presentation">
         Change role
@@ -220,6 +218,8 @@ function MemberActionsMenu({
           type="button"
           role="menuitem"
           className="row-menu-item"
+          onKeyDown={menu.onMenuKeyDown}
+          onBlur={menu.onMenuBlur}
           onClick={() => onChangeRole(r)}
         >
           {r === "owner" ? (
@@ -232,7 +232,14 @@ function MemberActionsMenu({
         </button>
       ))}
       <div className="row-menu-sep" role="separator" />
-      <button type="button" role="menuitem" className="row-menu-item danger" onClick={onRemove}>
+      <button
+        type="button"
+        role="menuitem"
+        className="row-menu-item danger"
+        onKeyDown={menu.onMenuKeyDown}
+        onBlur={menu.onMenuBlur}
+        onClick={onRemove}
+      >
         <Icons.Trash size={12} /> Remove
       </button>
     </div>
@@ -383,7 +390,7 @@ function AddMemberForm({
   const transfer = role === "owner"
   const personError = attempted && !user ? "Pick a user to add." : null
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (confirming.current || add.isPending) return
     setAttempted(true)

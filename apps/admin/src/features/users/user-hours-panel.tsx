@@ -159,7 +159,7 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
     setServerErrors({})
   }
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (confirming.current || credit.isPending) return
     setAttempted(true)

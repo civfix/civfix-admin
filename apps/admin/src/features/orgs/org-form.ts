@@ -273,9 +273,11 @@ export function clearChangedFieldErrors(
   ]
   const stale = changed.filter((key) => errors[key] !== undefined)
   if (stale.length === 0) return errors
-  const out = { ...errors }
-  for (const key of stale) delete out[key]
-  return out
+  const staleKeys = new Set<string>(stale)
+  return pickFieldErrors(
+    errors,
+    SERVER_ERROR_FIELDS.filter((key) => !staleKeys.has(key)),
+  )
 }
 
 export function pickFieldErrors(

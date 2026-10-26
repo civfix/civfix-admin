@@ -60,12 +60,11 @@ export function parseFocus(focusId: string | null): { folder: Folder; id: string
 }
 
 export function correspondent(thread: MailThreadDTO): string {
-  for (let i = thread.messages.length - 1; i >= 0; i--) {
-    const message = thread.messages[i]!
+  const newestFirst = thread.messages.slice().reverse()
+  for (const message of newestFirst) {
     if (message.dir === "in" && message.from) return message.from
   }
-  for (let i = thread.messages.length - 1; i >= 0; i--) {
-    const message = thread.messages[i]!
+  for (const message of newestFirst) {
     if (message.dir === "out" && message.to) return message.to
   }
   return thread.to || EMPTY_VALUE

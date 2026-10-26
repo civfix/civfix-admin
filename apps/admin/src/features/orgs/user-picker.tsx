@@ -120,6 +120,9 @@ export function UserPicker({
           aria-labelledby={labelledBy}
           aria-describedby={describedBy}
           autoComplete="off"
+          // Only the inline Add member form sets this, which the operator just opened: focus follows
+          // their click into the search instead of staying on a button that no longer exists.
+          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus={autoFocus}
           placeholder={placeholder}
           value={query}
@@ -178,7 +181,7 @@ export function UserPicker({
                 {u.deletedAt && <span className="pill status-flag tight">Deleted</span>}
                 {u.status !== "active" && (
                   <span className="pill status-flag tight">
-                    {USER_STATUS_LABELS[u.status] ?? u.status}
+                    {Object.hasOwn(USER_STATUS_LABELS, u.status) ? USER_STATUS_LABELS[u.status] : u.status}
                   </span>
                 )}
               </button>

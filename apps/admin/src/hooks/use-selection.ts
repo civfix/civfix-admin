@@ -93,7 +93,8 @@ export function useSelection<T, Id extends string>({
   React.useEffect(() => {
     if (!isSuccess || isFetching) return
     if (selectedId === null) {
-      if (autoPick && items.length) setSelectedId(getId(items[0]!))
+      const first = items[0]
+      if (autoPick && first !== undefined) setSelectedId(getId(first))
       return
     }
     setAutoPick(false)

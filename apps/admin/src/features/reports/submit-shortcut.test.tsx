@@ -8,7 +8,7 @@ afterEach(() => {
 })
 
 function hintFor(userAgent: string): string | null {
-  vi.stubGlobal("navigator", { ...navigator, userAgent })
+  vi.stubGlobal("navigator", { userAgent })
   const { container } = render(<SubmitShortcutHint />)
   return container.textContent
 }
