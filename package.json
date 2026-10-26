@@ -33,9 +33,10 @@
       "postcss-selector-parser@6": ">=6.1.5 <7",
       "source-map-js@1": ">=1.2.2 <2",
       "sharp": ">=0.35.5 <0.36",
-      "undici@7": ">=7.30.1 <8"
+      "undici@7": ">=7.30.1 <8",
+      "postcss-selector-parser@7": ">=7.1.6 <8"
     },
-    "//auditConfig": "GHSA-rj75-hqrm-r3gf (postcss-selector-parser quadratic flat-selector parsing) lists every version below 7.1.6 as affected, but postcss-selector-parser 6.1.5 backports that exact fix to the 6.x line tailwindcss 3 requires (Set-based index lookups in parser.js), and the override above forces 6.1.5. The parser also only ever sees our own stylesheets at build time. Remove once the advisory lists 6.1.5 as patched or admin moves to Tailwind 4, which drops the package.",
+    "//auditConfig": "GHSA-rj75-hqrm-r3gf (postcss-selector-parser quadratic flat-selector parsing) lists every version below 7.1.6 as affected, but postcss-selector-parser 6.1.5 backports that exact fix to the 6.x line tailwindcss 3 requires (Set-based index lookups in parser.js), and the overrides above force 6.1.5 (and 7.1.6+ should a 7.x copy appear, since an ignore covers every version). The parser also only ever sees our own stylesheets at build time. Remove once the advisory lists 6.1.5 as patched or admin moves to Tailwind 4, which drops the package.",
     "auditConfig": {
       "ignoreGhsas": [
         "GHSA-rj75-hqrm-r3gf"

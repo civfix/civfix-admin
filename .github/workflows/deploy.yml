@@ -107,8 +107,9 @@ jobs:
         with:
           version: 9.12.0
 
-      # No dependency or build cache in this job: caches written by other workflows on main are readable
-      # here, so restoring one would let any of them poison what ships to admin.civfix.org.
+      # No dependency or build cache in this job: a release run can restore any cache a run on main wrote
+      # (a staging deploy, or a future workflow there), so a restored cache could poison what ships to
+      # admin.civfix.org. Production builds from a clean install of the lockfile instead.
       - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
