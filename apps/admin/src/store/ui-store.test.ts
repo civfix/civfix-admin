@@ -45,6 +45,7 @@ describe("section registry", () => {
       "orgs",
       "hosts",
       "pages",
+      "legal",
     ])
   })
 
@@ -62,6 +63,7 @@ describe("section registry", () => {
       orgs: "Organizations",
       hosts: "Host messaging",
       pages: "Signup pages",
+      legal: "Legal",
     })
   })
 })
@@ -163,6 +165,14 @@ describe("initial route from the hash at module load", () => {
 })
 
 describe("syncFromHash", () => {
+  it("T1: opens the legal page from #/legal", async () => {
+    const { useUiStore, PAGE_LABEL } = await loadWithHash("")
+    window.location.hash = "#/legal"
+    useUiStore.getState().syncFromHash()
+    expect(useUiStore.getState().page).toBe("legal")
+    expect(PAGE_LABEL.legal).toBe("Legal")
+  })
+
   it("re-reads the current hash into the store", async () => {
     const { useUiStore } = await loadWithHash("")
     setHash("#/events/ev-9")
