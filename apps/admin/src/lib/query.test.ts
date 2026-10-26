@@ -232,6 +232,18 @@ describe("queryKeys static keys", () => {
     expect(queryKeys.mail.forwardTemplate).toEqual(["admin", "mail", "forward-template"])
   })
 
+  it("T23: dev", () => {
+    expect(queryKeys.dev).toEqual({
+      all: ["admin", "dev"],
+      overview: ["admin", "dev", "overview"],
+      jobs: ["admin", "dev", "jobs"],
+      flags: ["admin", "dev", "flags"],
+      forceUpdate: ["admin", "dev", "force-update"],
+      systemHealth: ["admin", "dev", "system-health"],
+      activity: ["admin", "dev", "activity"],
+    })
+  })
+
   it("covers exactly these top-level domains", () => {
     expect(Object.keys(queryKeys)).toEqual([
       "session",
@@ -251,6 +263,7 @@ describe("queryKeys static keys", () => {
       "hosts",
       "pages",
       "audit",
+      "dev",
     ])
   })
 })
