@@ -37,6 +37,7 @@ describe("section registry", () => {
     expect(SECTIONS).toEqual([
       "discovery",
       "reports",
+      "filings",
       "events",
       "mail",
       "users",
@@ -54,6 +55,7 @@ describe("section registry", () => {
       home: "Dashboard",
       discovery: "Jurisdictions",
       reports: "Reports",
+      filings: "Filings",
       events: "Events",
       mail: "Mail",
       users: "Users",
@@ -78,6 +80,7 @@ describe("initial route from the hash at module load", () => {
   it.each([
     "discovery",
     "reports",
+    "filings",
     "events",
     "mail",
     "users",
@@ -88,6 +91,12 @@ describe("initial route from the hash at module load", () => {
     "pages",
   ])("opens the %s section with no focus", async (section) => {
     expect(await initialRoute(`#/${section}`)).toEqual({ page: section, focusId: null })
+  })
+
+  it("T32: labels the Filings page and resolves its path", async () => {
+    const { PAGE_LABEL } = await loadWithHash("")
+    expect(PAGE_LABEL.filings).toBe("Filings")
+    expect(await initialRoute("#/filings")).toEqual({ page: "filings", focusId: null })
   })
 
   it("accepts a section without the leading slash", async () => {

@@ -173,7 +173,7 @@ describe("ReportsPage", () => {
     expect(within(card).getAllByText("Oakland Public Works")).toHaveLength(2)
     expect(within(card).getByText("works@oaklandca.gov")).toBeInTheDocument()
     expect(within(card).getByText("Not yet reviewed")).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: /Verify and send to city/ })).toBeEnabled()
+    expect(within(card).getByRole("button", { name: /Approve and file/ })).toBeEnabled()
     expect(within(card).getByRole("button", { name: "Acknowledged" })).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: "Under review" })).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: /Remove report/ })).toBeInTheDocument()
@@ -392,7 +392,7 @@ describe("ReportsPage correctness and accessibility", () => {
     expect(within(listCard()).getByRole("img", { name: "Flagged" })).toBeInTheDocument()
   })
 
-  it("labels the search box and the email fields", async () => {
+  it("labels the search box and the city message field", async () => {
     apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
     mockDetails(COUCH)
     renderPage()
@@ -402,41 +402,6 @@ describe("ReportsPage correctness and accessibility", () => {
     expect(screen.getByRole("textbox", { name: "Search reports" })).toBeInTheDocument()
     const followup = within(card).getByRole("textbox", { name: "Message to the city" })
     expect(followup).toHaveAttribute("maxlength", "4000")
-
-    await userEvent.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
-    const note = within(card).getByRole("textbox", { name: "Note to include in the email" })
-    expect(note).toHaveAttribute("maxlength", "4000")
-  })
-
-  it("still sends a verified report to the city when the operator opens another report mid-approval", async () => {
-    apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
-    mockDetails(COUCH, TAG)
-    const verdict = deferred<{ ok: true }>()
-    apiMock.setReportVerdict.mockReturnValue(verdict.promise)
-    apiMock.routeReport.mockResolvedValue({
-      ok: true,
-      threadId: "t-1",
-      routedTo: "works@oaklandca.gov",
-    })
-    const user = userEvent.setup()
-    renderPage()
-    const card = detailCard()
-    await within(card).findByRole("heading", { name: COUCH.title })
-
-    await user.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
-    await user.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Verify and send" }))
-    await waitFor(() =>
-      expect(apiMock.setReportVerdict).toHaveBeenCalledWith({ id: COUCH.id, verdict: "approved" }),
-    )
-
-    await user.click(within(listCard()).getByText(TAG.title))
-    await within(detailCard()).findByRole("heading", { name: TAG.title })
-    await act(async () => {
-      verdict.resolve({ ok: true })
-    })
-
-    await waitFor(() => expect(apiMock.routeReport).toHaveBeenCalledWith({ id: COUCH.id }))
   })
 
   it("does not jump to another report after the selected one is removed", async () => {
@@ -592,28 +557,6 @@ describe("ReportsPage correctness and accessibility", () => {
     expect(await within(listCard()).findByText("Selected report")).toBeInTheDocument()
     expect(within(listCard()).queryByText("Linked report")).not.toBeInTheDocument()
     expect(within(detailCard()).getByRole("heading", { name: TAG.title })).toBeInTheDocument()
-  })
-
-  it("shows why Send is blocked as visible text tied to the button", async () => {
-    const SENT = listItem({ id: "r3c3c3c3-0000-4000-8000-000000000003", title: "Pothole on 40th" })
-    apiMock.listAdminReports.mockResolvedValue(page([SENT]))
-    apiMock.getAdminReport.mockResolvedValue({
-      ...detail(SENT),
-      outreach: {
-        status: "sent",
-        threadId: "t-9",
-        routedTo: "works@oaklandca.gov",
-        routedAt: "2026-09-22T10:00:00.000Z",
-      },
-    })
-    apiMock.adminReportMessages.mockResolvedValue(NO_CHAT)
-    renderPage()
-    const card = detailCard()
-    await within(card).findByRole("heading", { name: SENT.title })
-
-    const reason = "This report was already sent. Resend it from the Mail thread."
-    expect(within(card).getByText(reason)).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: /Already sent/ })).toHaveAccessibleDescription(reason)
   })
 
   it("shows why a follow-up is blocked before the first send", async () => {

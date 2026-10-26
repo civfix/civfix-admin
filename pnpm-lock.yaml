@@ -32,8 +32,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: ^0.64.0
-        version: 0.64.0
+        specifier: 0.66.0-b-feat-city-filing-contract.g82d07a7
+        version: 0.66.0-b-feat-city-filing-contract.g82d07a7
       '@civfix/tokens':
         specifier: ^0.1.0
         version: 0.1.0
@@ -141,8 +141,8 @@ packages:
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
-  '@civfix/contract@0.64.0':
-    resolution: {integrity: sha512-I1dmMMhXqGaRhPUjIgwfxc9MApWAZBEWRiNUqWIxSRrgbeRYoO4IFPuXShphGPyL4g0Vo4qoHcgxPj/sx+nyEg==}
+  '@civfix/contract@0.66.0-b-feat-city-filing-contract.g82d07a7':
+    resolution: {integrity: sha512-X9XD70y6/RBCVzALe7Vtvp7Jdwqxs4UlyQdZqYaaKc6HcSP0YQXa5g27bNtKa2tcU4uqN5tBWdrXxEI5vrlccQ==}
     engines: {node: '>=20'}
 
   '@civfix/tokens@0.1.0':
@@ -3203,7 +3203,7 @@ snapshots:
 
   '@babel/runtime@7.29.7': {}
 
-  '@civfix/contract@0.64.0':
+  '@civfix/contract@0.66.0-b-feat-city-filing-contract.g82d07a7':
     dependencies:
       zod: 4.6.7
 

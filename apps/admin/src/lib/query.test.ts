@@ -251,6 +251,7 @@ describe("queryKeys static keys", () => {
       "hosts",
       "pages",
       "audit",
+      "filings",
     ])
   })
 })
@@ -271,6 +272,7 @@ describe("queryKeys `all` prefixes", () => {
     ["hosts", queryKeys.hosts.all, ["admin", "hosts"]],
     ["pages", queryKeys.pages.all, ["admin", "pages"]],
     ["audit", queryKeys.audit.all, ["admin", "audit"]],
+    ["filings", queryKeys.filings.all, ["admin", "filings"]],
   ] as const)("%s.all", (_name, key, expected) => {
     expect(key).toEqual(expected)
   })
