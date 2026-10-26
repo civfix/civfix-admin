@@ -29,7 +29,7 @@ function VersionRow({ doc }: { doc: LegalDocumentVersionDTO }) {
   return (
     <div className="qrow static">
       <div className="leading">
-        <span className="evt-row-ico hue-slate">
+        <span className="prow-ico hue-slate">
           <Icons.Layers size={15} />
         </span>
       </div>
