@@ -233,6 +233,10 @@ export const queryKeys = {
     preview: (cleanupId: string) => ["admin", "pages", "preview", cleanupId] as const,
   },
 
+  legal: {
+    versions: ["admin", "legal", "versions"] as const,
+  },
+
   audit: {
     all: ["admin", "audit"] as const,
     list: (params?: AuditListQuery) => ["admin", "audit", "list", params ?? null] as const,

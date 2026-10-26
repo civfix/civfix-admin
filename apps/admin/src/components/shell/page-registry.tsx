@@ -36,6 +36,7 @@ const SECTION_MODULES: Record<PageId, SectionModule> = {
   orgs: sectionModule(() => import("@/features/orgs/orgs-page"), "OrgsPage"),
   hosts: sectionModule(() => import("@/features/hosts/hosts-page"), "HostsPage"),
   pages: sectionModule(() => import("@/features/pages/pages-page"), "PagesPage"),
+  legal: sectionModule(() => import("@/features/legal/legal-page"), "LegalPage"),
 }
 
 function mapSections<T>(fn: (section: SectionModule) => T): Record<PageId, T> {
