@@ -93,6 +93,17 @@ describe("the developer page tabs", () => {
     expect(await screen.findByRole("table", { name: "Queues" })).toBeInTheDocument()
   })
 
+  it("T6: #audit opens Audit with its log", async () => {
+    env("staging")
+    apiMock.listAudit.mockResolvedValue({ items: [], nextCursor: null })
+    apiMock.adminActivity.mockResolvedValue({ items: [], nextCursor: null })
+    openAt("#audit")
+    renderDevPage()
+
+    expect(tab("Audit")).toHaveAttribute("aria-selected", "true")
+    expect(await screen.findByRole("heading", { name: "Audit log", level: 3 })).toBeInTheDocument()
+  })
+
   it.each([
     ["#flags", "Flags"],
     ["#test-tools", "Test tools"],
@@ -102,15 +113,6 @@ describe("the developer page tabs", () => {
     renderDevPage()
 
     expect(tab(name)).toHaveAttribute("aria-selected", "true")
-  })
-
-  it.each([["#audit", "Audit"]])("T6: %s opens %s, which is coming soon", (hash, name) => {
-    env("staging")
-    openAt(hash)
-    renderDevPage()
-
-    expect(tab(name)).toHaveAttribute("aria-selected", "true")
-    expect(screen.getByRole("tabpanel")).toHaveTextContent("Coming soon.")
   })
 
   it("T6: an unknown hash opens Overview", () => {

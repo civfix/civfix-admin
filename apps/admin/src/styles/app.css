@@ -734,3 +734,18 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .dev-switch[aria-checked="true"]::after { transform: translateX(var(--space-5)); }
 .dev-switch:focus-visible { outline: none; box-shadow: var(--ring); }
 .dev-switch:disabled { opacity: 0.5; cursor: default; }
+/* The Audit tab stacks two list cards, so neither may stick to the top the way a master-detail list does. */
+.dev-audit-stack { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.dev-audit-stack .md-list { position: static; max-height: none; }
+.trow.dev-audit { grid-template-columns: 0.8fr 1fr 1.2fr 2fr; cursor: default; }
+.dev-activity { list-style: none; margin: 0; padding: 0; }
+.dev-activity li {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+.dev-activity li:last-child { border-bottom: none; }
+.dev-activity-when { flex-shrink: 0; min-width: calc(var(--space-5) * 3.6); color: var(--ink-3); }
