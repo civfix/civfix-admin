@@ -18,7 +18,6 @@ import {
   type FlagReportRequest,
   type GetAdminReportResponse,
   type RemoveReportRequest,
-  type RouteReportRequest,
   type SendFollowupRequest,
   type SetReportStatusRequest,
   type SetReportVerdictRequest,
@@ -138,20 +137,6 @@ export function useSendReportFollowup() {
   })
 }
 
-export function useRouteReport() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: RouteReportRequest) => api.routeReport(input),
-    onSuccess: (_res, { id }) =>
-      Promise.all([
-        invalidateReports(qc, id),
-        qc.invalidateQueries({ queryKey: queryKeys.mail.all }),
-        qc.invalidateQueries({ queryKey: queryKeys.discovery.all }),
-        qc.invalidateQueries({ queryKey: queryKeys.jurisdictions.all }),
-      ]),
-  })
-}
-
 const VERDICT_TOAST: Record<SetReportVerdictRequest["verdict"], string> = {
   approved: "approved",
   rejected: "rejected",
@@ -161,7 +146,9 @@ export function useSetReportVerdict() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: SetReportVerdictRequest) => api.setReportVerdict(input),
-    onSuccess: (_res, { id }) => invalidateReports(qc, id),
+    // Approve files the report and Reject cancels its open filing (D1).
+    onSuccess: (_res, { id }) =>
+      Promise.all([invalidateReports(qc, id), qc.invalidateQueries({ queryKey: queryKeys.filings.all })]),
     meta: {
       successMessage: (_res: unknown, { id, verdict }: SetReportVerdictRequest) =>
         reportMessage(id, VERDICT_TOAST[verdict]),

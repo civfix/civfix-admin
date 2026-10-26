@@ -50,6 +50,7 @@ const summary = {
   livePins24h: 4,
   moderationQueue: 2,
   inboxUnread: 1,
+  filingsNeedsHuman: 0,
 } satisfies HomeSummaryResponse
 
 const actor = { id: "u-9", name: "Dana Reyes", handle: "dana", joined: "2025-01-01" }
@@ -213,6 +214,8 @@ function mockPopulatedHome() {
 }
 
 const PREVIEW_TILES = 6
+// Analytics and Filings, drawn from the summary alone.
+const SUMMARY_TILES = 2
 const ROWS_PER_TILE = 2
 
 async function renderLoadedHome(): Promise<HTMLElement> {
@@ -230,7 +233,7 @@ function tilesOf(container: HTMLElement): HTMLElement[] {
 
 const FOCUSABLE = "a[href], button, input, select, textarea, [tabindex]"
 const HEAD_AND_FOOT = 2
-const TILE_CONTROLS = (PREVIEW_TILES + 1) * HEAD_AND_FOOT + PREVIEW_TILES * ROWS_PER_TILE
+const TILE_CONTROLS = (PREVIEW_TILES + SUMMARY_TILES) * HEAD_AND_FOOT + PREVIEW_TILES * ROWS_PER_TILE
 
 function controlsOf(tile: HTMLElement): HTMLElement[] {
   return [...tile.querySelectorAll<HTMLElement>(FOCUSABLE)]
@@ -250,7 +253,7 @@ describe("home tile accessibility", () => {
     const container = await renderLoadedHome()
 
     const tiles = tilesOf(container)
-    expect(tiles).toHaveLength(PREVIEW_TILES + 1)
+    expect(tiles).toHaveLength(PREVIEW_TILES + SUMMARY_TILES)
     const controls = tiles.flatMap(controlsOf)
     expect(controls).toHaveLength(TILE_CONTROLS)
     for (const control of controls) {
@@ -266,7 +269,7 @@ describe("home tile accessibility", () => {
     const container = await renderLoadedHome()
 
     const tiles = tilesOf(container)
-    expect(tiles).toHaveLength(PREVIEW_TILES + 1)
+    expect(tiles).toHaveLength(PREVIEW_TILES + SUMMARY_TILES)
     for (const tile of tiles) {
       for (const el of [tile, ...tile.querySelectorAll("*")]) {
         expect(el).not.toHaveAttribute("role", "button")
@@ -288,7 +291,7 @@ describe("home tile accessibility", () => {
     }
 
     const tiles = tilesOf(container)
-    expect(tiles).toHaveLength(PREVIEW_TILES + 1)
+    expect(tiles).toHaveLength(PREVIEW_TILES + SUMMARY_TILES)
     for (const tile of tiles) {
       const expected = controlsOf(tile)
       expect(expected.length).toBeGreaterThanOrEqual(HEAD_AND_FOOT)
