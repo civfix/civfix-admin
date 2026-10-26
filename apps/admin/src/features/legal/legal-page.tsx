@@ -20,8 +20,13 @@ const DOCUMENTS: { type: LegalDocumentType; label: string }[] = [
 // "Material" nor "Notice only" is true of them, so they say so instead of guessing.
 const UNFLAGGED_NOTE = "Published before change notes were kept"
 
+// A further version the same day takes the suffix "-2", "-3" (DECISIONS §66) and can share its
+// effectiveAt, so the suffix breaks the tie.
 function newestFirst(a: LegalDocumentVersionDTO, b: LegalDocumentVersionDTO): number {
-  return new Date(b.effectiveAt).getTime() - new Date(a.effectiveAt).getTime()
+  return (
+    Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt) ||
+    b.version.localeCompare(a.version, "en", { numeric: true })
+  )
 }
 
 function VersionRow({ doc }: { doc: LegalDocumentVersionDTO }) {
@@ -93,7 +98,7 @@ export function LegalPage(_props: SectionPageProps) {
         subtitle={
           <span>
             Every published version of each legal document, newest first, and how many active accounts
-            accepted the current Terms and Privacy Policy.
+            have accepted the current Terms and Privacy Policy.
           </span>
         }
       />

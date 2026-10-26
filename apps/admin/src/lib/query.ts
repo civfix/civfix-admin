@@ -227,14 +227,14 @@ export const queryKeys = {
       ["admin", "hosts", "broadcasts", params ?? null] as const,
   },
 
-  legal: {
-    versions: ["admin", "legal", "versions"] as const,
-  },
-
   pages: {
     all: ["admin", "pages"] as const,
     list: (params?: AdminEventPageListQuery) => ["admin", "pages", "list", params ?? null] as const,
     preview: (cleanupId: string) => ["admin", "pages", "preview", cleanupId] as const,
+  },
+
+  legal: {
+    versions: ["admin", "legal", "versions"] as const,
   },
 
   audit: {
