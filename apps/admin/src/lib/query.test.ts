@@ -227,6 +227,10 @@ describe("queryKeys static keys", () => {
     })
   })
 
+  it("legal", () => {
+    expect(queryKeys.legal).toEqual({ versions: ["admin", "legal", "versions"] })
+  })
+
   it("mail stats and forward template", () => {
     expect(queryKeys.mail.stats).toEqual(["admin", "mail", "stats"])
     expect(queryKeys.mail.forwardTemplate).toEqual(["admin", "mail", "forward-template"])
@@ -250,6 +254,7 @@ describe("queryKeys static keys", () => {
       "media",
       "hosts",
       "pages",
+      "legal",
       "audit",
     ])
   })

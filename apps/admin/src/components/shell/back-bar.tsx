@@ -15,6 +15,7 @@ const SECTION_ICON: Record<SectionId, IconComponent> = {
   orgs: Icons.Building,
   hosts: Icons.Send,
   pages: Icons.Globe,
+  legal: Icons.Layers,
 }
 
 const SECTION_HUE: Record<SectionId, string> = {
@@ -28,6 +29,7 @@ const SECTION_HUE: Record<SectionId, string> = {
   orgs: "sky",
   hosts: "bloom",
   pages: "lilac",
+  legal: "slate",
 }
 
 export function BackBar({ page }: { page: SectionId }) {
