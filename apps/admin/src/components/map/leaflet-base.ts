@@ -15,7 +15,7 @@ const CARTO_TILE_URLS = {
 export type CartoTint = keyof typeof CARTO_TILE_URLS
 
 function cartoUrl(tint: CartoTint): string {
-  return CARTO_TILE_URLS[tint] ?? CARTO_TILE_URLS.voyager
+  return CARTO_TILE_URLS[tint]
 }
 
 export function addCartoBasemap(

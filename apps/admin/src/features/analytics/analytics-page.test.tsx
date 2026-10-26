@@ -143,8 +143,11 @@ async function findCard(title: string): Promise<HTMLElement> {
 function readBlob(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result)
+      else reject(new Error("FileReader returned no text"))
+    }
+    reader.onerror = () => reject(reader.error ?? new Error("FileReader failed"))
     reader.readAsText(blob)
   })
 }

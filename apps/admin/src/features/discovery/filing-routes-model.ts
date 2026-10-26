@@ -128,7 +128,7 @@ export function parseRows(rows: readonly RouteRow[]): {
       routes.push(parsed.data)
       sentKeys.push(row.key)
     } else {
-      rowErrors[row.key] = parsed.error.issues[0]!.message
+      rowErrors[row.key] = parsed.error.issues[0]?.message ?? parsed.error.message
     }
   }
   return { routes, sentKeys, rowErrors }

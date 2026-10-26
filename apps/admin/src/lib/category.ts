@@ -48,7 +48,7 @@ function buildCategoryReportTypeLabels(): Record<ReportCategory, string[]> {
   >
   for (const { category, label } of byType.values()) {
     const bucket = out[category]
-    if (bucket && !bucket.includes(label)) bucket.push(label)
+    if (!bucket.includes(label)) bucket.push(label)
   }
   return out
 }

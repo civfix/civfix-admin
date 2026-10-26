@@ -12,9 +12,7 @@ import { useOperatorSession } from "@/hooks/use-admin-auth"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = React.useRef<QueryClient | null>(null)
-  if (!clientRef.current) {
-    clientRef.current = makeQueryClient()
-  }
+  clientRef.current ??= makeQueryClient()
 
   return (
     <QueryClientProvider client={clientRef.current}>

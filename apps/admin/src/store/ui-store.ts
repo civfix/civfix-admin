@@ -98,7 +98,7 @@ export const useUiStore = create<UiState>((set) => ({
   toast: null,
 
   nav: (page, requestedFocus = null) => {
-    const focusId = page === "home" ? null : requestedFocus || null
+    const focusId = page === "home" || requestedFocus === "" ? null : requestedFocus
     set({ page, focusId })
     if (typeof window !== "undefined") {
       const next = hashFor(page, focusId)

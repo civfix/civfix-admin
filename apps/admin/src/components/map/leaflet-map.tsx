@@ -42,16 +42,19 @@ const PIN_WIDTH_ACTIVE = 40
 // fill of their kind.
 const TEARDROP =
   "M32 4 C46 4 58 16 58 30 C58 46 40 60 34 68 C33 69 31 69 30 68 C24 60 6 46 6 30 C6 16 18 4 32 4 Z"
-const GLYPHS: Record<string, string> = {
+// The icon html goes through innerHTML and the category arrives from the API unvalidated, so only a
+// constant entry may reach it: a Map holds no inherited keys like "constructor".
+const GLYPHS = new Map<string, string>(Object.entries({
   ...CATEGORY_GLYPHS,
   cleanup:
     "M3 6 L21 6 M19 6 V20 a2 2 0 0 1 -2 2 H7 a2 2 0 0 1 -2 -2 V6 M9 6 V4 a1 1 0 0 1 1 -1 h4 a1 1 0 0 1 1 1 V6 M9 11 V17 M12 11 V17 M15 11 V17",
   event: "M4 7 a1 1 0 0 1 1 -1 h14 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z M16 4 v4 M8 4 v4 M4 11 h16",
   "event-volunteer":
     "M12 9 a2 2 0 0 1 3 -1.3 a2 2 0 0 1 0.5 3 L12 14 L8.5 10.7 a2 2 0 0 1 0.5 -3 A2 2 0 0 1 12 9 Z M4 13 v5 a1 1 0 0 0 1 1 h2 v-6 Z M20 13 v5 a1 1 0 0 1 -1 1 h-2 v-6 Z",
-}
+}))
+const ROUTED_FILL = "var(--ink-3)"
 const PIN_FILL: Record<string, string> = {
-  routed: "var(--ink-3)",
+  routed: ROUTED_FILL,
   needs: "#E5564B",
   event: "var(--sun-600)",
   "event-volunteer": "#5B8C6E",
@@ -65,11 +68,9 @@ function pinIcon(
 ): L.DivIcon {
   const isEvent = kind != null && EVENT_KINDS.has(kind)
   const state = isEvent ? kind : draft ? "needs" : "routed"
-  const glyphKey = isEvent ? kind : category || "other"
-  // The icon html goes through innerHTML and the category arrives from the API unvalidated, so only a
-  // constant own entry of GLYPHS may reach it (an inherited key like "constructor" would not).
-  const glyph = Object.hasOwn(GLYPHS, glyphKey) ? GLYPHS[glyphKey]! : CATEGORY_GLYPHS.other
-  const fill = PIN_FILL[state] ?? PIN_FILL.routed
+  const glyphKey = isEvent ? kind : category
+  const glyph = GLYPHS.get(glyphKey ?? "other") ?? CATEGORY_GLYPHS.other
+  const fill = PIN_FILL[state] ?? ROUTED_FILL
   const width = active ? PIN_WIDTH_ACTIVE : PIN_WIDTH
   const height = width * (PIN_VIEWBOX_HEIGHT / PIN_VIEWBOX_WIDTH)
   const html =
@@ -89,7 +90,7 @@ function pinIcon(
 }
 
 export function tooltipText(pin: MapPin): string | null {
-  const title = pin.tip || pin.label
+  const title = pin.tip ?? pin.label
   if (!title) return null
   return pin.place ? `${title} · ${pin.place}` : title
 }
@@ -137,9 +138,9 @@ interface RenderedMarker {
 interface MarkerSync {
   activeId: string | null
   interactive: boolean
-  markers: Record<string, L.Marker>
-  rendered: Record<string, RenderedMarker>
-  latestPins: Record<string, MapPin>
+  markers: Map<string, L.Marker>
+  rendered: Map<string, RenderedMarker>
+  latestPins: Map<string, MapPin>
   onTap: (pin: MapPin) => void
 }
 
@@ -155,7 +156,7 @@ function createMarker(
   syncTooltip(marker, text)
   if (sync.interactive) labelMarker(marker, text)
   const tap = () => {
-    const latest = sync.latestPins[pin.id]
+    const latest = sync.latestPins.get(pin.id)
     if (latest) sync.onTap(latest)
   }
   marker.on("click", tap)
@@ -185,29 +186,29 @@ function updateMarker(
 function syncMarkers(map: L.Map, pins: MapPin[], sync: MarkerSync): void {
   const { markers, rendered, latestPins } = sync
   const nextIds = new Set(pins.map((p) => p.id))
-  for (const id of Object.keys(markers)) {
+  for (const [id, marker] of markers) {
     if (nextIds.has(id)) continue
-    markers[id]?.remove()
-    delete markers[id]
-    delete rendered[id]
-    delete latestPins[id]
+    marker.remove()
+    markers.delete(id)
+    rendered.delete(id)
+    latestPins.delete(id)
   }
 
   for (const p of pins) {
-    latestPins[p.id] = p
+    latestPins.set(p.id, p)
     const active = String(p.id) === String(sync.activeId)
     const next: RenderedMarker = {
       // Everything pinIcon() depends on: an equal key means an identical DivIcon.
-      key: `${p.category}|${p.draft}|${p.kind}|${active}`,
+      key: JSON.stringify([p.category, p.draft, p.kind, active]),
       text: tooltipText(p),
       lat: p.lat,
       lng: p.lng,
     }
     const icon = () => pinIcon(p.category, { active, draft: p.draft, kind: p.kind })
-    const existing = markers[p.id]
-    if (existing) updateMarker(existing, rendered[p.id], next, icon, sync.interactive)
-    else markers[p.id] = createMarker(map, p, icon(), next.text, sync)
-    rendered[p.id] = next
+    const existing = markers.get(p.id)
+    if (existing) updateMarker(existing, rendered.get(p.id), next, icon, sync.interactive)
+    else markers.set(p.id, createMarker(map, p, icon(), next.text, sync))
+    rendered.set(p.id, next)
   }
 }
 
@@ -232,10 +233,10 @@ export function LeafletMap({
 }: LeafletMapProps) {
   const elRef = React.useRef<HTMLDivElement | null>(null)
   const tileRef = React.useRef<L.TileLayer | null>(null)
-  const markersRef = React.useRef<Record<string, L.Marker>>({})
-  const renderRef = React.useRef<Record<string, RenderedMarker>>({})
+  const markersRef = React.useRef(new Map<string, L.Marker>())
+  const renderRef = React.useRef(new Map<string, RenderedMarker>())
   // The latest pin per id: marker handlers are bound once, and a refetch replaces the pin objects.
-  const pinsRef = React.useRef<Record<string, MapPin>>({})
+  const pinsRef = React.useRef(new Map<string, MapPin>())
   // Keep the latest onPinTap without re-running the create effect.
   const onPinTapRef = React.useRef(onPinTap)
   onPinTapRef.current = onPinTap
@@ -264,9 +265,9 @@ export function LeafletMap({
     },
     () => {
       tileRef.current = null
-      markersRef.current = {}
-      renderRef.current = {}
-      pinsRef.current = {}
+      markersRef.current = new Map()
+      renderRef.current = new Map()
+      pinsRef.current = new Map()
     },
   )
 

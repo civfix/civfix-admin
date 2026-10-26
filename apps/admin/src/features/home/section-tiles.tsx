@@ -106,7 +106,7 @@ export function MetricSectionTile({ summary }: { summary: SectionSummary }) {
         <span className="stile-stats">
           {summary.stats.map((stat) => (
             <span key={stat.k} className="stile-stat">
-              <b className={stat.tone || ""}>{stat.v}</b> {stat.k}
+              <b className={stat.tone ?? ""}>{stat.v}</b> {stat.k}
             </span>
           ))}
         </span>

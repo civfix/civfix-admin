@@ -34,7 +34,9 @@ export function errorMessage(
     for (const [field, byValue] of Object.entries(opts.fields)) {
       const value = e.fields[field]
       // The value is server data; only copy the caller wrote may match it, never an inherited member.
-      if (value !== undefined && Object.hasOwn(byValue, value)) return byValue[value]!
+      if (value === undefined || !Object.hasOwn(byValue, value)) continue
+      const message = byValue[value]
+      if (message !== undefined) return message
     }
   }
   const override = overrides[e.code]
