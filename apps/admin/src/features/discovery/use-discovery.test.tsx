@@ -41,15 +41,25 @@ async function runWrite<I>(
 
 describe("discovery writes refresh the directory but never the boundary", () => {
   it.each([
-    ["patch", "patchJurisdiction", () => usePatchJurisdiction(), {
-      request: { geoid: "0644000", flagged: true },
-      org: "Los Angeles",
-      action: "flag" as const,
-    }],
-    ["save & route", "saveJurisdictionContacts", () => useSaveJurisdictionContacts(), {
-      request: { geoid: "0644000", contacts: {} },
-      org: "Los Angeles",
-    }],
+    [
+      "patch",
+      "patchJurisdiction",
+      () => usePatchJurisdiction(),
+      {
+        request: { geoid: "0644000", flagged: true },
+        org: "Los Angeles",
+        action: "flag" as const,
+      },
+    ],
+    [
+      "save & route",
+      "saveJurisdictionContacts",
+      () => useSaveJurisdictionContacts(),
+      {
+        request: { geoid: "0644000", contacts: {} },
+        org: "Los Angeles",
+      },
+    ],
     ["note", "addDiscoveryNote", () => useAddDiscoveryNote(), { id: "0644000", note: "Called" }],
     ["flag", "flagDiscovery", () => useFlagDiscovery(), { id: "0644000", flagged: true }],
     ["draft", "saveDiscoveryDraft", () => useSaveDiscoveryDraft(), { id: "0644000", contacts: {} }],

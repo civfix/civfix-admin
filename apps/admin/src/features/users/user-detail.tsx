@@ -55,7 +55,10 @@ function UserDetailHeader({ user }: { user: AdminUserDTO }) {
       </div>
       <div className="udh-badges">
         {!!user.deletedAt && (
-          <span className="pill status-flag tight" title="This account was self-deleted (tombstoned)">
+          <span
+            className="pill status-flag tight"
+            title="This account was self-deleted (tombstoned)"
+          >
             <Icons.Trash size={11} /> Deleted
           </span>
         )}

@@ -73,13 +73,14 @@ export function HostsPage({ focusId }: SectionPageProps) {
     [filter, debouncedQuery],
   )
   const listQuery = useHostListInfinite(listParams)
-  const rows = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const rows = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
   // There is no single-host read, so a pick that a filter or search leaves out clears too, except the
   // deep-linked host: the action buttons never land on a host nobody chose.
-  const { selectedId, setSelectedId, selectedItem: selected } = useSelection({
+  const {
+    selectedId,
+    setSelectedId,
+    selectedItem: selected,
+  } = useSelection({
     focusId,
     list: listQuery,
     items: rows,
@@ -96,11 +97,10 @@ export function HostsPage({ focusId }: SectionPageProps) {
         title="Host messaging"
         subtitle={
           <span>
-            Every host who sent a broadcast in the last {HOST_ACTIVITY_WINDOW_DAYS} days, plus every host
-            currently suspended, with server-computed delivery counters and their current messaging
-            state. Automated lanes
-            (confirmations, reminders, thank-yous) are excluded. Suspend a host and every broadcast
-            stops immediately.
+            Every host who sent a broadcast in the last {HOST_ACTIVITY_WINDOW_DAYS} days, plus every
+            host currently suspended, with server-computed delivery counters and their current
+            messaging state. Automated lanes (confirmations, reminders, thank-yous) are excluded.
+            Suspend a host and every broadcast stops immediately.
           </span>
         }
       />
@@ -121,7 +121,12 @@ export function HostsPage({ focusId }: SectionPageProps) {
       </div>
 
       <div className="master-detail">
-        <HostListPane listQuery={listQuery} rows={rows} selectedId={selectedId} onSelect={setSelectedId} />
+        <HostListPane
+          listQuery={listQuery}
+          rows={rows}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
 
         <section className="card md-detail-card">
           <HostDetailPane

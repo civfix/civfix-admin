@@ -110,7 +110,9 @@ describe("makeQueryClient mutation defaults", () => {
   })
 
   it("does not toast a successful mutation", async () => {
-    const observer = new MutationObserver(makeQueryClient(), { mutationFn: () => Promise.resolve(1) })
+    const observer = new MutationObserver(makeQueryClient(), {
+      mutationFn: () => Promise.resolve(1),
+    })
     await observer.mutate()
     expect(useUiStore.getState().toast).toBeNull()
   })
@@ -146,7 +148,10 @@ describe("makeQueryClient mutation defaults", () => {
       },
     })
     await observer.mutate({ name: "River Keepers" }).catch(() => undefined)
-    expect(useUiStore.getState().toast).toMatchObject({ text: "River Keepers: taken", tone: "error" })
+    expect(useUiStore.getState().toast).toMatchObject({
+      text: "River Keepers: taken",
+      tone: "error",
+    })
   })
 
   it("does not toast when the mutation's copy returns null for an error its UI shows inline", async () => {
@@ -159,15 +164,21 @@ describe("makeQueryClient mutation defaults", () => {
   })
 
   it("toasts the mutation's success copy, built from the response and the variables, in the ok tone", async () => {
-    const observer = new MutationObserver<{ routedTo: string }, Error, { name: string }>(makeQueryClient(), {
-      mutationFn: () => Promise.resolve({ routedTo: "Oakland" }),
-      meta: {
-        successMessage: (data: { routedTo: string }, variables: { name: string }) =>
-          `${variables.name} sent to ${data.routedTo}`,
+    const observer = new MutationObserver<{ routedTo: string }, Error, { name: string }>(
+      makeQueryClient(),
+      {
+        mutationFn: () => Promise.resolve({ routedTo: "Oakland" }),
+        meta: {
+          successMessage: (data: { routedTo: string }, variables: { name: string }) =>
+            `${variables.name} sent to ${data.routedTo}`,
+        },
       },
-    })
+    )
     await observer.mutate({ name: "Pothole" })
-    expect(useUiStore.getState().toast).toMatchObject({ text: "Pothole sent to Oakland", tone: "ok" })
+    expect(useUiStore.getState().toast).toMatchObject({
+      text: "Pothole sent to Oakland",
+      tone: "ok",
+    })
   })
 
   it("does not toast when the success copy returns null", async () => {
@@ -319,7 +330,11 @@ describe("queryKeys param factories", () => {
 describe("queryKeys id factories", () => {
   it.each([
     ["discovery.detail", queryKeys.discovery.detail, ["admin", "discovery", "detail"]],
-    ["jurisdictions.geometry", queryKeys.jurisdictions.geometry, ["admin", "jurisdictions", "geometry"]],
+    [
+      "jurisdictions.geometry",
+      queryKeys.jurisdictions.geometry,
+      ["admin", "jurisdictions", "geometry"],
+    ],
     ["reports.detail", queryKeys.reports.detail, ["admin", "reports", "detail"]],
     ["events.detail", queryKeys.events.detail, ["admin", "events", "detail"]],
     ["users.detail", queryKeys.users.detail, ["admin", "users", "detail"]],
@@ -359,7 +374,9 @@ describe("queryKeys id + params factories", () => {
     const [a, b, c] = queryKeys.users.reports("u-1")
     expect([a, b]).toEqual(queryKeys.users.all)
     expect(c).toBe("u-1")
-    expect(queryKeys.users.reports("u-1").slice(0, 3)).not.toEqual(queryKeys.users.detail("u-1").slice(0, 3))
+    expect(queryKeys.users.reports("u-1").slice(0, 3)).not.toEqual(
+      queryKeys.users.detail("u-1").slice(0, 3),
+    )
   })
 })
 

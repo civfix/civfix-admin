@@ -42,14 +42,8 @@ function useMailboxLists(folder: Folder, box: MailBox, searchTerm: string | unde
   const mailListQuery = useMailListInfinite(mailListParams(folder, box, searchTerm))
   const inboxFeedQuery = useInboxFeedInfinite(inboxFeedParams(folder, box, searchTerm))
 
-  const mailItems = React.useMemo(
-    () => flatPages(mailListQuery.data),
-    [mailListQuery.data],
-  )
-  const feedItems = React.useMemo(
-    () => flatPages(inboxFeedQuery.data),
-    [inboxFeedQuery.data],
-  )
+  const mailItems = React.useMemo(() => flatPages(mailListQuery.data), [mailListQuery.data])
+  const feedItems = React.useMemo(() => flatPages(inboxFeedQuery.data), [inboxFeedQuery.data])
   const feedByKey = React.useMemo(
     () => new Map<string, InboxFeedItemDTO>(feedItems.map((item) => [feedKey(item), item])),
     [feedItems],
@@ -93,21 +87,16 @@ export function useMailbox(focusId: string | null) {
   const { mailItems, feedByKey } = lists
   // Opening an unread message reads it, so the Unread or Needs attention chip would otherwise close it.
   // A folder switch or a sent message is a fresh load, which picks again.
-  const {
-    selectedId,
-    setSelectedId,
-    setReadOnOpen,
-    releaseReadOnOpen,
-    restartAutoPick,
-  } = useSelection({
-    focusId: initial.id,
-    syncFocus: false,
-    list: lists.activeListQuery,
-    items: lists.activeIds,
-    getId: ownId,
-    listKey: JSON.stringify([folder, box, search.searchTerm ?? null]),
-    unreadIds: lists.activeUnread,
-  })
+  const { selectedId, setSelectedId, setReadOnOpen, releaseReadOnOpen, restartAutoPick } =
+    useSelection({
+      focusId: initial.id,
+      syncFocus: false,
+      list: lists.activeListQuery,
+      items: lists.activeIds,
+      getId: ownId,
+      listKey: JSON.stringify([folder, box, search.searchTerm ?? null]),
+      unreadIds: lists.activeUnread,
+    })
 
   const focusChanged = useValueChanged(focusId)
   if (focusChanged && focusId) {
@@ -133,32 +122,35 @@ export function useMailbox(focusId: string | null) {
   }
 
   // Stable across keystrokes and picks, so the memoized list rows skip re-rendering.
-  const select = React.useCallback((id: string) => {
-    setSelectedId(id)
-    setReadOnOpen(null)
-    const readFailed = { onError: () => releaseReadOnOpen(id) }
-    if (outreach) {
-      const row = mailItems.find((t) => t.id === id)
-      if (!row?.unread) return
+  const select = React.useCallback(
+    (id: string) => {
+      setSelectedId(id)
+      setReadOnOpen(null)
+      const readFailed = { onError: () => releaseReadOnOpen(id) }
+      if (outreach) {
+        const row = mailItems.find((t) => t.id === id)
+        if (!row?.unread) return
+        setReadOnOpen(id)
+        markRead({ id }, readFailed)
+        return
+      }
+      const item = feedByKey.get(id)
+      if (!item?.unread) return
       setReadOnOpen(id)
-      markRead({ id }, readFailed)
-      return
-    }
-    const item = feedByKey.get(id)
-    if (!item?.unread) return
-    setReadOnOpen(id)
-    if (item.source === "email") setInboxStatus({ id: item.id, status: "read" }, readFailed)
-    else markRead({ id: item.threadId }, readFailed)
-  }, [
-    setSelectedId,
-    setReadOnOpen,
-    releaseReadOnOpen,
-    outreach,
-    mailItems,
-    feedByKey,
-    markRead,
-    setInboxStatus,
-  ])
+      if (item.source === "email") setInboxStatus({ id: item.id, status: "read" }, readFailed)
+      else markRead({ id: item.threadId }, readFailed)
+    },
+    [
+      setSelectedId,
+      setReadOnOpen,
+      releaseReadOnOpen,
+      outreach,
+      mailItems,
+      feedByKey,
+      markRead,
+      setInboxStatus,
+    ],
+  )
 
   return {
     folder,

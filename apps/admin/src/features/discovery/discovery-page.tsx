@@ -200,10 +200,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     toDirectoryQuery("attention", sort, layer, debouncedQuery),
   )
 
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
   const firstPage = listQuery.data?.pages[0]
   const counts = directoryCounts({
     filter,
@@ -219,7 +216,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   })
 
   // There is no by-id read here, so a pick that a filter or search leaves out stays open as last listed.
-  const { selectedId, setSelectedId, selectedItem: selected } = useSelection({
+  const {
+    selectedId,
+    setSelectedId,
+    selectedItem: selected,
+  } = useSelection({
     focusId,
     list: listQuery,
     items,
@@ -238,8 +239,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         title="Jurisdictions"
         subtitle={
           <span>
-            Every place reports land in, and who they route to. Map a routing contact for the ones that
-            need one, and reports start flowing.
+            Every place reports land in, and who they route to. Map a routing contact for the ones
+            that need one, and reports start flowing.
           </span>
         }
       />

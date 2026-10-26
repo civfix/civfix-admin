@@ -10,7 +10,9 @@ import { expectConsoleError } from "@/test/console"
 const RENDER_FAILED_COPY = "This page hit an unexpected error. Try again, or reload the dashboard."
 
 function chunkLoadError(): Error {
-  const err = new Error("Loading chunk 812 failed.\n(error: https://admin.civfix.org/_next/static/chunks/812.js)")
+  const err = new Error(
+    "Loading chunk 812 failed.\n(error: https://admin.civfix.org/_next/static/chunks/812.js)",
+  )
   err.name = "ChunkLoadError"
   return err
 }
@@ -42,7 +44,9 @@ describe("isChunkLoadError", () => {
   })
 
   it("does not treat an ordinary render error or a non-error as a chunk failure", () => {
-    expect(isChunkLoadError(new TypeError("Cannot read properties of undefined (reading 'cls')"))).toBe(false)
+    expect(
+      isChunkLoadError(new TypeError("Cannot read properties of undefined (reading 'cls')")),
+    ).toBe(false)
     expect(isChunkLoadError("Loading chunk 1 failed")).toBe(false)
     expect(isChunkLoadError(null)).toBe(false)
   })

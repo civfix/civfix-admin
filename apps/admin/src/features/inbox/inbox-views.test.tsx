@@ -80,12 +80,15 @@ describe("InboxRow", () => {
     expect(screen.getByText("support")).not.toHaveStyle({ opacity: "0.6" })
   })
 
-  it.each(["", "not a date"])("gives the timestamp no tooltip for the unparseable time %j", (ts) => {
-    const { container } = renderWithQuery(
-      <InboxRow item={{ ...EMAIL, ts }} selected={false} onClick={() => {}} now={NOW} />,
-    )
-    expect(container.querySelector(".mail-ts")).not.toHaveAttribute("title")
-  })
+  it.each(["", "not a date"])(
+    "gives the timestamp no tooltip for the unparseable time %j",
+    (ts) => {
+      const { container } = renderWithQuery(
+        <InboxRow item={{ ...EMAIL, ts }} selected={false} onClick={() => {}} now={NOW} />,
+      )
+      expect(container.querySelector(".mail-ts")).not.toHaveAttribute("title")
+    },
+  )
 })
 
 describe("InboxReader", () => {
@@ -112,7 +115,11 @@ describe("InboxReader", () => {
 
   it("does not re-read an open message that has no attachments", async () => {
     startFakeTimersWithUser()
-    apiMock.getInboxMessage.mockResolvedValue({ ...MESSAGE, hasAttachments: false, attachments: [] })
+    apiMock.getInboxMessage.mockResolvedValue({
+      ...MESSAGE,
+      hasAttachments: false,
+      attachments: [],
+    })
     renderWithQuery(<InboxReader id="i-1" />)
     await screen.findByText("See attached", { selector: "p" })
 

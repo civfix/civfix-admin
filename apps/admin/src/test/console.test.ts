@@ -21,7 +21,9 @@ describe("console guard", () => {
   it("fails a test on an unexpected console.error or console.warn", () => {
     console.error("stray error", { id: 7 })
     console.warn("stray warning")
-    expect(settle).toThrow(/console\.error: stray error \{ id: 7 \}[\s\S]*console\.warn: stray warning/)
+    expect(settle).toThrow(
+      /console\.error: stray error \{ id: 7 \}[\s\S]*console\.warn: stray warning/,
+    )
   })
 
   it("swallows a call matching an expected substring or pattern", () => {

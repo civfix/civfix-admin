@@ -36,7 +36,9 @@ function UserOrganizationRow({ org, nav }: { org: UserOrganization; nav: NavFn }
         </div>
       </div>
       <div className="trailing">
-        <span className={`pill ${Object.hasOwn(ORG_ROLE_PILL, org.role) ? ORG_ROLE_PILL[org.role] : "priority-low"} tight`}>
+        <span
+          className={`pill ${Object.hasOwn(ORG_ROLE_PILL, org.role) ? ORG_ROLE_PILL[org.role] : "priority-low"} tight`}
+        >
           {Object.hasOwn(ORG_ROLE_LABEL, org.role) ? ORG_ROLE_LABEL[org.role] : org.role}
         </span>
       </div>

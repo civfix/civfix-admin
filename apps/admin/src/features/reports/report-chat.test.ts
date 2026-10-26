@@ -18,18 +18,24 @@ function msg(over: Partial<ChatMessageDTO> & { id: string }): ChatMessageDTO {
 
 describe("systemLabel", () => {
   it("names the status alone when there is no detail", () => {
-    expect(systemLabel(msg({ id: "a", system: { status: "acknowledged" } }))).toBe("System · Acknowledged")
+    expect(systemLabel(msg({ id: "a", system: { status: "acknowledged" } }))).toBe(
+      "System · Acknowledged",
+    )
   })
 
   it("prefers the note over the body", () => {
     expect(
-      systemLabel(msg({ id: "a", system: { status: "in_progress", note: " Crew out ", body: "Body" } })),
+      systemLabel(
+        msg({ id: "a", system: { status: "in_progress", note: " Crew out ", body: "Body" } }),
+      ),
     ).toBe("System · In progress · Crew out")
   })
 
   it("falls back to the message body when the system body is blank", () => {
     expect(
-      systemLabel(msg({ id: "a", body: "Crew dispatched", system: { status: "acknowledged", body: "  " } })),
+      systemLabel(
+        msg({ id: "a", body: "Crew dispatched", system: { status: "acknowledged", body: "  " } }),
+      ),
     ).toBe("System · Acknowledged · Crew dispatched")
   })
 

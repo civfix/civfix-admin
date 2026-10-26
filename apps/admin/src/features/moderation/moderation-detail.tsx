@@ -94,8 +94,7 @@ function ReportedSubjectCard({ item }: { item: ModerationItemDTO }) {
             style={{ marginTop: 10 }}
             onClick={() => nav(destination.page, destination.id)}
           >
-            <Icons.ExternalLink size={12} /> View reported{" "}
-            {item.subjectType}
+            <Icons.ExternalLink size={12} /> View reported {item.subjectType}
           </button>
         )}
       </div>

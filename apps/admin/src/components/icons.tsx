@@ -50,9 +50,7 @@ export const Icons = {
       d="M12 22s-7-7.5-7-13a7 7 0 1 1 14 0c0 5.5-7 13-7 13z M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"
     />
   ),
-  Layers: (p) => (
-    <Icon {...p} paths={["M12 3l9 5-9 5-9-5z", "M3 13l9 5 9-5", "M3 18l9 5 9-5"]} />
-  ),
+  Layers: (p) => <Icon {...p} paths={["M12 3l9 5-9 5-9-5z", "M3 13l9 5 9-5", "M3 18l9 5 9-5"]} />,
   Shield: (p) => <Icon {...p} d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z" />,
   Building: (p) => (
     <Icon
@@ -67,7 +65,10 @@ export const Icons = {
   Mail: (p) => (
     <Icon
       {...p}
-      paths={["M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M2 7l10 6 10-6"]}
+      paths={[
+        "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
+        "M2 7l10 6 10-6",
+      ]}
     />
   ),
   Users: (p) => (
@@ -93,7 +94,9 @@ export const Icons = {
       ]}
     />
   ),
-  Search: (p) => <Icon {...p} paths={["M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "M21 21l-4.35-4.35"]} />,
+  Search: (p) => (
+    <Icon {...p} paths={["M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z", "M21 21l-4.35-4.35"]} />
+  ),
   Plus: (p) => <Icon {...p} paths={["M12 5v14", "M5 12h14"]} />,
   Check: (p) => <Icon {...p} d="M20 6L9 17l-5-5" />,
   X: (p) => <Icon {...p} paths={["M18 6L6 18", "M6 6l12 12"]} />,
@@ -117,7 +120,10 @@ export const Icons = {
   Eye: (p) => (
     <Icon
       {...p}
-      paths={["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"]}
+      paths={[
+        "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z",
+        "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
+      ]}
     />
   ),
   EyeOff: (p) => (
@@ -130,9 +136,18 @@ export const Icons = {
     />
   ),
   Flag: (p) => <Icon {...p} paths={["M4 22V4", "M4 4h13l-2 5 2 5H4"]} />,
-  Clock: (p) => <Icon {...p} paths={["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 6v6l4 2"]} />,
+  Clock: (p) => (
+    <Icon {...p} paths={["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 6v6l4 2"]} />
+  ),
   ExternalLink: (p) => (
-    <Icon {...p} paths={["M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6", "M15 3h6v6", "M10 14L21 3"]} />
+    <Icon
+      {...p}
+      paths={[
+        "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6",
+        "M15 3h6v6",
+        "M10 14L21 3",
+      ]}
+    />
   ),
   Lock: (p) => <Icon {...p} paths={["M3 11h18v10H3z", "M7 11V7a5 5 0 0 1 10 0v4"]} />,
   FileText: (p) => (
@@ -161,7 +176,10 @@ export const Icons = {
   ),
   Send: (p) => <Icon {...p} paths={["M22 2L11 13", "M22 2l-7 20-4-9-9-4z"]} />,
   Star: (p) => (
-    <Icon {...p} d="M12 2l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 17.77l-6.18 3.23L7 14.13l-5-4.87 6.91-1z" />
+    <Icon
+      {...p}
+      d="M12 2l3.09 6.26 6.91 1-5 4.87 1.18 6.87L12 17.77l-6.18 3.23L7 14.13l-5-4.87 6.91-1z"
+    />
   ),
   MoreH: (p) => <Icon {...p} paths={["M5 12h.01", "M12 12h.01", "M19 12h.01"]} sw={3} />,
   CornerArr: (p) => <Icon {...p} paths={["M15 10l5 5-5 5", "M4 4v7a4 4 0 0 0 4 4h12"]} />,
@@ -188,8 +206,15 @@ export const Icons = {
   Calendar: (p) => (
     <Icon
       {...p}
-      paths={["M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", "M16 2v4", "M8 2v4", "M3 10h18"]}
+      paths={[
+        "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+        "M16 2v4",
+        "M8 2v4",
+        "M3 10h18",
+      ]}
     />
   ),
-  MessageSquare: (p) => <Icon {...p} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+  MessageSquare: (p) => (
+    <Icon {...p} d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  ),
 } satisfies Record<string, IconComponent>

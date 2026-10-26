@@ -43,7 +43,13 @@ function useRoster(org: AdminOrgDTO) {
 
 type Roster = ReturnType<typeof useRoster>
 
-function RosterBody({ org, roster: { q, members, ownerName } }: { org: AdminOrgDTO; roster: Roster }) {
+function RosterBody({
+  org,
+  roster: { q, members, ownerName },
+}: {
+  org: AdminOrgDTO
+  roster: Roster
+}) {
   if (q.isLoading) return <LoadingState label="Loading members..." />
   if (q.isError && !q.data) {
     return <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load members" />
@@ -93,7 +99,9 @@ export function MembersPanel({ org }: { org: AdminOrgDTO }) {
             className="btn primary sm"
             onClick={() => setAdding(true)}
             disabled={!!org.deletedAt}
-            title={suspended ? "The organization is suspended; members can still be managed." : undefined}
+            title={
+              suspended ? "The organization is suspended; members can still be managed." : undefined
+            }
           >
             <Icons.Plus size={13} /> Add member
           </button>
@@ -274,7 +282,11 @@ function MemberRow({
   // The backend refuses every change to the owner's own membership: ownership moves by promoting
   // someone else, so the owner row has no actions.
   const isOwner = member.role === "owner"
-  const picked: PickedUser = { id: member.user.id, name: member.user.name, handle: member.user.handle }
+  const picked: PickedUser = {
+    id: member.user.id,
+    name: member.user.name,
+    handle: member.user.handle,
+  }
   const openProfile = () => nav("users", member.user.id)
 
   return (
@@ -303,7 +315,9 @@ function MemberRow({
           {isOwner && (
             <>
               <span className="sep">·</span>
-              <span className="muted">Transfer ownership before changing this role or removing</span>
+              <span className="muted">
+                Transfer ownership before changing this role or removing
+              </span>
             </>
           )}
         </div>
@@ -452,12 +466,7 @@ function AddMemberForm({
           <UserPicker value={user} onChange={setUser} excludeIds={excludeIds} autoFocus />
           <FieldError id={fieldErrorId(PERSON_FIELD_ID)} text={personError} />
         </div>
-        <RoleField
-          role={role}
-          onChange={setRole}
-          ownerName={ownerName}
-          disabled={add.isPending}
-        />
+        <RoleField role={role} onChange={setRole} ownerName={ownerName} disabled={add.isPending} />
         <ReasonField
           id="org-add-reason"
           value={reason}
@@ -470,8 +479,13 @@ function AddMemberForm({
           <button type="button" className="btn ghost" onClick={onDone} disabled={add.isPending}>
             Cancel
           </button>
-          <button type="submit" className={`btn ${transfer ? "danger" : "primary"}`} disabled={add.isPending}>
-            <Icons.Plus size={13} /> {add.isPending ? "Adding…" : transfer ? "Add and transfer" : "Add member"}
+          <button
+            type="submit"
+            className={`btn ${transfer ? "danger" : "primary"}`}
+            disabled={add.isPending}
+          >
+            <Icons.Plus size={13} />{" "}
+            {add.isPending ? "Adding…" : transfer ? "Add and transfer" : "Add member"}
           </button>
         </div>
       </div>

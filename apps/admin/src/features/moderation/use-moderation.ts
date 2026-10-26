@@ -111,8 +111,10 @@ export function useAppealModeration() {
       api.appealModeration(request),
     onSuccess: (_res, { request: { id } }) => invalidateModeration(qc, id),
     meta: {
-      successMessage: (_res: unknown, { request, item }: ModerationDecision<AppealModerationRequest>) =>
-        `${item.flag} · appeal ${request.decision === "uphold" ? "upheld" : "overturned"}`,
+      successMessage: (
+        _res: unknown,
+        { request, item }: ModerationDecision<AppealModerationRequest>,
+      ) => `${item.flag} · appeal ${request.decision === "uphold" ? "upheld" : "overturned"}`,
     },
   })
 }

@@ -29,7 +29,9 @@ function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) 
 
   if (q.isLoading) return <LoadingState label="Loading document..." />
   if (q.isError && !q.data) {
-    return <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not open evidence" />
+    return (
+      <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not open evidence" />
+    )
   }
   if (!q.data) return null
   const media = q.data.media
@@ -44,8 +46,8 @@ function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) 
     return (
       <div className="org-evidence-view">
         <span className="org-evidence-note">
-          The signed link expired at {formatDateTime(q.data.expiresAt)}. Request a fresh one; the new
-          read is audited too.
+          The signed link expired at {formatDateTime(q.data.expiresAt)}. Request a fresh one; the
+          new read is audited too.
         </span>
         <button type="button" className="btn sm" onClick={() => void q.refetch()}>
           <Icons.Clock size={12} /> Request a new link

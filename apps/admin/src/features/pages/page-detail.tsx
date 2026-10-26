@@ -22,7 +22,9 @@ function PageDetailHead({ item, flagged }: { item: AdminEventPageListItemDTO; fl
         </span>
       </span>
       <div className="rep-head-text">
-        <div className="crumb mono">{item.slug ? publicPagePath(item.slug) : "unpublished draft"}</div>
+        <div className="crumb mono">
+          {item.slug ? publicPagePath(item.slug) : "unpublished draft"}
+        </div>
         <h2>{item.title}</h2>
       </div>
       {flagged && (

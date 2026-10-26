@@ -31,7 +31,10 @@ const SECTION_MODULES: Record<PageId, SectionModule> = {
   events: sectionModule(() => import("@/features/events/events-page"), "EventsPage"),
   mail: sectionModule(() => import("@/features/mail/mail-page"), "MailPage"),
   users: sectionModule(() => import("@/features/users/users-page"), "UsersPage"),
-  moderation: sectionModule(() => import("@/features/moderation/moderation-page"), "ModerationPage"),
+  moderation: sectionModule(
+    () => import("@/features/moderation/moderation-page"),
+    "ModerationPage",
+  ),
   analytics: sectionModule(() => import("@/features/analytics/analytics-page"), "AnalyticsPage"),
   orgs: sectionModule(() => import("@/features/orgs/orgs-page"), "OrgsPage"),
   hosts: sectionModule(() => import("@/features/hosts/hosts-page"), "HostsPage"),

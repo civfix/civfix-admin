@@ -48,7 +48,9 @@ export function ModerationKindIcon({ kind, size }: { kind: ModerationKind; size:
   return <Icon size={size} />
 }
 
-export function moderationKindLabel(item: Pick<ModerationListItemDTO, "kind" | "subjectType">): string {
+export function moderationKindLabel(
+  item: Pick<ModerationListItemDTO, "kind" | "subjectType">,
+): string {
   if (item.kind === "user_report" && item.subjectType) return `Reported ${item.subjectType}`
   return MODERATION_KIND_LABELS[item.kind]
 }

@@ -4,7 +4,12 @@ import * as React from "react"
 import L from "leaflet"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { addCartoBasemap, setCartoTint, useLeafletMap, type CartoTint } from "@/components/map/leaflet-base"
+import {
+  addCartoBasemap,
+  setCartoTint,
+  useLeafletMap,
+  type CartoTint,
+} from "@/components/map/leaflet-base"
 import { useLatestRef } from "@/hooks/use-latest-ref"
 import { CATEGORY_GLYPHS } from "@/lib/category"
 
@@ -45,14 +50,17 @@ const TEARDROP =
   "M32 4 C46 4 58 16 58 30 C58 46 40 60 34 68 C33 69 31 69 30 68 C24 60 6 46 6 30 C6 16 18 4 32 4 Z"
 // The icon html goes through innerHTML and the category arrives from the API unvalidated, so only a
 // constant entry may reach it: a Map holds no inherited keys like "constructor".
-const GLYPHS = new Map<string, string>(Object.entries({
-  ...CATEGORY_GLYPHS,
-  cleanup:
-    "M3 6 L21 6 M19 6 V20 a2 2 0 0 1 -2 2 H7 a2 2 0 0 1 -2 -2 V6 M9 6 V4 a1 1 0 0 1 1 -1 h4 a1 1 0 0 1 1 1 V6 M9 11 V17 M12 11 V17 M15 11 V17",
-  event: "M4 7 a1 1 0 0 1 1 -1 h14 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z M16 4 v4 M8 4 v4 M4 11 h16",
-  "event-volunteer":
-    "M12 9 a2 2 0 0 1 3 -1.3 a2 2 0 0 1 0.5 3 L12 14 L8.5 10.7 a2 2 0 0 1 0.5 -3 A2 2 0 0 1 12 9 Z M4 13 v5 a1 1 0 0 0 1 1 h2 v-6 Z M20 13 v5 a1 1 0 0 1 -1 1 h-2 v-6 Z",
-}))
+const GLYPHS = new Map<string, string>(
+  Object.entries({
+    ...CATEGORY_GLYPHS,
+    cleanup:
+      "M3 6 L21 6 M19 6 V20 a2 2 0 0 1 -2 2 H7 a2 2 0 0 1 -2 -2 V6 M9 6 V4 a1 1 0 0 1 1 -1 h4 a1 1 0 0 1 1 1 V6 M9 11 V17 M12 11 V17 M15 11 V17",
+    event:
+      "M4 7 a1 1 0 0 1 1 -1 h14 a1 1 0 0 1 1 1 v12 a1 1 0 0 1 -1 1 H5 a1 1 0 0 1 -1 -1 Z M16 4 v4 M8 4 v4 M4 11 h16",
+    "event-volunteer":
+      "M12 9 a2 2 0 0 1 3 -1.3 a2 2 0 0 1 0.5 3 L12 14 L8.5 10.7 a2 2 0 0 1 0.5 -3 A2 2 0 0 1 12 9 Z M4 13 v5 a1 1 0 0 0 1 1 h2 v-6 Z M20 13 v5 a1 1 0 0 1 -1 1 h-2 v-6 Z",
+  }),
+)
 const ROUTED_FILL = "var(--ink-3)"
 const PIN_FILL: Record<string, string> = {
   routed: ROUTED_FILL,
@@ -65,7 +73,11 @@ const EVENT_KINDS = new Set(["event", "event-volunteer"])
 
 function pinIcon(
   category: string | null | undefined,
-  { active = false, draft = false, kind = null }: { active?: boolean; draft?: boolean; kind?: string | null },
+  {
+    active = false,
+    draft = false,
+    kind = null,
+  }: { active?: boolean; draft?: boolean; kind?: string | null },
 ): L.DivIcon {
   const isEvent = kind != null && EVENT_KINDS.has(kind)
   const state = isEvent ? kind : draft ? "needs" : "routed"
@@ -152,7 +164,11 @@ function createMarker(
   text: string | null,
   sync: MarkerSync,
 ): L.Marker {
-  const marker = L.marker([pin.lat, pin.lng], { icon, riseOnHover: true, keyboard: sync.interactive })
+  const marker = L.marker([pin.lat, pin.lng], {
+    icon,
+    riseOnHover: true,
+    keyboard: sync.interactive,
+  })
   marker.addTo(map)
   syncTooltip(marker, text)
   if (sync.interactive) labelMarker(marker, text)
@@ -181,7 +197,8 @@ function updateMarker(
     syncTooltip(marker, next.text)
     if (interactive) labelMarker(marker, next.text)
   }
-  if (!prev || prev.lat !== next.lat || prev.lng !== next.lng) marker.setLatLng([next.lat, next.lng])
+  if (!prev || prev.lat !== next.lat || prev.lng !== next.lng)
+    marker.setLatLng([next.lat, next.lng])
 }
 
 function syncMarkers(map: L.Map, pins: MapPin[], sync: MarkerSync): void {

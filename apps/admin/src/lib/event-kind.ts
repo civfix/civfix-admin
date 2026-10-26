@@ -11,7 +11,9 @@ const EVENT_KIND_VIEW: Record<EventKind, { icon: IconComponent; label: string }>
 
 // An unknown kind from a newer server falls back to Cleanup rather than rendering blank.
 export function eventKindLabel(kind: EventKind): string {
-  return Object.hasOwn(EVENT_KIND_LABELS, kind) ? EVENT_KIND_LABELS[kind] : EVENT_KIND_LABELS.cleanup
+  return Object.hasOwn(EVENT_KIND_LABELS, kind)
+    ? EVENT_KIND_LABELS[kind]
+    : EVENT_KIND_LABELS.cleanup
 }
 
 export function eventKindView(kind: EventKind): { icon: IconComponent; label: string } {

@@ -69,7 +69,10 @@ interface ListSnapshot<T, Id extends string> {
 
 // A deep link that changes the pick wins even over an earlier drop-out of that row from this list;
 // one naming the row already open keeps its drop-out tracking.
-function focusOn<T, Id extends string>(state: SelectionState<T, Id>, focusId: Id): SelectionState<T, Id> {
+function focusOn<T, Id extends string>(
+  state: SelectionState<T, Id>,
+  focusId: Id,
+): SelectionState<T, Id> {
   return state.selectedId === focusId ? state : { ...state, selectedId: focusId, seenIn: null }
 }
 
@@ -172,7 +175,12 @@ export function useSelection<T, Id extends string>({
   return {
     selectedId: next.selectedId,
     setSelectedId,
-    selectedItem: resolveSelected(items, next.selectedId, keepLastSeen ? next.lastSeen : null, getId),
+    selectedItem: resolveSelected(
+      items,
+      next.selectedId,
+      keepLastSeen ? next.lastSeen : null,
+      getId,
+    ),
     clearIfSelected,
     restartAutoPick,
     readOnOpen: next.readOnOpen,

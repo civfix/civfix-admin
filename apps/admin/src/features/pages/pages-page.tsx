@@ -72,11 +72,12 @@ export function PagesPage({ focusId }: SectionPageProps) {
     [filter, debouncedQuery],
   )
   const listQuery = useEventPageListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
-  const { selectedId, setSelectedId, selectedItem: listed } = useSelection({
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
+  const {
+    selectedId,
+    setSelectedId,
+    selectedItem: listed,
+  } = useSelection({
     focusId,
     list: listQuery,
     items,
@@ -95,8 +96,8 @@ export function PagesPage({ focusId }: SectionPageProps) {
         title="Signup pages"
         subtitle={
           <span>
-            The public pages hosts publish for their events. Read what is actually on them, flag what
-            needs a second look, and take a page off the web without touching the event.
+            The public pages hosts publish for their events. Read what is actually on them, flag
+            what needs a second look, and take a page off the web without touching the event.
           </span>
         }
       />
@@ -117,7 +118,12 @@ export function PagesPage({ focusId }: SectionPageProps) {
       </div>
 
       <div className="master-detail">
-        <PageListPane listQuery={listQuery} items={items} selectedId={selectedId} onSelect={setSelectedId} />
+        <PageListPane
+          listQuery={listQuery}
+          items={items}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
 
         <section className="card md-detail-card">
           <PageDetailPane selected={selected} pageQuery={pageQuery} pageNoun={pageNoun} />

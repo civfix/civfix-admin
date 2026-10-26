@@ -4,7 +4,8 @@ import { toAppError } from "@/lib/api"
 
 // fetch() rejects with a TypeError whose wording is the browser's (Chromium, Firefox, WebKit), and it
 // means the request never reached the API.
-const FETCH_FAILURE = /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed)$/
+const FETCH_FAILURE =
+  /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed)$/
 
 const NETWORK_FAILURE = "Could not reach the server. Check your connection and try again."
 

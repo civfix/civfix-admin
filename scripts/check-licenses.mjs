@@ -20,7 +20,12 @@ const ALLOWED_LICENSES = new Set(
     "BlueOak-1.0.0",
     "Python-2.0",
     "MPL-2.0",
-    ...["LGPL-2.0", "LGPL-2.1", "LGPL-3.0"].flatMap((id) => [id, `${id}-only`, `${id}-or-later`, `${id}+`]),
+    ...["LGPL-2.0", "LGPL-2.1", "LGPL-3.0"].flatMap((id) => [
+      id,
+      `${id}-only`,
+      `${id}-or-later`,
+      `${id}+`,
+    ]),
     "GPL-2.0-or-later",
     "GPL-2.0+",
     ...["GPL-3.0", "AGPL-3.0"].flatMap((id) => [id, `${id}-only`, `${id}-or-later`, `${id}+`]),
@@ -134,7 +139,11 @@ export function findViolations(report, allowedPackages = ALLOWED_PACKAGES) {
     for (const pkg of packages) {
       const reported = pkg.license ?? license
       if (isLicenseAllowed(reported)) continue
-      if (Object.hasOwn(allowedPackages, pkg.name) && allowedPackages[pkg.name].license === reported) continue
+      if (
+        Object.hasOwn(allowedPackages, pkg.name) &&
+        allowedPackages[pkg.name].license === reported
+      )
+        continue
       violations.push({ name: pkg.name, versions: pkg.versions, license: reported })
     }
   }
@@ -151,7 +160,9 @@ function main() {
     console.log("check-licenses: every production dependency has an AGPL-3.0-compatible license.")
     return
   }
-  console.error("check-licenses: production dependencies with a denied, unknown or unreviewed license:")
+  console.error(
+    "check-licenses: production dependencies with a denied, unknown or unreviewed license:",
+  )
   for (const { name, versions, license } of violations) {
     console.error(`  ${name}@${versions.join(", ")}: ${license}`)
   }
@@ -163,4 +174,8 @@ function main() {
 
 // realpath on both sides: through a symlinked path the comparison would otherwise miss, skip main() and
 // pass the gate without checking anything.
-if (process.argv[1] !== undefined && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) main()
+if (
+  process.argv[1] !== undefined &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+)
+  main()
