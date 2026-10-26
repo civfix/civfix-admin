@@ -11,7 +11,13 @@ interface Expectation {
 
 const LEVELS: readonly ConsoleLevel[] = ["error", "warn"]
 
-let originals: Partial<Record<ConsoleLevel, Console[ConsoleLevel]>> = {}
+// Captured once at load: if a failing afterEach ever skips stopConsoleGuard, the next start must not save
+// the guard's own wrapper as the "real" console and swallow logs for the rest of the file.
+const REAL_CONSOLE: Record<ConsoleLevel, Console[ConsoleLevel]> = {
+  error: console.error,
+  warn: console.warn,
+}
+
 let expectations: Expectation[] = []
 let unexpected: string[] = []
 
@@ -46,18 +52,13 @@ export function expectConsoleWarn(matcher: Matcher): void {
 export function startConsoleGuard(): void {
   expectations = []
   unexpected = []
-  originals = {}
   for (const level of LEVELS) {
-    originals[level] = console[level]
     console[level] = (...args: unknown[]) => record(level, args)
   }
 }
 
 export function stopConsoleGuard(): void {
-  for (const level of LEVELS) {
-    const original = originals[level]
-    if (original) console[level] = original
-  }
+  for (const level of LEVELS) console[level] = REAL_CONSOLE[level]
   const missing = expectations
     .filter((e) => !e.matched)
     .map((e) => `expected a console.${e.level} matching ${String(e.matcher)}, but none was logged`)
