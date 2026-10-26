@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { formatDate, formatDateTime, formatPreciseDateTime, preciseDateTimeTitle } from "./dates"
+import { formatAgo, formatDate, formatDateTime, formatPreciseDateTime, preciseDateTimeTitle } from "./dates"
 import { EMPTY_VALUE } from "./empty-value"
 
 describe("formatDate", () => {
@@ -60,5 +60,34 @@ describe("preciseDateTimeTitle", () => {
 
   it.each(["", "not a date"])("gives no title for %j", (value) => {
     expect(preciseDateTimeTitle(value)).toBeUndefined()
+  })
+})
+
+describe("formatAgo", () => {
+  const NOW = Date.parse("2026-10-24T12:00:00.000Z")
+  const SECOND = 1000
+  const MINUTE = 60 * SECOND
+  const HOUR = 60 * MINUTE
+  const DAY = 24 * HOUR
+  const before = (ms: number) => new Date(NOW - ms).toISOString()
+
+  it.each([
+    ["T1", 30 * SECOND, "just now"],
+    ["T2", 59 * SECOND, "just now"],
+    ["T3", 60 * SECOND, "1 min ago"],
+    ["T4", 5 * MINUTE, "5 min ago"],
+    ["T5", 59 * MINUTE + 59 * SECOND, "59 min ago"],
+    ["T6", 60 * MINUTE, "1 h ago"],
+    ["T7", 2 * HOUR + 30 * MINUTE, "2 h ago"],
+    ["T8", 23 * HOUR + 59 * MINUTE, "23 h ago"],
+    ["T9", 24 * HOUR, "1 d ago"],
+    ["T10", 3 * DAY + 5 * HOUR, "3 d ago"],
+    ["T11", -10 * MINUTE, "just now"],
+  ])("%s: %d ms before now reads %j", (_id, ago, expected) => {
+    expect(formatAgo(before(ago), NOW)).toBe(expected)
+  })
+
+  it("T12: an unparseable value is shown as sent", () => {
+    expect(formatAgo("not-a-date", NOW)).toBe("not-a-date")
   })
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { AppError, ErrorCode } from "@civfix/contract"
 
-import { isNotFound, toAppError } from "./api"
+import { isNotFound, toAppError, validationFields } from "./api"
 
 /**
  * `@civfix/contract/client` ships its own copy of the AppError class, so errors thrown by the API client
@@ -54,5 +54,18 @@ describe("isNotFound", () => {
   it("sees a foreign NOT_FOUND", () => {
     expect(isNotFound(foreignAppError(ErrorCode.NOT_FOUND, "missing"))).toBe(true)
     expect(isNotFound(new Error("x"))).toBe(false)
+  })
+})
+
+describe("validationFields", () => {
+  it("returns the fields of a foreign VALIDATION error", () => {
+    const fields = { "routes.0.formUrl": "Bad URL" }
+    expect(validationFields(foreignAppError(ErrorCode.VALIDATION, "Invalid", fields))).toEqual(fields)
+  })
+
+  it("is null for a VALIDATION error without fields and for any other error", () => {
+    expect(validationFields(foreignAppError(ErrorCode.VALIDATION, "Invalid"))).toBeNull()
+    expect(validationFields(foreignAppError(ErrorCode.CONFLICT, "Taken", { slug: "taken" }))).toBeNull()
+    expect(validationFields(new TypeError("Failed to fetch"))).toBeNull()
   })
 })
