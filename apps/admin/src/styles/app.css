@@ -656,3 +656,96 @@ img.org-logo { object-fit: cover; background: var(--paper-2); }
 .prow-main .prow-meta {
   display: block;
 }
+
+/* The developer page (/dev/). */
+.dev-body { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.dev-tabs { align-self: flex-start; flex-wrap: wrap; }
+.dev-env-badge { font-size: 11px; padding: 2px 9px; }
+.dev-env-badge.env-prod { background: var(--danger); color: var(--fg-on-color); }
+.dev-env-badge.env-staging {
+  background: var(--sun-50);
+  color: var(--sun-700);
+  border-color: color-mix(in oklab, var(--sun) 30%, transparent);
+}
+.dev-env-badge.env-neutral { background: var(--paper-2); color: var(--ink-2); border-color: var(--border-soft); }
+.dev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--gutter);
+  align-items: start;
+}
+.dev-kv {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.dev-kv-row { display: contents; }
+.dev-kv dt { color: var(--ink-3); font-weight: 600; }
+.dev-kv dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.dev-health { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dev-health li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink); }
+.dev-health-val { margin-left: auto; color: var(--ink-3); }
+.dev-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.dev-dot.is-ok { background: var(--moss); }
+.dev-dot.is-warn { background: var(--sun-600); }
+.dev-dot.is-down { background: var(--danger); }
+.dev-dot.is-off { background: var(--ink-4); }
+.trow.dev-jobs {
+  grid-template-columns: 1.6fr 0.7fr 1.1fr repeat(5, 0.6fr) 0.9fr 1fr 0.9fr;
+  cursor: default;
+}
+/* Eleven columns need more room than the 640px every other scrolling table gets. */
+.table-scroll > .table.dev-jobs-table:has(> .trow.dev-jobs) { min-width: 1100px; }
+.dev-danger { color: var(--danger); font-weight: 700; }
+.dev-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.dev-stack > p { margin: 0; }
+.dev-stack > .field { margin-bottom: 0; }
+.dev-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.dev-list li { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); overflow-wrap: anywhere; }
+.dev-list li .btn { margin-left: auto; }
+/* A two-state control: the knob sits right, on the moss track, when the flag is on. */
+.dev-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: calc(var(--space-5) * 2);
+  height: var(--space-5);
+  padding: 0;
+  border: none;
+  border-radius: var(--space-5);
+  background: var(--ink-4);
+  cursor: pointer;
+  transition: background 120ms var(--ease-out);
+}
+.dev-switch::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--space-1) / 2);
+  left: calc(var(--space-1) / 2);
+  width: calc(var(--space-5) - var(--space-1));
+  height: calc(var(--space-5) - var(--space-1));
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+  transition: transform 120ms var(--ease-out);
+}
+.dev-switch[aria-checked="true"] { background: var(--moss); }
+.dev-switch[aria-checked="true"]::after { transform: translateX(var(--space-5)); }
+.dev-switch:focus-visible { outline: none; box-shadow: var(--ring); }
+.dev-switch:disabled { opacity: 0.5; cursor: default; }
+/* The Audit tab stacks two list cards, so neither may stick to the top the way a master-detail list does. */
+.dev-audit-stack { display: flex; flex-direction: column; gap: var(--gutter); min-width: 0; }
+.dev-audit-stack .md-list { position: static; max-height: none; }
+.trow.dev-audit { grid-template-columns: 0.8fr 1fr 1.2fr 2fr; cursor: default; }
+.dev-activity { list-style: none; margin: 0; padding: 0; }
+.dev-activity li {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: var(--fs-13);
+  color: var(--ink-2);
+}
+.dev-activity li:last-child { border-bottom: none; }
+.dev-activity-when { flex-shrink: 0; min-width: calc(var(--space-5) * 3.6); color: var(--ink-3); }
