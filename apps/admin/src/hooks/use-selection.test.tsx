@@ -137,6 +137,12 @@ describe("useSelection", () => {
       hook.rerender({ listKey: "suspended", items: [A] })
       expect(hook.result.current.selectedId).toBe("z")
     })
+
+    it("opens a new unlisted deep link over an unlisted one", () => {
+      const hook = setup({ readableById: false, focusId: "z", items: [A] })
+      hook.rerender({ focusId: "y", items: [A] })
+      expect(hook.result.current.selectedId).toBe("y")
+    })
   })
 
   it("clearIfSelected clears only the matching pick", () => {
