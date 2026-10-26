@@ -22,9 +22,9 @@ function PeekGlyph({ item }: { item: PeekItem }) {
     )
   }
   if (item.kind === "icon") {
-    const Glyph = item.icon ?? Icons.Shield
+    const Glyph = item.icon
     return (
-      <span className={`peek-ico hue-${item.hue ?? "lilac"}`}>
+      <span className={`peek-ico hue-${item.hue}`}>
         <Glyph size={13} />
       </span>
     )
@@ -36,7 +36,7 @@ function PeekGlyph({ item }: { item: PeekItem }) {
       </span>
     )
   }
-  return <span className="peek-av">{initials(item.name ?? "")}</span>
+  return <span className="peek-av">{initials(item.name)}</span>
 }
 
 function PreviewRow({ item, page }: { item: PeekItem; page: PageId }) {

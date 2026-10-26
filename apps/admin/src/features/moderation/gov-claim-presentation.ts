@@ -19,7 +19,9 @@ export const GOV_CLAIM_STATUS_VIEW: Record<GovClaimStatus, { cls: string; label:
 
 // The fallbacks cover a status newer than this build, which the client passes through.
 export function govClaimStatusView(status: GovClaimStatus): { cls: string; label: string } {
-  return GOV_CLAIM_STATUS_VIEW[status] ?? GOV_CLAIM_STATUS_VIEW.pending
+  return Object.hasOwn(GOV_CLAIM_STATUS_VIEW, status)
+    ? GOV_CLAIM_STATUS_VIEW[status]
+    : GOV_CLAIM_STATUS_VIEW.pending
 }
 
 export const GOV_CHECK_STATUS_VIEW: Record<GovCheckStatus, { cls: string; label: string }> = {

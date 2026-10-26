@@ -28,14 +28,15 @@ export function Fact({
 
 /** Only an https url becomes a link; anything else stored is shown as text so it is never hidden. */
 export function UrlFact({ url }: { url: string | null | undefined }) {
-  if (isHttpsUrl(url)) {
+  if (url && isHttpsUrl(url)) {
     return (
       <a href={url} target="_blank" rel="noreferrer noopener">
         {url}
       </a>
     )
   }
-  return <>{url || EMPTY_VALUE}</>
+  const shown = url ?? ""
+  return <>{shown === "" ? EMPTY_VALUE : shown}</>
 }
 
 export function kindLabel(kind: OrgVerificationKind | null | undefined): string {

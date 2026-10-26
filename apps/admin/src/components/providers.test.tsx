@@ -5,11 +5,7 @@ import { Providers } from "@/components/providers"
 
 vi.mock("@/components/auth/auth-hydrator", () => ({ AuthHydrator: () => null }))
 const session = vi.hoisted(() => ({
-  current: { isOperator: true, operator: null, status: "authenticated" } as {
-    isOperator: boolean
-    operator: null
-    status: string
-  },
+  current: { isOperator: true, operator: null, status: "authenticated" },
 }))
 
 vi.mock("@/hooks/use-admin-auth", () => ({

@@ -45,25 +45,26 @@ function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
 
 function ReaderLinks({ thread, eventId }: { thread: MailThreadDTO; eventId: string | null }) {
   const nav = useNav()
-  if (!thread.jurisdictionGeoid && !thread.reportId && !eventId) return null
+  const { jurisdictionGeoid, reportId } = thread
+  if (!jurisdictionGeoid && !reportId && !eventId) return null
   return (
     <div className="mail-reader-links">
-      {thread.jurisdictionGeoid && (
+      {jurisdictionGeoid && (
         <button
           type="button"
           className="lnk-inline"
           title="Open this thread's jurisdiction"
-          onClick={() => nav("discovery", thread.jurisdictionGeoid!)}
+          onClick={() => nav("discovery", jurisdictionGeoid)}
         >
           <Icons.Building size={12} /> View jurisdiction
         </button>
       )}
-      {thread.reportId && (
+      {reportId && (
         <button
           type="button"
           className="lnk-inline"
           title="Open the report this thread is about"
-          onClick={() => nav("reports", thread.reportId!)}
+          onClick={() => nav("reports", reportId)}
         >
           <Icons.FileText size={12} /> View report
         </button>

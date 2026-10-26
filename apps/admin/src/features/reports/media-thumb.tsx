@@ -22,6 +22,7 @@ export function ImageThumbButton({ media, onOpen }: { media: ThumbMedia; onOpen:
       type="button"
       className="dsc-msg-thumb dsc-msg-thumb-open"
       title="Expand this photo"
+      aria-label="Expand this photo"
       onClick={onOpen}
     >
       <img src={media.thumbUrl ?? media.url} alt="" loading="lazy" decoding="async" />

@@ -14,7 +14,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { confirmDialog } from "@/components/shared/dialog"
 import { categoryPinSrc } from "@/lib/category"
 import { shortRef } from "@/lib/display"
-import { reportStatusView } from "@/lib/report-status"
+import { reportStatusLabel, reportStatusView } from "@/lib/report-status"
 import { ReportActivity } from "@/features/reports/report-activity"
 import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
 import { ReportDiscussion } from "@/features/reports/report-discussion"
@@ -112,7 +112,9 @@ function StatusButtons({
   statusMutation: ReportQuickActionMutations["statusMutation"]
 }) {
   // A status newer than this build arrives unvalidated; offer no transition rather than guess one.
-  const statusActions = ADMIN_REPORT_STATUS_TRANSITIONS[report.status] ?? []
+  const statusActions = Object.hasOwn(ADMIN_REPORT_STATUS_TRANSITIONS, report.status)
+    ? ADMIN_REPORT_STATUS_TRANSITIONS[report.status]
+    : []
 
   const onStatus = async (status: AdminReportStatus) => {
     if (status === report.status) return
@@ -130,7 +132,7 @@ function StatusButtons({
   if (statusActions.length === 0) {
     return (
       <span className="hint">
-        No status changes from {ADMIN_REPORT_STATUS_LABELS[report.status] ?? report.status}
+        No status changes from {reportStatusLabel(report.status)}
       </span>
     )
   }
