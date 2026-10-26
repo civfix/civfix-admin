@@ -31,7 +31,8 @@ pnpm install      # fetches @civfix/contract and @civfix/tokens from repo.civfix
 pnpm build        # admin (next build, static export -> apps/admin/out)
 pnpm typecheck
 pnpm lint         # eslint (flat config, typed rules) over apps/admin
-pnpm test         # vitest unit tests
+pnpm test         # vitest unit tests; any unexpected console.error/warn fails the test
+pnpm test:coverage # the same, with the coverage thresholds CI enforces
 pnpm --filter admin knip   # unused files, exports and dependencies
 pnpm --filter admin dup    # jscpd duplication gate (app code and tests measured separately)
 pnpm dev          # runs the dashboard dev server (admin)

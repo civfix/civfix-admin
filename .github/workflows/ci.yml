@@ -55,5 +55,5 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Test (unit)
-        run: pnpm test
+      - name: Test (unit, coverage thresholds)
+        run: pnpm test:coverage
