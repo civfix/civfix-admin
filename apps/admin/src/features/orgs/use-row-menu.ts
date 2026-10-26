@@ -78,7 +78,7 @@ export function useRowMenu() {
     }
   }, [open, close])
 
-  const onMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onMenuKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     const items = menuItemsIn(popRef.current)
     const current = items.findIndex((el) => el === document.activeElement)
     const next = menuFocusIndex(e.key, current, items.length)
@@ -86,7 +86,7 @@ export function useRowMenu() {
     e.preventDefault()
     items[next]?.focus(FOCUS_OPTIONS)
   }
-  const onMenuBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+  const onMenuBlur = (e: React.FocusEvent<HTMLElement>) => {
     const to = e.relatedTarget as Node | null
     if (!to || !wrapRef.current?.contains(to)) close(false)
   }

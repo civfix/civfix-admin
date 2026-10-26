@@ -134,7 +134,7 @@ describe("MembersPanel row actions", () => {
     const menu = screen.getByRole("menu", { name: "Actions for Sam Lee" })
     expect(within(menu).getByRole("separator")).toBeInTheDocument()
     expect(within(menu).getByText("Change role")).toHaveAttribute("role", "presentation")
-    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent?.trim())).toEqual([
+    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent.trim())).toEqual([
       "Transfer ownership",
       "Make admin",
       "Remove",

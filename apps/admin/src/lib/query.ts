@@ -274,12 +274,11 @@ export function invalidateKeys(
   qc: QueryClient,
   targets: readonly Invalidation[],
 ): Promise<unknown> {
-  return Promise.all(
-    targets.map((target, index) => {
-      if (target === null) return null
-      if (!isQueryKey(target)) return qc.invalidateQueries(target)
-      if (coveredByAnother(target, index, targets)) return null
-      return qc.invalidateQueries({ queryKey: target })
-    }),
-  )
+  const refetches = targets.flatMap((target, index) => {
+    if (target === null) return []
+    if (!isQueryKey(target)) return [qc.invalidateQueries(target)]
+    if (coveredByAnother(target, index, targets)) return []
+    return [qc.invalidateQueries({ queryKey: target })]
+  })
+  return Promise.all(refetches)
 }

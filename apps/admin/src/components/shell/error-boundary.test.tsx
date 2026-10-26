@@ -14,10 +14,11 @@ function chunkLoadError(): Error {
   return err
 }
 
-let shouldThrow: unknown = null
+const NOTHING_THROWN = Symbol("nothing thrown")
+let shouldThrow: unknown = NOTHING_THROWN
 
 function Flaky() {
-  if (shouldThrow !== null) throw shouldThrow
+  if (shouldThrow !== NOTHING_THROWN) throw shouldThrow
   return <p>Page content</p>
 }
 
@@ -28,7 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
-  shouldThrow = null
+  shouldThrow = NOTHING_THROWN
 })
 
 describe("isChunkLoadError", () => {
@@ -105,7 +106,7 @@ describe("ErrorBoundary", () => {
     )
     expect(screen.getByRole("alert")).toBeInTheDocument()
 
-    shouldThrow = null
+    shouldThrow = NOTHING_THROWN
     await user.click(screen.getByRole("button", { name: "Try again" }))
     expect(screen.queryByRole("alert")).toBeNull()
     expect(screen.getByText("Page content")).toBeInTheDocument()

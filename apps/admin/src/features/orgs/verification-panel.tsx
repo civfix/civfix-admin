@@ -133,7 +133,7 @@ function ApplicationSummary({ verification }: { verification: OrgVerification | 
 }
 
 function EvidenceSection({ verification }: { verification: OrgVerification }) {
-  const documentIds = verification.documentMediaIds ?? []
+  const documentIds = verification.documentMediaIds
   return (
     <div className="sub">
       <div className="sub-head">

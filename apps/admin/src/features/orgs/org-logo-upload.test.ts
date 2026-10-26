@@ -15,7 +15,7 @@ import {
 } from "./org-logo-upload"
 
 function imageBlob(type: string, bytes = 4): Blob & { type: string; size: number } {
-  return new Blob([new Uint8Array(bytes)], { type }) as Blob & { type: string; size: number }
+  return new Blob([new Uint8Array(bytes)], { type })
 }
 
 describe("ORG_LOGO_ACCEPT", () => {
@@ -76,7 +76,7 @@ describe("logoPutTimeoutMs", () => {
 
 describe("putLogoBytes", () => {
   it("PUTs the bytes with the presigned headers", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response)
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 })
     const body = imageBlob("image/png")
     await putLogoBytes("https://storage/put", { "content-type": "image/png" }, body, 4, fetchImpl)
     const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit]
@@ -87,7 +87,7 @@ describe("putLogoBytes", () => {
   })
 
   it("throws on a non-2xx storage response", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 403 } as Response)
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 403 })
     await expect(
       putLogoBytes("https://storage/put", {}, imageBlob("image/png"), 4, fetchImpl),
     ).rejects.toThrow(/403/)
@@ -111,7 +111,7 @@ describe("uploadOrgLogo", () => {
     const finalizeMedia = vi
       .fn()
       .mockResolvedValue({ mediaId: "55555555-5555-4555-8555-555555555555", status: "validating" })
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 } as Response)
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, status: 200 })
 
     const mediaId = await uploadOrgLogo({
       api: { createMediaUpload, finalizeMedia },

@@ -180,8 +180,8 @@ describe("buildUpdateRequest", () => {
     // Typing surrounding whitespace into the draft is not a change either.
     const draft = draftFromOrg(org)
     draft.name = `  ${org.name}  `
-    draft.description = `${org.description}\n\n`
-    draft.websiteUrl = ` ${org.websiteUrl} `
+    draft.description = `${org.description ?? ""}\n\n`
+    draft.websiteUrl = ` ${org.websiteUrl ?? ""} `
     expect(buildUpdateRequest(org, draft, "r")).toBeNull()
     // A real edit next to a padded field only sends the edited key.
     draft.description = "We clean the river, weekly."

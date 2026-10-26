@@ -33,7 +33,7 @@ export function initials(name: string): string {
     .split(WHITESPACE)
     .filter(Boolean)
     .slice(0, INITIALS_MAX_LETTERS)
-    .map((word) => [...word][0])
+    .map((word) => Array.from(word)[0])
     .join("")
     .toUpperCase()
   return letters || "?"

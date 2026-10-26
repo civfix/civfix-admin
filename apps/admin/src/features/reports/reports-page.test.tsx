@@ -700,7 +700,7 @@ describe("ReportsPage chat", () => {
 
   function chatHead(card: HTMLElement): HTMLElement {
     const head = [...card.querySelectorAll<HTMLElement>(".sub-head")].find((el) =>
-      el.textContent?.startsWith("Chat"),
+      el.textContent.startsWith("Chat"),
     )
     if (!head) throw new Error("no Chat section in the detail card")
     return head

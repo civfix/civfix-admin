@@ -160,12 +160,10 @@ function DirectoryListBody({
 
 function SelectedJurisdiction({
   selected,
-  selectedId,
-  notListed,
+  notListedId,
 }: {
   selected: JurisdictionDirectoryDTO | null
-  selectedId: string | null
-  notListed: boolean
+  notListedId: string | null
 }) {
   if (selected) {
     return selected.geoid === UNMAPPED_GEOID ? (
@@ -174,11 +172,11 @@ function SelectedJurisdiction({
       <JurisdictionDetail key={selected.geoid} dto={selected} />
     )
   }
-  if (notListed) {
+  if (notListedId !== null) {
     return (
       <EmptyState
         title="Not in this list"
-        sub={`No loaded jurisdiction has GEOID ${selectedId}.`}
+        sub={`No loaded jurisdiction has GEOID ${notListedId}.`}
         icon={<Icons.Search size={20} />}
       />
     )
@@ -228,8 +226,10 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     listKey: JSON.stringify([listParams.filter, listParams.sort, layer, debouncedQuery]),
     keepLastSeen: true,
   })
-  const notListed =
+  const notListedId =
     selectedId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
+      ? selectedId
+      : null
 
   return (
     <>
@@ -265,7 +265,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         </ListCard>
 
         <section className="card md-detail-card">
-          <SelectedJurisdiction selected={selected} selectedId={selectedId} notListed={notListed} />
+          <SelectedJurisdiction selected={selected} notListedId={notListedId} />
         </section>
       </div>
     </>

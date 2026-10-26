@@ -181,18 +181,19 @@ function OrgDetailTabs({
 }) {
   const tabRefs = React.useRef(new Map<OrgDetailTab, HTMLButtonElement>())
 
-  const onTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     const current = ORG_DETAIL_TABS.indexOf(tab)
     const next = menuFocusIndex(e.key, current, ORG_DETAIL_TABS.length, "horizontal")
     if (next === null) return
+    const target = ORG_DETAIL_TABS[next]
+    if (target === undefined) return
     e.preventDefault()
-    const target = ORG_DETAIL_TABS[next]!
     onTab(target)
     tabRefs.current.get(target)?.focus()
   }
 
   return (
-    <div className="profile-tabs org-tabs" role="tablist" onKeyDown={onTabKeyDown}>
+    <div className="profile-tabs org-tabs" role="tablist">
       {ORG_DETAIL_TABS.map((t) => (
         <button
           key={t}
@@ -207,6 +208,7 @@ function OrgDetailTabs({
           aria-controls={tab === t ? panelId : undefined}
           tabIndex={tab === t ? 0 : -1}
           className={`profile-tab ${tab === t ? "on" : ""}`}
+          onKeyDown={onTabKeyDown}
           onClick={() => onTab(t)}
         >
           {TAB_LABEL[t]}
