@@ -15,6 +15,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 })
 
 const TS = "2026-09-20T15:00:00.000Z"
+const NOW = Date.parse(TS)
 
 const EMAIL = {
   source: "email",
@@ -54,7 +55,9 @@ const MESSAGE = {
 describe("InboxRow", () => {
   it("is a keyboard-operable row that marks itself current when selected", async () => {
     const onClick = vi.fn()
-    const { rerender } = renderWithQuery(<InboxRow item={EMAIL} selected={false} onClick={onClick} />)
+    const { rerender } = renderWithQuery(
+      <InboxRow item={EMAIL} selected={false} onClick={onClick} now={NOW} />,
+    )
     const row = screen.getByRole("button", { name: /Photos of the dumping/ })
     expect(row).toHaveAttribute("tabindex", "0")
     expect(row).not.toHaveAttribute("aria-current")
@@ -64,7 +67,7 @@ describe("InboxRow", () => {
     await userEvent.keyboard(" ")
     expect(onClick).toHaveBeenCalledTimes(2)
 
-    rerender(<InboxRow item={EMAIL} selected onClick={onClick} />)
+    rerender(<InboxRow item={EMAIL} selected onClick={onClick} now={NOW} />)
     expect(screen.getByRole("button", { name: /Photos of the dumping/ })).toHaveAttribute(
       "aria-current",
       "true",
@@ -72,14 +75,14 @@ describe("InboxRow", () => {
   })
 
   it("names the attachment marker and does not dim the recipient below the preview text", () => {
-    renderWithQuery(<InboxRow item={EMAIL} selected={false} onClick={() => {}} />)
+    renderWithQuery(<InboxRow item={EMAIL} selected={false} onClick={() => {}} now={NOW} />)
     expect(screen.getByRole("img", { name: "Has attachments" })).toBeInTheDocument()
     expect(screen.getByText("support")).not.toHaveStyle({ opacity: "0.6" })
   })
 
   it.each(["", "not a date"])("gives the timestamp no tooltip for the unparseable time %j", (ts) => {
     const { container } = renderWithQuery(
-      <InboxRow item={{ ...EMAIL, ts }} selected={false} onClick={() => {}} />,
+      <InboxRow item={{ ...EMAIL, ts }} selected={false} onClick={() => {}} now={NOW} />,
     )
     expect(container.querySelector(".mail-ts")).not.toHaveAttribute("title")
   })

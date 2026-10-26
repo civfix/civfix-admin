@@ -6,6 +6,7 @@ import { create } from "zustand"
 import { Icons } from "@/components/icons"
 import { useBackdropDismiss } from "@/components/shared/backdrop-dismiss"
 import { useModalFocus } from "@/components/shared/modal-focus"
+import { useValueChanged } from "@/hooks/use-value-changed"
 
 interface ConfirmRequest {
   kind: "confirm"
@@ -34,6 +35,10 @@ interface PromptRequest {
 }
 
 type DialogRequest = ConfirmRequest | PromptRequest
+
+function promptDefault(request: DialogRequest | null): string {
+  return request?.kind === "prompt" ? (request.defaultValue ?? "") : ""
+}
 
 interface DialogState {
   current: DialogRequest | null
@@ -174,7 +179,7 @@ function PromptField({
 export function DialogHost() {
   const current = useDialogStore((s) => s.current)
   const close = useDialogStore((s) => s.close)
-  const [value, setValue] = React.useState("")
+  const [value, setValue] = React.useState(() => promptDefault(current))
   const modalRef = useModalFocus<HTMLDivElement>(current !== null)
   const cancelRef = React.useRef<HTMLButtonElement>(null)
   const fieldRef = React.useRef<HTMLTextAreaElement>(null)
@@ -182,9 +187,8 @@ export function DialogHost() {
   const bodyId = React.useId()
   const fieldId = React.useId()
 
-  React.useEffect(() => {
-    if (current?.kind === "prompt") setValue(current.defaultValue ?? "")
-  }, [current])
+  const requestChanged = useValueChanged(current)
+  if (requestChanged && current?.kind === "prompt") setValue(promptDefault(current))
 
   // Runs after useModalFocus's effect, so that hook has already recorded the opener to restore; an
   // autoFocus on the field would land first and be recorded as the opener instead.

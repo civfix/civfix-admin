@@ -17,6 +17,7 @@ import { useMailListInfinite, useMarkMailRead } from "@/features/mail/use-mail"
 import { SEARCH_DEBOUNCE_MS } from "@/lib/timing"
 import { flatPages } from "@/lib/infinite"
 import { useSelection } from "@/hooks/use-selection"
+import { useValueChanged } from "@/hooks/use-value-changed"
 
 const ownId = (id: string) => id
 
@@ -92,7 +93,13 @@ export function useMailbox(focusId: string | null) {
   const { mailItems, feedByKey } = lists
   // Opening an unread message reads it, so the Unread or Needs attention chip would otherwise close it.
   // A folder switch or a sent message is a fresh load, which picks again.
-  const { selectedId, setSelectedId, readOnOpen, restartAutoPick } = useSelection({
+  const {
+    selectedId,
+    setSelectedId,
+    setReadOnOpen,
+    releaseReadOnOpen,
+    restartAutoPick,
+  } = useSelection({
     focusId: initial.id,
     syncFocus: false,
     list: lists.activeListQuery,
@@ -102,17 +109,15 @@ export function useMailbox(focusId: string | null) {
     unreadIds: lists.activeUnread,
   })
 
-  React.useEffect(() => {
-    if (!focusId) return
+  const focusChanged = useValueChanged(focusId)
+  if (focusChanged && focusId) {
     const focus = parseFocus(focusId)
     setFolder(focus.folder)
     setBox("all")
     setSelectedId(focus.id)
-  }, [focusId, setSelectedId])
-  React.useEffect(() => {
-    const listed = selectedId ? feedByKey.get(selectedId) : undefined
-    if (listed) setPickedFeedItem(listed)
-  }, [selectedId, feedByKey])
+  }
+  const listed = selectedId ? feedByKey.get(selectedId) : undefined
+  if (listed && listed !== pickedFeedItem) setPickedFeedItem(listed)
 
   const openFresh = (next: Folder) => {
     setFolder(next)
@@ -130,25 +135,30 @@ export function useMailbox(focusId: string | null) {
   // Stable across keystrokes and picks, so the memoized list rows skip re-rendering.
   const select = React.useCallback((id: string) => {
     setSelectedId(id)
-    readOnOpen.current = null
-    const readFailed = {
-      onError: () => {
-        if (readOnOpen.current === id) readOnOpen.current = null
-      },
-    }
+    setReadOnOpen(null)
+    const readFailed = { onError: () => releaseReadOnOpen(id) }
     if (outreach) {
       const row = mailItems.find((t) => t.id === id)
       if (!row?.unread) return
-      readOnOpen.current = id
+      setReadOnOpen(id)
       markRead({ id }, readFailed)
       return
     }
     const item = feedByKey.get(id)
     if (!item?.unread) return
-    readOnOpen.current = id
+    setReadOnOpen(id)
     if (item.source === "email") setInboxStatus({ id: item.id, status: "read" }, readFailed)
     else markRead({ id: item.threadId }, readFailed)
-  }, [setSelectedId, readOnOpen, outreach, mailItems, feedByKey, markRead, setInboxStatus])
+  }, [
+    setSelectedId,
+    setReadOnOpen,
+    releaseReadOnOpen,
+    outreach,
+    mailItems,
+    feedByKey,
+    markRead,
+    setInboxStatus,
+  ])
 
   return {
     folder,

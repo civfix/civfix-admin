@@ -7,6 +7,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDateTime } from "@/lib/dates"
 import { shortId } from "@/lib/display"
+import { useValueChanged } from "@/hooks/use-value-changed"
 import { evidenceUrlRemainingMs, isEvidenceUrlExpired } from "@/features/orgs/evidence-cache"
 import { useOrgVerificationDocument } from "@/features/orgs/use-orgs"
 
@@ -73,10 +74,8 @@ export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
   const [openId, setOpenId] = React.useState<string | null>(null)
   const viewerIdPrefix = React.useId()
 
-  const mediaKey = mediaIds.join(",")
-  React.useEffect(() => {
-    setOpenId(null)
-  }, [mediaKey])
+  const documentsChanged = useValueChanged(mediaIds.join(","))
+  if (documentsChanged) setOpenId(null)
 
   if (mediaIds.length === 0) {
     return (
