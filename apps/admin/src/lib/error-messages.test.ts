@@ -33,15 +33,17 @@ describe("errorMessage server message and fallback", () => {
   })
 
   it("prefers the server message over a caller fallback", () => {
-    expect(errorMessage(new AppError(ErrorCode.CONFLICT, "Slug taken"), {}, { fallback: "Try later" })).toBe(
-      "Slug taken",
-    )
+    expect(
+      errorMessage(new AppError(ErrorCode.CONFLICT, "Slug taken"), {}, { fallback: "Try later" }),
+    ).toBe("Slug taken")
   })
 
   it("ignores the server message when preferServerMessage is false", () => {
     const err = new AppError(ErrorCode.CONFLICT, "Slug taken")
     expect(errorMessage(err, {}, { preferServerMessage: false })).toBe(GENERIC)
-    expect(errorMessage(err, {}, { preferServerMessage: false, fallback: "Try later" })).toBe("Try later")
+    expect(errorMessage(err, {}, { preferServerMessage: false, fallback: "Try later" })).toBe(
+      "Try later",
+    )
   })
 
   it("reads the message of a foreign AppError from the client bundle", () => {
@@ -54,26 +56,31 @@ describe("errorMessage server message and fallback", () => {
     )
   })
 
-  it.each([
-    "Failed to fetch",
-    "NetworkError when attempting to fetch resource.",
-    "Load failed",
-  ])("shows connection copy instead of the browser's fetch failure %j", (message) => {
-    expect(errorMessage(new TypeError(message))).toBe(
-      "Could not reach the server. Check your connection and try again.",
-    )
-    expect(errorMessage(new TypeError(message), {}, { fallback: "Try later" })).toBe(
-      "Could not reach the server. Check your connection and try again.",
-    )
-  })
+  it.each(["Failed to fetch", "NetworkError when attempting to fetch resource.", "Load failed"])(
+    "shows connection copy instead of the browser's fetch failure %j",
+    (message) => {
+      expect(errorMessage(new TypeError(message))).toBe(
+        "Could not reach the server. Check your connection and try again.",
+      )
+      expect(errorMessage(new TypeError(message), {}, { fallback: "Try later" })).toBe(
+        "Could not reach the server. Check your connection and try again.",
+      )
+    },
+  )
 
   it("keeps a code override ahead of the connection copy", () => {
-    expect(errorMessage(new TypeError("Failed to fetch"), { [ErrorCode.INTERNAL]: "Offline" })).toBe("Offline")
+    expect(
+      errorMessage(new TypeError("Failed to fetch"), { [ErrorCode.INTERNAL]: "Offline" }),
+    ).toBe("Offline")
   })
 
   it("shows the fallback, not the connection copy, for a fetch failure when preferServerMessage is false", () => {
     expect(
-      errorMessage(new TypeError("Failed to fetch"), {}, { preferServerMessage: false, fallback: "Try later" }),
+      errorMessage(
+        new TypeError("Failed to fetch"),
+        {},
+        { preferServerMessage: false, fallback: "Try later" },
+      ),
     ).toBe("Try later")
   })
 
@@ -93,7 +100,9 @@ describe("errorMessage server message and fallback", () => {
   })
 
   it("uses the fallback for a non-Error value when preferServerMessage is false", () => {
-    expect(errorMessage(null, {}, { preferServerMessage: false, fallback: "Try later" })).toBe("Try later")
+    expect(errorMessage(null, {}, { preferServerMessage: false, fallback: "Try later" })).toBe(
+      "Try later",
+    )
   })
 })
 
@@ -106,7 +115,11 @@ describe("errorMessage code overrides", () => {
   it("wins over preferServerMessage false and the fallback", () => {
     const err = new AppError(ErrorCode.NOT_FOUND, "missing")
     expect(
-      errorMessage(err, { [ErrorCode.NOT_FOUND]: "Gone" }, { preferServerMessage: false, fallback: "x" }),
+      errorMessage(
+        err,
+        { [ErrorCode.NOT_FOUND]: "Gone" },
+        { preferServerMessage: false, fallback: "x" },
+      ),
     ).toBe("Gone")
   })
 
@@ -126,7 +139,9 @@ describe("errorMessage code overrides", () => {
 
   it("matches a foreign AppError's code", () => {
     expect(
-      errorMessage(foreignAppError(ErrorCode.FORBIDDEN, "Nope"), { [ErrorCode.FORBIDDEN]: "Operators only" }),
+      errorMessage(foreignAppError(ErrorCode.FORBIDDEN, "Nope"), {
+        [ErrorCode.FORBIDDEN]: "Operators only",
+      }),
     ).toBe("Operators only")
   })
 })
@@ -176,7 +191,9 @@ describe("errorMessage field errors", () => {
   })
 
   it("falls through to the server message when no field or override matches", () => {
-    expect(errorMessage(validation("Server says no", { other: "x" }), {}, { fields })).toBe("Server says no")
+    expect(errorMessage(validation("Server says no", { other: "x" }), {}, { fields })).toBe(
+      "Server says no",
+    )
   })
 
   it("ignores opts.fields when the error carries no fields", () => {

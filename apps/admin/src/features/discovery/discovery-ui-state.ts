@@ -98,6 +98,6 @@ export function directoryCounts({
       clear: listCount(facets?.routed ?? null),
       all: listCount(allTotal),
     },
-    header: filter === "attention" ? needsMapping : listedTotal ?? loadedCount,
+    header: filter === "attention" ? needsMapping : (listedTotal ?? loadedCount),
   }
 }

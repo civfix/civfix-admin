@@ -30,13 +30,26 @@ export interface PickedUser {
   avatarUrl?: string | null
 }
 
-export function PickedUserAvatar({ user, size = PICKED_AVATAR_SIZE }: { user: PickedUser; size?: number }) {
-  const style: React.CSSProperties = { width: size, height: size, fontSize: Math.round(size * AVATAR_FONT_RATIO) }
+export function PickedUserAvatar({
+  user,
+  size = PICKED_AVATAR_SIZE,
+}: {
+  user: PickedUser
+  size?: number
+}) {
+  const style: React.CSSProperties = {
+    width: size,
+    height: size,
+    fontSize: Math.round(size * AVATAR_FONT_RATIO),
+  }
   if (user.avatarUrl) {
     return <img className="user-av" style={style} src={user.avatarUrl} alt="" />
   }
   return (
-    <span className="user-av" style={{ ...style, background: user.avatar?.[0] ?? avatarColor(user.id) }}>
+    <span
+      className="user-av"
+      style={{ ...style, background: user.avatar?.[0] ?? avatarColor(user.id) }}
+    >
       {monogram(user.name)}
     </span>
   )
@@ -181,7 +194,9 @@ export function UserPicker({
                 {u.deletedAt && <span className="pill status-flag tight">Deleted</span>}
                 {u.status !== "active" && (
                   <span className="pill status-flag tight">
-                    {Object.hasOwn(USER_STATUS_LABELS, u.status) ? USER_STATUS_LABELS[u.status] : u.status}
+                    {Object.hasOwn(USER_STATUS_LABELS, u.status)
+                      ? USER_STATUS_LABELS[u.status]
+                      : u.status}
                   </span>
                 )}
               </button>

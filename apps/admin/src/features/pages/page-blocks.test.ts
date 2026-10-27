@@ -44,7 +44,13 @@ describe("signup page block extraction", () => {
   })
 
   it("drops empty text rather than rendering blank rows", () => {
-    const view = pageBlockView({ id: "b4", kind: "location", title: null, note: "   ", showMap: true })
+    const view = pageBlockView({
+      id: "b4",
+      kind: "location",
+      title: null,
+      note: "   ",
+      showMap: true,
+    })
     expect(view.title).toBeNull()
     expect(view.lines).toEqual([])
   })

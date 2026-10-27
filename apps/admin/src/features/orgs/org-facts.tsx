@@ -48,7 +48,13 @@ export function DeletedFact({ deletedAt }: { deletedAt: string | null | undefine
   return <Fact label="Deleted">{formatDateTime(deletedAt)}</Fact>
 }
 
-export function OrgStatusSubHead({ title, org }: { title: string; org: Pick<AdminOrgDTO, "verifiedStatus"> }) {
+export function OrgStatusSubHead({
+  title,
+  org,
+}: {
+  title: string
+  org: Pick<AdminOrgDTO, "verifiedStatus">
+}) {
   const statusView = orgStatusView(org.verifiedStatus)
   return (
     <div className="sub-head">

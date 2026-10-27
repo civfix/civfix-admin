@@ -23,7 +23,10 @@ describe("ListStates", () => {
   it("shows the error with a retry that refetches", () => {
     const refetch = vi.fn()
     render(
-      <ListStates query={{ ...IDLE, isError: true, error: "boom", refetch }} loadingLabel="Loading rows...">
+      <ListStates
+        query={{ ...IDLE, isError: true, error: "boom", refetch }}
+        loadingLabel="Loading rows..."
+      >
         <p>rows</p>
       </ListStates>,
     )
@@ -42,7 +45,12 @@ describe("ListStates", () => {
     expect(screen.queryByText("rows")).toBeNull()
 
     rerender(
-      <ListStates query={IDLE} loadingLabel="Loading rows..." isEmpty={false} empty={<p>nothing</p>}>
+      <ListStates
+        query={IDLE}
+        loadingLabel="Loading rows..."
+        isEmpty={false}
+        empty={<p>nothing</p>}
+      >
         <p>rows</p>
       </ListStates>,
     )
@@ -76,7 +84,10 @@ describe("LoadMoreButton", () => {
 
   it("takes a custom label", () => {
     render(<LoadMoreButton query={nextPage()} className="load-more" label="Load more broadcasts" />)
-    expect(screen.getByRole("button", { name: "Load more broadcasts" })).toHaveClass("btn", "load-more")
+    expect(screen.getByRole("button", { name: "Load more broadcasts" })).toHaveClass(
+      "btn",
+      "load-more",
+    )
   })
 })
 
@@ -107,7 +118,9 @@ describe("SearchBox", () => {
   it("reports the typed value", () => {
     const onChange = vi.fn()
     render(<SearchBox label="Search events" placeholder="Search…" value="" onChange={onChange} />)
-    fireEvent.change(screen.getByRole("textbox", { name: "Search events" }), { target: { value: "park" } })
+    fireEvent.change(screen.getByRole("textbox", { name: "Search events" }), {
+      target: { value: "park" },
+    })
     expect(onChange).toHaveBeenCalledWith("park")
   })
 })

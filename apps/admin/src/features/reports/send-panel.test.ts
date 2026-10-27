@@ -4,7 +4,12 @@ import { sendPanelView, type SendPanelReport } from "./send-panel"
 
 type Verdict = SendPanelReport["verificationVerdict"]
 
-const CITY = { dept: "Public Works", place: "Oakland", contact: "works@oaklandca.gov", routed: false }
+const CITY = {
+  dept: "Public Works",
+  place: "Oakland",
+  contact: "works@oaklandca.gov",
+  routed: false,
+}
 const ROUTED_AT = "2026-09-22T10:00:00.000Z"
 
 function report(over: Partial<SendPanelReport> = {}): SendPanelReport {
@@ -17,18 +22,70 @@ function report(over: Partial<SendPanelReport> = {}): SendPanelReport {
   }
 }
 
-const SENT = { status: "sent", threadId: "t-1", routedTo: CITY.contact, routedAt: ROUTED_AT } as const
-const BOUNCED = { status: "bounced", threadId: "t-1", routedTo: CITY.contact, routedAt: ROUTED_AT } as const
+const SENT = {
+  status: "sent",
+  threadId: "t-1",
+  routedTo: CITY.contact,
+  routedAt: ROUTED_AT,
+} as const
+const BOUNCED = {
+  status: "bounced",
+  threadId: "t-1",
+  routedTo: CITY.contact,
+  routedAt: ROUTED_AT,
+} as const
 const NO_CONTACT = { ...CITY, contact: null }
 
 describe("sendPanelView", () => {
-  it.each<[string, Verdict, boolean, { approvesOnSend: boolean; canApproveHere: boolean; label: string; pill: string }]>([
-    ["unreviewed", null, false, { approvesOnSend: true, canApproveHere: false, label: "Verify and send to city", pill: "Not yet reviewed" }],
-    ["approved on the server", "approved", false, { approvesOnSend: false, canApproveHere: false, label: "Send to city", pill: "Approved" }],
-    ["approved locally", null, true, { approvesOnSend: false, canApproveHere: false, label: "Send to city", pill: "Approved" }],
+  it.each<
+    [
+      string,
+      Verdict,
+      boolean,
+      { approvesOnSend: boolean; canApproveHere: boolean; label: string; pill: string },
+    ]
+  >([
+    [
+      "unreviewed",
+      null,
+      false,
+      {
+        approvesOnSend: true,
+        canApproveHere: false,
+        label: "Verify and send to city",
+        pill: "Not yet reviewed",
+      },
+    ],
+    [
+      "approved on the server",
+      "approved",
+      false,
+      { approvesOnSend: false, canApproveHere: false, label: "Send to city", pill: "Approved" },
+    ],
+    [
+      "approved locally",
+      null,
+      true,
+      { approvesOnSend: false, canApproveHere: false, label: "Send to city", pill: "Approved" },
+    ],
     // Pinned as found: sending re-approves a rejected report. Whether it should is a product question.
-    ["rejected", "rejected", false, { approvesOnSend: true, canApproveHere: false, label: "Verify and send to city", pill: "Rejected" }],
-    ["rejected on the server, approved locally since", "rejected", true, { approvesOnSend: false, canApproveHere: false, label: "Send to city", pill: "Approved" }],
+    [
+      "rejected",
+      "rejected",
+      false,
+      {
+        approvesOnSend: true,
+        canApproveHere: false,
+        label: "Verify and send to city",
+        pill: "Rejected",
+      },
+    ],
+    [
+      "rejected on the server, approved locally since",
+      "rejected",
+      true,
+      { approvesOnSend: false, canApproveHere: false, label: "Send to city", pill: "Approved" },
+    ],
   ])("a sendable report that is %s", (_name, verdict, approvedLocally, want) => {
     const view = sendPanelView(report({ verificationVerdict: verdict }), approvedLocally)
     expect(view.routeAction.kind).toBe("send")
@@ -54,7 +111,10 @@ describe("sendPanelView", () => {
   })
 
   it("offers a resend after a bounce without re-approving", () => {
-    const view = sendPanelView(report({ outreach: BOUNCED, verificationVerdict: "approved" }), false)
+    const view = sendPanelView(
+      report({ outreach: BOUNCED, verificationVerdict: "approved" }),
+      false,
+    )
     expect(view.routeAction.kind).toBe("resend")
     expect(view.routeLabel).toBe("Send again to jurisdiction")
     expect(view.approvesOnSend).toBe(false)
@@ -83,8 +143,12 @@ describe("sendPanelView", () => {
     expect(sendPanelView(report({ verificationVerdict: "rejected" }), false).rejectBlocked).toBe(
       "This report is already rejected.",
     )
-    expect(sendPanelView(report({ verificationVerdict: "rejected" }), true).rejectBlocked).toBeNull()
-    expect(sendPanelView(report({ verificationVerdict: "approved" }), false).rejectBlocked).toBeNull()
+    expect(
+      sendPanelView(report({ verificationVerdict: "rejected" }), true).rejectBlocked,
+    ).toBeNull()
+    expect(
+      sendPanelView(report({ verificationVerdict: "approved" }), false).rejectBlocked,
+    ).toBeNull()
     expect(sendPanelView(report(), false).rejectBlocked).toBeNull()
   })
 })

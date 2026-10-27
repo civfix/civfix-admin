@@ -1,7 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { MAIL_STATUS_LABELS, relativeAgo, type MailMessageDTO, type MailThreadDTO } from "@civfix/contract"
+import {
+  MAIL_STATUS_LABELS,
+  relativeAgo,
+  type MailMessageDTO,
+  type MailThreadDTO,
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
@@ -11,7 +16,12 @@ import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { correspondent } from "@/features/mail/mail-page-state"
 import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
-import { useMailThread, useReplyMail, useResendMail, useSetMailStatus } from "@/features/mail/use-mail"
+import {
+  useMailThread,
+  useReplyMail,
+  useResendMail,
+  useSetMailStatus,
+} from "@/features/mail/use-mail"
 import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav } from "@/store/ui-store"
 
@@ -257,7 +267,13 @@ function ReplyComposer({
   )
 }
 
-export function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: string | null }) {
+export function MailReader({
+  threadId,
+  eventId = null,
+}: {
+  threadId: string
+  eventId?: string | null
+}) {
   const threadQuery = useMailThread(threadId)
   const reply = useReplyMail()
   const setStatus = useSetMailStatus()

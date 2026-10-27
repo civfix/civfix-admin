@@ -23,7 +23,10 @@ afterEach(() => {
 })
 
 function roster(items: AdminOrgMemberListResponse["items"], nextCursor: string | null = null) {
-  apiMock.adminListOrgMembers.mockResolvedValue({ items, nextCursor } satisfies AdminOrgMemberListResponse)
+  apiMock.adminListOrgMembers.mockResolvedValue({
+    items,
+    nextCursor,
+  } satisfies AdminOrgMemberListResponse)
 }
 
 function renderPanel(org = makeOrg()) {
@@ -75,7 +78,9 @@ describe("MembersPanel row actions", () => {
     renderPanel()
 
     expect(await screen.findByRole("button", { name: "Actions for Rosa Park" })).toBeDisabled()
-    expect(screen.getByText("Transfer ownership before changing this role or removing")).toBeInTheDocument()
+    expect(
+      screen.getByText("Transfer ownership before changing this role or removing"),
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Actions for Sam Lee" })).toBeEnabled()
   })
 
@@ -134,11 +139,11 @@ describe("MembersPanel row actions", () => {
     const menu = screen.getByRole("menu", { name: "Actions for Sam Lee" })
     expect(within(menu).getByRole("separator")).toBeInTheDocument()
     expect(within(menu).getByText("Change role")).toHaveAttribute("role", "presentation")
-    expect(within(menu).getAllByRole("menuitem").map((i) => i.textContent.trim())).toEqual([
-      "Transfer ownership",
-      "Make admin",
-      "Remove",
-    ])
+    expect(
+      within(menu)
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent.trim()),
+    ).toEqual(["Transfer ownership", "Make admin", "Remove"])
   })
 })
 

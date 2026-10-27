@@ -151,15 +151,18 @@ describe("putLogoBytes timeout", () => {
       const fetchImpl = vi.fn(
         (_url: string, init?: RequestInit) =>
           new Promise<Response>((_resolve, reject) => {
-            init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")))
+            init?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            )
           }),
       ) as unknown as typeof fetch
       const pending = putLogoBytes("https://storage/put", {}, imageBlob("image/png"), 4, fetchImpl)
-      const outcome = expect(pending).rejects.toThrow(
-        "Upload failed. Please check your connection and try again.",
-      )
-      await vi.advanceTimersByTimeAsync(logoPutTimeoutMs(4))
-      await outcome
+      await Promise.all([
+        expect(pending).rejects.toThrow(
+          "Upload failed. Please check your connection and try again.",
+        ),
+        vi.advanceTimersByTimeAsync(logoPutTimeoutMs(4)),
+      ])
     } finally {
       vi.useRealTimers()
     }

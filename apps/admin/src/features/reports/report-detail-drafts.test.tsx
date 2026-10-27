@@ -53,7 +53,12 @@ const COUCH_DETAIL = {
   media: [],
   linkedEvents: [],
   geoid: "0653000",
-  outreach: { status: "sent", threadId: null, routedTo: "works@oaklandca.gov", routedAt: "2026-09-23T10:00:00Z" },
+  outreach: {
+    status: "sent",
+    threadId: null,
+    routedTo: "works@oaklandca.gov",
+    routedAt: "2026-09-23T10:00:00Z",
+  },
   referenceCode: "CF-R1A2",
   verificationVerdict: "approved",
   verifiedAt: "2026-09-23T10:00:00Z",

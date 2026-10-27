@@ -8,5 +8,5 @@
   // Pure static export: there are no Pages Functions, so the Workers runtime version is never
   // exercised and compatibility_date is inert. It is required whenever pages_build_output_dir
   // is set, so we pin a stable past date.
-  "compatibility_date": "2024-12-01"
+  "compatibility_date": "2024-12-01",
 }

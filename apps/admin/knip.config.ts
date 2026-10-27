@@ -10,7 +10,7 @@ const config: KnipConfig = {
   },
   vitest: {
     config: ["vitest.config.ts"],
-    entry: ["src/**/*.test.{ts,tsx}", "vitest.setup.ts"],
+    entry: ["src/**/*.test.{ts,tsx}", "vitest.setup.ts", "vitest.console-guard.ts"],
   },
   // Knip skips any extension it cannot compile, so without this an orphaned stylesheet is never
   // reported; following @import is what keeps colors-and-type.css (reached only from admin.css) used.

@@ -36,7 +36,13 @@ export interface OrgProfileDraft {
   logoPreviewUrl: string | null
 }
 
-const ORG_PROFILE_SCALAR_FIELDS = ["name", "slug", "description", "websiteUrl", "logoMediaId"] as const
+const ORG_PROFILE_SCALAR_FIELDS = [
+  "name",
+  "slug",
+  "description",
+  "websiteUrl",
+  "logoMediaId",
+] as const
 
 type OrgProfileField = (typeof ORG_PROFILE_SCALAR_FIELDS)[number] | SocialPlatform
 export type OrgProfileErrors = Partial<Record<OrgProfileField | "ownerUserId" | "reason", string>>
