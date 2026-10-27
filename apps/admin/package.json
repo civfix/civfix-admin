@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@civfix/contract": "^0.65.0",
-    "@civfix/tokens": "^0.1.0",
+    "@civfix/tokens": "^0.1.1",
     "@tanstack/react-query": "^5.62.7",
     "leaflet": "^1.9.4",
     "next": "15.5.28",
