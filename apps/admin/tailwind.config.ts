@@ -64,9 +64,7 @@ const config: Config = {
 
       // Token font sizes exposed as text-token-12 .. text-token-64 so the default Tailwind type
       // scale (text-sm, text-lg, ...) stays usable alongside the exact token ramp.
-      fontSize: Object.fromEntries(
-        Object.entries(fontSize).map(([k, v]) => [`token-${k}`, v]),
-      ),
+      fontSize: Object.fromEntries(Object.entries(fontSize).map(([k, v]) => [`token-${k}`, v])),
 
       lineHeight: {
         tight: String(tokens.lineHeight.tight),
@@ -82,9 +80,7 @@ const config: Config = {
       },
 
       // Token spacing exposed as p-token-4, gap-token-6, etc. (4,8,12,16,20,24,32,40,48,64 px).
-      spacing: Object.fromEntries(
-        Object.entries(space).map(([k, v]) => [`token-${k}`, px(v)]),
-      ),
+      spacing: Object.fromEntries(Object.entries(space).map(([k, v]) => [`token-${k}`, px(v)])),
 
       borderRadius: {
         lg: px(radius.lg), // 20

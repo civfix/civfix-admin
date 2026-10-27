@@ -49,7 +49,8 @@ const DAY = 24 * HOUR
 const before = (ms: number) => new Date(NOW - ms).toISOString()
 
 const PORTAL_URL_MESSAGE = "Portal URL must be a public https URL outside civfix."
-const PORTAL_NEEDS_URL_MESSAGE = "A portal route needs a form URL, and only a portal route takes one."
+const PORTAL_NEEDS_URL_MESSAGE =
+  "A portal route needs a form URL, and only a portal route takes one."
 const SENDER_MESSAGE = "Sender domain must be a hostname such as lacity.org."
 const GMAIL_MESSAGE = "gmail.com can't be a city sender."
 const ROUTES_HINT =
@@ -82,7 +83,10 @@ function rowsWith(...edits: [RouteRowKey, Partial<RouteRow>][]): RouteRow[] {
   })
 }
 
-const VALID_PORTAL: Partial<RouteRow> = { channel: "portal", formUrl: "https://myla311.lacity.gov/s/" }
+const VALID_PORTAL: Partial<RouteRow> = {
+  channel: "portal",
+  formUrl: "https://myla311.lacity.gov/s/",
+}
 
 function validation(fields: Record<string, string>): AppError {
   return new AppError(ErrorCode.VALIDATION, "Invalid request", { httpStatus: 400, fields })
@@ -106,7 +110,10 @@ describe("routeRows", () => {
   it("T13: no routes gives Default then every category, each Not set with the defaults", () => {
     const rows = routeRows([])
     expect(rows.map((row) => row.key)).toEqual(["default", ...REPORT_CATEGORIES])
-    expect(rows.map((row) => row.label)).toEqual(["Default", ...REPORT_CATEGORIES.map(categoryLabel)])
+    expect(rows.map((row) => row.label)).toEqual([
+      "Default",
+      ...REPORT_CATEGORIES.map(categoryLabel),
+    ])
     expect(rows).toEqual(blankRows())
   })
 
@@ -133,7 +140,12 @@ describe("routeRows", () => {
     const rows = routeRows([
       routeDTO({ category: null, channel: "manual", formUrl: null, requestTypeHint: null }),
     ])
-    expect(rows[0]).toMatchObject({ key: "default", channel: "manual", formUrl: "", requestTypeHint: "" })
+    expect(rows[0]).toMatchObject({
+      key: "default",
+      channel: "manual",
+      formUrl: "",
+      requestTypeHint: "",
+    })
   })
 })
 
@@ -170,7 +182,12 @@ describe("parseRows", () => {
     const result = parseRows(
       rowsWith([
         "default",
-        { channel: "manual", includeLink: false, formUrl: "https://x.lacity.gov/", requestTypeHint: "abc" },
+        {
+          channel: "manual",
+          includeLink: false,
+          formUrl: "https://x.lacity.gov/",
+          requestTypeHint: "abc",
+        },
       ]),
     )
     expect(result.routes).toEqual([
@@ -188,7 +205,10 @@ describe("parseRows", () => {
 
   it("T18: an email row sends no form URL or hint", () => {
     const result = parseRows(
-      rowsWith(["graffiti", { channel: "email", formUrl: "https://x.lacity.gov/", requestTypeHint: "abc" }]),
+      rowsWith([
+        "graffiti",
+        { channel: "email", formUrl: "https://x.lacity.gov/", requestTypeHint: "abc" },
+      ]),
     )
     expect(result.routes[0]).toMatchObject({ formUrl: null, requestTypeHint: null })
   })
@@ -200,7 +220,11 @@ describe("parseRows", () => {
 
   it("T20: every set row is sent, in row order", () => {
     const result = parseRows(
-      rowsWith(["default", { channel: "manual" }], ["graffiti", VALID_PORTAL], ["hazard", { channel: "email" }]),
+      rowsWith(
+        ["default", { channel: "manual" }],
+        ["graffiti", VALID_PORTAL],
+        ["hazard", { channel: "email" }],
+      ),
     )
     expect(result.routes.map((route) => route.category)).toEqual([null, "graffiti", "hazard"])
   })
@@ -224,12 +248,16 @@ describe("parseRows", () => {
   })
 
   it("T24: an IP-address start URL is refused", () => {
-    const result = parseRows(rowsWith(["graffiti", { channel: "portal", formUrl: "https://10.0.0.1/" }]))
+    const result = parseRows(
+      rowsWith(["graffiti", { channel: "portal", formUrl: "https://10.0.0.1/" }]),
+    )
     expect(result.rowErrors.graffiti).toBe(PORTAL_URL_MESSAGE)
   })
 
   it("T25: a localhost start URL is refused", () => {
-    const result = parseRows(rowsWith(["graffiti", { channel: "portal", formUrl: "https://localhost/" }]))
+    const result = parseRows(
+      rowsWith(["graffiti", { channel: "portal", formUrl: "https://localhost/" }]),
+    )
     expect(result.rowErrors.graffiti).toBe(PORTAL_URL_MESSAGE)
   })
 
@@ -255,11 +283,13 @@ describe("parseRows", () => {
       enabled: true,
     }).error?.issues[0]?.message
     expect(expected).toEqual(expect.any(String))
-    expect(parseRows(rowsWith(["graffiti", { ...VALID_PORTAL, requestTypeHint: long }])).rowErrors.graffiti).toBe(
-      expected,
-    )
     expect(
-      parseRows(rowsWith(["graffiti", { ...VALID_PORTAL, requestTypeHint: "a".repeat(200) }])).rowErrors,
+      parseRows(rowsWith(["graffiti", { ...VALID_PORTAL, requestTypeHint: long }])).rowErrors
+        .graffiti,
+    ).toBe(expected)
+    expect(
+      parseRows(rowsWith(["graffiti", { ...VALID_PORTAL, requestTypeHint: "a".repeat(200) }]))
+        .rowErrors,
     ).toEqual({})
   })
 
@@ -308,49 +338,75 @@ describe("healthText", () => {
 
   it("T35: every part present", () => {
     expect(
-      healthText({ lastFiledAt: before(2 * HOUR), lastFailedAt: before(3 * DAY), scriptVersion: "a1b2c3d4e5f6" }, NOW),
+      healthText(
+        {
+          lastFiledAt: before(2 * HOUR),
+          lastFailedAt: before(3 * DAY),
+          scriptVersion: "a1b2c3d4e5f6",
+        },
+        NOW,
+      ),
     ).toBe("Last filed 2 h ago · Last failed 3 d ago · script a1b2c3d4e5f6")
   })
 
   it("T36: only a failure", () => {
-    expect(healthText({ ...NO_HEALTH, lastFailedAt: before(5 * MINUTE) }, NOW)).toBe("Last failed 5 min ago")
+    expect(healthText({ ...NO_HEALTH, lastFailedAt: before(5 * MINUTE) }, NOW)).toBe(
+      "Last failed 5 min ago",
+    )
   })
 
   it("T37: only a script version", () => {
-    expect(healthText({ ...NO_HEALTH, scriptVersion: "a1b2c3d4e5f6" }, NOW)).toBe("script a1b2c3d4e5f6")
+    expect(healthText({ ...NO_HEALTH, scriptVersion: "a1b2c3d4e5f6" }, NOW)).toBe(
+      "script a1b2c3d4e5f6",
+    )
   })
 
   it("T38: a filing just now and a script version", () => {
-    expect(healthText({ ...NO_HEALTH, lastFiledAt: before(30 * SECOND), scriptVersion: "a1b2c3d4e5f6" }, NOW)).toBe(
-      "Last filed just now · script a1b2c3d4e5f6",
-    )
+    expect(
+      healthText(
+        { ...NO_HEALTH, lastFiledAt: before(30 * SECOND), scriptVersion: "a1b2c3d4e5f6" },
+        NOW,
+      ),
+    ).toBe("Last filed just now · script a1b2c3d4e5f6")
   })
 })
 
 describe("rowErrorsFromError", () => {
   it("T39: a field error lands on the row sent at its index", () => {
     expect(
-      rowErrorsFromError(validation({ "routes.1.statusSenderDomains": GMAIL_MESSAGE }), ["default", "graffiti"]),
+      rowErrorsFromError(validation({ "routes.1.statusSenderDomains": GMAIL_MESSAGE }), [
+        "default",
+        "graffiti",
+      ]),
     ).toEqual({ rows: { graffiti: GMAIL_MESSAGE }, general: null })
   })
 
   it("T40: index 0 is the first row sent", () => {
-    expect(rowErrorsFromError(validation({ "routes.0.formUrl": "m" }), ["default", "graffiti"])).toEqual({
+    expect(
+      rowErrorsFromError(validation({ "routes.0.formUrl": "m" }), ["default", "graffiti"]),
+    ).toEqual({
       rows: { default: "m" },
       general: null,
     })
   })
 
   it("T41: a nested path still maps by the route index", () => {
-    expect(rowErrorsFromError(validation({ "routes.0.statusSenderDomains.2": "bad" }), ["graffiti"])).toEqual({
+    expect(
+      rowErrorsFromError(validation({ "routes.0.statusSenderDomains.2": "bad" }), ["graffiti"]),
+    ).toEqual({
       rows: { graffiti: "bad" },
       general: null,
     })
   })
 
   it("T42: an error on the whole list is general", () => {
-    const raw = validation({ routes: "Each category may have one route, and the jurisdiction one default." })
-    expect(rowErrorsFromError(raw, ["default", "graffiti"])).toEqual({ rows: {}, general: errorMessage(raw) })
+    const raw = validation({
+      routes: "Each category may have one route, and the jurisdiction one default.",
+    })
+    expect(rowErrorsFromError(raw, ["default", "graffiti"])).toEqual({
+      rows: {},
+      general: errorMessage(raw),
+    })
   })
 
   it("T43: an index that was not sent is general", () => {
@@ -360,9 +416,15 @@ describe("rowErrorsFromError", () => {
 
   it("T44: any other error is general", () => {
     const conflict = new AppError(ErrorCode.CONFLICT, "Conflict", { httpStatus: 409 })
-    expect(rowErrorsFromError(conflict, ["graffiti"])).toEqual({ rows: {}, general: errorMessage(conflict) })
+    expect(rowErrorsFromError(conflict, ["graffiti"])).toEqual({
+      rows: {},
+      general: errorMessage(conflict),
+    })
     const offline = new TypeError("Failed to fetch")
-    expect(rowErrorsFromError(offline, ["graffiti"])).toEqual({ rows: {}, general: errorMessage(offline) })
+    expect(rowErrorsFromError(offline, ["graffiti"])).toEqual({
+      rows: {},
+      general: errorMessage(offline),
+    })
   })
 })
 
@@ -386,7 +448,9 @@ function graffitiRow(): HTMLElement {
 }
 
 function routeGroups(): HTMLElement[] {
-  return screen.queryAllByRole("group").filter((group) => / route$/.test(group.getAttribute("aria-label") ?? ""))
+  return screen
+    .queryAllByRole("group")
+    .filter((group) => / route$/.test(group.getAttribute("aria-label") ?? ""))
 }
 
 function routesCard(): HTMLElement {
@@ -505,7 +569,14 @@ describe("Filing routes card", () => {
 
   it("T52: five sender chips fill the list, and removing one frees the input", async () => {
     const senders = ["a.lacity.org", "b.lacity.org", "c.lacity.org", "d.lacity.org", "e.lacity.org"]
-    await renderSection(LA, [routeDTO({ channel: "email", formUrl: null, requestTypeHint: null, statusSenderDomains: senders })])
+    await renderSection(LA, [
+      routeDTO({
+        channel: "email",
+        formUrl: null,
+        requestTypeHint: null,
+        statusSenderDomains: senders,
+      }),
+    ])
     const row = graffitiRow()
     const chips = () => [...row.querySelectorAll(".fchip")]
     expect(chips()).toHaveLength(5)
@@ -571,10 +642,15 @@ describe("Filing routes card", () => {
 
     await waitFor(() => expect(toast).toHaveBeenCalledWith("Routes saved", "ok"))
     expect(apiMock.saveFilingRoutes).toHaveBeenCalledTimes(1)
-    expect(apiMock.saveFilingRoutes).toHaveBeenCalledWith({ geoid: LA.geoid, routes: [defaultRoute, graffitiRoute] })
+    expect(apiMock.saveFilingRoutes).toHaveBeenCalledWith({
+      geoid: LA.geoid,
+      routes: [defaultRoute, graffitiRoute],
+    })
     await waitFor(() => expect(within(defaultRow).getByText("Never used")).toBeInTheDocument())
     expect(within(graffitiRow()).getByText("Never used")).toBeInTheDocument()
-    for (const label of ROW_LABELS.filter((l) => l !== "Default" && l !== categoryLabel("graffiti"))) {
+    for (const label of ROW_LABELS.filter(
+      (l) => l !== "Default" && l !== categoryLabel("graffiti"),
+    )) {
       expect(within(routeRow(label)).queryByText("Never used")).not.toBeInTheDocument()
     }
   })
@@ -585,15 +661,23 @@ describe("Filing routes card", () => {
     apiMock.saveFilingRoutes.mockResolvedValue({ routes: [] })
     await userEvent.click(screen.getByRole("button", { name: "Save routes" }))
     await waitFor(() => expect(apiMock.saveFilingRoutes).toHaveBeenCalledTimes(1))
-    const sent = apiMock.saveFilingRoutes.mock.calls[0]?.[0] as { routes: { category: string | null }[] }
+    const sent = apiMock.saveFilingRoutes.mock.calls[0]?.[0] as {
+      routes: { category: string | null }[]
+    }
     expect(sent.routes.map((route) => route.category)).not.toContain("graffiti")
   })
 
   it("T56: Save routes never saves the contacts, the note or the handle", async () => {
     await renderDetail()
     await chooseChannel(graffitiRow(), "Email")
-    await userEvent.type(screen.getByRole("textbox", { name: "Note for the next operator" }), "Called the city")
-    await userEvent.type(screen.getByRole("textbox", { name: "Jurisdiction discussion handle" }), "la")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Note for the next operator" }),
+      "Called the city",
+    )
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Jurisdiction discussion handle" }),
+      "la",
+    )
     await userEvent.type(
       screen.getByRole("textbox", { name: `${categoryLabel("trash")} contact email` }),
       "trash@lacity.org",
@@ -630,7 +714,9 @@ describe("Filing routes card", () => {
     const row = graffitiRow()
     await chooseChannel(row, "Email")
     await userEvent.type(within(row).getByLabelText("City email senders"), "gmail.com{Enter}")
-    apiMock.saveFilingRoutes.mockRejectedValue(validation({ "routes.1.statusSenderDomains": GMAIL_MESSAGE }))
+    apiMock.saveFilingRoutes.mockRejectedValue(
+      validation({ "routes.1.statusSenderDomains": GMAIL_MESSAGE }),
+    )
     await userEvent.click(screen.getByRole("button", { name: "Save routes" }))
 
     expect(await within(row).findByText(GMAIL_MESSAGE)).toBeInTheDocument()
@@ -641,14 +727,17 @@ describe("Filing routes card", () => {
   it("T59: any other save error shows above the Save routes button", async () => {
     await renderSection()
     await chooseChannel(graffitiRow(), "Email")
-    const conflict = new AppError(ErrorCode.CONFLICT, "Routes changed meanwhile", { httpStatus: 409 })
+    const conflict = new AppError(ErrorCode.CONFLICT, "Routes changed meanwhile", {
+      httpStatus: 409,
+    })
     apiMock.saveFilingRoutes.mockRejectedValue(conflict)
     const save = screen.getByRole("button", { name: "Save routes" })
     await userEvent.click(save)
 
     const message = await screen.findByText(errorMessage(conflict))
     expect(message.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    for (const group of routeGroups()) expect(within(group).queryByRole("alert")).not.toBeInTheDocument()
+    for (const group of routeGroups())
+      expect(within(group).queryByRole("alert")).not.toBeInTheDocument()
   })
 
   it("T60: the fallback hint shows under the rows", async () => {
@@ -661,13 +750,19 @@ describe("Filing routes card", () => {
   it("T61: a health time carries the exact time as its hover title", async () => {
     const lastFiledAt = before(2 * HOUR)
     await renderSection(LA, [routeDTO({ health: { ...NO_HEALTH, lastFiledAt } })])
-    expect(within(graffitiRow()).getByText("2 h ago")).toHaveAttribute("title", preciseDateTimeTitle(lastFiledAt))
+    expect(within(graffitiRow()).getByText("2 h ago")).toHaveAttribute(
+      "title",
+      preciseDateTimeTitle(lastFiledAt),
+    )
   })
 
   it("T62: a Save draft refetch does not replace unsaved route edits", async () => {
     const { client } = await renderDetail()
     await chooseChannel(graffitiRow(), "Email")
-    await userEvent.type(screen.getByRole("textbox", { name: "Note for the next operator" }), "Called the city")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Note for the next operator" }),
+      "Called the city",
+    )
     apiMock.patchJurisdiction.mockResolvedValue({ ok: true })
     await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
 

@@ -14,9 +14,7 @@ export function UserAvatar({
 }) {
   const className = `user-av${large ? " lg" : ""}`
   if (user.avatarUrl) {
-    return (
-      <img className={className} src={user.avatarUrl} alt="" />
-    )
+    return <img className={className} src={user.avatarUrl} alt="" />
   }
   return (
     <span className={className} style={{ background: user.avatar?.[0] ?? avatarColor(user.id) }}>

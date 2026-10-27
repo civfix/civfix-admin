@@ -18,7 +18,11 @@ import { reportStatusLabel, reportStatusView } from "@/lib/report-status"
 import { useFilingControls } from "@/features/filings/use-filings"
 import { CityFilingCard } from "@/features/reports/city-filing-card"
 import { ReportActivity } from "@/features/reports/report-activity"
-import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
+import {
+  CityMessageCard,
+  RoutedToCard,
+  useCityFollowup,
+} from "@/features/reports/report-city-cards"
 import { ReportDiscussion } from "@/features/reports/report-discussion"
 import { ReportLinkedEvents } from "@/features/reports/report-linked-events"
 import { reportMediaView } from "@/features/reports/report-media"
@@ -131,11 +135,7 @@ function StatusButtons({
   }
 
   if (statusActions.length === 0) {
-    return (
-      <span className="hint">
-        No status changes from {reportStatusLabel(report.status)}
-      </span>
-    )
+    return <span className="hint">No status changes from {reportStatusLabel(report.status)}</span>
   }
   return (
     <>

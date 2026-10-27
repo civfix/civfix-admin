@@ -148,7 +148,10 @@ export function useSetReportVerdict() {
     mutationFn: (input: SetReportVerdictRequest) => api.setReportVerdict(input),
     // Approve files the report and Reject cancels its open filing (D1).
     onSuccess: (_res, { id }) =>
-      Promise.all([invalidateReports(qc, id), qc.invalidateQueries({ queryKey: queryKeys.filings.all })]),
+      Promise.all([
+        invalidateReports(qc, id),
+        qc.invalidateQueries({ queryKey: queryKeys.filings.all }),
+      ]),
     meta: {
       successMessage: (_res: unknown, { id, verdict }: SetReportVerdictRequest) =>
         reportMessage(id, VERDICT_TOAST[verdict]),

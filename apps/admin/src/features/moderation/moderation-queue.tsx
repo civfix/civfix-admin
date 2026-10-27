@@ -38,10 +38,7 @@ export function ModerationQueueSection({ focusId }: SectionPageProps) {
     ...(debouncedQuery.trim() ? { q: debouncedQuery.trim() } : {}),
   }
   const listQuery = useModerationListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
 
   // A decision clears its item outright: the detail carries no status, so a resolved item the list
   // never held would otherwise keep live buttons.

@@ -4,7 +4,9 @@ import { reportStatusLabel } from "@/lib/report-status"
 
 export function systemLabel(msg: ChatMessageDTO): string {
   const status = msg.system?.status
-  const detail = [msg.system?.note, msg.system?.body, msg.body].map((text) => text?.trim()).find(Boolean)
+  const detail = [msg.system?.note, msg.system?.body, msg.body]
+    .map((text) => text?.trim())
+    .find(Boolean)
   const head = status ? `System · ${reportStatusLabel(status)}` : "System"
   return detail ? `${head} · ${detail}` : head
 }

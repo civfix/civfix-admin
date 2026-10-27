@@ -260,9 +260,11 @@ describe("clearChangedFieldErrors", () => {
 
 describe("pickFieldErrors", () => {
   it("keeps only the keys a form renders", () => {
-    expect(pickFieldErrors({ name: "a", reason: "b", ownerUserId: "c" }, ["name", "slug"])).toEqual({
-      name: "a",
-    })
+    expect(pickFieldErrors({ name: "a", reason: "b", ownerUserId: "c" }, ["name", "slug"])).toEqual(
+      {
+        name: "a",
+      },
+    )
   })
 })
 
@@ -302,7 +304,9 @@ describe("validateProfileDraft length limits", () => {
 
   it("rejects a description longer than the contract allows", () => {
     const draft = { ...draftFromOrg(org), description: "x".repeat(MAX_ORG_DESCRIPTION + 1) }
-    expect(validateProfileDraft(draft).description).toBe(`At most ${MAX_ORG_DESCRIPTION} characters.`)
+    expect(validateProfileDraft(draft).description).toBe(
+      `At most ${MAX_ORG_DESCRIPTION} characters.`,
+    )
   })
 })
 

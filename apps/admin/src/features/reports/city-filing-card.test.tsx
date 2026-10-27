@@ -18,13 +18,7 @@ import { openLightbox } from "@/components/shared/lightbox"
 import { queryKeys } from "@/lib/query"
 import { apiMock } from "@/test/api-mock"
 import { startFakeTimersWithUser } from "@/test/fake-timers"
-import {
-  FILING_ID,
-  REPORT_ID,
-  filingDTO,
-  getFilingResponse,
-  reportDetail,
-} from "@/test/filings"
+import { FILING_ID, REPORT_ID, filingDTO, getFilingResponse, reportDetail } from "@/test/filings"
 import type { ReportFiling } from "@/features/filings/use-filings"
 import { makeTestQueryClient, renderWithQuery } from "@/test/render"
 import { spyToasts } from "@/test/toasts"
@@ -220,7 +214,10 @@ describe("CityFilingCard", () => {
 
     await act(async () => {
       pending.resolve(
-        getFilingResponse({ ...report.filing!, scriptVersion: "a1b2c3d4e5f6" }, [SCREENSHOT, SCRIPT]),
+        getFilingResponse({ ...report.filing!, scriptVersion: "a1b2c3d4e5f6" }, [
+          SCREENSHOT,
+          SCRIPT,
+        ]),
       )
     })
     expect(await within(c).findByRole("img", { name: "Form filled" })).toBeInTheDocument()
@@ -278,7 +275,9 @@ describe("CityFilingCard", () => {
     renderDetail(report, client)
     apiMock.getFiling
       .mockResolvedValueOnce(getFilingResponse(report.filing!))
-      .mockResolvedValue(getFilingResponse({ ...report.filing!, status: "submitted", caseId: "1-111" }))
+      .mockResolvedValue(
+        getFilingResponse({ ...report.filing!, status: "submitted", caseId: "1-111" }),
+      )
     await act(() => vi.advanceTimersByTimeAsync(0))
     expect(apiMock.getFiling).toHaveBeenCalledTimes(1)
 
@@ -315,28 +314,46 @@ describe("CityFilingCard", () => {
   it.each<[string, AdminReportFilingRoute | null, string]>([
     ["email", { channel: "email", target: "311@lacity.org" }, "Email · 311@lacity.org"],
     ["no", null, "No route — needs a human"],
-  ])("T18: names the %s route in the Approve and file confirm, then approves and refreshes", async (_n, filingRoute, line) => {
-    const client = makeTestQueryClient()
-    const keys = invalidatedKeys(client)
-    renderDetail(reportDetail({ filingRoute }), client)
-    apiMock.setReportVerdict.mockResolvedValue({ ok: true })
-    const c = await findCard()
-    await userEvent.click(within(c).getByRole("button", { name: "Approve and file" }))
-    const dialog = await screen.findByRole("dialog")
-    expect(dialog).toHaveTextContent(line)
+  ])(
+    "T18: names the %s route in the Approve and file confirm, then approves and refreshes",
+    async (_n, filingRoute, line) => {
+      const client = makeTestQueryClient()
+      const keys = invalidatedKeys(client)
+      renderDetail(reportDetail({ filingRoute }), client)
+      apiMock.setReportVerdict.mockResolvedValue({ ok: true })
+      const c = await findCard()
+      await userEvent.click(within(c).getByRole("button", { name: "Approve and file" }))
+      const dialog = await screen.findByRole("dialog")
+      expect(dialog).toHaveTextContent(line)
 
-    await userEvent.click(within(dialog).getByRole("button", { name: "Approve and file" }))
-    await waitFor(() =>
-      expect(apiMock.setReportVerdict).toHaveBeenCalledWith({ id: REPORT_ID, verdict: "approved" }),
-    )
-    await waitFor(() => expectThreeKeys(keys()))
-    expect(apiMock.routeReport).not.toHaveBeenCalled()
-  })
+      await userEvent.click(within(dialog).getByRole("button", { name: "Approve and file" }))
+      await waitFor(() =>
+        expect(apiMock.setReportVerdict).toHaveBeenCalledWith({
+          id: REPORT_ID,
+          verdict: "approved",
+        }),
+      )
+      await waitFor(() => expectThreeKeys(keys()))
+      expect(apiMock.routeReport).not.toHaveBeenCalled()
+    },
+  )
 
   const STATES: [string, AdminReportDTO, (typeof ACTIONS)[number][]][] = [
-    ["verdict approved, no filing", reportDetail({ verificationVerdict: "approved", filing: null }), ["File"]],
-    ["verdict null, no filing", reportDetail({ verificationVerdict: null, filing: null }), ["Approve and file"]],
-    ["queued", withFiling({ status: "queued" }), ["Cancel filing", "Record manual filing", "Copy report text"]],
+    [
+      "verdict approved, no filing",
+      reportDetail({ verificationVerdict: "approved", filing: null }),
+      ["File"],
+    ],
+    [
+      "verdict null, no filing",
+      reportDetail({ verificationVerdict: null, filing: null }),
+      ["Approve and file"],
+    ],
+    [
+      "queued",
+      withFiling({ status: "queued" }),
+      ["Cancel filing", "Record manual filing", "Copy report text"],
+    ],
     ["running", withFiling({ status: "running" }), ["Copy report text"]],
     [
       "needs_human no_route",
@@ -348,15 +365,27 @@ describe("CityFilingCard", () => {
       withFiling({ status: "needs_human", reason: "city_needs_info", caseId: "1-111" }),
       ["Record manual filing", "Copy report text"],
     ],
-    ["submitted, city open", withFiling({ status: "submitted", caseId: "1-111" }), ["Copy report text"]],
+    [
+      "submitted, city open",
+      withFiling({ status: "submitted", caseId: "1-111" }),
+      ["Copy report text"],
+    ],
     [
       "submitted, city closed",
-      withFiling({ status: "submitted", caseId: "1-111", cityClosedAt: "2026-10-22T00:00:00.000Z" }),
+      withFiling({
+        status: "submitted",
+        caseId: "1-111",
+        cityClosedAt: "2026-10-22T00:00:00.000Z",
+      }),
       ["File again", "Copy report text"],
     ],
     [
       "linked_existing, city closed",
-      withFiling({ status: "linked_existing", caseId: "1-111", cityClosedAt: "2026-10-22T00:00:00.000Z" }),
+      withFiling({
+        status: "linked_existing",
+        caseId: "1-111",
+        cityClosedAt: "2026-10-22T00:00:00.000Z",
+      }),
       ["File again", "Copy report text"],
     ],
     ["cancelled", withFiling({ status: "cancelled" }), ["File again", "Copy report text"]],
@@ -398,7 +427,9 @@ describe("CityFilingCard", () => {
     expect(note).toHaveAttribute("maxlength", "500")
     await user.type(note, "Call first")
     await user.click(within(c).getByRole("button", { name: "File" }))
-    await waitFor(() => expect(apiMock.fileReport).toHaveBeenCalledWith({ id: REPORT_ID, note: "Call first" }))
+    await waitFor(() =>
+      expect(apiMock.fileReport).toHaveBeenCalledWith({ id: REPORT_ID, note: "Call first" }),
+    )
     await waitFor(() => expectThreeKeys(keys()))
 
     await user.click(await within(c).findByRole("button", { name: "File" }))
@@ -409,7 +440,9 @@ describe("CityFilingCard", () => {
 
   it("T21: says why File was refused on a conflict", async () => {
     renderDetail(reportDetail({ verificationVerdict: "approved" }))
-    apiMock.fileReport.mockRejectedValue(new AppError(ErrorCode.CONFLICT, "Report has an open filing"))
+    apiMock.fileReport.mockRejectedValue(
+      new AppError(ErrorCode.CONFLICT, "Report has an open filing"),
+    )
     const user = userEvent.setup()
     const c = await findCard()
     await user.click(within(c).getByRole("button", { name: "File" }))
@@ -422,17 +455,20 @@ describe("CityFilingCard", () => {
   it.each([
     ["Retry", "needs_human", "retryFiling"],
     ["Cancel filing", "queued", "cancelFiling"],
-  ] as const)("T22: %s calls the API with the filing id and refreshes", async (button, status, method) => {
-    const client = makeTestQueryClient()
-    const keys = invalidatedKeys(client)
-    const report = withFiling({ status, reason: status === "needs_human" ? "captcha" : null })
-    renderDetail(report, client)
-    apiMock[method].mockResolvedValue({ filing: filingDTO({ status: "queued" }) })
-    const c = await findCard()
-    await userEvent.click(within(c).getByRole("button", { name: button }))
-    await waitFor(() => expect(apiMock[method]).toHaveBeenCalledWith({ id: FILING_ID }))
-    await waitFor(() => expectThreeKeys(keys()))
-  })
+  ] as const)(
+    "T22: %s calls the API with the filing id and refreshes",
+    async (button, status, method) => {
+      const client = makeTestQueryClient()
+      const keys = invalidatedKeys(client)
+      const report = withFiling({ status, reason: status === "needs_human" ? "captcha" : null })
+      renderDetail(report, client)
+      apiMock[method].mockResolvedValue({ filing: filingDTO({ status: "queued" }) })
+      const c = await findCard()
+      await userEvent.click(within(c).getByRole("button", { name: button }))
+      await waitFor(() => expect(apiMock[method]).toHaveBeenCalledWith({ id: FILING_ID }))
+      await waitFor(() => expectThreeKeys(keys()))
+    },
+  )
 
   async function openManualForm(report: AdminReportDTO) {
     renderDetail(report)
@@ -453,12 +489,19 @@ describe("CityFilingCard", () => {
     await user.click(within(c).getByRole("button", { name: "Record manual filing" }))
     const form = within(within(c).getByRole("group", { name: "Record manual filing" }))
     await user.type(form.getByRole("textbox", { name: "Request number" }), "1-2345678901")
-    await user.type(form.getByRole("textbox", { name: "Link on the city site" }), "https://myla311.lacity.gov/s/")
+    await user.type(
+      form.getByRole("textbox", { name: "Link on the city site" }),
+      "https://myla311.lacity.gov/s/",
+    )
     await user.click(form.getByRole("button", { name: "Record" }))
 
     await waitFor(() => expect(apiMock.recordManualFiling).toHaveBeenCalledTimes(1))
     const input = apiMock.recordManualFiling.mock.calls[0]![0]
-    expect(input).toEqual({ id: FILING_ID, caseId: "1-2345678901", caseUrl: "https://myla311.lacity.gov/s/" })
+    expect(input).toEqual({
+      id: FILING_ID,
+      caseId: "1-2345678901",
+      caseUrl: "https://myla311.lacity.gov/s/",
+    })
     expect(input).not.toHaveProperty("note")
     await waitFor(() => expectThreeKeys(keys()))
   })
@@ -469,7 +512,9 @@ describe("CityFilingCard", () => {
     ["a 65-character number", "1".repeat(65), ""],
     ["an http link", "1-111", "http://x.org"],
   ])("T24: sends nothing for %s and shows a field error", async (_name, number, link) => {
-    const { user, form } = await openManualForm(withFiling({ status: "needs_human", reason: "captcha" }))
+    const { user, form } = await openManualForm(
+      withFiling({ status: "needs_human", reason: "captcha" }),
+    )
     const f = within(form)
     if (number) await user.type(f.getByRole("textbox", { name: "Request number" }), number)
     if (link) await user.type(f.getByRole("textbox", { name: "Link on the city site" }), link)
@@ -480,7 +525,9 @@ describe("CityFilingCard", () => {
 
   it("T25: shows a server error inside the form and keeps it open", async () => {
     const { user, form } = await openManualForm(withFiling({ status: "queued" }))
-    apiMock.recordManualFiling.mockRejectedValue(new AppError(ErrorCode.CONFLICT, "Filing is running"))
+    apiMock.recordManualFiling.mockRejectedValue(
+      new AppError(ErrorCode.CONFLICT, "Filing is running"),
+    )
     const f = within(form)
     await user.type(f.getByRole("textbox", { name: "Request number" }), "1-2345678901")
     await user.click(f.getByRole("button", { name: "Record" }))

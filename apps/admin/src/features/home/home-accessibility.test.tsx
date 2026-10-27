@@ -233,7 +233,8 @@ function tilesOf(container: HTMLElement): HTMLElement[] {
 
 const FOCUSABLE = "a[href], button, input, select, textarea, [tabindex]"
 const HEAD_AND_FOOT = 2
-const TILE_CONTROLS = (PREVIEW_TILES + SUMMARY_TILES) * HEAD_AND_FOOT + PREVIEW_TILES * ROWS_PER_TILE
+const TILE_CONTROLS =
+  (PREVIEW_TILES + SUMMARY_TILES) * HEAD_AND_FOOT + PREVIEW_TILES * ROWS_PER_TILE
 
 function controlsOf(tile: HTMLElement): HTMLElement[] {
   return [...tile.querySelectorAll<HTMLElement>(FOCUSABLE)]

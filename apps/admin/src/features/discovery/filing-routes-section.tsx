@@ -45,7 +45,10 @@ export function FilingRoutesSection({ dto }: { dto: JurisdictionDirectoryDTO }) 
   const [edits, setEdits] = React.useState<RouteRow[] | null>(null)
   const [rowErrors, setRowErrors] = React.useState<RouteRowErrors>({})
   const [generalError, setGeneralError] = React.useState<string | null>(null)
-  const saved = React.useMemo(() => (routes.data ? routeRows(routes.data.routes) : null), [routes.data])
+  const saved = React.useMemo(
+    () => (routes.data ? routeRows(routes.data.routes) : null),
+    [routes.data],
+  )
   const rows = edits ?? saved
 
   const updateRow = (key: RouteRowKey, change: (row: RouteRow) => RouteRow) => {
@@ -86,7 +89,9 @@ export function FilingRoutesSection({ dto }: { dto: JurisdictionDirectoryDTO }) 
                   row={row}
                   error={rowErrors[row.key] ?? null}
                   now={now}
-                  onChannel={(channel) => updateRow(row.key, (r) => withChannel(r, channel, dto.form))}
+                  onChannel={(channel) =>
+                    updateRow(row.key, (r) => withChannel(r, channel, dto.form))
+                  }
                   onChange={(patch) => updateRow(row.key, (r) => ({ ...r, ...patch }))}
                 />
               ))}
@@ -101,7 +106,12 @@ export function FilingRoutesSection({ dto }: { dto: JurisdictionDirectoryDTO }) 
             )}
             <div className="tpl-state" style={{ marginTop: "var(--space-3)" }}>
               <div className="spacer" />
-              <button type="button" className="btn primary" disabled={save.isPending} onClick={saveRoutes}>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={save.isPending}
+                onClick={saveRoutes}
+              >
                 Save routes
               </button>
             </div>
@@ -142,7 +152,11 @@ function RouteRowCell({
     >
       <div className="ccat-cell-head">
         <span className="ccat-pin">
-          {row.key === "default" ? <Icons.Layers size={16} /> : <img src={categoryPinSrc(row.key)} alt="" />}
+          {row.key === "default" ? (
+            <Icons.Layers size={16} />
+          ) : (
+            <img src={categoryPinSrc(row.key)} alt="" />
+          )}
         </span>
         <span className="ccat-label">{row.label}</span>
       </div>
@@ -194,7 +208,11 @@ function RouteRowCell({
         </>
       )}
 
-      <SenderChips senders={row.senders} inputId={`${id}-senders`} onChange={(senders) => onChange({ senders })} />
+      <SenderChips
+        senders={row.senders}
+        inputId={`${id}-senders`}
+        onChange={(senders) => onChange({ senders })}
+      />
 
       <div className="row-flex">
         <label className="row-flex">
@@ -206,7 +224,11 @@ function RouteRowCell({
           Include CivFix link
         </label>
         <label className="row-flex">
-          <input type="checkbox" checked={row.enabled} onChange={(e) => onChange({ enabled: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={row.enabled}
+            onChange={(e) => onChange({ enabled: e.target.checked })}
+          />
           Enabled
         </label>
       </div>
@@ -282,7 +304,12 @@ function SenderChips({
             add()
           }}
         />
-        <button type="button" className="btn sm" disabled={full || text.trim() === ""} onClick={add}>
+        <button
+          type="button"
+          className="btn sm"
+          disabled={full || text.trim() === ""}
+          onClick={add}
+        >
           Add
         </button>
       </div>

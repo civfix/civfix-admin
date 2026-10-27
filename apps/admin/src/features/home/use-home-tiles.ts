@@ -75,7 +75,10 @@ function previewTile(
   }
 }
 
-function previewRows<T>(data: { items: T[] } | undefined, toRow: (item: T) => PeekItem): PeekItem[] {
+function previewRows<T>(
+  data: { items: T[] } | undefined,
+  toRow: (item: T) => PeekItem,
+): PeekItem[] {
   return (data?.items ?? []).slice(0, PREVIEW_ROWS).map(toRow)
 }
 

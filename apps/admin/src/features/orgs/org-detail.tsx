@@ -144,8 +144,8 @@ function OrgBanners({
         <div className="org-banner" role="status">
           <Icons.Trash size={14} />
           <div>
-            <b>Deleted {formatDateTime(org.deletedAt)}.</b> This organization was soft-deleted; it is
-            read-only here.
+            <b>Deleted {formatDateTime(org.deletedAt)}.</b> This organization was soft-deleted; it
+            is read-only here.
           </div>
         </div>
       )}
@@ -234,7 +234,11 @@ export function OrgDetail({
   if (q.isLoading) return <LoadingState label="Loading organization..." />
   if (q.isError && !q.data) {
     return (
-      <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load this organization" />
+      <ErrorState
+        error={q.error}
+        onRetry={() => q.refetch()}
+        title="Could not load this organization"
+      />
     )
   }
   const org = q.data

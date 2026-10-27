@@ -51,7 +51,9 @@ describe("org verification status the build does not know", () => {
 
     const row = queueRowOf(await screen.findByText("/river-keepers"))
     expect(row).toHaveTextContent("under_appeal")
-    expect(await screen.findByRole("heading", { level: 2, name: "River Keepers" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "River Keepers" }),
+    ).toBeInTheDocument()
     expect(screen.getAllByText("under_appeal").length).toBeGreaterThan(1)
   })
 })

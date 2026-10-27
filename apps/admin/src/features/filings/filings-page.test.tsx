@@ -18,7 +18,8 @@ vi.mock("@/lib/api", async (importOriginal) => {
 })
 
 const PAUSED_BANNER = "Automatic filing is paused. Approved reports wait in Queued."
-const OFF_BANNER = "Automatic filing is off in this environment. Portal filings go to Needs a human."
+const OFF_BANNER =
+  "Automatic filing is off in this environment. Portal filings go to Needs a human."
 const COUNTS = { needs_human: 4, in_progress: 2 }
 const RUNNING: FilingSettingsDTO = { paused: false, automaticFiling: true }
 
@@ -28,7 +29,11 @@ function page(items: AdminFilingDTO[], nextCursor: string | null = null): ListFi
 
 function rows(n: number, from = 1): AdminFilingDTO[] {
   return Array.from({ length: n }, (_, i) =>
-    filingRow({ id: `f-${from + i}`, reportId: `r-${from + i}`, reportTitle: `Report ${from + i}` }),
+    filingRow({
+      id: `f-${from + i}`,
+      reportId: `r-${from + i}`,
+      reportTitle: `Report ${from + i}`,
+    }),
   )
 }
 
@@ -54,7 +59,12 @@ describe("FilingsPage", () => {
     await waitFor(() => expect(apiMock.listFilings).toHaveBeenCalledWith({ group: "needs_human" }))
     await screen.findByText("Nothing needs a human")
     const tabs = screen.getAllByRole("tab")
-    expect(tabs.map((t) => t.textContent)).toEqual(["Needs a human4", "In progress2", "Filed", "Cancelled"])
+    expect(tabs.map((t) => t.textContent)).toEqual([
+      "Needs a human4",
+      "In progress2",
+      "Filed",
+      "Cancelled",
+    ])
     expect(tabs[0]).toHaveAttribute("aria-selected", "true")
   })
 
@@ -107,7 +117,9 @@ describe("FilingsPage", () => {
     apiMock.listFilings.mockResolvedValue(page([human, filed]))
     renderPage()
 
-    const humanRow = (await screen.findByText("Couch on 5th")).closest<HTMLElement>("[role=button]")!
+    const humanRow = (await screen.findByText("Couch on 5th")).closest<HTMLElement>(
+      "[role=button]",
+    )!
     for (const text of ["CF-0001", "Los Angeles", "Portal", "The city site showed a CAPTCHA"]) {
       expect(within(humanRow).getByText(text)).toBeInTheDocument()
     }
@@ -166,7 +178,9 @@ describe("FilingsPage", () => {
     expect(screen.queryByText(OFF_BANNER)).not.toBeInTheDocument()
 
     await userEvent.click(pause)
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Cancel" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Cancel" }),
+    )
     expect(apiMock.setFilingSettings).not.toHaveBeenCalled()
 
     await userEvent.click(pause)

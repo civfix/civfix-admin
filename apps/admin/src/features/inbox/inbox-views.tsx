@@ -30,12 +30,12 @@ export function InboxRow({
   item,
   selected,
   onClick,
-  now = Date.now(),
+  now,
 }: {
   item: InboxFeedItemDTO
   selected: boolean
   onClick: () => void
-  now?: number
+  now: number
 }) {
   const isEmail = item.source === "email"
   return (

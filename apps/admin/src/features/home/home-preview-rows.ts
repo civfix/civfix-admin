@@ -98,7 +98,8 @@ export function mailPreviewRows(
   limit: number,
 ): PeekItem[] {
   // Both feeds serialize ts with toISOString, so comparing the strings orders them by time.
-  const newestFirst = (a: { ts: string }, b: { ts: string }) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)
+  const newestFirst = (a: { ts: string }, b: { ts: string }) =>
+    a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0
   return [
     ...outreach.map((thread) => ({ ts: thread.ts, row: mailRow(thread) })),
     ...inbound.map((email) => ({ ts: email.ts, row: inboxRow(email) })),

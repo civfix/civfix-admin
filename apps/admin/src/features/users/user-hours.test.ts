@@ -70,7 +70,9 @@ describe("hours ledger labels", () => {
     expect(hoursEntryTitle(entry())).toBe("Echo Park Lake cleanup")
     expect(hoursEntryTitle(entry({ event: null }))).toBe("Event credit")
     expect(hoursEntryTitle(manual())).toBe("Manual adjustment")
-    expect(hoursEntryTitle(entry({ source: "report", event: null }))).toBe("Report credit (retired)")
+    expect(hoursEntryTitle(entry({ source: "report", event: null }))).toBe(
+      "Report credit (retired)",
+    )
   })
 
   it("names the host, or CivFix with the operator behind an official credit", () => {
@@ -97,8 +99,13 @@ describe("hours ledger labels", () => {
       "Los Angeles",
       "Credited by Maya Host",
     ])
-    expect(hoursEntryMeta(entry({ jurisdiction: { geoid: "0644000", name: null } }))[1]).toBe("0644000")
-    expect(hoursEntryMeta(manual())).toEqual([formatServiceDate("2026-09-20"), "Credited by CivFix · Ops Olu"])
+    expect(hoursEntryMeta(entry({ jurisdiction: { geoid: "0644000", name: null } }))[1]).toBe(
+      "0644000",
+    )
+    expect(hoursEntryMeta(manual())).toEqual([
+      formatServiceDate("2026-09-20"),
+      "Credited by CivFix · Ops Olu",
+    ])
   })
 
   it("describes a void by whoever is known", () => {
@@ -106,12 +113,16 @@ describe("hours ledger labels", () => {
     expect(hoursEntryVoidDetail(entry())).toBeNull()
     expect(
       hoursEntryVoidDetail(
-        entry({ ...voided, voidedBy: { id: USER_ID, name: "Ops Olu" }, voidReason: "Wrong person" }),
+        entry({
+          ...voided,
+          voidedBy: { id: USER_ID, name: "Ops Olu" },
+          voidReason: "Wrong person",
+        }),
       ),
     ).toBe("by Ops Olu: Wrong person")
-    expect(hoursEntryVoidDetail(entry({ ...voided, voidedBy: { id: USER_ID, name: "Ops Olu" } }))).toBe(
-      "by Ops Olu",
-    )
+    expect(
+      hoursEntryVoidDetail(entry({ ...voided, voidedBy: { id: USER_ID, name: "Ops Olu" } })),
+    ).toBe("by Ops Olu")
     expect(hoursEntryVoidDetail(entry({ ...voided, source: "report" }))).toBeNull()
   })
 
@@ -123,9 +134,9 @@ describe("hours ledger labels", () => {
   })
 
   it("prints an affected certificate in its display form", () => {
-    expect(affectedCertificateLine({ code: "A1B2C3D4E5F6", issuedAt: "2026-09-01T12:00:00.000Z" })).toBe(
-      `CFX-A1B2-C3D4-E5F6 · issued ${formatDate("2026-09-01T12:00:00.000Z")}`,
-    )
+    expect(
+      affectedCertificateLine({ code: "A1B2C3D4E5F6", issuedAt: "2026-09-01T12:00:00.000Z" }),
+    ).toBe(`CFX-A1B2-C3D4-E5F6 · issued ${formatDate("2026-09-01T12:00:00.000Z")}`)
   })
 })
 
@@ -135,7 +146,12 @@ const TODAY = "2026-09-26"
 function draft(over: Partial<CreditHoursDraft> = {}): CreditHoursDraft {
   return {
     kind: "event",
-    event: { id: EVENT_ID, title: "Echo Park Lake cleanup", place: "Echo Park", when: "Sep 12, 2026" },
+    event: {
+      id: EVENT_ID,
+      title: "Echo Park Lake cleanup",
+      place: "Echo Park",
+      when: "Sep 12, 2026",
+    },
     hours: "2.5",
     serviceDate: TODAY,
     reason: "  Signed the paper sheet before joining  ",
@@ -154,22 +170,32 @@ describe("credit hours draft", () => {
     expect(creditDraftErrors(draft({ hours: "24" }), TODAY).hours).toBeUndefined()
     expect(creditDraftErrors(draft({ hours: "" }), TODAY).hours).toBe("Enter the hours to credit.")
     for (const bad of ["0", "0.009", "24.01", "-1", "abc", "Infinity"]) {
-      expect(creditDraftErrors(draft({ hours: bad }), TODAY).hours).toBe("Enter between 0.01 and 24 hours.")
+      expect(creditDraftErrors(draft({ hours: bad }), TODAY).hours).toBe(
+        "Enter between 0.01 and 24 hours.",
+      )
     }
   })
 
   it("requires an event for an event credit and a past-or-today date for a manual one", () => {
-    expect(creditDraftErrors(draft({ event: null }), TODAY)).toEqual({ event: "Pick the event to credit." })
+    expect(creditDraftErrors(draft({ event: null }), TODAY)).toEqual({
+      event: "Pick the event to credit.",
+    })
     expect(creditDraftErrors(draft({ kind: "manual", event: null }), TODAY)).toEqual({})
     expect(creditDraftErrors(draft({ kind: "event", serviceDate: "" }), TODAY)).toEqual({})
     expect(serviceDateDraftError("", TODAY)).toBe("Pick the date of service.")
-    expect(serviceDateDraftError("2026-09-27", TODAY)).toBe("The date of service can't be in the future.")
-    expect(serviceDateDraftError("1999-12-31", TODAY)).toMatch(/^The date of service must be on or after /)
+    expect(serviceDateDraftError("2026-09-27", TODAY)).toBe(
+      "The date of service can't be in the future.",
+    )
+    expect(serviceDateDraftError("1999-12-31", TODAY)).toMatch(
+      /^The date of service must be on or after /,
+    )
     expect(serviceDateDraftError(TODAY, TODAY)).toBeNull()
   })
 
   it("requires a reason that is not only whitespace", () => {
-    expect(creditDraftErrors(draft({ reason: "   " }), TODAY)).toEqual({ reason: "A reason is required." })
+    expect(creditDraftErrors(draft({ reason: "   " }), TODAY)).toEqual({
+      reason: "A reason is required.",
+    })
   })
 
   it("builds the event member with a trimmed reason and no manual fields", () => {
@@ -184,7 +210,11 @@ describe("credit hours draft", () => {
 
   it("builds the manual member with the service date and no event", () => {
     expect(
-      buildCreditRequest(USER_ID, draft({ kind: "manual", hours: " 3 ", serviceDate: "2026-09-20" }), TODAY),
+      buildCreditRequest(
+        USER_ID,
+        draft({ kind: "manual", hours: " 3 ", serviceDate: "2026-09-20" }),
+        TODAY,
+      ),
     ).toEqual({
       id: USER_ID,
       kind: "manual",
@@ -197,7 +227,9 @@ describe("credit hours draft", () => {
   it("builds nothing while the draft has an error", () => {
     expect(buildCreditRequest(USER_ID, draft({ event: null }), TODAY)).toBeNull()
     expect(buildCreditRequest(USER_ID, draft({ hours: "25" }), TODAY)).toBeNull()
-    expect(buildCreditRequest(USER_ID, draft({ kind: "manual", serviceDate: "2026-09-27" }), TODAY)).toBeNull()
+    expect(
+      buildCreditRequest(USER_ID, draft({ kind: "manual", serviceDate: "2026-09-27" }), TODAY),
+    ).toBeNull()
   })
 
   it("words the confirmation and the toast", () => {
@@ -205,7 +237,11 @@ describe("credit hours draft", () => {
     expect(creditConfirmTitle("Rosa", event, "Echo Park Lake cleanup")).toBe(
       "Credit 3.5 h to Rosa for Echo Park Lake cleanup?",
     )
-    const manualRequest = buildCreditRequest(USER_ID, draft({ kind: "manual", serviceDate: "2026-09-20" }), TODAY)!
+    const manualRequest = buildCreditRequest(
+      USER_ID,
+      draft({ kind: "manual", serviceDate: "2026-09-20" }),
+      TODAY,
+    )!
     expect(creditConfirmTitle("Rosa", manualRequest, null)).toBe(
       `Credit 2.5 h to Rosa as a manual adjustment for ${formatServiceDate("2026-09-20")}?`,
     )
@@ -254,7 +290,10 @@ describe("credit hours server errors", () => {
   })
 
   it("shows every other refusal on the form with the server's words", () => {
-    const err = new AppError(ErrorCode.CONFLICT, "Rosa already holds 2 h for this event; void it first.")
+    const err = new AppError(
+      ErrorCode.CONFLICT,
+      "Rosa already holds 2 h for this event; void it first.",
+    )
     expect(creditServerErrors(err)).toEqual({
       form: "Rosa already holds 2 h for this event; void it first.",
     })

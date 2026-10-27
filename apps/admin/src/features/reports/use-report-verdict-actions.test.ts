@@ -8,7 +8,9 @@ import {
   type ReportVerdictControls,
 } from "@/features/reports/use-report-verdict-actions"
 
-vi.mock("@/components/shared/dialog", () => ({ confirmDialog: vi.fn(() => Promise.resolve(false)) }))
+vi.mock("@/components/shared/dialog", () => ({
+  confirmDialog: vi.fn(() => Promise.resolve(false)),
+}))
 
 const CANCELS = "This also cancels its city filing."
 

@@ -120,7 +120,10 @@ describe("initial route from the hash at module load", () => {
       page: "mail",
       focusId: "inbox:msg-1",
     })
-    expect(await initialRoute("#/mail/inbox:msg-1")).toEqual({ page: "mail", focusId: "inbox:msg-1" })
+    expect(await initialRoute("#/mail/inbox:msg-1")).toEqual({
+      page: "mail",
+      focusId: "inbox:msg-1",
+    })
   })
 
   it("joins every segment after the section so orgs id/tab survives", async () => {
@@ -155,7 +158,10 @@ describe("initial route from the hash at module load", () => {
   })
 
   it("ignores a query string after the focus id", async () => {
-    expect(await initialRoute("#/reports/rep-1?tab=open")).toEqual({ page: "reports", focusId: "rep-1" })
+    expect(await initialRoute("#/reports/rep-1?tab=open")).toEqual({
+      page: "reports",
+      focusId: "rep-1",
+    })
   })
 
   it("falls back to home with no focus on a malformed percent-encoding at import", async () => {

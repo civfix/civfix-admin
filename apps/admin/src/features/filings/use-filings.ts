@@ -66,7 +66,8 @@ export function useFiling(filing: ReportFiling | null) {
     queryKey: queryKeys.filings.detail(id),
     queryFn: async () => {
       const before =
-        qc.getQueryData<GetFilingResponse>(queryKeys.filings.detail(id))?.filing.status ?? filing?.status
+        qc.getQueryData<GetFilingResponse>(queryKeys.filings.detail(id))?.filing.status ??
+        filing?.status
       const res = await api.getFiling({ id })
       if (before && isFilingActive(before) && !isFilingActive(res.filing.status)) {
         void refreshAfterSettle(qc, res.filing)
@@ -149,7 +150,9 @@ export type FilingControls = ReturnType<typeof useFilingControls>
 
 export function useFilingList(group: FilingGroup) {
   return useInfiniteQuery(
-    infiniteListOptions(queryKeys.filings.list(group), { group }, (input) => api.listFilings(input)),
+    infiniteListOptions(queryKeys.filings.list(group), { group }, (input) =>
+      api.listFilings(input),
+    ),
   )
 }
 

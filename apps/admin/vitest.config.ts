@@ -7,6 +7,9 @@ process.env.TZ = "UTC"
 process.env.LANG = "en_US.UTF-8"
 process.env.LC_ALL = "en_US.UTF-8"
 
+// Listed first so its afterEach runs last and also sees what other hooks' cleanup logs.
+const CONSOLE_GUARD = "./vitest.console-guard.ts"
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -17,10 +20,28 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     pool: "forks",
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/**/*.d.ts"],
+      reporter: ["text-summary"],
+      // The measured baseline rounded down; raise these as coverage grows, never lower them.
+      thresholds: {
+        lines: 89,
+        functions: 86,
+        branches: 83,
+        statements: 87,
+      },
+    },
     projects: [
       {
         extends: true,
-        test: { name: "node", environment: "node", include: ["src/**/*.test.ts"] },
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          setupFiles: [CONSOLE_GUARD],
+        },
       },
       {
         extends: true,
@@ -28,7 +49,7 @@ export default defineConfig({
           name: "dom",
           environment: "jsdom",
           include: ["src/**/*.test.tsx"],
-          setupFiles: ["./vitest.setup.ts"],
+          setupFiles: [CONSOLE_GUARD, "./vitest.setup.ts"],
         },
       },
     ],

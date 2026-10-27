@@ -60,12 +60,16 @@ describe("isNotFound", () => {
 describe("validationFields", () => {
   it("returns the fields of a foreign VALIDATION error", () => {
     const fields = { "routes.0.formUrl": "Bad URL" }
-    expect(validationFields(foreignAppError(ErrorCode.VALIDATION, "Invalid", fields))).toEqual(fields)
+    expect(validationFields(foreignAppError(ErrorCode.VALIDATION, "Invalid", fields))).toEqual(
+      fields,
+    )
   })
 
   it("is null for a VALIDATION error without fields and for any other error", () => {
     expect(validationFields(foreignAppError(ErrorCode.VALIDATION, "Invalid"))).toBeNull()
-    expect(validationFields(foreignAppError(ErrorCode.CONFLICT, "Taken", { slug: "taken" }))).toBeNull()
+    expect(
+      validationFields(foreignAppError(ErrorCode.CONFLICT, "Taken", { slug: "taken" })),
+    ).toBeNull()
     expect(validationFields(new TypeError("Failed to fetch"))).toBeNull()
   })
 })
