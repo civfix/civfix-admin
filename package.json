@@ -1,6 +1,6 @@
 {
   "name": "civfix-admin",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "civfix admin / operator dashboard workspace (admin.civfix.org). Consumes @civfix/contract and @civfix/tokens from the private npm registry.",
