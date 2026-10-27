@@ -208,7 +208,9 @@ describe("OrgsPage list states", () => {
     await detailHeading("River Keepers")
     expect(screen.getAllByText("Suspended").length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText(/Broadcast abuse/)).toBeInTheDocument()
-    expect(screen.getByText(/Writes under\s+this organization are refused until it is restored\./)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Writes under\s+this organization are refused until it is restored\./),
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Restore" })).toBeEnabled()
   })
 })
@@ -244,7 +246,9 @@ describe("OrgsPage paging, filters and search", () => {
     await detailHeading("River Keepers")
     fireEvent.click(screen.getByRole("button", { name: /^Pending review/ }))
 
-    expect(await screen.findByRole("heading", { level: 3, name: "Verification queue" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 3, name: "Verification queue" }),
+    ).toBeInTheDocument()
     await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "pending" }))
     expect(await screen.findByText("/park-friends")).toBeInTheDocument()
     await detailHeading("River Keepers")
@@ -266,7 +270,9 @@ describe("OrgsPage paging, filters and search", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Pending review/ }))
 
     expect(await screen.findByText("Queue is clear")).toBeInTheDocument()
-    expect(screen.getByText("No verification application is waiting for a decision.")).toBeInTheDocument()
+    expect(
+      screen.getByText("No verification application is waiting for a decision."),
+    ).toBeInTheDocument()
   })
 
   it("maps each chip to its list params", async () => {
@@ -278,10 +284,14 @@ describe("OrgsPage paging, filters and search", () => {
     await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ suspended: true }))
 
     fireEvent.click(screen.getByRole("button", { name: /^Rejected/ }))
-    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "rejected" }))
+    await waitFor(() =>
+      expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "rejected" }),
+    )
 
     fireEvent.click(screen.getByRole("button", { name: /^Verified/ }))
-    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "verified" }))
+    await waitFor(() =>
+      expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "verified" }),
+    )
   })
 
   it("debounces the search box into a trimmed q param", async () => {
@@ -351,7 +361,9 @@ describe("OrgsPage deep links and detail tabs", () => {
     expect(screen.getByRole("tab", { name: /^Members/ })).toHaveAttribute("aria-selected", "true")
     expect(await screen.findByText("Sam Lee")).toBeInTheDocument()
     expect(apiMock.adminListOrgMembers).toHaveBeenCalledWith({ id: "org-1" })
-    expect(screen.getByText("Transfer ownership before changing this role or removing")).toBeInTheDocument()
+    expect(
+      screen.getByText("Transfer ownership before changing this role or removing"),
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Actions for Sam Lee" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Add member/ })).toBeEnabled()
   })
@@ -414,7 +426,9 @@ describe("OrgsPage deep links and detail tabs", () => {
     renderWithQuery(<OrgsPage focusId="org-1/verification" />)
 
     await detailHeading("River Keepers")
-    expect(screen.getByText("This organization has never applied for verification.")).toBeInTheDocument()
+    expect(
+      screen.getByText("This organization has never applied for verification."),
+    ).toBeInTheDocument()
     expect(screen.getByText("No application is awaiting a decision.")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument()
   })
@@ -491,7 +505,10 @@ describe("OrgsPage list accessibility", () => {
     fireEvent.keyDown(queueRowOf(screen.getByText("/park-friends")), { key: "Enter" })
 
     await detailHeading("Park Friends")
-    expect(queueRowOf(screen.getAllByText("/park-friends")[0]!)).toHaveAttribute("aria-current", "true")
+    expect(queueRowOf(screen.getAllByText("/park-friends")[0]!)).toHaveAttribute(
+      "aria-current",
+      "true",
+    )
     expect(queueRowOf(screen.getByText("/river-keepers"))).not.toHaveAttribute("aria-current")
   })
 
@@ -594,7 +611,9 @@ describe("OrgsPage selection", () => {
 
   it("keeps the selection when a filter change still lists it", async () => {
     apiMock.adminListOrgs.mockImplementation((params: { verified?: string }) =>
-      Promise.resolve(params.verified === "pending" ? listPage([RIVER, PARK]) : listPage([RIVER, PARK])),
+      Promise.resolve(
+        params.verified === "pending" ? listPage([RIVER, PARK]) : listPage([RIVER, PARK]),
+      ),
     )
     mockOrgDetails(RIVER, PARK)
     renderWithQuery(<OrgsPage focusId={null} />)
@@ -604,12 +623,19 @@ describe("OrgsPage selection", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Verified/ }))
 
-    await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "verified" }))
+    await waitFor(() =>
+      expect(apiMock.adminListOrgs).toHaveBeenCalledWith({ verified: "verified" }),
+    )
     await detailHeading("Park Friends")
   })
 
   it("clears a decided organization that leaves the list, without opening another", async () => {
-    const applied = makeOrg({ id: "org-3", slug: "tree-crew", name: "Tree Crew", verifiedStatus: "pending" })
+    const applied = makeOrg({
+      id: "org-3",
+      slug: "tree-crew",
+      name: "Tree Crew",
+      verifiedStatus: "pending",
+    })
     let queue = [applied, PARK]
     apiMock.adminListOrgs.mockImplementation(() => Promise.resolve(listPage(queue)))
     mockOrgDetails(applied, PARK)
@@ -619,7 +645,9 @@ describe("OrgsPage selection", () => {
     queue = [PARK]
     await act(() => client.invalidateQueries({ queryKey: ["admin", "orgs"] }))
 
-    await waitFor(() => expect(screen.queryByText("/tree-crew", { selector: ".mono" })).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.queryByText("/tree-crew", { selector: ".mono" })).not.toBeInTheDocument(),
+    )
     expect(await within(detailCard()).findByText("No organization selected")).toBeInTheDocument()
     expect(queueRowOf(screen.getByText("/park-friends"))).not.toHaveClass("selected")
   })
@@ -640,7 +668,12 @@ describe("OrgsPage selection", () => {
   })
 
   it("keeps a just-created organization selected while the cached All list lacks it", async () => {
-    const created = makeOrg({ id: "org-new", slug: "brand-new", name: "Brand New", verifiedStatus: "unverified" })
+    const created = makeOrg({
+      id: "org-new",
+      slug: "brand-new",
+      name: "Brand New",
+      verifiedStatus: "unverified",
+    })
     apiMock.adminListOrgs.mockImplementation((params: { verified?: string }) =>
       Promise.resolve(params.verified === "pending" ? listPage([PARK]) : listPage([RIVER, PARK])),
     )
@@ -653,7 +686,9 @@ describe("OrgsPage selection", () => {
     renderWithQuery(<OrgsPage focusId={null} />)
     await detailHeading("River Keepers")
     fireEvent.click(screen.getByRole("button", { name: /^Pending review/ }))
-    expect(await screen.findByRole("heading", { level: 3, name: "Verification queue" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 3, name: "Verification queue" }),
+    ).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("button", { name: /New organization/ }))
     const dialog = screen.getByRole("dialog", { name: "New organization" })
@@ -662,7 +697,9 @@ describe("OrgsPage selection", () => {
     await userEvent.type(within(dialog).getByLabelText(/^Reason/), "Partner meeting")
     await userEvent.click(within(dialog).getByRole("button", { name: /Create organization/ }))
 
-    expect(await screen.findByRole("heading", { level: 3, name: "Organizations" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 3, name: "Organizations" }),
+    ).toBeInTheDocument()
     await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenLastCalledWith({}))
     await detailHeading("Brand New")
     await waitFor(() => expect(apiMock.adminListOrgs).toHaveBeenCalledTimes(4))

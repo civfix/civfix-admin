@@ -13,7 +13,9 @@ export function SourceFooter() {
       <a href={SOURCE.url} target="_blank" rel="noreferrer noopener">
         <Icons.ExternalLink size={12} /> Source code (AGPL-3.0)
       </a>
-      {SOURCE.commit ? <span className="hub-foot-commit">{SOURCE.commit.slice(0, SHORT_COMMIT_LENGTH)}</span> : null}
+      {SOURCE.commit ? (
+        <span className="hub-foot-commit">{SOURCE.commit.slice(0, SHORT_COMMIT_LENGTH)}</span>
+      ) : null}
     </footer>
   )
 }

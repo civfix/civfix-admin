@@ -8,6 +8,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
 import { useNow } from "@/hooks/use-now"
 import { useSelection } from "@/hooks/use-selection"
+import { useValueChanged } from "@/hooks/use-value-changed"
 import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
   directoryCounts,
@@ -45,13 +46,13 @@ function useDirectoryFilters(focusId: string | null) {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [query])
-  React.useEffect(() => {
-    if (!focusId) return
+  const focusChanged = useValueChanged(focusId)
+  if (focusChanged && focusId) {
     const next = initialDirectoryState(focusId)
     setFilter(next.filter)
     setQuery(next.query)
     setDebouncedQuery(next.query)
-  }, [focusId])
+  }
 
   return { filter, setFilter, layer, setLayer, sort, setSort, query, setQuery, debouncedQuery }
 }
@@ -199,10 +200,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     toDirectoryQuery("attention", sort, layer, debouncedQuery),
   )
 
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
   const firstPage = listQuery.data?.pages[0]
   const counts = directoryCounts({
     filter,
@@ -218,7 +216,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   })
 
   // There is no by-id read here, so a pick that a filter or search leaves out stays open as last listed.
-  const { selectedId, setSelectedId, selectedItem: selected } = useSelection({
+  const {
+    selectedId,
+    setSelectedId,
+    selectedItem: selected,
+  } = useSelection({
     focusId,
     list: listQuery,
     items,
@@ -237,8 +239,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         title="Jurisdictions"
         subtitle={
           <span>
-            Every place reports land in, and who they route to. Map a routing contact for the ones that
-            need one, and reports start flowing.
+            Every place reports land in, and who they route to. Map a routing contact for the ones
+            that need one, and reports start flowing.
           </span>
         }
       />

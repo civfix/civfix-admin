@@ -5,7 +5,12 @@ import { downloadCsv, toCsv } from "./csv"
 
 describe("toCsv", () => {
   it("quotes every cell and escapes embedded quotes", () => {
-    expect(toCsv([["a", 'say "hi"'], [1, 2]])).toBe('"a","say ""hi"""\n"1","2"')
+    expect(
+      toCsv([
+        ["a", 'say "hi"'],
+        [1, 2],
+      ]),
+    ).toBe('"a","say ""hi"""\n"1","2"')
   })
 
   it("renders null and undefined as empty cells", () => {
@@ -17,7 +22,7 @@ describe("toCsv", () => {
   })
 
   it("neutralizes spreadsheet formulas in operator-supplied text", () => {
-    expect(toCsv([["=HYPERLINK(\"http://evil\")"]])).toBe('"\'=HYPERLINK(""http://evil"")"')
+    expect(toCsv([['=HYPERLINK("http://evil")']])).toBe('"\'=HYPERLINK(""http://evil"")"')
     expect(toCsv([["+1+1"], ["@SUM(A1)"]])).toBe('"\'+1+1"\n"\'@SUM(A1)"')
     expect(toCsv([["-1+1 as a name"]])).toBe('"\'-1+1 as a name"')
   })

@@ -42,7 +42,11 @@ function SummaryCell({
         </section>
       ) : summaryQuery.isError ? (
         <section className="card">
-          <ErrorState error={summaryQuery.error} onRetry={() => summaryQuery.refetch()} title={errorTitle} />
+          <ErrorState
+            error={summaryQuery.error}
+            onRetry={() => summaryQuery.refetch()}
+            title={errorTitle}
+          />
         </section>
       ) : summary ? (
         <MetricSectionTile summary={summary} />

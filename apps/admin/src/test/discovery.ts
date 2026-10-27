@@ -8,7 +8,9 @@ import { apiMock } from "@/test/api-mock"
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-export function jurisdiction(overrides: Partial<JurisdictionDirectoryDTO> = {}): JurisdictionDirectoryDTO {
+export function jurisdiction(
+  overrides: Partial<JurisdictionDirectoryDTO> = {},
+): JurisdictionDirectoryDTO {
   return {
     geoid: "0644000",
     org: "Los Angeles",

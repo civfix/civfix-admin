@@ -1,4 +1,9 @@
-import type { AdminFilingDTO, AdminReportDTO, FilingEvidenceDTO, GetFilingResponse } from "@civfix/contract"
+import type {
+  AdminFilingDTO,
+  AdminReportDTO,
+  FilingEvidenceDTO,
+  GetFilingResponse,
+} from "@civfix/contract"
 
 import type { ReportFiling } from "@/features/filings/use-filings"
 

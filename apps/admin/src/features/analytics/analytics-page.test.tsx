@@ -278,7 +278,10 @@ describe("AnalyticsPage", () => {
 
   it("shows the 'No data yet' empty state on every card when the aggregates are empty", async () => {
     apiMock.analyticsKpis.mockResolvedValue({ kpis: [] } satisfies AnalyticsKpisResponse)
-    apiMock.analyticsPinsByWeek.mockResolvedValue({ weeks: [], labels: [] } satisfies AnalyticsPinsByWeekResponse)
+    apiMock.analyticsPinsByWeek.mockResolvedValue({
+      weeks: [],
+      labels: [],
+    } satisfies AnalyticsPinsByWeekResponse)
     apiMock.analyticsByCategory.mockResolvedValue({
       rows: [{ cat: "trash", count: 0, pct: 0 }],
     } satisfies AnalyticsByCategoryResponse)
@@ -298,11 +301,17 @@ describe("AnalyticsPage", () => {
       byMonth: [],
       monthLabels: [],
     } satisfies AnalyticsEventsResponse)
-    apiMock.analyticsTopJurisdictions.mockResolvedValue({ rows: [] } satisfies AnalyticsTopJurisdictionsResponse)
-    apiMock.analyticsTopContributors.mockResolvedValue({ rows: [] } satisfies AnalyticsTopContributorsResponse)
+    apiMock.analyticsTopJurisdictions.mockResolvedValue({
+      rows: [],
+    } satisfies AnalyticsTopJurisdictionsResponse)
+    apiMock.analyticsTopContributors.mockResolvedValue({
+      rows: [],
+    } satisfies AnalyticsTopContributorsResponse)
     renderPage()
 
-    await waitFor(() => expect(screen.getAllByText("No data yet")).toHaveLength(CARD_TITLES.length + 1))
+    await waitFor(() =>
+      expect(screen.getAllByText("No data yet")).toHaveLength(CARD_TITLES.length + 1),
+    )
     for (const title of CARD_TITLES) {
       const c = card(title)
       expect(within(c).getByText("No data yet")).toBeInTheDocument()
@@ -439,7 +448,10 @@ describe("AnalyticsPage", () => {
 
   it("shows bags collected when the events aggregate has bags", async () => {
     mockPopulated()
-    apiMock.analyticsEvents.mockResolvedValue({ ...events, bags: 2500 } satisfies AnalyticsEventsResponse)
+    apiMock.analyticsEvents.mockResolvedValue({
+      ...events,
+      bags: 2500,
+    } satisfies AnalyticsEventsResponse)
     renderPage()
 
     const c = await findCard("Cleanup events")
@@ -479,7 +491,9 @@ describe("AnalyticsPage", () => {
     expect(within(jurisdictions).getByRole("cell", { name: "Oakland" })).toBeInTheDocument()
     expect(within(jurisdictions).getByRole("cell", { name: "64%" })).toBeInTheDocument()
 
-    const contributors = within(card("Top contributors")).getByRole("table", { name: "Top contributors" })
+    const contributors = within(card("Top contributors")).getByRole("table", {
+      name: "Top contributors",
+    })
     expect(
       within(contributors)
         .getAllByRole("columnheader")
@@ -540,7 +554,9 @@ describe("AnalyticsPage", () => {
     apiMock.analyticsByCategory.mockRejectedValue(new Error("categories offline"))
     renderPage()
 
-    expect(await within(await findCard("By category")).findByText("categories offline")).toBeInTheDocument()
+    expect(
+      await within(await findCard("By category")).findByText("categories offline"),
+    ).toBeInTheDocument()
     expect(screen.getByText("1,234")).toBeInTheDocument()
     await within(card("Cleanup events")).findByText("events this month")
     expect(screen.getByRole("button", { name: "Export" })).toBeDisabled()
@@ -563,7 +579,9 @@ describe("AnalyticsPage", () => {
       },
     )
     const downloads: string[] = []
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
       downloads.push(this.download)
     })
     renderPageWithToast()

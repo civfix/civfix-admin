@@ -1,6 +1,9 @@
 import type { AdminReportDTO } from "@civfix/contract"
 
-export type SendPanelReport = Pick<AdminReportDTO, "city" | "outreach" | "status" | "verificationVerdict">
+export type SendPanelReport = Pick<
+  AdminReportDTO,
+  "city" | "outreach" | "status" | "verificationVerdict"
+>
 
 const VERDICT_PILL = {
   approved: { cls: "status-ok", label: "Approved" },

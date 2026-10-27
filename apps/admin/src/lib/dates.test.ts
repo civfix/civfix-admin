@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { formatAgo, formatDate, formatDateTime, formatPreciseDateTime, preciseDateTimeTitle } from "./dates"
+import {
+  formatAgo,
+  formatDate,
+  formatDateTime,
+  formatPreciseDateTime,
+  preciseDateTimeTitle,
+} from "./dates"
 import { EMPTY_VALUE } from "./empty-value"
 
 describe("formatDate", () => {
@@ -16,9 +22,12 @@ describe("formatDate", () => {
     expect(formatDate(iso)).toBe(expected)
   })
 
-  it.each(["not a date", "2026-13-45", " "])("returns an unparseable string %j unchanged", (value) => {
-    expect(formatDate(value)).toBe(value)
-  })
+  it.each(["not a date", "2026-13-45", " "])(
+    "returns an unparseable string %j unchanged",
+    (value) => {
+      expect(formatDate(value)).toBe(value)
+    },
+  )
 })
 
 describe("formatDateTime", () => {
@@ -34,9 +43,12 @@ describe("formatDateTime", () => {
     expect(formatDateTime(iso)).toBe(expected)
   })
 
-  it.each(["not a date", "2026-13-45", " "])("returns an unparseable string %j unchanged", (value) => {
-    expect(formatDateTime(value)).toBe(value)
-  })
+  it.each(["not a date", "2026-13-45", " "])(
+    "returns an unparseable string %j unchanged",
+    (value) => {
+      expect(formatDateTime(value)).toBe(value)
+    },
+  )
 })
 
 describe("formatPreciseDateTime", () => {

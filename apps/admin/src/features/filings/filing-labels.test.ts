@@ -49,11 +49,17 @@ describe("filing labels", () => {
 
   it("T3: words every channel", () => {
     expect(FILING_CHANNEL_LABEL).toEqual({ email: "Email", portal: "Portal", manual: "Manual" })
-    expect(Object.keys(FILING_CHANNEL_LABEL).sort()).toEqual([...FilingChannelSchema.options].sort())
+    expect(Object.keys(FILING_CHANNEL_LABEL).sort()).toEqual(
+      [...FilingChannelSchema.options].sort(),
+    )
   })
 
   it.each<[string, AdminReportFilingRoute | null | undefined, string | null]>([
-    ["a portal", { channel: "portal", target: "myla311.lacity.gov" }, "Portal · myla311.lacity.gov"],
+    [
+      "a portal",
+      { channel: "portal", target: "myla311.lacity.gov" },
+      "Portal · myla311.lacity.gov",
+    ],
     ["an email", { channel: "email", target: "311@lacity.org" }, "Email · 311@lacity.org"],
     ["a manual", { channel: "manual", target: null }, "Manual route"],
     ["no", null, "No route — needs a human"],

@@ -19,9 +19,24 @@ import type { SectionPageProps } from "@/components/shell/page-registry"
 
 type FilingCounts = ListFilingsResponse["counts"]
 
-const TABS: { group: FilingGroup; label: string; empty: string; counted: keyof FilingCounts | null }[] = [
-  { group: "needs_human", label: "Needs a human", empty: "Nothing needs a human", counted: "needs_human" },
-  { group: "in_progress", label: "In progress", empty: "Nothing in progress", counted: "in_progress" },
+const TABS: {
+  group: FilingGroup
+  label: string
+  empty: string
+  counted: keyof FilingCounts | null
+}[] = [
+  {
+    group: "needs_human",
+    label: "Needs a human",
+    empty: "Nothing needs a human",
+    counted: "needs_human",
+  },
+  {
+    group: "in_progress",
+    label: "In progress",
+    empty: "Nothing in progress",
+    counted: "in_progress",
+  },
   { group: "filed", label: "Filed", empty: "Nothing filed yet", counted: null },
   { group: "cancelled", label: "Cancelled", empty: "Nothing cancelled", counted: null },
 ]
@@ -67,7 +82,9 @@ function SettingsBanners({ settings }: { settings: FilingSettingsDTO }) {
       {!settings.automaticFiling && (
         <div className="org-banner" role="status">
           <Icons.AlertTriangle size={14} />
-          <div>Automatic filing is off in this environment. Portal filings go to Needs a human.</div>
+          <div>
+            Automatic filing is off in this environment. Portal filings go to Needs a human.
+          </div>
         </div>
       )}
     </>
@@ -128,8 +145,8 @@ export function FilingsPage(_props: SectionPageProps) {
         title="Filings"
         subtitle={
           <span>
-            Approved reports on their way to the city: the ones that need an operator first, then the
-            ones in progress, filed and cancelled.
+            Approved reports on their way to the city: the ones that need an operator first, then
+            the ones in progress, filed and cancelled.
           </span>
         }
       >

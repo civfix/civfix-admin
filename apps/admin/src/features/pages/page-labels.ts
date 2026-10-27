@@ -12,7 +12,9 @@ const PAGE_STATUS_VIEW: Record<EventPageStatus, PageStatusView> = {
 }
 
 export function pageStatusView(status: EventPageStatus): PageStatusView {
-  return Object.hasOwn(PAGE_STATUS_VIEW, status) ? PAGE_STATUS_VIEW[status] : { label: status, cls: "priority-low" }
+  return Object.hasOwn(PAGE_STATUS_VIEW, status)
+    ? PAGE_STATUS_VIEW[status]
+    : { label: status, cls: "priority-low" }
 }
 
 export const VISIBILITY_LABEL: Record<EventVisibility, string> = {

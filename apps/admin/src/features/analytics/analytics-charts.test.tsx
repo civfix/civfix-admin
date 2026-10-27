@@ -7,7 +7,9 @@ describe("Spark", () => {
   it("names the trend for assistive tech", () => {
     render(<Spark values={[1, 4, 2]} label="Pins per week, last 3 weeks: 1, 4, 2" />)
 
-    expect(screen.getByRole("img", { name: "Pins per week, last 3 weeks: 1, 4, 2" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("img", { name: "Pins per week, last 3 weeks: 1, 4, 2" }),
+    ).toBeInTheDocument()
   })
 
   it("colours the bars through the hue class so a hue without its own custom property still paints", () => {

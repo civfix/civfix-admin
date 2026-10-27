@@ -74,7 +74,10 @@ describe("MailReader attachments", () => {
       updatedAt: null,
     } satisfies GetForwardTemplateDefaultResponse)
     apiMock.listInbox.mockResolvedValue({ items: [], nextCursor: null } satisfies InboxListResponse)
-    apiMock.listMail.mockResolvedValue({ items: [THREAD], nextCursor: null } satisfies MailListResponse)
+    apiMock.listMail.mockResolvedValue({
+      items: [THREAD],
+      nextCursor: null,
+    } satisfies MailListResponse)
     apiMock.getMailThread.mockResolvedValue(DETAIL)
     renderWithQuery(<MailPage focusId={null} />)
 
@@ -105,8 +108,14 @@ describe("MailReader attachments", () => {
       bodyTemplate: null,
       updatedAt: null,
     } satisfies GetForwardTemplateDefaultResponse)
-    apiMock.listInboxFeed.mockResolvedValue({ items: [], nextCursor: null } satisfies InboxFeedResponse)
-    apiMock.listMail.mockResolvedValue({ items: [THREAD], nextCursor: null } satisfies MailListResponse)
+    apiMock.listInboxFeed.mockResolvedValue({
+      items: [],
+      nextCursor: null,
+    } satisfies InboxFeedResponse)
+    apiMock.listMail.mockResolvedValue({
+      items: [THREAD],
+      nextCursor: null,
+    } satisfies MailListResponse)
     apiMock.getMailThread.mockResolvedValue(DETAIL)
     renderWithQuery(<MailPage focusId={null} />)
     await screen.findByRole("link", { name: /pothole\.jpg/ })

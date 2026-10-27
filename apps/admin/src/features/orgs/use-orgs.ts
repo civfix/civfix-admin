@@ -52,10 +52,8 @@ export function useOrg(id: string | null) {
 
 export function useOrgMemberListInfinite(id: string | null) {
   return useInfiniteQuery({
-    ...infiniteListOptions(
-      queryKeys.orgs.members(id ?? ""),
-      { id: id as string },
-      (input) => api.adminListOrgMembers(input),
+    ...infiniteListOptions(queryKeys.orgs.members(id ?? ""), { id: id as string }, (input) =>
+      api.adminListOrgMembers(input),
     ),
     enabled: !!id,
   })
@@ -111,7 +109,10 @@ export function useDecideOrgVerification() {
     mutationFn: (input: DecideOrgVerificationRequest) => api.adminDecideOrgVerification(input),
     onSuccess: (_res, { id }) => invalidateOrg(qc, id),
     meta: {
-      successMessage: (org: GetAdminOrgResponse, { decision, kind }: DecideOrgVerificationRequest) => {
+      successMessage: (
+        org: GetAdminOrgResponse,
+        { decision, kind }: DecideOrgVerificationRequest,
+      ) => {
         if (decision === "rejected") return `${org.name} rejected`
         return kind ? `${org.name} verified · ${ORG_KIND_LABEL[kind]}` : `${org.name} verified`
       },
@@ -186,7 +187,8 @@ export interface OrgMemberVariables<R> {
 export function useAddOrgMember() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ request }: OrgMemberVariables<AdminAddOrgMemberRequest>) => api.adminAddOrgMember(request),
+    mutationFn: ({ request }: OrgMemberVariables<AdminAddOrgMemberRequest>) =>
+      api.adminAddOrgMember(request),
     onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
     meta: {
       successMessage: (
@@ -209,8 +211,15 @@ export function useSetOrgMemberRole() {
     meta: {
       successMessage: (
         _res: unknown,
-        { request: { role }, memberName, orgName }: OrgMemberVariables<AdminSetOrgMemberRoleRequest>,
-      ) => (role === "owner" ? `${memberName} now owns ${orgName}` : `${memberName} · ${ORG_ROLE_LABEL[role]}`),
+        {
+          request: { role },
+          memberName,
+          orgName,
+        }: OrgMemberVariables<AdminSetOrgMemberRoleRequest>,
+      ) =>
+        role === "owner"
+          ? `${memberName} now owns ${orgName}`
+          : `${memberName} · ${ORG_ROLE_LABEL[role]}`,
     },
   })
 }
@@ -222,8 +231,10 @@ export function useRemoveOrgMember() {
       api.adminRemoveOrgMember(request),
     onSuccess: (_res, { request: { id } }) => invalidateOrgMembers(qc, id),
     meta: {
-      successMessage: (_res: unknown, { memberName, orgName }: OrgMemberVariables<AdminRemoveOrgMemberRequest>) =>
-        `${memberName} removed from ${orgName}`,
+      successMessage: (
+        _res: unknown,
+        { memberName, orgName }: OrgMemberVariables<AdminRemoveOrgMemberRequest>,
+      ) => `${memberName} removed from ${orgName}`,
     },
   })
 }

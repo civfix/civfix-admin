@@ -1,7 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { SOCIAL_PLATFORM_LABELS, SOCIAL_PLATFORMS, socialLinkUrl, type AdminOrgDTO } from "@civfix/contract"
+import {
+  SOCIAL_PLATFORM_LABELS,
+  SOCIAL_PLATFORMS,
+  socialLinkUrl,
+  type AdminOrgDTO,
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { promptReason } from "@/components/shared/dialog"

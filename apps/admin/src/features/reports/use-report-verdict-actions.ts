@@ -22,7 +22,8 @@ function approveBody(routeLine: string | null): string {
 // Reject cancels a queued or needs-human filing (D1); a running one finishes, and the city may have it.
 function rejectBody(report: AdminReportDTO, filing: ReportFiling | null): string {
   const status = filing?.status
-  const filed = report.outreach.routedAt !== null || status === "submitted" || status === "linked_existing"
+  const filed =
+    report.outreach.routedAt !== null || status === "submitted" || status === "linked_existing"
   const cancels = status === "queued" || status === "needs_human"
   return sentences([
     "This rejects the report's verification verdict.",

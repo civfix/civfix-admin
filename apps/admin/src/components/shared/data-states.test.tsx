@@ -13,7 +13,9 @@ describe("ErrorState", () => {
   it("explains a failed request in plain words instead of the browser's fetch text", () => {
     render(<ErrorState error={new TypeError("Failed to fetch")} />)
     const alert = screen.getByRole("alert")
-    expect(alert).toHaveTextContent("Could not reach the server. Check your connection and try again.")
+    expect(alert).toHaveTextContent(
+      "Could not reach the server. Check your connection and try again.",
+    )
     expect(alert).not.toHaveTextContent("Failed to fetch")
   })
 

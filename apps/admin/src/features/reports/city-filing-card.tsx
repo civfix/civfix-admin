@@ -54,7 +54,11 @@ function secureClipboard(): Clipboard | undefined {
   return navigator.clipboard
 }
 
-function copyToClipboard(text: string, copied: string, toast: (text: string, tone?: ToastTone) => void) {
+function copyToClipboard(
+  text: string,
+  copied: string,
+  toast: (text: string, tone?: ToastTone) => void,
+) {
   const copyFailed = () => toast("Couldn't copy. Select the text manually.", "error")
   const clipboard = secureClipboard()
   if (!clipboard) {
@@ -118,7 +122,9 @@ function FilingSummary({ filing }: { filing: ReportFiling }) {
         {filing.attempts > 0 && <span>Attempts: {filing.attempts}</span>}
       </div>
       <RequestNumber filing={filing} />
-      {filing.status === "linked_existing" && <div className="hint">Linked to existing city request</div>}
+      {filing.status === "linked_existing" && (
+        <div className="hint">Linked to existing city request</div>
+      )}
       {filing.reason && (
         <div style={{ marginTop: 8 }}>
           <div>{FILING_REASON_LABEL[filing.reason]}</div>
@@ -249,10 +255,20 @@ function FileForm({
         <FieldError text={errorMessage(file.error, { [ErrorCode.CONFLICT]: FILE_CONFLICT })} />
       )}
       <div className="rep-to" style={{ marginTop: 8 }}>
-        <button type="button" className="btn primary full" disabled={controls.busy} onClick={submit}>
+        <button
+          type="button"
+          className="btn primary full"
+          disabled={controls.busy}
+          onClick={submit}
+        >
           <Icons.Send size={13} /> {label}
         </button>
-        <button type="button" className="btn" disabled={controls.busy} onClick={() => setForm(null)}>
+        <button
+          type="button"
+          className="btn"
+          disabled={controls.busy}
+          onClick={() => setForm(null)}
+        >
           Cancel
         </button>
       </div>
@@ -340,10 +356,20 @@ function ManualForm({ filing, controls }: { filing: ReportFiling; controls: Fili
       </div>
       {manual.isError && <FieldError text={errorMessage(manual.error)} />}
       <div className="rep-to" style={{ marginTop: 8 }}>
-        <button type="button" className="btn primary full" disabled={controls.busy} onClick={submit}>
+        <button
+          type="button"
+          className="btn primary full"
+          disabled={controls.busy}
+          onClick={submit}
+        >
           <Icons.Check size={13} /> Record
         </button>
-        <button type="button" className="btn" disabled={controls.busy} onClick={() => setForm(null)}>
+        <button
+          type="button"
+          className="btn"
+          disabled={controls.busy}
+          onClick={() => setForm(null)}
+        >
           Cancel
         </button>
       </div>

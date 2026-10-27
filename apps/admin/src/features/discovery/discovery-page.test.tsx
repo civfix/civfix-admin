@@ -84,7 +84,9 @@ describe("DiscoveryPage", () => {
   })
 
   it("shows the empty state when nothing matches", async () => {
-    apiMock.listJurisdictions.mockResolvedValue(page([], { total: 0, facets: { routed: 0, unrouted: 0 } }))
+    apiMock.listJurisdictions.mockResolvedValue(
+      page([], { total: 0, facets: { routed: 0, unrouted: 0 } }),
+    )
     renderWithQuery(<DiscoveryPage focusId={null} />)
 
     expect(await screen.findByText("Nothing matches")).toBeInTheDocument()
@@ -101,11 +103,15 @@ describe("DiscoveryPage", () => {
     const alert = await screen.findByRole("alert")
     expect(alert).toHaveTextContent("Could not load this")
     expect(alert).toHaveTextContent("directory is down")
-    expect(chip(/^Needs mapping/)).toHaveTextContent(new RegExp(`^Needs mapping\\s*${EMPTY_VALUE}$`))
+    expect(chip(/^Needs mapping/)).toHaveTextContent(
+      new RegExp(`^Needs mapping\\s*${EMPTY_VALUE}$`),
+    )
 
     apiMock.listJurisdictions.mockResolvedValue(page([LA]))
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }))
-    expect(await screen.findByRole("heading", { level: 2, name: "Los Angeles" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Los Angeles" }),
+    ).toBeInTheDocument()
   })
 
   it("renders rows and auto-selects the first one into the detail pane", async () => {
@@ -231,7 +237,12 @@ describe("DiscoveryPage", () => {
       "county",
     )
     await waitFor(() =>
-      expect(listCalls()).toContainEqual({ filter: "all", sort: "reports", layer: "county", limit: 50 }),
+      expect(listCalls()).toContainEqual({
+        filter: "all",
+        sort: "reports",
+        layer: "county",
+        limit: 50,
+      }),
     )
     await waitFor(() =>
       expect(listCalls()).toContainEqual({
@@ -256,7 +267,12 @@ describe("DiscoveryPage", () => {
     await userEvent.type(screen.getByPlaceholderText("Search place or GEOID…"), "  pasa ")
 
     await waitFor(() =>
-      expect(listCalls()).toContainEqual({ filter: "needs_mapping", sort: "oldest", q: "pasa", limit: 50 }),
+      expect(listCalls()).toContainEqual({
+        filter: "needs_mapping",
+        sort: "oldest",
+        q: "pasa",
+        limit: 50,
+      }),
     )
   })
 
@@ -313,7 +329,10 @@ describe("DiscoveryPage", () => {
     renderWithQuery(<DiscoveryPage focusId={null} />)
     await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
 
-    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Default contact email" }),
+      "reports@la.gov",
+    )
     await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
 
     await waitFor(() =>
@@ -344,7 +363,10 @@ describe("DiscoveryPage", () => {
     await waitFor(() => expect(listCalls().at(-1)).toMatchObject({ filter: "all" }))
     await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
 
-    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Default contact email" }),
+      "reports@la.gov",
+    )
     await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
 
     expect(await screen.findByText("No jurisdiction selected")).toBeInTheDocument()
@@ -385,7 +407,10 @@ describe("DiscoveryPage", () => {
     await screen.findByRole("button", { name: /^Los Angeles/ })
 
     await userEvent.click(chip(/^Routed/))
-    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Sort jurisdictions" }), "reports")
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Sort jurisdictions" }),
+      "reports",
+    )
     await userEvent.click(chip(/^Needs mapping/))
     await userEvent.click(chip(/^Routed/))
 
@@ -428,7 +453,9 @@ describe("DiscoveryPage saving", () => {
       defaultEmails: ["reports@pasadena.gov"],
     })
     expect(
-      screen.getByText(/Clearing the default email or form URL here does not remove the saved one\./),
+      screen.getByText(
+        /Clearing the default email or form URL here does not remove the saved one\./,
+      ),
     ).toBeInTheDocument()
   })
 
@@ -527,7 +554,10 @@ describe("DiscoveryPage saving", () => {
     renderWithQuery(<DiscoveryPage focusId={null} />)
     await screen.findByRole("heading", { level: 2, name: "Pasadena" })
 
-    await userEvent.type(screen.getByRole("textbox", { name: "Jurisdiction discussion handle" }), "a")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Jurisdiction discussion handle" }),
+      "a",
+    )
 
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Handle must be 2-40 characters using lowercase letters, numbers, or underscores.",
@@ -544,7 +574,10 @@ describe("DiscoveryPage saving", () => {
     renderWithQuery(<DiscoveryPage focusId={null} />, makeQueryClient())
     await screen.findByRole("heading", { level: 2, name: "Los Angeles" })
 
-    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Default contact email" }),
+      "reports@la.gov",
+    )
     await userEvent.click(screen.getByRole("button", { name: "Save draft" }))
 
     await waitFor(() => expect(toasts).toHaveBeenCalled())
@@ -584,11 +617,17 @@ describe("DiscoveryPage saving", () => {
       screen.getByRole("textbox", { name: "Note for the next operator" }),
       "Called the clerk",
     )
-    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Default contact email" }),
+      "reports@la.gov",
+    )
     await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
 
     await waitFor(() => expect(toasts).toHaveBeenCalled())
-    expect(apiMock.patchJurisdiction).toHaveBeenCalledWith({ geoid: "0644000", notes: "Called the clerk" })
+    expect(apiMock.patchJurisdiction).toHaveBeenCalledWith({
+      geoid: "0644000",
+      notes: "Called the clerk",
+    })
     expect(toasts).toHaveBeenCalledTimes(1)
     expect(toasts).toHaveBeenCalledWith(
       "The note was saved, but the contacts were not: Contacts service down",
@@ -614,7 +653,10 @@ describe("DiscoveryPage saving", () => {
       screen.getByRole("textbox", { name: "Note for the next operator" }),
       "Called the clerk",
     )
-    await userEvent.type(screen.getByRole("textbox", { name: "Default contact email" }), "reports@la.gov")
+    await userEvent.type(
+      screen.getByRole("textbox", { name: "Default contact email" }),
+      "reports@la.gov",
+    )
     await userEvent.click(screen.getByRole("button", { name: /Save & route/ }))
     await waitFor(() => expect(apiMock.saveJurisdictionContacts).toHaveBeenCalled())
 
