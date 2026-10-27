@@ -64,26 +64,20 @@ function useUserSubListInfinite<TKey extends QueryKey, TPage extends CursorPage>
 }
 
 export function useUserReportListInfinite(id: string | null) {
-  return useUserSubListInfinite(
-    queryKeys.users.reports(id ?? ""),
-    id,
-    (input) => api.getUserReports(input),
+  return useUserSubListInfinite(queryKeys.users.reports(id ?? ""), id, (input) =>
+    api.getUserReports(input),
   )
 }
 
 export function useUserEventListInfinite(id: string | null) {
-  return useUserSubListInfinite(
-    queryKeys.users.events(id ?? ""),
-    id,
-    (input) => api.getUserEvents(input),
+  return useUserSubListInfinite(queryKeys.users.events(id ?? ""), id, (input) =>
+    api.getUserEvents(input),
   )
 }
 
 export function useUserMessageListInfinite(id: string | null) {
-  return useUserSubListInfinite(
-    queryKeys.users.messages(id ?? ""),
-    id,
-    (input) => api.getUserMessages(input),
+  return useUserSubListInfinite(queryKeys.users.messages(id ?? ""), id, (input) =>
+    api.getUserMessages(input),
   )
 }
 

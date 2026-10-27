@@ -16,11 +16,7 @@ import { formatDateTime } from "@/lib/dates"
 import { useNav } from "@/store/ui-store"
 import { FieldError, ReasonField, fieldErrorId } from "@/features/orgs/org-form-fields"
 import { EventPicker } from "@/features/users/event-picker"
-import {
-  useCreditUserHours,
-  useUserHours,
-  useVoidUserHours,
-} from "@/features/users/use-user-hours"
+import { useCreditUserHours, useUserHours, useVoidUserHours } from "@/features/users/use-user-hours"
 import {
   buildCreditRequest,
   creditBlockedReason,
@@ -223,8 +219,8 @@ function CreditHoursForm({ user, onDone }: { user: AdminUserDTO; onDone: () => v
               <FieldError id={fieldErrorId("user-hours-event")} text={errors.event} />
             ) : (
               <span className="hint">
-                Only events that have ended can be credited. Each credit is at most the
-                event&apos;s length plus one hour, and a person gets at most 24 h per day.
+                Only events that have ended can be credited. Each credit is at most the event&apos;s
+                length plus one hour, and a person gets at most 24 h per day.
               </span>
             )}
           </div>

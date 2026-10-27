@@ -109,7 +109,11 @@ function claim(over: Partial<GovClaimDTO> & { id: string; name: string }) {
     verified: ["linkedin"],
     pending: ["directory", "callback"],
     checks: {
-      linkedin: { status: "verified", evidence: "https://linkedin.example/in/applicant", note: null },
+      linkedin: {
+        status: "verified",
+        evidence: "https://linkedin.example/in/applicant",
+        note: null,
+      },
       directory: { status: "pending", evidence: null, note: null },
       callback: { status: "pending", evidence: null, note: null },
     },
@@ -153,7 +157,10 @@ describe("ModerationPage queue", () => {
     apiMock.listModeration.mockReturnValue(new Promise(() => {}))
     renderWithQuery(<ModerationPage focusId={null} />)
     expect(screen.getByRole("radio", { name: "Queue" })).toHaveAttribute("aria-checked", "true")
-    expect(screen.getByRole("radio", { name: "Gov claims" })).toHaveAttribute("aria-checked", "false")
+    expect(screen.getByRole("radio", { name: "Gov claims" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    )
   })
 
   it("shows the loading state while the first page is in flight", () => {
@@ -277,7 +284,9 @@ describe("ModerationPage queue", () => {
     apiMock.listModeration.mockResolvedValue(modPage([COMMENT_REPORT, APPEAL]))
     mockModDetails(COMMENT_REPORT, APPEAL)
     renderWithQuery(<ModerationPage focusId="mod-2" />)
-    expect(await within(detailCard()).findByRole("heading", { name: "MOD-202" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "MOD-202" }),
+    ).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: "MOD-101" })).not.toBeInTheDocument()
   })
 
@@ -286,7 +295,9 @@ describe("ModerationPage queue", () => {
     apiMock.listModeration.mockResolvedValue(modPage([COMMENT_REPORT, APPEAL]))
     mockModDetails(COMMENT_REPORT, APPEAL, OTHER)
     renderWithQuery(<ModerationPage focusId="mod-9" />)
-    expect(await within(detailCard()).findByRole("heading", { name: "MOD-909" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "MOD-909" }),
+    ).toBeInTheDocument()
     await within(listCard("Queue")).findByText("MOD-101")
     expect(within(detailCard()).getByRole("heading", { name: "MOD-909" })).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: "MOD-101" })).not.toBeInTheDocument()
@@ -300,7 +311,10 @@ describe("ModerationPage gov claims", () => {
     renderWithQuery(<ModerationPage focusId={null} />)
     await openGovClaims()
 
-    expect(screen.getByRole("radio", { name: "Gov claims" })).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByRole("radio", { name: "Gov claims" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    )
     expect(screen.getByText(/Government staff asking for access/)).toBeInTheDocument()
     expect(screen.getByRole("status")).toHaveTextContent("Loading claims...")
     expect(within(detailCard()).getByText("No claim selected")).toBeInTheDocument()
@@ -314,7 +328,9 @@ describe("ModerationPage gov claims", () => {
     await openGovClaims()
 
     expect(await screen.findByText("No claims here")).toBeInTheDocument()
-    expect(screen.getByText("Nobody is waiting on government access right now.")).toBeInTheDocument()
+    expect(
+      screen.getByText("Nobody is waiting on government access right now."),
+    ).toBeInTheDocument()
     expect(within(detailCard()).getByText("Pick a claim from the queue.")).toBeInTheDocument()
   })
 
@@ -350,9 +366,13 @@ describe("ModerationPage gov claims", () => {
     expect(within(card).getAllByText("applicant@oaklandca.gov")).toHaveLength(2)
     expect(within(card).getByText(/Gov provisioning · Emailed us/)).toBeInTheDocument()
     expect(within(card).getByText("LinkedIn")).toBeInTheDocument()
-    expect(within(card).getByRole("link", { name: "https://linkedin.example/in/applicant" })).toBeInTheDocument()
+    expect(
+      within(card).getByRole("link", { name: "https://linkedin.example/in/applicant" }),
+    ).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: "Mark LinkedIn pending" })).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: "Mark Directory verified" })).toBeInTheDocument()
+    expect(
+      within(card).getByRole("button", { name: "Mark Directory verified" }),
+    ).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: "Mark Callback verified" })).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: "Approve" })).toBeEnabled()
     expect(within(card).getByRole("button", { name: "Reject" })).toBeEnabled()
@@ -374,7 +394,9 @@ describe("ModerationPage gov claims", () => {
     expect(within(card).getByText(/Gov provisioning · Cold outreach/)).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: "Approve" })).toBeDisabled()
     expect(within(card).getByRole("button", { name: "Reject" })).toBeDisabled()
-    expect(within(card).getByText(/This claim was already approved\. Decisions are final/)).toBeInTheDocument()
+    expect(
+      within(card).getByText(/This claim was already approved\. Decisions are final/),
+    ).toBeInTheDocument()
   })
 
   it("sends the chosen filter chip to the api", async () => {
@@ -474,7 +496,9 @@ describe("ModerationPage selection after a decision", () => {
     await within(detailCard()).findByRole("heading", { name: "MOD-101" })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: "Keep" }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }),
+    )
 
     await waitFor(() => expect(apiMock.approveModeration).toHaveBeenCalledWith({ id: "mod-1" }))
     expect(within(detailCard()).getByRole("heading", { name: "MOD-101" })).toBeInTheDocument()
@@ -483,7 +507,9 @@ describe("ModerationPage selection after a decision", () => {
     await act(async () => {
       refetch.resolve(modPage([APPEAL]))
     })
-    await waitFor(() => expect(within(listCard("Queue")).queryByText("MOD-101")).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(listCard("Queue")).queryByText("MOD-101")).not.toBeInTheDocument(),
+    )
     expect(await within(detailCard()).findByText("No item selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("button", { name: "Keep" })).not.toBeInTheDocument()
     expect(within(detailCard()).queryByRole("button", { name: "Overturn" })).not.toBeInTheDocument()
@@ -505,8 +531,12 @@ describe("ModerationPage selection after a decision", () => {
     await within(listCard("Queue")).findByText("MOD-101")
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: "Remove" }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }),
+    )
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }),
+    )
 
     await waitFor(() => expect(apiMock.removeModeration).toHaveBeenCalledWith({ id: "mod-9" }))
     expect(await within(detailCard()).findByText("No item selected")).toBeInTheDocument()
@@ -532,7 +562,9 @@ describe("ModerationPage selection after a decision", () => {
     await within(detailCard()).findByRole("heading", { name: "MOD-101" })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: "Hold" }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }),
+    )
 
     await waitFor(() => expect(apiMock.holdModeration).toHaveBeenCalledWith({ id: "mod-1" }))
     await waitFor(() => expect(apiMock.listModeration).toHaveBeenCalledTimes(2))
@@ -559,7 +591,9 @@ describe("ModerationPage selection after a decision", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Appeal" }))
 
-    await waitFor(() => expect(within(listCard("Queue")).queryByText("MOD-101")).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(listCard("Queue")).queryByText("MOD-101")).not.toBeInTheDocument(),
+    )
     expect(within(detailCard()).getByRole("heading", { name: "MOD-101" })).toBeInTheDocument()
     expect(rowIn(listCard("Queue"), "MOD-202")).not.toHaveAttribute("aria-current")
   })
@@ -612,7 +646,9 @@ describe("ModerationPage selection after a decision", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Reject claim" }))
 
     expect(await within(detailCard()).findByText("No claim selected")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Tom Nguyen" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Tom Nguyen" }),
+    ).not.toBeInTheDocument()
     expect(rowIn(listCard("Gov claims"), "Maya Rivera")).not.toHaveAttribute("aria-current")
   })
 
@@ -635,7 +671,9 @@ describe("ModerationPage selection after a decision", () => {
     await within(detailCard()).findByRole("heading", { name: "MOD-101" })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: "Keep" }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Submit" }),
+    )
 
     expect(await within(detailCard()).findByText("No item selected")).toBeInTheDocument()
     await act(async () => {
@@ -685,7 +723,9 @@ describe("ModerationPage selection after a decision", () => {
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: "Hold" }))
     expect(
-      within(await screen.findByRole("dialog")).getByRole("heading", { name: "Hold MOD-101 for review" }),
+      within(await screen.findByRole("dialog")).getByRole("heading", {
+        name: "Hold MOD-101 for review",
+      }),
     ).toBeInTheDocument()
     await userEvent.keyboard("{Escape}")
   })
@@ -714,7 +754,9 @@ describe("ModerationPage selection after a decision", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Reject claim" }))
 
     await waitFor(() => expect(apiMock.rejectGovClaim).toHaveBeenCalled())
-    expect(within(detailCard()).queryByRole("heading", { name: "Lee Park" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Lee Park" }),
+    ).not.toBeInTheDocument()
     await act(async () => {
       refetch.resolve(claimPage([SECOND]))
     })
@@ -722,7 +764,9 @@ describe("ModerationPage selection after a decision", () => {
       expect(within(listCard("Gov claims")).queryByText("Maya Rivera")).not.toBeInTheDocument(),
     )
     expect(await within(detailCard()).findByText("No claim selected")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Lee Park" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Lee Park" }),
+    ).not.toBeInTheDocument()
   })
 
   it("still confirms a gov claim approval when the list drops the claim before the detail refetch settles", async () => {
@@ -746,7 +790,9 @@ describe("ModerationPage selection after a decision", () => {
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: "Approve" }))
     await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", { name: "Approve and provision" }),
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Approve and provision",
+      }),
     )
 
     expect(await within(detailCard()).findByText("No claim selected")).toBeInTheDocument()
@@ -774,7 +820,9 @@ describe("ModerationPage selection after a decision", () => {
     await screen.findByText("No claims here")
     await userEvent.click(screen.getByRole("radio", { name: "Queue" }))
 
-    expect(await within(detailCard()).findByRole("heading", { name: "MOD-101" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "MOD-101" }),
+    ).toBeInTheDocument()
     expect(useUiStore.getState().focusId).toBeNull()
   })
 })
@@ -786,7 +834,12 @@ describe("ModerationPage detail", () => {
     apiMock.getModerationItem.mockResolvedValue({
       ...modDetail(withMedia),
       media: [
-        { id: "md-1", kind: "image", url: "https://media.example/full-1.jpg", thumbUrl: "https://media.example/thumb-1.jpg" },
+        {
+          id: "md-1",
+          kind: "image",
+          url: "https://media.example/full-1.jpg",
+          thumbUrl: "https://media.example/thumb-1.jpg",
+        },
         { id: "md-2", kind: "video", url: "https://media.example/clip.mp4" },
       ],
     } satisfies ModerationItemDTO)
@@ -813,7 +866,10 @@ describe("ModerationPage detail", () => {
   it("keeps each signal on its own row when a new signal arrives first", async () => {
     apiMock.listModeration.mockResolvedValue(modPage([COMMENT_REPORT]))
     let signals: ModerationItemDTO["signals"] = [{ label: "Prior flags", val: "3", tone: "warn" }]
-    apiMock.getModerationItem.mockImplementation(async () => ({ ...modDetail(COMMENT_REPORT), signals }))
+    apiMock.getModerationItem.mockImplementation(async () => ({
+      ...modDetail(COMMENT_REPORT),
+      signals,
+    }))
     const { client } = renderWithQuery(<ModerationPage focusId={null} />)
     const before = (await within(detailCard()).findByText("Prior flags")).closest(".umr")
 
@@ -832,7 +888,9 @@ describe("ModerationPage detail", () => {
     )
     renderWithQuery(<ModerationPage focusId="mod-gone" />)
     expect(await within(detailCard()).findByText("Item not found")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument()
   })
 
   it("shows a not-found state without a retry for a claim that no longer exists", async () => {
@@ -844,7 +902,9 @@ describe("ModerationPage detail", () => {
     renderWithQuery(<ModerationPage focusId={null} />)
     await openGovClaims()
     expect(await within(detailCard()).findByText("Claim not found")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument()
   })
 
   it("opens the subject's profile with the Space key", async () => {
@@ -871,7 +931,9 @@ describe("ModerationPage keyboard and names", () => {
 
     rowIn(list, "MOD-202").focus()
     await userEvent.keyboard(" ")
-    expect(await within(detailCard()).findByRole("heading", { name: "MOD-202" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "MOD-202" }),
+    ).toBeInTheDocument()
     expect(rowIn(list, "MOD-202")).toHaveAttribute("aria-current", "true")
     expect(rowIn(list, "MOD-101")).not.toHaveAttribute("aria-current")
   })
@@ -886,7 +948,9 @@ describe("ModerationPage keyboard and names", () => {
 
     rowIn(listCard("Gov claims"), "Tom Nguyen").focus()
     await userEvent.keyboard("{Enter}")
-    expect(await within(detailCard()).findByRole("heading", { name: "Tom Nguyen" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Tom Nguyen" }),
+    ).toBeInTheDocument()
     expect(rowIn(listCard("Gov claims"), "Tom Nguyen")).toHaveAttribute("aria-current", "true")
   })
 

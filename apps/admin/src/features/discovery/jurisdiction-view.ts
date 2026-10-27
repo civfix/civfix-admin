@@ -6,7 +6,12 @@ import {
   type ReportCategory,
 } from "@civfix/contract"
 
-import { REPORT_CATEGORIES, categoryLabel, categoryPinSrc, categoryReportTypes } from "@/lib/category"
+import {
+  REPORT_CATEGORIES,
+  categoryLabel,
+  categoryPinSrc,
+  categoryReportTypes,
+} from "@/lib/category"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { MINUTE_MS } from "@/lib/timing"
 
@@ -14,13 +19,14 @@ export const UNMAPPED_GEOID = "__unmapped__"
 
 export type LayerChoice = "all" | JurisdictionLayer
 
-export const LAYER_OPTIONS: readonly { value: JurisdictionLayer; label: string; plural: string }[] = [
-  { value: "state", label: "State", plural: "States" },
-  { value: "county", label: "County", plural: "Counties" },
-  { value: "place", label: "City", plural: "Cities" },
-  { value: "federal", label: "Federal land", plural: "Federal land" },
-  { value: "tribal", label: "Tribal", plural: "Tribal" },
-]
+export const LAYER_OPTIONS: readonly { value: JurisdictionLayer; label: string; plural: string }[] =
+  [
+    { value: "state", label: "State", plural: "States" },
+    { value: "county", label: "County", plural: "Counties" },
+    { value: "place", label: "City", plural: "Cities" },
+    { value: "federal", label: "Federal land", plural: "Federal land" },
+    { value: "tribal", label: "Tribal", plural: "Tribal" },
+  ]
 
 export const LAYER_LABEL = Object.fromEntries(
   LAYER_OPTIONS.map((option) => [option.value, option.label]),

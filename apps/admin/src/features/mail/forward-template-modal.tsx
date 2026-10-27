@@ -73,8 +73,8 @@ function TemplatePreview({ rendered }: { rendered: PreviewForwardTemplateRespons
         />
       </div>
       <div className="hint">
-        Rendered with sample data · subject from {SOURCE_LABEL[rendered.subjectSource]} · body
-        from {SOURCE_LABEL[rendered.bodySource]}
+        Rendered with sample data · subject from {SOURCE_LABEL[rendered.subjectSource]} · body from{" "}
+        {SOURCE_LABEL[rendered.bodySource]}
       </div>
     </div>
   )
@@ -359,7 +359,9 @@ function ForwardTemplateEditor({
           onPreview={onPreview}
           onClose={onClose}
           saveDisabled={hasIssues || pending}
-          onSave={() => onSave({ subject: toStoredTemplate(subject), body: toStoredTemplate(body) })}
+          onSave={() =>
+            onSave({ subject: toStoredTemplate(subject), body: toStoredTemplate(body) })
+          }
         />
       </div>
     </div>

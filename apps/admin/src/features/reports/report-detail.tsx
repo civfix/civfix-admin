@@ -16,7 +16,11 @@ import { categoryPinSrc } from "@/lib/category"
 import { shortRef } from "@/lib/display"
 import { reportStatusLabel, reportStatusView } from "@/lib/report-status"
 import { ReportActivity } from "@/features/reports/report-activity"
-import { CityMessageCard, RoutedToCard, useCityFollowup } from "@/features/reports/report-city-cards"
+import {
+  CityMessageCard,
+  RoutedToCard,
+  useCityFollowup,
+} from "@/features/reports/report-city-cards"
 import { ReportDiscussion } from "@/features/reports/report-discussion"
 import { ReportLinkedEvents } from "@/features/reports/report-linked-events"
 import { reportMediaView } from "@/features/reports/report-media"
@@ -130,11 +134,7 @@ function StatusButtons({
   }
 
   if (statusActions.length === 0) {
-    return (
-      <span className="hint">
-        No status changes from {reportStatusLabel(report.status)}
-      </span>
-    )
+    return <span className="hint">No status changes from {reportStatusLabel(report.status)}</span>
   }
   return (
     <>

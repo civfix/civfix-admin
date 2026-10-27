@@ -23,7 +23,9 @@ const BROADCAST_STATUS_VIEW: Record<BroadcastStatus, BroadcastStatusView> = {
 }
 
 function broadcastStatusView(status: BroadcastStatus): BroadcastStatusView {
-  return Object.hasOwn(BROADCAST_STATUS_VIEW, status) ? BROADCAST_STATUS_VIEW[status] : { label: status, cls: "priority-low" }
+  return Object.hasOwn(BROADCAST_STATUS_VIEW, status)
+    ? BROADCAST_STATUS_VIEW[status]
+    : { label: status, cls: "priority-low" }
 }
 
 const BROADCAST_KIND_LABEL: Record<BroadcastKind, string> = {
