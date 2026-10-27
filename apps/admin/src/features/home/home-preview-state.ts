@@ -7,7 +7,7 @@ export interface PreviewState {
   onRetry: () => void
   hasMore: boolean
   /** One source of a merged tile failed while the other loaded; its rows still show. */
-  partialError?: { title: string; error: unknown; onRetry: () => void }
+  partialError?: { title: string; error: unknown; onRetry: () => void } | undefined
 }
 
 interface ListPage<T> {
