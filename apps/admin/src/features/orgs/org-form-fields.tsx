@@ -152,7 +152,7 @@ function LogoField({
   error: string | undefined
   onChange: (next: OrgProfileDraft) => void
   mode: FormMode
-  disabled?: boolean
+  disabled?: boolean | undefined
   onUploadingChange?: (uploading: boolean) => void
 }) {
   const { uploading, problem, pick, remove } = useLogoUpload({ draft, onChange, onUploadingChange })
@@ -454,7 +454,7 @@ export function ReasonField({
 }: {
   value: string
   onChange: (v: string) => void
-  error?: string
+  error?: string | undefined
   placeholder?: string
   disabled?: boolean
   id?: string

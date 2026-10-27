@@ -27,7 +27,7 @@ export interface PickedUser {
   name: string
   handle: string
   avatar?: AdminUserListItemDTO["avatar"]
-  avatarUrl?: string | null
+  avatarUrl?: string | null | undefined
 }
 
 export function PickedUserAvatar({
