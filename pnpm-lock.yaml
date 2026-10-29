@@ -38,8 +38,8 @@ importers:
         specifier: 0.66.0-b-integration-notification-center.g66a7652
         version: 0.66.0-b-integration-notification-center.g66a7652
       '@civfix/tokens':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.101.0(react@19.0.0)
@@ -223,8 +223,8 @@ packages:
     resolution: {integrity: sha512-BJKtYZWhFKFJC2U7JJeAkE9aVm2yptcPynJOHhitSleFdo1r+0D82Za1ZkAX8rk7mIfsSdFgAnl0NHyXvBj38Q==}
     engines: {node: '>=20'}
 
-  '@civfix/tokens@0.1.0':
-    resolution: {integrity: sha512-CSwCLbNl0ojkG6oUBL2SSM73Kw8n+8J2G3GN06ptyjiKVQ0G5KybWIxPXIG0uumtu3iTrMBBh/b7RAx2GjqFpg==}
+  '@civfix/tokens@0.1.1':
+    resolution: {integrity: sha512-q8X1kGM90fEAbbk1tEuy91cA9Dr8Z/l9v3gdKN5DibEZrSnVbPnclJCMotmW7HzC8AjhqBo1MHxxrBaooGUPkw==}
     engines: {node: '>=20'}
 
   '@cloudflare/kv-asset-handler@0.5.0':
@@ -3542,7 +3542,7 @@ snapshots:
     dependencies:
       zod: 4.6.7
 
-  '@civfix/tokens@0.1.0': {}
+  '@civfix/tokens@0.1.1': {}
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
