@@ -1,7 +1,7 @@
 type UserMessageDestination = { page: "events" | "reports"; id: string }
 
 export function userMessageDestination(input: {
-  source?: string | null
+  source?: string | null | undefined
   sourceId: string | null
 }): UserMessageDestination | null {
   if (!input.sourceId) return null

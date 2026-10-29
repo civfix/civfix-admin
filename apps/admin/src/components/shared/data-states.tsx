@@ -21,7 +21,7 @@ export function ErrorState({
   action,
 }: {
   error: unknown
-  onRetry?: () => void
+  onRetry?: (() => void) | undefined
   title?: string
   message?: string
   action?: { label: string; onClick: () => void }
