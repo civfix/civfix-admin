@@ -47,7 +47,7 @@ function AccountTool({
   return (
     <Card title={title}>
       {email === undefined ? (
-        <p className="muted">{NO_ACCOUNTS}</p>
+        <p className="muted dev-note">{NO_ACCOUNTS}</p>
       ) : (
         <div className="dev-stack">
           <div className="field">
@@ -228,7 +228,7 @@ export function TestToolsTab() {
     <div className="dev-grid">
       <Card title="Test accounts">
         {accounts.length === 0 ? (
-          <p className="muted">{NO_ACCOUNTS}</p>
+          <p className="muted dev-note">{NO_ACCOUNTS}</p>
         ) : (
           <ul className="dev-list">
             {accounts.map((account) => (
