@@ -247,7 +247,10 @@ export function hasProfileChanges(org: AdminOrgDTO, draft: OrgProfileDraft): boo
  * carries `fields` keyed by request field. Anything else returns an empty object so the caller falls
  * back to the error toast.
  */
-export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }): OrgProfileErrors {
+export function fieldErrorsFromError(
+  raw: unknown,
+  request?: { slug?: string | undefined },
+): OrgProfileErrors {
   if (!(raw instanceof Error)) return {}
   const err = toAppError(raw)
   if (err.code === ErrorCode.CONFLICT) {

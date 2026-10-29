@@ -51,7 +51,7 @@ const TILE_NOUN: Record<PreviewPage, TileNoun> = {
 
 export interface PreviewTileModel {
   cell: string
-  feature?: boolean
+  feature?: boolean | undefined
   summary: SectionSummary
   state: PreviewState
   rows: PeekItem[]
@@ -63,7 +63,7 @@ function previewTile(
   summary: SectionSummary,
   state: PreviewState,
   rows: PeekItem[],
-  opts?: { feature?: boolean; total?: number },
+  opts?: { feature?: boolean; total?: number | undefined },
 ): PreviewTileModel {
   return {
     cell: `bt-${page}`,

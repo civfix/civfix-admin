@@ -5,7 +5,7 @@ import { openLightbox, type LightboxImage } from "@/components/shared/lightbox"
 
 interface ThumbMedia {
   url: string
-  thumbUrl?: string | null
+  thumbUrl?: string | null | undefined
 }
 
 export function openLightboxAt(images: LightboxImage[], id: string, refresh: () => void): void {
@@ -30,7 +30,7 @@ export function ImageThumbButton({ media, onOpen }: { media: ThumbMedia; onOpen:
   )
 }
 
-export function StillThumbFace({ thumbUrl }: { thumbUrl?: string | null }) {
+export function StillThumbFace({ thumbUrl }: { thumbUrl?: string | null | undefined }) {
   return thumbUrl ? (
     <img src={thumbUrl} alt="" loading="lazy" decoding="async" />
   ) : (

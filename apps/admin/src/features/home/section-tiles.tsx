@@ -122,7 +122,7 @@ export function PreviewSectionTile({
   children,
 }: {
   summary: SectionSummary
-  feature?: boolean
+  feature?: boolean | undefined
   moreLabel: string | null
   children: ReactNode
 }) {
