@@ -77,7 +77,7 @@ function pinIcon(
     active = false,
     draft = false,
     kind = null,
-  }: { active?: boolean; draft?: boolean; kind?: string | null },
+  }: { active?: boolean; draft?: boolean | undefined; kind?: string | null | undefined },
 ): L.DivIcon {
   const isEvent = kind != null && EVENT_KINDS.has(kind)
   const state = isEvent ? kind : draft ? "needs" : "routed"

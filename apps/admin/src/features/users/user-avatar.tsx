@@ -8,7 +8,7 @@ export function UserAvatar({
 }: {
   user: Pick<AdminUserListItemDTO, "id" | "name"> & {
     avatar?: AdminUserListItemDTO["avatar"]
-    avatarUrl?: string | null
+    avatarUrl?: string | null | undefined
   }
   large?: boolean
 }) {

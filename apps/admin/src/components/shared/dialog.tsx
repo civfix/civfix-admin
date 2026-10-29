@@ -27,7 +27,7 @@ interface PromptRequest {
   label?: string
   placeholder?: string
   defaultValue?: string
-  confirmLabel?: string
+  confirmLabel?: string | undefined
   required?: boolean
   maxLength?: number
   danger?: boolean

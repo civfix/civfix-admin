@@ -26,8 +26,8 @@ export interface SectionSummary {
   blurb?: string
   stats: SectionStat[]
   cta: string
-  spark?: number[]
-  metrics?: SectionMetric[]
+  spark?: number[] | undefined
+  metrics?: SectionMetric[] | undefined
 }
 
 export interface HomeSections {

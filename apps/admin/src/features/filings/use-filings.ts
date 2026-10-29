@@ -76,7 +76,7 @@ export function useFiling(filing: ReportFiling | null) {
     },
     enabled: filing !== null,
     staleTime: 0,
-    placeholderData: filing ? { filing: { ...filing, evidence: [] } } : undefined,
+    ...(filing ? { placeholderData: { filing: { ...filing, evidence: [] } } } : {}),
     refetchInterval: (query) => {
       const status = query.state.data?.filing.status
       return status && isFilingActive(status) ? FILING_POLL_MS : false
