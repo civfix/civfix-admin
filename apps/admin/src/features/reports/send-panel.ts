@@ -30,7 +30,9 @@ export interface SendPanelView {
 
 function routeButtonLabel(action: RouteAction, verdictApproved: boolean): string {
   if (action.kind === "already_sent") {
-    return action.routedAt ? `Already sent · ${formatPreciseDateTime(action.routedAt)}` : "Already sent"
+    return action.routedAt
+      ? `Already sent · ${formatPreciseDateTime(action.routedAt)}`
+      : "Already sent"
   }
   if (action.kind === "resend") return "Send again to jurisdiction"
   return routeSendLabel(verdictApproved)

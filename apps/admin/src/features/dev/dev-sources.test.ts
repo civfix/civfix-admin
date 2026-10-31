@@ -7,7 +7,8 @@ import { describe, expect, it } from "vitest"
 const SRC = fileURLToPath(new URL("../..", import.meta.url))
 const DEV = join(SRC, "features/dev")
 
-const IMPORT_FROM = /\bfrom\s+["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)|\bimport\s+["']([^"']+)["']/g
+const IMPORT_FROM =
+  /\bfrom\s+["']([^"']+)["']|\bimport\s*\(\s*["']([^"']+)["']\s*\)|\bimport\s+["']([^"']+)["']/g
 
 function importsOf(source: string): string[] {
   return [...source.matchAll(IMPORT_FROM)].map((m) => m[1] ?? m[2] ?? m[3] ?? "")

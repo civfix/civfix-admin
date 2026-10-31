@@ -20,7 +20,10 @@ describe("organization list filters", () => {
   })
 
   it("trims the search and combines it with the facet", () => {
-    expect(orgListParams("verified", "  Griffith ")).toEqual({ verified: "verified", q: "Griffith" })
+    expect(orgListParams("verified", "  Griffith ")).toEqual({
+      verified: "verified",
+      q: "Griffith",
+    })
     expect(orgListParams("all", "park")).toEqual({ q: "park" })
   })
 

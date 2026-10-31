@@ -28,14 +28,15 @@ export function Fact({
 
 /** Only an https url becomes a link; anything else stored is shown as text so it is never hidden. */
 export function UrlFact({ url }: { url: string | null | undefined }) {
-  if (isHttpsUrl(url)) {
+  if (url && isHttpsUrl(url)) {
     return (
       <a href={url} target="_blank" rel="noreferrer noopener">
         {url}
       </a>
     )
   }
-  return <>{url || EMPTY_VALUE}</>
+  const shown = url ?? ""
+  return <>{shown === "" ? EMPTY_VALUE : shown}</>
 }
 
 export function kindLabel(kind: OrgVerificationKind | null | undefined): string {
@@ -47,7 +48,13 @@ export function DeletedFact({ deletedAt }: { deletedAt: string | null | undefine
   return <Fact label="Deleted">{formatDateTime(deletedAt)}</Fact>
 }
 
-export function OrgStatusSubHead({ title, org }: { title: string; org: Pick<AdminOrgDTO, "verifiedStatus"> }) {
+export function OrgStatusSubHead({
+  title,
+  org,
+}: {
+  title: string
+  org: Pick<AdminOrgDTO, "verifiedStatus">
+}) {
   const statusView = orgStatusView(org.verifiedStatus)
   return (
     <div className="sub-head">

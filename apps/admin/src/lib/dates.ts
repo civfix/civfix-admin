@@ -19,10 +19,7 @@ const DATE_TIME_FORMAT = new Intl.DateTimeFormat(undefined, DATE_TIME_PARTS)
 const PRECISE_DATE_TIME_FORMAT = new Intl.DateTimeFormat(undefined, PRECISE_DATE_TIME_PARTS)
 
 // An unparseable value is shown as sent rather than hidden, so an operator still sees what arrived.
-function formatWith(
-  value: string | null | undefined,
-  format: (date: Date) => string,
-): string {
+function formatWith(value: string | null | undefined, format: (date: Date) => string): string {
   if (value === null || value === undefined || value === "") return EMPTY_VALUE
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -46,5 +43,7 @@ export function formatPreciseDateTime(value: string | null | undefined): string 
 // placeholder or the raw value.
 export function preciseDateTimeTitle(value: string): string | undefined {
   const date = new Date(value)
-  return value === "" || Number.isNaN(date.getTime()) ? undefined : PRECISE_DATE_TIME_FORMAT.format(date)
+  return value === "" || Number.isNaN(date.getTime())
+    ? undefined
+    : PRECISE_DATE_TIME_FORMAT.format(date)
 }

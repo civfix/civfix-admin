@@ -72,15 +72,22 @@ function AccountTool({
 function ForcedList({ onTurnOff, busy }: { onTurnOff: (email: string) => void; busy: boolean }) {
   const forced = useDevForceUpdate()
   if (forced.isPending) return <LoadingState label="Loading forced accounts..." />
-  if (forced.isError) return <ErrorState error={forced.error} onRetry={() => void forced.refetch()} />
-  if (forced.data.accounts.length === 0) return <p className="muted">No accounts are forced to update.</p>
+  if (forced.isError)
+    return <ErrorState error={forced.error} onRetry={() => void forced.refetch()} />
+  if (forced.data.accounts.length === 0)
+    return <p className="muted">No accounts are forced to update.</p>
   return (
     <ul className="dev-list" aria-label="Forced to update">
       {forced.data.accounts.map((account) => (
         <li key={account.userId}>
           <span className="mono">{account.email}</span>
           <span className="muted">Until {formatDateTime(account.expiresAt)}</span>
-          <button type="button" className="btn ghost sm" disabled={busy} onClick={() => onTurnOff(account.email)}>
+          <button
+            type="button"
+            className="btn ghost sm"
+            disabled={busy}
+            onClick={() => onTurnOff(account.email)}
+          >
             Turn off
           </button>
         </li>
@@ -102,12 +109,20 @@ function ForceUpdate({ email }: { email: string }) {
   return (
     <>
       <div className="row-flex">
-        <button type="button" className="btn sm" disabled={setForce.isPending} onClick={() => void turnOn()}>
+        <button
+          type="button"
+          className="btn sm"
+          disabled={setForce.isPending}
+          onClick={() => void turnOn()}
+        >
           Turn on
         </button>
       </div>
       <Outcome result={null} error={setForce.error} />
-      <ForcedList busy={setForce.isPending} onTurnOff={(account) => setForce.mutate({ email: account, enabled: false })} />
+      <ForcedList
+        busy={setForce.isPending}
+        onTurnOff={(account) => setForce.mutate({ email: account, enabled: false })}
+      />
     </>
   )
 }
@@ -127,7 +142,11 @@ function TestPush({ email }: { email: string }) {
     // A field left empty is left out of the request, so the API's default text is used.
     const pushTitle = title.trim()
     const pushBody = body.trim()
-    push.mutate({ email, ...(pushTitle ? { title: pushTitle } : {}), ...(pushBody ? { body: pushBody } : {}) })
+    push.mutate({
+      email,
+      ...(pushTitle ? { title: pushTitle } : {}),
+      ...(pushBody ? { body: pushBody } : {}),
+    })
   }
 
   return (
@@ -181,7 +200,12 @@ function TestEmail() {
       <div className="dev-stack">
         <p className="muted">Sends a plain test email to your own address.</p>
         <div className="row-flex">
-          <button type="button" className="btn sm" disabled={send.isPending} onClick={() => send.mutate()}>
+          <button
+            type="button"
+            className="btn sm"
+            disabled={send.isPending}
+            onClick={() => send.mutate()}
+          >
             Send to me
           </button>
         </div>
@@ -196,13 +220,19 @@ function ResetFirstRun({ email }: { email: string }) {
   const confirm = useDevConfirm()
 
   const run = async () => {
-    if (await confirm({ title: `Reset first run for ${email}?`, verb: "Change" })) reset.mutate({ email })
+    if (await confirm({ title: `Reset first run for ${email}?`, verb: "Change" }))
+      reset.mutate({ email })
   }
 
   return (
     <>
       <div className="row-flex">
-        <button type="button" className="btn sm" disabled={reset.isPending} onClick={() => void run()}>
+        <button
+          type="button"
+          className="btn sm"
+          disabled={reset.isPending}
+          onClick={() => void run()}
+        >
           Reset
         </button>
       </div>
@@ -221,7 +251,8 @@ export function TestToolsTab() {
       <LoadingState label="Loading test tools..." />
     )
   }
-  if (!overview.data.devToolsEnabled) return <p className="muted">Test tools are off in this environment.</p>
+  if (!overview.data.devToolsEnabled)
+    return <p className="muted">Test tools are off in this environment.</p>
 
   const accounts = overview.data.testAccounts
   return (

@@ -15,10 +15,7 @@ function SentMessages({ messages }: { messages: AdminEventDTO["messages"] }) {
   return (
     <div className="evt-msgs">
       {messages.map((m, i) => (
-        <div
-          key={i}
-          className="evt-msg"
-        >
+        <div key={i} className="evt-msg">
           <span className="evt-msg-who">{m.who}</span>
           <span className="evt-msg-text">{m.text}</span>
           <span className="evt-msg-when">{m.when}</span>
@@ -85,7 +82,9 @@ export function EventAttendeeMessages({
         >
           <Icons.Send size={13} /> Post update <SubmitShortcutHint />
         </button>
-        <div className="evt-post-hint">Updates are posted as CivFix, not from your own account.</div>
+        <div className="evt-post-hint">
+          Updates are posted as CivFix, not from your own account.
+        </div>
       </div>
     </div>
   )

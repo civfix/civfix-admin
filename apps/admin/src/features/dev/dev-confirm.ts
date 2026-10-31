@@ -19,8 +19,8 @@ export function useDevConfirm() {
       verb,
     }: {
       title: string
-      body?: string
-      details?: string[]
+      body?: string | undefined
+      details?: string[] | undefined
       verb: "Run" | "Change"
     }) => {
       const onProduction = environment === "prod"

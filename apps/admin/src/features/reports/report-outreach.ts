@@ -17,5 +17,5 @@ const OUTREACH_VIEW: Record<ReportOutreachStatus, OutreachView> = {
 }
 
 export function outreachView(status: ReportOutreachStatus): OutreachView {
-  return OUTREACH_VIEW[status] ?? OUTREACH_VIEW.not_sent
+  return Object.hasOwn(OUTREACH_VIEW, status) ? OUTREACH_VIEW[status] : OUTREACH_VIEW.not_sent
 }

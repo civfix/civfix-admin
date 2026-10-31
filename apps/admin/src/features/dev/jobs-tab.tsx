@@ -57,13 +57,21 @@ function QueueRow({
       <Count value={counts.active} />
       <Count value={counts.failed} danger={counts.failed > 0} />
       <Count value={queue.failedLast24h} danger={queue.failedLast24h > 0} />
-      <Count value={formatDuration(queue.oldestPendingSeconds)} danger={queue.oldestPendingSeconds > 0} />
+      <Count
+        value={formatDuration(queue.oldestPendingSeconds)}
+        danger={queue.oldestPendingSeconds > 0}
+      />
       <span role="cell">
         {queue.lastCompletedAt ? <Ago value={queue.lastCompletedAt} now={now} /> : "None in 2 days"}
       </span>
       <span role="cell">
         {queue.runnable && (
-          <button type="button" className="btn sm" disabled={running} onClick={() => onRun(queue.name)}>
+          <button
+            type="button"
+            className="btn sm"
+            disabled={running}
+            onClick={() => onRun(queue.name)}
+          >
             Run now
           </button>
         )}
@@ -82,7 +90,9 @@ export function JobsTab() {
     if (await confirm({ title: `Run ${name} now?`, verb: "Run" })) runJob.mutate(name)
   }
 
-  const failure = jobs.isError && <ErrorState error={jobs.error} onRetry={() => void jobs.refetch()} />
+  const failure = jobs.isError && (
+    <ErrorState error={jobs.error} onRetry={() => void jobs.refetch()} />
+  )
   if (!jobs.data) return failure || <LoadingState label="Loading queues..." />
   if (jobs.data.queues.length === 0) return <EmptyState title="No queues reported" />
 

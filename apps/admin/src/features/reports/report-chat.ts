@@ -1,9 +1,13 @@
-import { ADMIN_REPORT_STATUS_LABELS, type ChatMessageDTO, type ReactionEmoji } from "@civfix/contract"
+import type { ChatMessageDTO, ReactionEmoji } from "@civfix/contract"
+
+import { reportStatusLabel } from "@/lib/report-status"
 
 export function systemLabel(msg: ChatMessageDTO): string {
   const status = msg.system?.status
-  const detail = msg.system?.note?.trim() || msg.system?.body?.trim() || msg.body?.trim()
-  const head = status ? `System · ${ADMIN_REPORT_STATUS_LABELS[status] ?? status}` : "System"
+  const detail = [msg.system?.note, msg.system?.body, msg.body]
+    .map((text) => text?.trim())
+    .find(Boolean)
+  const head = status ? `System · ${reportStatusLabel(status)}` : "System"
   return detail ? `${head} · ${detail}` : head
 }
 

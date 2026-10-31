@@ -34,7 +34,11 @@ function entry(n: number, overrides: Partial<AuditLogEntryDTO> = {}): AuditLogEn
   } satisfies AuditLogEntryDTO
 }
 
-const E1 = entry(1, { actorName: "Rudra", action: "flag.set", target: "flag:host_messaging_enabled" })
+const E1 = entry(1, {
+  actorName: "Rudra",
+  action: "flag.set",
+  target: "flag:host_messaging_enabled",
+})
 const E2 = entry(2)
 const E3 = entry(3)
 const E4 = entry(4)
@@ -60,7 +64,9 @@ function page<T>(items: T[], nextCursor: string | null = null) {
 type ActivityMock = typeof apiMock.adminActivity
 
 /** Opens `/dev/#audit` once `listAudit` is set up; activity answers A1 and A2 unless `activity` says otherwise. */
-function openAudit(activity: (mock: ActivityMock) => void = (mock) => mock.mockResolvedValue(page([A1, A2]))) {
+function openAudit(
+  activity: (mock: ActivityMock) => void = (mock) => mock.mockResolvedValue(page([A1, A2])),
+) {
   env("staging")
   activity(apiMock.adminActivity)
   openAt("#audit")
@@ -87,7 +93,7 @@ function auditRows(): string[][] {
     .map((row) =>
       within(row)
         .getAllByRole("cell")
-        .map((cell) => cell.textContent ?? ""),
+        .map((cell) => cell.textContent),
     )
 }
 
@@ -143,9 +149,7 @@ describe("the Audit tab's audit log", () => {
   })
 
   it("T2: Load more asks for the next page by cursor and appends it", async () => {
-    apiMock.listAudit
-      .mockResolvedValueOnce(page([E1, E2], "c1"))
-      .mockResolvedValueOnce(page([E3]))
+    apiMock.listAudit.mockResolvedValueOnce(page([E1, E2], "c1")).mockResolvedValueOnce(page([E3]))
     openAudit()
     await showsTargets([E1.target, E2.target])
 
@@ -301,7 +305,9 @@ describe("the Audit tab's recent activity", () => {
 
   it("T14: failed activity shows the API's message and Try again, while the log still shows", async () => {
     apiMock.listAudit.mockResolvedValue(page([E1, E2]))
-    openAudit((mock) => mock.mockRejectedValue(new AppError(ErrorCode.INTERNAL, "Activity unavailable")))
+    openAudit((mock) =>
+      mock.mockRejectedValue(new AppError(ErrorCode.INTERNAL, "Activity unavailable")),
+    )
 
     const alert = await within(activitySection()).findByRole("alert")
     expect(alert).toHaveTextContent("Activity unavailable")

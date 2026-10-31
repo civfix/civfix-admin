@@ -9,6 +9,9 @@ describe("SourceFooter", () => {
     render(<SourceFooter />)
 
     expect(screen.getByRole("link", { name: "Developer" })).toHaveAttribute("href", "/dev/")
-    expect(screen.getByRole("link", { name: "Source code (AGPL-3.0)" })).toHaveAttribute("href", SOURCE.url)
+    expect(screen.getByRole("link", { name: "Source code (AGPL-3.0)" })).toHaveAttribute(
+      "href",
+      SOURCE.url,
+    )
   })
 })

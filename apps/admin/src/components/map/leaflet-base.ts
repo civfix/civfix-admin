@@ -1,6 +1,7 @@
 import * as React from "react"
 import L from "leaflet"
 
+import { useLatestRef } from "@/hooks/use-latest-ref"
 import { withCartoKey } from "@/lib/carto"
 import { MAP_SETTLE_MS } from "@/lib/timing"
 
@@ -15,7 +16,7 @@ const CARTO_TILE_URLS = {
 export type CartoTint = keyof typeof CARTO_TILE_URLS
 
 function cartoUrl(tint: CartoTint): string {
-  return CARTO_TILE_URLS[tint] ?? CARTO_TILE_URLS.voyager
+  return CARTO_TILE_URLS[tint]
 }
 
 export function addCartoBasemap(
@@ -57,11 +58,15 @@ export function useLeafletMap(
   onRemove?: () => void,
 ): React.RefObject<L.Map | null> {
   const mapRef = React.useRef<L.Map | null>(null)
+  // Created once; callers' own effects apply later prop changes, so new callbacks never re-create it.
+  const createRef = useLatestRef(create)
+  const onRemoveRef = useLatestRef(onRemove)
 
   React.useEffect(() => {
     const container = containerRef.current
     if (!container || mapRef.current) return
-    const map = create(container)
+    const map = createRef.current(container)
+    const onRemoveAtMount = onRemoveRef.current
     mapRef.current = map
     const detachResize = attachResize(map, container)
 
@@ -69,11 +74,9 @@ export function useLeafletMap(
       detachResize()
       map.remove()
       mapRef.current = null
-      onRemove?.()
+      onRemoveAtMount?.()
     }
-    // Created once; callers' own effects apply later prop changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerRef])
+  }, [containerRef, createRef, onRemoveRef])
 
   return mapRef
 }

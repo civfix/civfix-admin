@@ -20,7 +20,10 @@ import { isValidationError, useRuntimeFlags, useSetRuntimeFlag } from "@/feature
 const FLAG_DEFS = new Map<string, RuntimeFlagDef>(RUNTIME_FLAGS.map((def) => [def.key, def]))
 
 // A minimum version above a phone's own locks that phone out until it updates.
-const MIN_VERSION_KEYS: ReadonlySet<string> = new Set(["min_app_version_ios", "min_app_version_android"])
+const MIN_VERSION_KEYS: ReadonlySet<string> = new Set([
+  "min_app_version_ios",
+  "min_app_version_android",
+])
 const MIN_VERSION_WARNING = "Phones below this version can't use civfix until they update."
 
 type TextFlagDef = Extract<RuntimeFlagDef, { type: "semver" | "url" | "text" }>
@@ -33,7 +36,8 @@ function shownValue(def: RuntimeFlagDef, value: RuntimeFlagValue): string {
   if (value === true) return "On"
   if (value === false) return "Off"
   if (value === null) return NOT_SET
-  if (def.type === "choice") return def.choices.find((choice) => choice.value === value)?.label ?? value
+  if (def.type === "choice")
+    return def.choices.find((choice) => choice.value === value)?.label ?? value
   return value
 }
 
@@ -42,7 +46,15 @@ function sourceLabel(state: RuntimeFlagStateDTO): string {
   return state.fallbackSource === "env" ? "From env" : "Default"
 }
 
-function FlagFacts({ def, state, now }: { def: RuntimeFlagDef; state: RuntimeFlagStateDTO; now: number }) {
+function FlagFacts({
+  def,
+  state,
+  now,
+}: {
+  def: RuntimeFlagDef
+  state: RuntimeFlagStateDTO
+  now: number
+}) {
   const rows: { label: string; value: React.ReactNode }[] = [
     { label: "Value", value: shownValue(def, state.value) },
     { label: "Source", value: sourceLabel(state) },
@@ -50,7 +62,8 @@ function FlagFacts({ def, state, now }: { def: RuntimeFlagDef; state: RuntimeFla
   if (state.override !== null) {
     rows.push({ label: "Fallback", value: shownValue(def, state.fallback) })
     if (state.updatedBy) rows.push({ label: "Changed by", value: state.updatedBy.email })
-    if (state.updatedAt) rows.push({ label: "Changed", value: <Ago value={state.updatedAt} now={now} /> })
+    if (state.updatedAt)
+      rows.push({ label: "Changed", value: <Ago value={state.updatedAt} now={now} /> })
   }
   return <Fields rows={rows} />
 }
@@ -117,7 +130,15 @@ function TextFlagField({
   )
 }
 
-function FlagCard({ def, state, now }: { def: RuntimeFlagDef; state: RuntimeFlagStateDTO; now: number }) {
+function FlagCard({
+  def,
+  state,
+  now,
+}: {
+  def: RuntimeFlagDef
+  state: RuntimeFlagStateDTO
+  now: number
+}) {
   const headingId = React.useId()
   const setFlag = useSetRuntimeFlag({ fieldErrors: isTextFlag(def) })
   const confirm = useDevConfirm()
@@ -134,7 +155,11 @@ function FlagCard({ def, state, now }: { def: RuntimeFlagDef; state: RuntimeFlag
     if (ok) setFlag.mutate({ key: def.key, value })
   }
   const changeTo = (value: RuntimeFlagValue) =>
-    void change(`Change ${def.label} to ${value === null ? "not set" : shownValue(def, value)}?`, value, value)
+    void change(
+      `Change ${def.label} to ${value === null ? "not set" : shownValue(def, value)}?`,
+      value,
+      value,
+    )
 
   let editor: React.ReactNode
   if (def.type === "boolean") {
@@ -168,7 +193,8 @@ function FlagCard({ def, state, now }: { def: RuntimeFlagDef; state: RuntimeFlag
       </div>
     )
   } else {
-    const refused = setFlag.isError && isValidationError(setFlag.error) ? errorMessage(setFlag.error) : null
+    const refused =
+      setFlag.isError && isValidationError(setFlag.error) ? errorMessage(setFlag.error) : null
     editor = (
       <TextFlagField
         // A saved change remounts the field, so it starts again from the new value.
@@ -218,7 +244,9 @@ export function FlagsTab() {
   const flags = useRuntimeFlags()
   const now = useNow()
 
-  const failure = flags.isError && <ErrorState error={flags.error} onRetry={() => void flags.refetch()} />
+  const failure = flags.isError && (
+    <ErrorState error={flags.error} onRetry={() => void flags.refetch()} />
+  )
   if (!flags.data) return failure || <LoadingState label="Loading flags..." />
 
   return (

@@ -13,7 +13,10 @@ export const INBOX_EMPTY_COPY: Record<InboxFeedFilter, { title: string; sub: str
   all: { title: "Inbox is empty", sub: "City replies and other mail sent to civfix show up here." },
   unread: { title: "All caught up", sub: "No unread mail." },
   replies: { title: "No replies yet", sub: "Replies to report and event forwards show up here." },
-  review: { title: "Nothing to review", sub: "Replies held back from a report chat or event show up here." },
+  review: {
+    title: "Nothing to review",
+    sub: "Replies held back from a report chat or event show up here.",
+  },
   unmatched: { title: "No other mail", sub: "Mail that isn't a reply to a forward shows up here." },
   archived: { title: "Nothing archived", sub: "Archived mail shows up here." },
 }
@@ -47,7 +50,9 @@ export function isInboxFeedFilter(value: string): value is InboxFeedFilter {
   return InboxFeedFilterSchema.safeParse(value).success
 }
 
-export function replyOriginLabel(item: Pick<InboxFeedReplyItemDTO, "reportId" | "cleanupId">): string {
+export function replyOriginLabel(
+  item: Pick<InboxFeedReplyItemDTO, "reportId" | "cleanupId">,
+): string {
   if (item.reportId) return "Report reply"
   if (item.cleanupId) return "Event reply"
   return "Thread reply"

@@ -31,7 +31,10 @@ function eventMessage(id: string, text: string): string {
   return `${shortRef(id)} · ${text}`
 }
 
-export function useEventList(params: AdminEventListQuery, opts: { keepPreviousData?: boolean } = {}) {
+export function useEventList(
+  params: AdminEventListQuery,
+  opts: { keepPreviousData?: boolean } = {},
+) {
   return useQuery<AdminEventListResponse>({
     queryKey: queryKeys.events.page(params),
     queryFn: () => api.listAdminEvents(params),
@@ -153,7 +156,8 @@ export function useUnlinkReport() {
         qc.invalidateQueries({ queryKey: queryKeys.reports.all }),
       ]),
     meta: {
-      successMessage: (_res: unknown, { id }: { id: string }) => eventMessage(id, "report unlinked"),
+      successMessage: (_res: unknown, { id }: { id: string }) =>
+        eventMessage(id, "report unlinked"),
     },
   })
 }

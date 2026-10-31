@@ -96,7 +96,7 @@ function flagSwitch(label: string): HTMLElement {
 }
 
 function textField(label: string): HTMLInputElement {
-  return within(card(label)).getByRole("textbox") as HTMLInputElement
+  return within(card(label)).getByRole("textbox")
 }
 
 function saveButton(label: string): HTMLElement {
@@ -106,7 +106,7 @@ function saveButton(label: string): HTMLElement {
 function details(dialog: HTMLElement): string[] {
   return within(dialog)
     .queryAllByRole("listitem")
-    .map((item) => item.textContent ?? "")
+    .map((item) => item.textContent)
 }
 
 async function dialogTitled(title: string): Promise<HTMLElement> {
@@ -132,7 +132,9 @@ describe("the Flags list", () => {
     await openFlags()
 
     const headings = within(screen.getByRole("tabpanel")).getAllByRole("heading", { level: 3 })
-    expect(headings.map((heading) => heading.textContent)).toEqual(RUNTIME_FLAGS.map((def) => def.label))
+    expect(headings.map((heading) => heading.textContent)).toEqual(
+      RUNTIME_FLAGS.map((def) => def.label),
+    )
     for (const def of RUNTIME_FLAGS) expect(card(def.label)).toHaveTextContent(def.description)
   })
 
@@ -166,7 +168,11 @@ describe("the Flags list", () => {
     expect(flagSwitch(AUTOFORWARD)).toHaveAttribute("aria-checked", "false")
 
     const style = within(card(LVL)).getByRole("combobox")
-    expect(within(style).getAllByRole("option").map((option) => option.textContent)).toEqual(["Info", "Warning"])
+    expect(
+      within(style)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Info", "Warning"])
     expect(style).toHaveDisplayValue("Info")
 
     for (const label of [IOS, AND, URL_FLAG, TXT]) {
@@ -220,7 +226,10 @@ describe("changing a flag", () => {
 
     await waitFor(() => expect(apiMock.adminListRuntimeFlags).toHaveBeenCalledTimes(2))
     expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledTimes(1)
-    expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "host_messaging_kill_switch", value: true })
+    expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+      key: "host_messaging_kill_switch",
+      value: true,
+    })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["admin", "audit"] })
   })
 
@@ -234,7 +243,10 @@ describe("changing a flag", () => {
     await userEvent.click(confirm)
 
     await waitFor(() =>
-      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "host_messaging_kill_switch", value: false }),
+      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+        key: "host_messaging_kill_switch",
+        value: false,
+      }),
     )
   })
 
@@ -259,7 +271,10 @@ describe("changing a flag", () => {
     await confirmChange(dialog)
 
     await waitFor(() =>
-      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "announcement_level", value: "warning" }),
+      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+        key: "announcement_level",
+        value: "warning",
+      }),
     )
   })
 
@@ -287,20 +302,30 @@ describe("changing a flag", () => {
     await openFlags()
 
     const ios = await saveText(IOS, "2.1.0")
-    expect(within(ios).getByRole("heading", { name: `Change ${IOS} to 2.1.0?` })).toBeInTheDocument()
+    expect(
+      within(ios).getByRole("heading", { name: `Change ${IOS} to 2.1.0?` }),
+    ).toBeInTheDocument()
     expect(ios).toHaveTextContent(VERSION_WARNING)
     await confirmChange(ios)
     await waitFor(() =>
-      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "min_app_version_ios", value: "2.1.0" }),
+      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+        key: "min_app_version_ios",
+        value: "2.1.0",
+      }),
     )
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
 
     const android = await saveText(AND, "3.0.0")
-    expect(within(android).getByRole("heading", { name: `Change ${AND} to 3.0.0?` })).toBeInTheDocument()
+    expect(
+      within(android).getByRole("heading", { name: `Change ${AND} to 3.0.0?` }),
+    ).toBeInTheDocument()
     expect(android).toHaveTextContent(VERSION_WARNING)
     await confirmChange(android)
     await waitFor(() =>
-      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "min_app_version_android", value: "3.0.0" }),
+      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+        key: "min_app_version_android",
+        value: "3.0.0",
+      }),
     )
   })
 
@@ -309,12 +334,17 @@ describe("changing a flag", () => {
     await openFlags({ app_store_url_ios: { value: link, override: link } })
 
     const dialog = await saveText(URL_FLAG, "")
-    expect(within(dialog).getByRole("heading", { name: `Change ${URL_FLAG} to not set?` })).toBeInTheDocument()
+    expect(
+      within(dialog).getByRole("heading", { name: `Change ${URL_FLAG} to not set?` }),
+    ).toBeInTheDocument()
     expect(details(dialog)).toEqual([link, "Not set"])
     await confirmChange(dialog)
 
     await waitFor(() =>
-      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "app_store_url_ios", value: null }),
+      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+        key: "app_store_url_ios",
+        value: null,
+      }),
     )
   })
 
@@ -322,7 +352,9 @@ describe("changing a flag", () => {
     await openFlags({ min_app_version_ios: { value: "2.0.0", override: "2.0.0" } })
 
     const dialog = await saveText(IOS, "")
-    expect(within(dialog).getByRole("heading", { name: `Change ${IOS} to not set?` })).toBeInTheDocument()
+    expect(
+      within(dialog).getByRole("heading", { name: `Change ${IOS} to not set?` }),
+    ).toBeInTheDocument()
     expect(dialog).not.toHaveTextContent(VERSION_WARNING)
   })
 
@@ -354,18 +386,24 @@ describe("changing a flag", () => {
   it.each([
     ["staging", "Change", false],
     ["prod", "Change on production", true],
-  ] as const)("T14: clears an override on %s back to its fallback", async (environment, label, danger) => {
-    await openFlags(KS_OVERRIDDEN, environment)
+  ] as const)(
+    "T14: clears an override on %s back to its fallback",
+    async (environment, label, danger) => {
+      await openFlags(KS_OVERRIDDEN, environment)
 
-    await userEvent.click(within(card(KS)).getByRole("button", { name: "Clear override" }))
-    const dialog = await dialogTitled(`Clear the override for ${KS}? It goes back to Off.`)
-    expect(details(dialog)).toEqual(["On", "Off"])
-    const confirm = within(dialog).getByRole("button", { name: label })
-    if (danger) expect(confirm).toHaveClass("danger")
-    else expect(confirm).not.toHaveClass("danger")
-    await userEvent.click(confirm)
+      await userEvent.click(within(card(KS)).getByRole("button", { name: "Clear override" }))
+      const dialog = await dialogTitled(`Clear the override for ${KS}? It goes back to Off.`)
+      expect(details(dialog)).toEqual(["On", "Off"])
+      const confirm = within(dialog).getByRole("button", { name: label })
+      if (danger) expect(confirm).toHaveClass("danger")
+      else expect(confirm).not.toHaveClass("danger")
+      await userEvent.click(confirm)
 
-    await waitFor(() => expect(apiMock.adminListRuntimeFlags).toHaveBeenCalledTimes(2))
-    expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({ key: "host_messaging_kill_switch", value: null })
-  })
+      await waitFor(() => expect(apiMock.adminListRuntimeFlags).toHaveBeenCalledTimes(2))
+      expect(apiMock.adminSetRuntimeFlag).toHaveBeenCalledWith({
+        key: "host_messaging_kill_switch",
+        value: null,
+      })
+    },
+  )
 })

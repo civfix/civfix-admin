@@ -8,6 +8,7 @@ import { PageHead, FilterChips, EmptyState } from "@/components/shared/page-prim
 import { ListCard, ListStates, LoadMoreButton, SearchBox } from "@/components/shared/section-list"
 import { useNow } from "@/hooks/use-now"
 import { useSelection } from "@/hooks/use-selection"
+import { useValueChanged } from "@/hooks/use-value-changed"
 import { useJurisdictionListInfinite } from "@/features/discovery/use-discovery"
 import {
   directoryCounts,
@@ -45,13 +46,13 @@ function useDirectoryFilters(focusId: string | null) {
     const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [query])
-  React.useEffect(() => {
-    if (!focusId) return
+  const focusChanged = useValueChanged(focusId)
+  if (focusChanged && focusId) {
     const next = initialDirectoryState(focusId)
     setFilter(next.filter)
     setQuery(next.query)
     setDebouncedQuery(next.query)
-  }, [focusId])
+  }
 
   return { filter, setFilter, layer, setLayer, sort, setSort, query, setQuery, debouncedQuery }
 }
@@ -160,12 +161,10 @@ function DirectoryListBody({
 
 function SelectedJurisdiction({
   selected,
-  selectedId,
-  notListed,
+  notListedId,
 }: {
   selected: JurisdictionDirectoryDTO | null
-  selectedId: string | null
-  notListed: boolean
+  notListedId: string | null
 }) {
   if (selected) {
     return selected.geoid === UNMAPPED_GEOID ? (
@@ -174,11 +173,11 @@ function SelectedJurisdiction({
       <JurisdictionDetail key={selected.geoid} dto={selected} />
     )
   }
-  if (notListed) {
+  if (notListedId !== null) {
     return (
       <EmptyState
         title="Not in this list"
-        sub={`No loaded jurisdiction has GEOID ${selectedId}.`}
+        sub={`No loaded jurisdiction has GEOID ${notListedId}.`}
         icon={<Icons.Search size={20} />}
       />
     )
@@ -201,10 +200,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     toDirectoryQuery("attention", sort, layer, debouncedQuery),
   )
 
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
   const firstPage = listQuery.data?.pages[0]
   const counts = directoryCounts({
     filter,
@@ -220,7 +216,11 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
   })
 
   // There is no by-id read here, so a pick that a filter or search leaves out stays open as last listed.
-  const { selectedId, setSelectedId, selectedItem: selected } = useSelection({
+  const {
+    selectedId,
+    setSelectedId,
+    selectedItem: selected,
+  } = useSelection({
     focusId,
     list: listQuery,
     items,
@@ -228,8 +228,10 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
     listKey: JSON.stringify([listParams.filter, listParams.sort, layer, debouncedQuery]),
     keepLastSeen: true,
   })
-  const notListed =
+  const notListedId =
     selectedId !== null && selected === null && !listQuery.isLoading && !listQuery.isError
+      ? selectedId
+      : null
 
   return (
     <>
@@ -237,8 +239,8 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         title="Jurisdictions"
         subtitle={
           <span>
-            Every place reports land in, and who they route to. Map a routing contact for the ones that
-            need one, and reports start flowing.
+            Every place reports land in, and who they route to. Map a routing contact for the ones
+            that need one, and reports start flowing.
           </span>
         }
       />
@@ -265,7 +267,7 @@ export function DiscoveryPage({ focusId }: SectionPageProps) {
         </ListCard>
 
         <section className="card md-detail-card">
-          <SelectedJurisdiction selected={selected} selectedId={selectedId} notListed={notListed} />
+          <SelectedJurisdiction selected={selected} notListedId={notListedId} />
         </section>
       </div>
     </>

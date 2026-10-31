@@ -59,7 +59,10 @@ afterEach(() => {
   useUiStore.setState({ toast: null })
 })
 
-async function openJobs(environment: AdminDevEnvironment, queues: AdminDevQueue[] = [INBOUND, RETENTION]) {
+async function openJobs(
+  environment: AdminDevEnvironment,
+  queues: AdminDevQueue[] = [INBOUND, RETENTION],
+) {
   env(environment)
   apiMock.adminSystemHealth.mockResolvedValue(NO_HEALTH)
   apiMock.adminDevJobs.mockResolvedValue(jobs(queues))
@@ -95,7 +98,9 @@ describe("the Jobs tab table", () => {
     vi.setSystemTime(NOW)
     await openJobs("staging")
 
-    const headers = within(screen.getByRole("table", { name: "Queues" })).getAllByRole("columnheader")
+    const headers = within(screen.getByRole("table", { name: "Queues" })).getAllByRole(
+      "columnheader",
+    )
     expect(headers[FAILED]).toHaveTextContent(/failed/i)
     expect(headers[FAILED_24H]).toHaveTextContent(/failed/i)
 
@@ -164,11 +169,15 @@ describe("the Jobs tab table", () => {
     openAt("#jobs")
     renderDevPage()
 
-    expect(await within(screen.getByRole("tabpanel")).findByText(errorMessage(error))).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole("tabpanel")).findByText(errorMessage(error)),
+    ).toBeInTheDocument()
     await waitFor(() => expect(badge()).toHaveTextContent("Staging"))
 
     await userEvent.click(tab("Overview"))
-    expect(await screen.findByRole("heading", { name: "Environment and builds", level: 3 })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { name: "Environment and builds", level: 3 }),
+    ).toBeInTheDocument()
     expect(card("Services")).toBeInTheDocument()
   })
 })
@@ -178,7 +187,9 @@ describe("Run now", () => {
     await openJobs("staging")
 
     const dialog = await runNow("inbound.sweep")
-    expect(within(dialog).getByRole("heading", { name: "Run inbound.sweep now?" })).toBeInTheDocument()
+    expect(
+      within(dialog).getByRole("heading", { name: "Run inbound.sweep now?" }),
+    ).toBeInTheDocument()
     const confirm = within(dialog).getByRole("button", { name: "Run" })
     expect(confirm).not.toHaveClass("danger")
 

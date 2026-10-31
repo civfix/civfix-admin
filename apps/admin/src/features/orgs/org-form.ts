@@ -36,7 +36,13 @@ export interface OrgProfileDraft {
   logoPreviewUrl: string | null
 }
 
-const ORG_PROFILE_SCALAR_FIELDS = ["name", "slug", "description", "websiteUrl", "logoMediaId"] as const
+const ORG_PROFILE_SCALAR_FIELDS = [
+  "name",
+  "slug",
+  "description",
+  "websiteUrl",
+  "logoMediaId",
+] as const
 
 type OrgProfileField = (typeof ORG_PROFILE_SCALAR_FIELDS)[number] | SocialPlatform
 export type OrgProfileErrors = Partial<Record<OrgProfileField | "ownerUserId" | "reason", string>>
@@ -241,7 +247,10 @@ export function hasProfileChanges(org: AdminOrgDTO, draft: OrgProfileDraft): boo
  * carries `fields` keyed by request field. Anything else returns an empty object so the caller falls
  * back to the error toast.
  */
-export function fieldErrorsFromError(raw: unknown, request?: { slug?: string }): OrgProfileErrors {
+export function fieldErrorsFromError(
+  raw: unknown,
+  request?: { slug?: string | undefined },
+): OrgProfileErrors {
   if (!(raw instanceof Error)) return {}
   const err = toAppError(raw)
   if (err.code === ErrorCode.CONFLICT) {
@@ -273,9 +282,11 @@ export function clearChangedFieldErrors(
   ]
   const stale = changed.filter((key) => errors[key] !== undefined)
   if (stale.length === 0) return errors
-  const out = { ...errors }
-  for (const key of stale) delete out[key]
-  return out
+  const staleKeys = new Set<string>(stale)
+  return pickFieldErrors(
+    errors,
+    SERVER_ERROR_FIELDS.filter((key) => !staleKeys.has(key)),
+  )
 }
 
 export function pickFieldErrors(

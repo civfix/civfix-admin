@@ -66,7 +66,9 @@ export function ProfileReportRow({ report, nav }: { report: UserReportItemDTO; n
 }
 
 export function ProfileEventRow({ event, nav }: { event: UserEventItemDTO; nav: NavFn }) {
-  const role = EVENT_ROLE_VIEW[event.role] ?? EVENT_ROLE_VIEW.member
+  const role = Object.hasOwn(EVENT_ROLE_VIEW, event.role)
+    ? EVENT_ROLE_VIEW[event.role]
+    : EVENT_ROLE_VIEW.member
   const open = () => nav("events", event.id)
   return (
     <div

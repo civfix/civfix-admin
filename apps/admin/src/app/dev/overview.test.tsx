@@ -29,7 +29,7 @@ const SEAMS_AND_SETTINGS = {
 function labelsOf(title: string): string[] {
   return within(card(title))
     .queryAllByRole("term")
-    .map((term) => term.textContent ?? "")
+    .map((term) => term.textContent)
 }
 
 beforeEach(() => {
@@ -70,10 +70,9 @@ describe("the Overview tab", () => {
     expect(builds).toBeInTheDocument()
 
     expect(field(BUILDS, "Environment")).toHaveTextContent("Production")
-    expect(within(field(BUILDS, "API commit")).getByRole("link", { name: "0123456" })).toHaveAttribute(
-      "href",
-      `https://github.com/civfix/civfix-backend/commit/${API_SHA}`,
-    )
+    expect(
+      within(field(BUILDS, "API commit")).getByRole("link", { name: "0123456" }),
+    ).toHaveAttribute("href", `https://github.com/civfix/civfix-backend/commit/${API_SHA}`)
     expect(field(BUILDS, "Release")).toHaveTextContent("v1.4.0")
     expect(field(BUILDS, "API image")).toHaveTextContent("ghcr.io/civfix/api@sha256:abc")
     expect(field(BUILDS, "Contract version")).toHaveTextContent("0.67.0")
@@ -83,10 +82,9 @@ describe("the Overview tab", () => {
       const time = within(field(BUILDS, label)).getByText("3 min ago")
       expect(time).toHaveAttribute("title", formatPreciseDateTime(THREE_MIN_AGO))
     }
-    expect(within(field(BUILDS, "Admin commit")).getByRole("link", { name: "fedcba9" })).toHaveAttribute(
-      "href",
-      `https://github.com/civfix/civfix-admin/commit/${ADMIN_SHA}`,
-    )
+    expect(
+      within(field(BUILDS, "Admin commit")).getByRole("link", { name: "fedcba9" }),
+    ).toHaveAttribute("href", `https://github.com/civfix/civfix-admin/commit/${ADMIN_SHA}`)
   })
 
   it("T10: reads Not set for every missing build value and links no commit", async () => {
@@ -96,11 +94,20 @@ describe("the Overview tab", () => {
     renderDevPage()
 
     await screen.findByRole("heading", { name: BUILDS, level: 3 })
-    for (const label of ["API commit", "Release", "API image", "Worker image", "Worker last job", "Admin commit"]) {
+    for (const label of [
+      "API commit",
+      "Release",
+      "API image",
+      "Worker image",
+      "Worker last job",
+      "Admin commit",
+    ]) {
       expect(field(BUILDS, label), label).toHaveTextContent(/^Not set$/)
     }
     expect(
-      screen.queryAllByRole("link").filter((link) => link.getAttribute("href")?.includes("/commit/")),
+      screen
+        .queryAllByRole("link")
+        .filter((link) => link.getAttribute("href")?.includes("/commit/")),
     ).toEqual([])
   })
 

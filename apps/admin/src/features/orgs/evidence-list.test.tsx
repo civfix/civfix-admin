@@ -57,4 +57,3 @@ describe("EvidenceList", () => {
     expect(document.getElementById(viewerId!)).toContainElement(image)
   })
 })
-
