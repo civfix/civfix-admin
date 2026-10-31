@@ -35,8 +35,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: 0.66.0-b-integration-notification-center.g66a7652
-        version: 0.66.0-b-integration-notification-center.g66a7652
+        specifier: 0.68.0-b-integration-notification-center.g91e57ed
+        version: 0.68.0-b-integration-notification-center.g91e57ed
       '@civfix/tokens':
         specifier: ^0.1.1
         version: 0.1.1
@@ -219,8 +219,8 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@civfix/contract@0.66.0-b-integration-notification-center.g66a7652':
-    resolution: {integrity: sha512-BJKtYZWhFKFJC2U7JJeAkE9aVm2yptcPynJOHhitSleFdo1r+0D82Za1ZkAX8rk7mIfsSdFgAnl0NHyXvBj38Q==}
+  '@civfix/contract@0.68.0-b-integration-notification-center.g91e57ed':
+    resolution: {integrity: sha512-nTvXFHUrN2ZtX0Bf7t8W+bqZXGxmxqBY5+a9GCp0QZ0pM6ZmrZPdE6769G8QXuGo16GRuks4Mpclk+Jyg4A4qw==}
     engines: {node: '>=20'}
 
   '@civfix/tokens@0.1.1':
@@ -3538,7 +3538,7 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@civfix/contract@0.66.0-b-integration-notification-center.g66a7652':
+  '@civfix/contract@0.68.0-b-integration-notification-center.g91e57ed':
     dependencies:
       zod: 4.6.7
 
