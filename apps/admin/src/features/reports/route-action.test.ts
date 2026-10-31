@@ -18,9 +18,9 @@ describe("routeActionView", () => {
   })
 
   it("blocks the send when the jurisdiction has no contact", () => {
-    expect(routeActionView(makeReport({ city: { ...makeReport().city, contact: null } })).kind).toBe(
-      "no_contact",
-    )
+    expect(
+      routeActionView(makeReport({ city: { ...makeReport().city, contact: null } })).kind,
+    ).toBe("no_contact")
     expect(routeActionView(makeReport({ city: { ...makeReport().city, contact: "" } })).kind).toBe(
       "no_contact",
     )

@@ -43,7 +43,7 @@ export function domainOfAddress(address: string): string {
 }
 
 export function withheldNote(
-  msg: { authVerdict?: MailAuthVerdict | null; from: string },
+  msg: { authVerdict?: MailAuthVerdict | null | undefined; from: string },
   isReport: boolean,
 ): string {
   const target = isReport ? "the report chat" : "the event timeline"

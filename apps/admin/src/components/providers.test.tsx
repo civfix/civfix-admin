@@ -1,15 +1,12 @@
 import { render, screen, within } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Providers } from "@/components/providers"
+import { expectConsoleError } from "@/test/console"
 
 vi.mock("@/components/auth/auth-hydrator", () => ({ AuthHydrator: () => null }))
 const session = vi.hoisted(() => ({
-  current: { isOperator: true, operator: null, status: "authenticated" } as {
-    isOperator: boolean
-    operator: null
-    status: string
-  },
+  current: { isOperator: true, operator: null, status: "authenticated" },
 }))
 
 vi.mock("@/hooks/use-admin-auth", () => ({
@@ -20,12 +17,7 @@ function Crash(): never {
   throw new Error("shell exploded")
 }
 
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined)
-})
-
 afterEach(() => {
-  vi.restoreAllMocks()
   session.current = { isOperator: true, operator: null, status: "authenticated" }
 })
 
@@ -40,6 +32,7 @@ describe("Providers", () => {
   })
 
   it("catches a render error anywhere in the app with a root alert offering Reload", () => {
+    expectConsoleError("shell exploded")
     render(
       <Providers>
         <Crash />

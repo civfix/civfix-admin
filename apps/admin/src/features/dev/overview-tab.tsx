@@ -57,7 +57,12 @@ function Commit({ repo, value }: { repo: string; value: string | null | undefine
   const sha = sourceLink(value).commit
   if (!sha) return <span className="mono">{value}</span>
   return (
-    <a className="mono" href={`https://github.com/civfix/${repo}/commit/${sha}`} target="_blank" rel="noreferrer noopener">
+    <a
+      className="mono"
+      href={`https://github.com/civfix/${repo}/commit/${sha}`}
+      target="_blank"
+      rel="noreferrer noopener"
+    >
       {sha.slice(0, SHORT_COMMIT_LENGTH)}
     </a>
   )
@@ -83,10 +88,17 @@ function BuildsCard({ overview, now }: { overview: AdminDevOverviewResponse; now
           { label: "Worker image", value: <Mono value={worker.image} /> },
           {
             label: "Worker last job",
-            value: worker.lastJobCompletedAt ? <Ago value={worker.lastJobCompletedAt} now={now} /> : NOT_SET,
+            value: worker.lastJobCompletedAt ? (
+              <Ago value={worker.lastJobCompletedAt} now={now} />
+            ) : (
+              NOT_SET
+            ),
           },
           // Read at render, not at import: the build inlines it either way, and a test can set it.
-          { label: "Admin commit", value: <Commit repo="civfix-admin" value={process.env.NEXT_PUBLIC_COMMIT_SHA} /> },
+          {
+            label: "Admin commit",
+            value: <Commit repo="civfix-admin" value={process.env.NEXT_PUBLIC_COMMIT_SHA} />,
+          },
         ]}
       />
     </Card>
@@ -97,8 +109,10 @@ function HealthCard() {
   const health = useDevSystemHealth()
   let body: React.ReactNode
   if (health.isPending) body = <LoadingState label="Loading health..." />
-  else if (health.isError) body = <ErrorState error={health.error} onRetry={() => void health.refetch()} />
-  else if (health.data.services.length === 0) body = <p className="muted">No health checks reported.</p>
+  else if (health.isError)
+    body = <ErrorState error={health.error} onRetry={() => void health.refetch()} />
+  else if (health.data.services.length === 0)
+    body = <p className="muted">No health checks reported.</p>
   else {
     body = (
       <ul className="dev-health" aria-label="System health">

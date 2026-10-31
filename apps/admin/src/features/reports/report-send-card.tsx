@@ -55,7 +55,11 @@ function RouteUnavailable({
     <>
       <div className="hint">{NO_ROUTE_HINT[kind]}</div>
       {geoid !== null && (
-        <button className="btn full" style={{ marginTop: 8 }} onClick={() => nav("discovery", geoid)}>
+        <button
+          className="btn full"
+          style={{ marginTop: 8 }}
+          onClick={() => nav("discovery", geoid)}
+        >
           <Icons.Building size={13} /> Set the routing contact in Jurisdictions
         </button>
       )}
@@ -140,7 +144,9 @@ function RoutePanel({
     return <RouteUnavailable kind={kind} geoid={report.geoid} />
   }
   if (!actions.routeOpen) return <RouteOpener panel={panel} onOpen={actions.openRoute} />
-  return <RouteComposer contact={report.city.contact} routeLabel={panel.routeLabel} actions={actions} />
+  return (
+    <RouteComposer contact={report.city.contact} routeLabel={panel.routeLabel} actions={actions} />
+  )
 }
 
 function VerdictButtons({ panel, actions }: { panel: SendPanelView; actions: VerdictActions }) {

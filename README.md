@@ -12,7 +12,7 @@ API it calls) and `civfix-infra` (the edge that serves it).
 civfix-admin/
   apps/admin/           # the operator dashboard (Next.js 15 static-export SPA). See its source.
   .npmrc                # @civfix:registry=https://repo.civfix.org/ (installs @civfix/contract and @civfix/tokens)
-  pnpm-workspace.yaml   # workspace packages: apps/*
+  pnpm-workspace.yaml   # workspace packages (apps/*) and every pnpm setting (overrides, build allow-list, supply-chain gates)
   turbo.json            # build/typecheck/lint task graph
   wrangler.jsonc        # Cloudflare Pages project "civfix-admin" -> apps/admin/out -> admin.civfix.org
 ```
@@ -31,9 +31,12 @@ pnpm install      # fetches @civfix/contract and @civfix/tokens from repo.civfix
 pnpm build        # admin (next build, static export -> apps/admin/out)
 pnpm typecheck
 pnpm lint         # eslint (flat config, typed rules) over apps/admin
-pnpm test         # vitest unit tests
+pnpm test         # vitest unit tests; any unexpected console.error/warn fails the test
+pnpm test:coverage # the same, with the coverage thresholds CI enforces
 pnpm --filter admin knip   # unused files, exports and dependencies
 pnpm --filter admin dup    # jscpd duplication gate (app code and tests measured separately)
+pnpm check:licenses        # fails on a production dependency whose license is AGPL-incompatible or unknown
+pnpm audit --audit-level high && pnpm audit --prod --audit-level moderate   # the CI audit gates
 pnpm dev          # runs the dashboard dev server (admin)
 ```
 
@@ -52,7 +55,7 @@ Cookies, CSRF and `x-client: web` are sent exactly as the public web app sends t
 ## Deploy
 
 Cloudflare Pages (Direct Upload). GitHub Actions builds the static export (a plain checkout +
-`pnpm install`, which fetches `@civfix/contract` and `@civfix/tokens` from `repo.civfix.org`; pinned Node 22 + pnpm 9.12.0)
+`pnpm install`, which fetches `@civfix/contract` and `@civfix/tokens` from `repo.civfix.org`; pinned Node 22 + the pnpm that `packageManager` pins)
 and ships the prebuilt `apps/admin/out` via `wrangler pages deploy`. The Pages project name and output
 dir come from the repo-root `wrangler.jsonc`
 (`civfix-admin` -> `apps/admin/out`). A push to `main` deploys staging (`admin.civfix.dev`); a published

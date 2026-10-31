@@ -30,7 +30,9 @@ function CheckRow({
   onToggle: (check: GovVerificationCheck, next: GovCheckStatus) => void
 }) {
   const state = claim.checks[check]
-  const view = GOV_CHECK_STATUS_VIEW[state.status] ?? GOV_CHECK_STATUS_VIEW.pending
+  const view = Object.hasOwn(GOV_CHECK_STATUS_VIEW, state.status)
+    ? GOV_CHECK_STATUS_VIEW[state.status]
+    : GOV_CHECK_STATUS_VIEW.pending
   const verified = state.status === "verified"
   const evidence = state.evidence ?? null
   return (

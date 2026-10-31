@@ -38,11 +38,17 @@ export function useSetDevForceUpdate() {
 }
 
 export function useDevTestPush() {
-  return useDevTool((input: AdminDevTestPushRequest) => api.adminDevTestPush(input), [queryKeys.audit.all])
+  return useDevTool(
+    (input: AdminDevTestPushRequest) => api.adminDevTestPush(input),
+    [queryKeys.audit.all],
+  )
 }
 
 export function useDevTestEmail() {
-  return useDevTool<void, AdminDevTestEmailResponse>(() => api.adminDevTestEmail({}), [queryKeys.audit.all])
+  return useDevTool<void, AdminDevTestEmailResponse>(
+    () => api.adminDevTestEmail({}),
+    [queryKeys.audit.all],
+  )
 }
 
 export function useDevResetFirstRun() {

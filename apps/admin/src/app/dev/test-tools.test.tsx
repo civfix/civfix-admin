@@ -45,7 +45,9 @@ async function openTestTools(
   overrides: Partial<AdminDevOverviewResponse> = {},
   accounts: AdminDevForceUpdateAccount[] = [],
 ) {
-  apiMock.adminDevOverview.mockResolvedValue(overview({ devToolsEnabled: true, testAccounts: [A, B], ...overrides }))
+  apiMock.adminDevOverview.mockResolvedValue(
+    overview({ devToolsEnabled: true, testAccounts: [A, B], ...overrides }),
+  )
   apiMock.adminDevListForceUpdate.mockResolvedValue(list(accounts))
   openAt("#test-tools")
   const { client } = renderDevPage()
@@ -186,7 +188,9 @@ describe("Force update", () => {
 
   it("T22: shows a refusal in the card", async () => {
     await openTools()
-    apiMock.adminDevSetForceUpdate.mockRejectedValue(new AppError(ErrorCode.CONFLICT, "At most 20 accounts"))
+    apiMock.adminDevSetForceUpdate.mockRejectedValue(
+      new AppError(ErrorCode.CONFLICT, "At most 20 accounts"),
+    )
     await pick(FORCE, B)
 
     await userEvent.click(button(FORCE, "Turn on"))
@@ -212,7 +216,9 @@ describe("Test push", () => {
 
   it("T24: sends the title and body typed, within their limits, and counts the devices", async () => {
     await openTools()
-    apiMock.adminDevTestPush.mockResolvedValueOnce({ devices: 2 }).mockResolvedValueOnce({ devices: 1 })
+    apiMock.adminDevTestPush
+      .mockResolvedValueOnce({ devices: 2 })
+      .mockResolvedValueOnce({ devices: 1 })
     const title = within(card(PUSH)).getByRole("textbox", { name: /^Title/ })
     const body = within(card(PUSH)).getByRole("textbox", { name: /^Message/ })
     expect(title).toHaveAttribute("maxlength", "80")
@@ -233,7 +239,9 @@ describe("Test push", () => {
 
   it("T25: shows a refusal in the card", async () => {
     await openTools()
-    apiMock.adminDevTestPush.mockRejectedValue(new AppError(ErrorCode.FORBIDDEN, "Not a test account"))
+    apiMock.adminDevTestPush.mockRejectedValue(
+      new AppError(ErrorCode.FORBIDDEN, "Not a test account"),
+    )
 
     await userEvent.click(button(PUSH, "Send"))
 
@@ -277,7 +285,9 @@ describe("Reset first run", () => {
 
   it("T28: shows a refusal in the card", async () => {
     await openTools()
-    apiMock.adminDevResetFirstRun.mockRejectedValue(new AppError(ErrorCode.NOT_FOUND, "No account yet"))
+    apiMock.adminDevResetFirstRun.mockRejectedValue(
+      new AppError(ErrorCode.NOT_FOUND, "No account yet"),
+    )
     await pick(RESET, A)
 
     await userEvent.click(button(RESET, "Reset"))

@@ -1,0 +1,3 @@
+# Commits git blame skips (GitHub honors this file; locally: git config blame.ignoreRevsFile .git-blame-ignore-revs).
+# Prettier formatting for admin (#259) (#90): one-time repo-wide reformat.
+2ae9c42d0a7b2683c1e0b3fd4f63779576841283

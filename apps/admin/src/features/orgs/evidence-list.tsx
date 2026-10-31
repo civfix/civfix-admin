@@ -7,6 +7,7 @@ import { LoadingState, ErrorState } from "@/components/shared/data-states"
 import { EmptyState } from "@/components/shared/page-primitives"
 import { formatDateTime } from "@/lib/dates"
 import { shortId } from "@/lib/display"
+import { useValueChanged } from "@/hooks/use-value-changed"
 import { evidenceUrlRemainingMs, isEvidenceUrlExpired } from "@/features/orgs/evidence-cache"
 import { useOrgVerificationDocument } from "@/features/orgs/use-orgs"
 
@@ -28,7 +29,9 @@ function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) 
 
   if (q.isLoading) return <LoadingState label="Loading document..." />
   if (q.isError && !q.data) {
-    return <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not open evidence" />
+    return (
+      <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not open evidence" />
+    )
   }
   if (!q.data) return null
   const media = q.data.media
@@ -43,8 +46,8 @@ function EvidenceViewer({ mediaId, index }: { mediaId: string; index: number }) 
     return (
       <div className="org-evidence-view">
         <span className="org-evidence-note">
-          The signed link expired at {formatDateTime(q.data.expiresAt)}. Request a fresh one; the new
-          read is audited too.
+          The signed link expired at {formatDateTime(q.data.expiresAt)}. Request a fresh one; the
+          new read is audited too.
         </span>
         <button type="button" className="btn sm" onClick={() => void q.refetch()}>
           <Icons.Clock size={12} /> Request a new link
@@ -73,10 +76,8 @@ export function EvidenceList({ mediaIds }: { mediaIds: string[] }) {
   const [openId, setOpenId] = React.useState<string | null>(null)
   const viewerIdPrefix = React.useId()
 
-  const mediaKey = mediaIds.join(",")
-  React.useEffect(() => {
-    setOpenId(null)
-  }, [mediaKey])
+  const documentsChanged = useValueChanged(mediaIds.join(","))
+  if (documentsChanged) setOpenId(null)
 
   if (mediaIds.length === 0) {
     return (

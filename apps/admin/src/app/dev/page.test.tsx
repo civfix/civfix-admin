@@ -15,13 +15,15 @@ vi.mock("@/lib/api", async (importOriginal) => {
 
 const TAB_NAMES = ["Overview", "Jobs", "Flags", "Test tools", "Audit"]
 
-async function badgeOf(environment: AdminDevEnvironment): Promise<{ text: string; className: string }> {
+async function badgeOf(
+  environment: AdminDevEnvironment,
+): Promise<{ text: string; className: string }> {
   env(environment)
   apiMock.adminSystemHealth.mockResolvedValue(NO_HEALTH)
   const { unmount } = renderDevPage()
   await waitFor(() => expect(badge()).not.toBeNull())
   const el = badge() as HTMLElement
-  const result = { text: el.textContent ?? "", className: el.className }
+  const result = { text: el.textContent, className: el.className }
   unmount()
   return result
 }
@@ -32,11 +34,21 @@ describe("the developer page header", () => {
     apiMock.adminSystemHealth.mockReturnValue(new Promise(() => {}))
     renderDevPage()
 
-    expect(within(header()).getByRole("heading", { name: "civfix developer", level: 1 })).toBeInTheDocument()
-    expect(within(header()).getByRole("link", { name: "Back to admin" })).toHaveAttribute("href", "/")
-    expect(within(screen.getByRole("tablist")).getAllByRole("tab").map((t) => t.textContent)).toEqual(TAB_NAMES)
+    expect(
+      within(header()).getByRole("heading", { name: "civfix developer", level: 1 }),
+    ).toBeInTheDocument()
+    expect(within(header()).getByRole("link", { name: "Back to admin" })).toHaveAttribute(
+      "href",
+      "/",
+    )
+    expect(
+      within(screen.getByRole("tablist"))
+        .getAllByRole("tab")
+        .map((t) => t.textContent),
+    ).toEqual(TAB_NAMES)
     expect(tab("Overview")).toHaveAttribute("aria-selected", "true")
-    for (const name of TAB_NAMES.slice(1)) expect(tab(name)).toHaveAttribute("aria-selected", "false")
+    for (const name of TAB_NAMES.slice(1))
+      expect(tab(name)).toHaveAttribute("aria-selected", "false")
     expect(badge()).toBeNull()
   })
 

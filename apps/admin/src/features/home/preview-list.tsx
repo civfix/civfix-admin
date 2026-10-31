@@ -13,18 +13,14 @@ function PeekGlyph({ item }: { item: PeekItem }) {
     const src = item.cat ? categoryPinSrc(item.cat) : null
     return (
       <span className="peek-pin">
-        {src ? (
-          <img src={src} alt="" />
-        ) : (
-          <Icons.Layers size={13} />
-        )}
+        {src ? <img src={src} alt="" /> : <Icons.Layers size={13} />}
       </span>
     )
   }
   if (item.kind === "icon") {
-    const Glyph = item.icon ?? Icons.Shield
+    const Glyph = item.icon
     return (
-      <span className={`peek-ico hue-${item.hue ?? "lilac"}`}>
+      <span className={`peek-ico hue-${item.hue}`}>
         <Glyph size={13} />
       </span>
     )
@@ -36,18 +32,14 @@ function PeekGlyph({ item }: { item: PeekItem }) {
       </span>
     )
   }
-  return <span className="peek-av">{initials(item.name ?? "")}</span>
+  return <span className="peek-av">{initials(item.name)}</span>
 }
 
 function PreviewRow({ item, page }: { item: PeekItem; page: PageId }) {
   const nav = useNav()
   const open = () => nav(page, item.focusId)
   return (
-    <button
-      type="button"
-      className="slr"
-      onClick={open}
-    >
+    <button type="button" className="slr" onClick={open}>
       <PeekGlyph item={item} />
       <span className="slr-body">
         <span className="slr-title">{item.title}</span>

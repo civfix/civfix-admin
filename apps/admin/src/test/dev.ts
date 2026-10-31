@@ -16,7 +16,9 @@ import { renderWithQuery } from "@/test/render"
 export const NOW = new Date("2026-10-20T12:00:00.000Z")
 export const THREE_MIN_AGO = new Date(NOW.getTime() - 3 * 60_000).toISOString()
 
-export function overview(overrides: Partial<AdminDevOverviewResponse> = {}): AdminDevOverviewResponse {
+export function overview(
+  overrides: Partial<AdminDevOverviewResponse> = {},
+): AdminDevOverviewResponse {
   return {
     environment: "staging",
     devToolsEnabled: true,
@@ -104,5 +106,5 @@ export function jobRow(name: string): HTMLElement {
 export function jobCells(name: string): string[] {
   return within(jobRow(name))
     .getAllByRole("cell")
-    .map((cell) => cell.textContent ?? "")
+    .map((cell) => cell.textContent)
 }

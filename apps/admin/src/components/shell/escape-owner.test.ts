@@ -4,8 +4,8 @@ import { ESCAPE_OWNER_SELECTOR, hasEscapeOwner, shellEscapeGoesHome } from "./es
 
 function doc(open: boolean): Pick<Document, "querySelector"> {
   return {
-    querySelector: ((selector: string) =>
-      open && selector === ESCAPE_OWNER_SELECTOR ? ({} as Element) : null) as Document["querySelector"],
+    querySelector: (selector: string) =>
+      open && selector === ESCAPE_OWNER_SELECTOR ? ({} as Element) : null,
   }
 }
 

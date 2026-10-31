@@ -19,18 +19,20 @@ import { formatCompactCount } from "@/lib/display"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { reportStatusView } from "@/lib/report-status"
 
-export interface PeekItem {
-  kind: "pin" | "icon" | "dir" | "avatar"
-  cat?: ReportCategory
-  icon?: IconComponent
-  hue?: Hue
-  dir?: MailDirection
-  name?: string
+interface PeekRow {
   title: string
   meta: string
   age: string
   focusId: string
 }
+
+export type PeekItem = PeekRow &
+  (
+    | { kind: "pin"; cat?: ReportCategory }
+    | { kind: "icon"; icon: IconComponent; hue: Hue }
+    | { kind: "dir"; dir: MailDirection }
+    | { kind: "avatar"; name: string }
+  )
 
 export function discoveryRow(task: DiscoveryTaskDTO): PeekItem {
   const population = task.pop > 0 ? formatCompactCount(task.pop) : ""
@@ -96,7 +98,8 @@ export function mailPreviewRows(
   limit: number,
 ): PeekItem[] {
   // Both feeds serialize ts with toISOString, so comparing the strings orders them by time.
-  const newestFirst = (a: { ts: string }, b: { ts: string }) => (a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0)
+  const newestFirst = (a: { ts: string }, b: { ts: string }) =>
+    a.ts < b.ts ? 1 : a.ts > b.ts ? -1 : 0
   return [
     ...outreach.map((thread) => ({ ts: thread.ts, row: mailRow(thread) })),
     ...inbound.map((email) => ({ ts: email.ts, row: inboxRow(email) })),

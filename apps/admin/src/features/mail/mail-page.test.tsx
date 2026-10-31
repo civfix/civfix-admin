@@ -214,7 +214,13 @@ function mockInboxMessages(...items: InboundEmailListItemDTO[]) {
   })
 }
 
-const STATS = { unread: 2, threads: 17, sent: 40, bounced: 3, failed: 1 } satisfies MailStatsResponse
+const STATS = {
+  unread: 2,
+  threads: 17,
+  sent: 40,
+  bounced: 3,
+  failed: 1,
+} satisfies MailStatsResponse
 
 // The page always loads the stats strip, the forward template and both folder lists, so every test
 // resolves the ones it is not about.
@@ -381,7 +387,9 @@ describe("MailPage outreach", () => {
     apiMock.listMail.mockResolvedValue(mailPage([POTHOLE, GRAFFITI]))
     mockThreads(POTHOLE, GRAFFITI)
     renderWithQuery(<MailPage focusId="t-2" />)
-    expect(await within(detailCard()).findByText("Body of Graffiti at Lake Merritt")).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByText("Body of Graffiti at Lake Merritt"),
+    ).toBeInTheDocument()
     expect(within(detailCard()).queryByText("Body of Pothole on 5th Ave")).not.toBeInTheDocument()
   })
 
@@ -443,7 +451,12 @@ describe("MailPage outreach", () => {
 
   it("keeps an unread thread open under Needs attention when opening it reads it out of the list", async () => {
     mockChrome()
-    const UNREAD_REPLY = thread({ id: "t-4", subject: "Re: Streetlight out", dir: "in", unread: true })
+    const UNREAD_REPLY = thread({
+      id: "t-4",
+      subject: "Re: Streetlight out",
+      dir: "in",
+      unread: true,
+    })
     let read = false
     apiMock.listMail.mockImplementation(async (params: { filter?: string }) =>
       params.filter === "attn"
@@ -486,7 +499,9 @@ describe("MailPage outreach", () => {
 
     graffiti.focus()
     await userEvent.keyboard("{Enter}")
-    expect(await within(detailCard()).findByText("Body of Graffiti at Lake Merritt")).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByText("Body of Graffiti at Lake Merritt"),
+    ).toBeInTheDocument()
     expect(graffiti).toHaveAttribute("aria-current", "true")
 
     pothole.focus()
@@ -526,7 +541,9 @@ describe("MailPage outreach", () => {
   it("shows the server thread total on the All list and marks a partial count when more pages exist", async () => {
     mockChrome()
     apiMock.listMail.mockImplementation(async (params: { dir?: string }) =>
-      params.dir === "out" ? mailPage([GRAFFITI], "mail-2") : mailPage([POTHOLE, GRAFFITI], "mail-2"),
+      params.dir === "out"
+        ? mailPage([GRAFFITI], "mail-2")
+        : mailPage([POTHOLE, GRAFFITI], "mail-2"),
     )
     mockThreads(POTHOLE, GRAFFITI)
     renderWithQuery(<MailPage focusId={null} />)
@@ -559,7 +576,9 @@ describe("MailPage reader", () => {
   it("addresses the reply placeholder to the correspondent when the thread has no org", async () => {
     const NO_ORG = { ...REPORT_REPLY_THREAD, org: "", reportId: null }
     mockChrome()
-    apiMock.listMail.mockResolvedValue(mailPage([thread({ id: "t-1", subject: "Re: Pothole", org: "" })]))
+    apiMock.listMail.mockResolvedValue(
+      mailPage([thread({ id: "t-1", subject: "Re: Pothole", org: "" })]),
+    )
     mockThreadDetails(NO_ORG)
     renderWithQuery(<MailPage focusId={null} />)
     expect(
@@ -707,7 +726,8 @@ describe("MailPage inbox", () => {
       })
       apiMock.listInboxFeed.mockReturnValue(
         new Promise((resolve) => {
-          releaseFeed = () => resolve(feedPage([{ ...REPORT_REPLY, publication: "published" as const }]))
+          releaseFeed = () =>
+            resolve(feedPage([{ ...REPORT_REPLY, publication: "published" as const }]))
         }),
       )
       return { publication: "published" }
@@ -720,11 +740,17 @@ describe("MailPage inbox", () => {
     )
     await openInbox()
 
-    await userEvent.click(await within(detailCard()).findByRole("button", { name: /Publish reply/ }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Publish reply" }))
+    await userEvent.click(
+      await within(detailCard()).findByRole("button", { name: /Publish reply/ }),
+    )
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Publish reply" }),
+    )
 
     await waitFor(() =>
-      expect(within(detailCard()).queryByRole("button", { name: /Publish reply/ })).not.toBeInTheDocument(),
+      expect(
+        within(detailCard()).queryByRole("button", { name: /Publish reply/ }),
+      ).not.toBeInTheDocument(),
     )
     releaseFeed()
     await waitFor(() =>
@@ -805,7 +831,9 @@ describe("MailPage inbox", () => {
 
     expect(screen.getByRole("radio", { name: /Inbox/ })).toHaveAttribute("aria-checked", "true")
     expect(await within(detailCard()).findByText("Body of Press inquiry")).toBeInTheDocument()
-    expect(within(detailCard()).queryByText("Body of Question about my report")).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByText("Body of Question about my report"),
+    ).not.toBeInTheDocument()
     expect(apiMock.getInboxMessage).not.toHaveBeenCalledWith({ id: "i-1" })
   })
 
