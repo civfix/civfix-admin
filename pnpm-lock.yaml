@@ -35,8 +35,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: 0.68.0-b-integration-city-filing.g48a6446
-        version: 0.68.0-b-integration-city-filing.g48a6446
+        specifier: 0.69.0-b-integration-city-filing.g3a21377
+        version: 0.69.0-b-integration-city-filing.g3a21377
       '@civfix/tokens':
         specifier: ^0.1.1
         version: 0.1.1
@@ -219,8 +219,8 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@civfix/contract@0.68.0-b-integration-city-filing.g48a6446':
-    resolution: {integrity: sha512-HAfxqUCMB2hnJRXZ9DKUunFvzfJlx+u8IkDXc4no0Dim2sZ73mdmnYDiHsazHq+qokYimdI4rJQtjIUV9mmBcA==}
+  '@civfix/contract@0.69.0-b-integration-city-filing.g3a21377':
+    resolution: {integrity: sha512-hJ3NKNJhh8U/edBH4EgwbTlEMfIs4PxeUXiakmU0h+1Q+MtFOeTJB6lCtYi0jnTa65P7DFUaStb5EZkWVmWSuw==}
     engines: {node: '>=20'}
 
   '@civfix/tokens@0.1.1':
@@ -3538,7 +3538,7 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@civfix/contract@0.68.0-b-integration-city-filing.g48a6446':
+  '@civfix/contract@0.69.0-b-integration-city-filing.g3a21377':
     dependencies:
       zod: 4.6.7
 
