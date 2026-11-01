@@ -11,11 +11,11 @@ import { useValueChanged } from "@/hooks/use-value-changed"
 interface ConfirmRequest {
   kind: "confirm"
   title: string
-  body?: string
+  body?: string | undefined
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
-  details?: string[]
+  details?: string[] | undefined
   acknowledgeOnly?: boolean
   resolve: (ok: boolean) => void
 }
