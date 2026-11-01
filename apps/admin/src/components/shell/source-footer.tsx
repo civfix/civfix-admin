@@ -16,6 +16,7 @@ export function SourceFooter() {
       {SOURCE.commit ? (
         <span className="hub-foot-commit">{SOURCE.commit.slice(0, SHORT_COMMIT_LENGTH)}</span>
       ) : null}
+      <a href="/dev/">Developer</a>
     </footer>
   )
 }
