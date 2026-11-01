@@ -23,7 +23,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 
 const KS = "Host messaging kill switch"
 const OD = "Outreach digest"
-const AUTOFORWARD = "Report auto-forward"
+const AUTOFORWARD = "Suggest the city in discussions"
 const IOS = "Minimum iOS version"
 const AND = "Minimum Android version"
 const URL_FLAG = "App Store link (iOS)"
