@@ -35,8 +35,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: 0.68.0-b-integration-dev-console.g43ac5d9
-        version: 0.68.0-b-integration-dev-console.g43ac5d9
+        specifier: ^0.68.0
+        version: 0.68.0
       '@civfix/tokens':
         specifier: ^0.1.1
         version: 0.1.1
@@ -219,8 +219,8 @@ packages:
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
 
-  '@civfix/contract@0.68.0-b-integration-dev-console.g43ac5d9':
-    resolution: {integrity: sha512-bA/B0cquqqg5InHwGhoVesNzfEt4QGOBUkZR/faXs+s4YIPRA/LTWH2o17uFHI9jykBHaP8yQ5D596hMxCei+g==}
+  '@civfix/contract@0.68.0':
+    resolution: {integrity: sha512-NmL3EyCxs5t8oKocAvMtsL6rNDpI7e3ClnrR6LddUBq3U4KGsycU1hREx4aPNq3VZlrz3En7SuUQ5IdRikq6gQ==}
     engines: {node: '>=20'}
 
   '@civfix/tokens@0.1.1':
@@ -3538,7 +3538,7 @@ snapshots:
 
   '@bcoe/v8-coverage@1.0.2': {}
 
-  '@civfix/contract@0.68.0-b-integration-dev-console.g43ac5d9':
+  '@civfix/contract@0.68.0':
     dependencies:
       zod: 4.6.7
 
