@@ -10,7 +10,7 @@ API it calls) and `civfix-infra` (the edge that serves it).
 
 ```
 civfix-admin/
-  apps/admin/           # the operator dashboard (Next.js 15 static-export SPA). See its source.
+  apps/admin/           # the operator dashboard (Next.js 16 static-export SPA). See its source.
   .npmrc                # @civfix:registry=https://repo.civfix.org/ (installs @civfix/contract and @civfix/tokens)
   pnpm-workspace.yaml   # workspace packages (apps/*) and every pnpm setting (overrides, build allow-list, supply-chain gates)
   turbo.json            # build/typecheck/lint task graph

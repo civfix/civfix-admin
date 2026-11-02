@@ -20,11 +20,6 @@ const config: KnipConfig = {
         .flatMap(([, specifier]) => (specifier === undefined ? [] : [`import "${specifier}";`]))
         .join("\n"),
   },
-  ignoreDependencies: [
-    // Loaded by name through FlatCompat.extends("next/...") in eslint.config.mjs, which knip's ESLint
-    // plugin cannot see into.
-    "eslint-config-next",
-  ],
 }
 
 export default config
