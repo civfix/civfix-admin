@@ -55,7 +55,7 @@ Cookies, CSRF and `x-client: web` are sent exactly as the public web app sends t
 ## Deploy
 
 Cloudflare Pages (Direct Upload). GitHub Actions builds the static export (a plain checkout +
-`pnpm install`, which fetches `@civfix/contract` and `@civfix/tokens` from `repo.civfix.org`; pinned Node 22 + the pnpm that `packageManager` pins)
+`pnpm install`, which fetches `@civfix/contract` and `@civfix/tokens` from `repo.civfix.org`; pinned Node 24 + the pnpm that `packageManager` pins)
 and ships the prebuilt `apps/admin/out` via `wrangler pages deploy`. The Pages project name and output
 dir come from the repo-root `wrangler.jsonc`
 (`civfix-admin` -> `apps/admin/out`). A push to `main` deploys staging (`admin.civfix.dev`); a published
