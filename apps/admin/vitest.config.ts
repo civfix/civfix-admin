@@ -17,7 +17,7 @@ export default defineConfig({
     },
   },
   // tsconfig keeps `jsx: preserve` for Next; tests need the automatic runtime.
-  esbuild: { jsx: "automatic" },
+  oxc: { jsx: { runtime: "automatic" } },
   test: {
     pool: "forks",
     coverage: {

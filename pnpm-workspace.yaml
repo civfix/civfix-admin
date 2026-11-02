@@ -17,6 +17,13 @@ minimumReleaseAgeExclude:
   - "@civfix/*"
 # Refuse a version published with weaker provenance than the versions before it (a stolen token, not CI).
 trustPolicy: no-downgrade
+# Exact versions that fail that check only because a later line of the package carried provenance first, each checked
+# to come from the package's usual maintainer: eslint-import-resolver-typescript 3.10.1 (eslint-config-next 15 pins
+# ^3; a 3.x backport published after the attested 4.2.6) and semver 6.3.1 (the 6.x backport of the 7.5.2 ReDoS fix).
+# Drop each entry once the tree leaves that version. Never exclude a package name without a version.
+trustPolicyExclude:
+  - eslint-import-resolver-typescript@3.10.1
+  - semver@6.3.1
 # A git or tarball-URL subdependency carries no publish time or provenance, so it would slip past both checks above.
 blockExoticSubdeps: true
 # A new install script must stop the install for review: skipped silently, it can also break a native binary unnoticed.
@@ -32,12 +39,11 @@ allowBuilds:
   workerd: true
 
 # Floors for transitive packages whose parent still declares a vulnerable range, each bounded inside the
-# vulnerable package's own major so the fix stays a patch/minor for the requester: vite (vitest peer), js-yaml 4,
+# vulnerable package's own major so the fix stays a patch/minor for the requester: js-yaml 4,
 # brace-expansion 1/5, nanoid 3, postcss, browserslist, postcss-selector-parser 6/7 and source-map-js 1 (eslint,
 # tailwindcss 3, next and vitest DoS and path-traversal advisories); sharp (next still accepts the vulnerable 0.34
 # line); undici 7 (wrangler pins it through miniflare). Drop each entry once its parent ships the fixed range itself.
 overrides:
-  vite: ">=7.3.7 <8"
   js-yaml@4: ">=4.3.1 <5"
   brace-expansion@1: ">=1.1.21 <2"
   brace-expansion@5: ">=5.0.12 <6"
