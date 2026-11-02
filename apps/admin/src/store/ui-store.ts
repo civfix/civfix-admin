@@ -13,6 +13,7 @@ export const SECTIONS = [
   "orgs",
   "hosts",
   "pages",
+  "legal",
 ] as const
 
 export type SectionId = (typeof SECTIONS)[number]
@@ -30,6 +31,7 @@ export const PAGE_LABEL: Record<PageId, string> = {
   orgs: "Organizations",
   hosts: "Host messaging",
   pages: "Signup pages",
+  legal: "Legal",
 }
 
 export type ToastTone = "ok" | "error"
