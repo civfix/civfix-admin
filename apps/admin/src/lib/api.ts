@@ -84,3 +84,9 @@ export function isAppError(err: unknown): boolean {
 export function isNotFound(err: unknown): boolean {
   return toAppError(err).code === ErrorCode.NOT_FOUND
 }
+
+/** The per-field messages of a VALIDATION error, keyed by request path; null for any other error. */
+export function validationFields(err: unknown): Record<string, string> | null {
+  const e = toAppError(err)
+  return e.code === ErrorCode.VALIDATION && e.fields ? e.fields : null
+}

@@ -37,6 +37,7 @@ export interface HomeSections {
   mail: SectionSummary
   users: SectionSummary
   analytics: SectionSummary
+  filings: SectionSummary
 }
 
 const NO_COUNT = { lead: null, unit: "" } as const
@@ -139,6 +140,14 @@ export function buildSections(data: HomeSummaryResponse | undefined): HomeSectio
         { k: "New users", v: data.analytics.newUsers },
       ],
       cta: "See analytics",
+    },
+    filings: {
+      page: "filings",
+      label: "Filings",
+      hue: "bloom",
+      ...counted(data?.filingsNeedsHuman, "need a human"),
+      stats: [],
+      cta: "Open filings",
     },
   }
 }

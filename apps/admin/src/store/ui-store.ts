@@ -5,6 +5,7 @@ import { create } from "zustand"
 export const SECTIONS = [
   "discovery",
   "reports",
+  "filings",
   "events",
   "mail",
   "users",
@@ -23,6 +24,7 @@ export const PAGE_LABEL: Record<PageId, string> = {
   home: "Dashboard",
   discovery: "Jurisdictions",
   reports: "Reports",
+  filings: "Filings",
   events: "Events",
   mail: "Mail",
   users: "Users",

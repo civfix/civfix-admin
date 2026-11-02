@@ -3890,7 +3890,8 @@ button.prow-main {
 .bt-mail,
 .bt-users,
 .bt-reports,
-.bt-events {
+.bt-events,
+.bt-filings {
   grid-column: span 3;
 }
 @media (max-width: 1100px) {
@@ -3910,7 +3911,8 @@ button.prow-main {
   .bt-mail,
   .bt-users,
   .bt-reports,
-  .bt-events {
+  .bt-events,
+  .bt-filings {
     grid-column: span 3;
   }
 }

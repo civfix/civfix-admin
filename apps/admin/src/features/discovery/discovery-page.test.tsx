@@ -1,21 +1,18 @@
 import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClientProvider } from "@tanstack/react-query"
-import { describe, expect, it, onTestFinished, vi } from "vitest"
-import type {
-  GetForwardTemplateDefaultResponse,
-  JurisdictionDirectoryDTO,
-  JurisdictionDirectoryResponse,
-  JurisdictionGeometryResponse,
-} from "@civfix/contract"
+import { describe, expect, it, vi } from "vitest"
+import type { JurisdictionDirectoryDTO, JurisdictionDirectoryResponse } from "@civfix/contract"
 
 import type * as ApiModule from "@/lib/api"
 import { categoryLabel } from "@/lib/category"
 import { EMPTY_VALUE } from "@/lib/empty-value"
 import { makeQueryClient } from "@/lib/query"
-import { useUiStore, type ToastTone } from "@/store/ui-store"
+import { useUiStore } from "@/store/ui-store"
 import { apiMock } from "@/test/api-mock"
+import { jurisdiction, mockDetailQueries } from "@/test/discovery"
 import { renderWithQuery } from "@/test/render"
+import { spyToasts } from "@/test/toasts"
 import { DiscoveryPage } from "@/features/discovery/discovery-page"
 
 vi.mock("@/lib/api", async (importOriginal) => {
@@ -27,33 +24,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
 vi.mock("@/components/map/boundary-map", () => ({
   BoundaryMap: () => <div data-testid="boundary-map" />,
 }))
-
-const DAY_MS = 24 * 60 * 60 * 1000
-
-function jurisdiction(overrides: Partial<JurisdictionDirectoryDTO> = {}): JurisdictionDirectoryDTO {
-  return {
-    geoid: "0644000",
-    org: "Los Angeles",
-    dept: null,
-    email: null,
-    form: null,
-    method: "none",
-    status: "pending",
-    coverage: "City limits",
-    lastRouted: null,
-    layer: "place",
-    population: 3_898_747,
-    reportsWaiting: 4,
-    perCategoryCounts: { trash: 3, graffiti: 1 },
-    contacts: [],
-    flaggedAt: null,
-    handle: null,
-    oldestReportAt: new Date(Date.now() - 3 * DAY_MS).toISOString(),
-    forwardSubjectTemplate: null,
-    forwardBodyTemplate: null,
-    ...overrides,
-  } satisfies JurisdictionDirectoryDTO
-}
 
 const LA = jurisdiction()
 const PASADENA = jurisdiction({
@@ -83,37 +53,12 @@ function page(
   } satisfies JurisdictionDirectoryResponse
 }
 
-const GEOMETRY = {
-  geoid: "0644000",
-  layer: "place",
-  geometry: { type: "Polygon", coordinates: [] },
-  bbox: [-118.7, 33.7, -118.1, 34.3],
-  point: { lat: 34.05, lng: -118.25 },
-} as unknown as JurisdictionGeometryResponse
-
-function mockDetailQueries(): void {
-  apiMock.getJurisdictionGeometry.mockResolvedValue(GEOMETRY)
-  apiMock.getForwardTemplateDefault.mockResolvedValue({
-    subjectTemplate: null,
-    bodyTemplate: null,
-    updatedAt: null,
-  } satisfies GetForwardTemplateDefaultResponse)
-}
-
 function listCalls(): Record<string, unknown>[] {
   return apiMock.listJurisdictions.mock.calls.map((call) => call[0] as Record<string, unknown>)
 }
 
 function chip(name: RegExp): HTMLElement {
   return screen.getByRole("button", { name })
-}
-
-function spyToasts() {
-  const original = useUiStore.getState().showToast
-  const showToast = vi.fn<(text: string, tone?: ToastTone) => void>()
-  useUiStore.setState({ showToast })
-  onTestFinished(() => useUiStore.setState({ showToast: original }))
-  return showToast
 }
 
 describe("DiscoveryPage", () => {
