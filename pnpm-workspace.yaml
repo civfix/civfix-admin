@@ -18,7 +18,7 @@ minimumReleaseAgeExclude:
 # Refuse a version published with weaker provenance than the versions before it (a stolen token, not CI).
 trustPolicy: no-downgrade
 # Exact versions that fail that check only because a later line of the package carried provenance first, each checked
-# to come from the package's usual maintainer: eslint-import-resolver-typescript 3.10.1 (eslint-config-next 15 pins
+# to come from the package's usual maintainer: eslint-import-resolver-typescript 3.10.1 (eslint-config-next 16 pins
 # ^3; a 3.x backport published after the attested 4.2.6) and semver 6.3.1 (the 6.x backport of the 7.5.2 ReDoS fix).
 # Drop each entry once the tree leaves that version. Never exclude a package name without a version.
 trustPolicyExclude:
@@ -40,9 +40,9 @@ allowBuilds:
 
 # Floors for transitive packages whose parent still declares a vulnerable range, each bounded inside the
 # vulnerable package's own major so the fix stays a patch/minor for the requester: js-yaml 4,
-# brace-expansion 1/5, nanoid 3, postcss, browserslist, postcss-selector-parser 6/7 and source-map-js 1 (eslint,
-# tailwindcss 3, next and vitest DoS and path-traversal advisories); sharp (next still accepts the vulnerable 0.34
-# line); undici 7 (wrangler pins it through miniflare). Drop each entry once its parent ships the fixed range itself.
+# brace-expansion 1/5, nanoid 3, postcss, browserslist and source-map-js 1 (eslint, next, tailwindcss 4, babel and
+# vitest DoS and path-traversal advisories); undici 7 (wrangler pins it through miniflare). Drop each entry once its
+# parent ships the fixed range itself.
 overrides:
   js-yaml@4: ">=4.3.1 <5"
   brace-expansion@1: ">=1.1.21 <2"
@@ -50,8 +50,5 @@ overrides:
   nanoid@3: ">=3.3.18 <4"
   postcss: ">=8.5.28 <9"
   browserslist: ">=4.28.9 <5"
-  postcss-selector-parser@6: ">=6.1.5 <7"
   source-map-js@1: ">=1.2.2 <2"
-  sharp: ">=0.35.5 <0.36"
   undici@7: ">=7.30.1 <8"
-  postcss-selector-parser@7: ">=7.1.6 <8"

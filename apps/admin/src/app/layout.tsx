@@ -4,8 +4,8 @@ import { tokens } from "@civfix/tokens"
 
 import { Providers } from "@/components/providers"
 import "./globals.css"
-// After globals.css so the design system's component classes win over Tailwind's base reset where
-// they overlap on the shell.
+// Unlayered, so the design system's component classes win over Tailwind's layered base reset where
+// they overlap on the shell; after globals.css so they also follow its few unlayered rules.
 import "@/styles/admin.css"
 // Last, so the app's own additions layer on top of the design system CSS.
 import "@/styles/app.css"
