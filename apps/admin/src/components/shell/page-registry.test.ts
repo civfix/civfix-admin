@@ -15,6 +15,7 @@ const LOADERS: Record<string, () => Promise<Record<string, unknown>>> = {
   orgs: () => import("@/features/orgs/orgs-page"),
   hosts: () => import("@/features/hosts/hosts-page"),
   pages: () => import("@/features/pages/pages-page"),
+  legal: () => import("@/features/legal/legal-page"),
 }
 
 describe("page registry", () => {
@@ -24,6 +25,12 @@ describe("page registry", () => {
 
   it("T32: maps filings to FilingsPage", () => {
     expect(EXPECTED_EXPORTS.filings).toBe("FilingsPage")
+  })
+
+  it("T2: loads LegalPage for the legal section", async () => {
+    expect(EXPECTED_EXPORTS.legal).toBe("LegalPage")
+    const mod = await import("@/features/legal/legal-page")
+    expect(typeof mod.LegalPage).toBe("function")
   })
 
   it.each(Object.entries(EXPECTED_EXPORTS))(
