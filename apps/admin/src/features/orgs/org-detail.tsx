@@ -211,8 +211,8 @@ function OrgDetailTabs({
           onKeyDown={onTabKeyDown}
           onClick={() => onTab(t)}
         >
-          {TAB_LABEL[t]}
-          <TabBadge org={org} tab={t} />
+          {/* The flex tab never renders this space; it keeps the badge apart from the label in the tab's accessible name. */}
+          {TAB_LABEL[t]} <TabBadge org={org} tab={t} />
         </button>
       ))}
     </div>
