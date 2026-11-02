@@ -157,7 +157,9 @@ describe("PagesPage list states", () => {
     apiMock.adminListEventPages.mockResolvedValue(listPage([echoPage]))
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }))
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" }),
+    ).toBeInTheDocument()
     expect(apiMock.adminListEventPages).toHaveBeenCalledTimes(2)
   })
 
@@ -198,7 +200,9 @@ describe("PagesPage list states", () => {
     expect(await within(detail).findByText("Monthly lakeside sweep")).toBeInTheDocument()
     expect(within(detail).getByText("About the day")).toBeInTheDocument()
     expect(within(detail).getByText("Bring gloves and water.")).toBeInTheDocument()
-    expect(within(detail).getByText(/^\/e\/echo-park-cleanup · theme bloom · indexable$/)).toBeInTheDocument()
+    expect(
+      within(detail).getByText(/^\/e\/echo-park-cleanup · theme bloom · indexable$/),
+    ).toBeInTheDocument()
     expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: ECHO_ID })
   })
 
@@ -225,7 +229,9 @@ describe("PagesPage list states", () => {
     await userEvent.click(await screen.findByText("LA River Day"))
 
     const detail = detailPane("LA River Day")
-    expect(screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" }),
+    ).not.toBeInTheDocument()
     expect(within(detail).getByText("/e/river-day")).toBeInTheDocument()
     // Once as the header badge, once as the flag row label.
     expect(within(detail).getAllByText("Flagged")).toHaveLength(2)
@@ -235,7 +241,9 @@ describe("PagesPage list states", () => {
     ).toBeInTheDocument()
     expect(within(detail).getByRole("button", { name: "Clear flag" })).toBeEnabled()
     expect(within(detail).getByRole("button", { name: "Unpublish" })).toBeDisabled()
-    expect(await within(detail).findByText(/^\/e\/river-day · theme bloom · noindex$/)).toBeInTheDocument()
+    expect(
+      await within(detail).findByText(/^\/e\/river-day · theme bloom · noindex$/),
+    ).toBeInTheDocument()
   })
 
   it("shows the draft crumb for a page without a slug", async () => {
@@ -270,13 +278,17 @@ describe("PagesPage list accessibility", () => {
 
     riverRow.focus()
     await userEvent.keyboard("{Enter}")
-    expect(await screen.findByRole("heading", { level: 2, name: "LA River Day" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "LA River Day" }),
+    ).toBeInTheDocument()
     expect(riverRow).toHaveAttribute("aria-current", "true")
     expect(echoRow).not.toHaveAttribute("aria-current")
 
     echoRow.focus()
     await userEvent.keyboard(" ")
-    expect(await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Echo Park Cleanup" }),
+    ).toBeInTheDocument()
   })
 
   it("names the search box and the flagged marker", async () => {
@@ -350,7 +362,13 @@ describe("PagesPage moderation", () => {
   })
 
   it("clears the selection instead of jumping to another page when an unpublished page leaves the Published list", async () => {
-    const otherPublished = { ...riverPage, status: "published", flaggedAt: null, flagReason: null, flaggedBy: null } satisfies AdminEventPageListItemDTO
+    const otherPublished = {
+      ...riverPage,
+      status: "published",
+      flaggedAt: null,
+      flagReason: null,
+      flaggedBy: null,
+    } satisfies AdminEventPageListItemDTO
     let unpublished = false
     apiMock.adminListEventPages.mockImplementation(async () =>
       listPage(unpublished ? [otherPublished] : [echoPage, otherPublished]),
@@ -380,7 +398,13 @@ describe("PagesPage moderation", () => {
 
   it("confirms the unpublish once the page preview refetch lands after the list dropped the page", async () => {
     useUiStore.setState({ toast: null })
-    const otherPublished = { ...riverPage, status: "published", flaggedAt: null, flagReason: null, flaggedBy: null } satisfies AdminEventPageListItemDTO
+    const otherPublished = {
+      ...riverPage,
+      status: "published",
+      flaggedAt: null,
+      flagReason: null,
+      flaggedBy: null,
+    } satisfies AdminEventPageListItemDTO
     let unpublished = false
     let releasePreview!: (page: AdminGetEventPageResponse) => void
     const previewRefetch = new Promise<AdminGetEventPageResponse>((resolve) => {
@@ -422,7 +446,12 @@ describe("PagesPage moderation", () => {
     )
     apiMock.adminGetEventPage.mockImplementation(({ id }: { id: string }) =>
       Promise.resolve(
-        eventPage(id, id === RIVER_ID ? { slug: "river-day", seo: { title: "LA River Day", noindex: false } } : {}),
+        eventPage(
+          id,
+          id === RIVER_ID
+            ? { slug: "river-day", seo: { title: "LA River Day", noindex: false } }
+            : {},
+        ),
       ),
     )
     renderWithQuery(<PagesPage focusId={null} />)
@@ -433,7 +462,9 @@ describe("PagesPage moderation", () => {
     await userEvent.click(screen.getByRole("button", { name: "Draft" }))
     const lakeRow = await within(listPane()).findByText("Silver Lake Sweep")
 
-    expect(await screen.findByRole("heading", { level: 2, name: "LA River Day" })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "LA River Day" }),
+    ).toBeInTheDocument()
     expect(queueRowOf(lakeRow)).not.toHaveAttribute("aria-current")
     expect(apiMock.adminGetEventPage).toHaveBeenCalledWith({ id: RIVER_ID })
   })
@@ -506,7 +537,9 @@ describe("PagesPage paging, filters and search", () => {
       vi.advanceTimersByTime(1)
     })
     expect(apiMock.adminListEventPages).toHaveBeenLastCalledWith({ status: "published", q: "echo" })
-    expect(apiMock.adminListEventPages).toHaveBeenCalledWith(expect.objectContaining({ q: expect.any(String) }))
+    expect(apiMock.adminListEventPages).toHaveBeenCalledWith(
+      expect.objectContaining({ q: expect.any(String) }),
+    )
   })
 })
 
@@ -518,8 +551,12 @@ describe("PagesPage deep links", () => {
     )
     renderWithQuery(<PagesPage focusId={RIVER_ID} />)
 
-    expect(await screen.findByRole("heading", { level: 2, name: "LA River Day" })).toBeInTheDocument()
-    expect(screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" })).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "LA River Day" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" }),
+    ).not.toBeInTheDocument()
   })
 
   it("fetches the focused page on its own when it is not in the loaded list", async () => {
@@ -548,7 +585,9 @@ describe("PagesPage deep links", () => {
     expect(within(detail).getByText("Unlisted")).toBeInTheDocument()
     expect(within(detail).getByText("Copied a city logo")).toBeInTheDocument()
     expect(within(detail).getByRole("button", { name: "Unpublish" })).toBeDisabled()
-    expect(screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Echo Park Cleanup" }),
+    ).not.toBeInTheDocument()
     expect(within(listPane()).getByText("/e/echo-park-cleanup")).toBeInTheDocument()
   })
 

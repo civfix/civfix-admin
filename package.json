@@ -1,10 +1,10 @@
 {
   "name": "civfix-admin",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "license": "AGPL-3.0-only",
   "description": "civfix admin / operator dashboard workspace (admin.civfix.org). Consumes @civfix/contract and @civfix/tokens from the private npm registry.",
-  "packageManager": "pnpm@9.12.0",
+  "packageManager": "pnpm@10.34.9+sha512.f49b5a8ea0fdedb44bb3c0c1d6575092a53c2950d95b7ad15df11f17974877a2de3a01c07e934e9b28ce716e51c09a94962c7306d09be2e1e4b18a8c8762fd32",
   "engines": {
     "node": ">=22"
   },
@@ -14,33 +14,16 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "clean": "turbo run clean"
+    "test:coverage": "turbo run test:coverage",
+    "clean": "turbo run clean",
+    "check:licenses": "node scripts/check-licenses.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "prettier": "3.9.9",
     "turbo": "^2.3.3",
     "wrangler": "4.152.0"
-  },
-  "pnpm": {
-    "//overrides": "Floors for transitive packages whose parent still declares a vulnerable range, each bounded inside the vulnerable package's own major so the fix stays a patch/minor for the requester: vite (vitest peer), js-yaml 4, brace-expansion 1/5, nanoid 3, postcss, browserslist, postcss-selector-parser 6 and source-map-js 1 (eslint, tailwindcss 3, next and vitest DoS and path-traversal advisories); sharp (next still accepts the vulnerable 0.34 line); undici 7 (wrangler pins it through miniflare). Drop each entry once its parent ships the fixed range itself.",
-    "overrides": {
-      "vite": ">=7.3.7 <8",
-      "js-yaml@4": ">=4.3.1 <5",
-      "brace-expansion@1": ">=1.1.21 <2",
-      "brace-expansion@5": ">=5.0.12 <6",
-      "nanoid@3": ">=3.3.18 <4",
-      "postcss": ">=8.5.28 <9",
-      "browserslist": ">=4.28.9 <5",
-      "postcss-selector-parser@6": ">=6.1.5 <7",
-      "source-map-js@1": ">=1.2.2 <2",
-      "sharp": ">=0.35.5 <0.36",
-      "undici@7": ">=7.30.1 <8",
-      "postcss-selector-parser@7": ">=7.1.6 <8"
-    },
-    "//auditConfig": "GHSA-rj75-hqrm-r3gf (postcss-selector-parser quadratic flat-selector parsing) lists every version below 7.1.6 as affected, but postcss-selector-parser 6.1.5 backports that exact fix to the 6.x line tailwindcss 3 requires (Set-based index lookups in parser.js), and the overrides above force 6.1.5 (and 7.1.6+ should a 7.x copy appear, since an ignore covers every version). The parser also only ever sees our own stylesheets at build time. Remove once the advisory lists 6.1.5 as patched or admin moves to Tailwind 4, which drops the package.",
-    "auditConfig": {
-      "ignoreGhsas": [
-        "GHSA-rj75-hqrm-r3gf"
-      ]
-    }
   }
 }

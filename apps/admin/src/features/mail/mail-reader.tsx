@@ -1,7 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { MAIL_STATUS_LABELS, relativeAgo, type MailMessageDTO, type MailThreadDTO } from "@civfix/contract"
+import {
+  MAIL_STATUS_LABELS,
+  relativeAgo,
+  type MailMessageDTO,
+  type MailThreadDTO,
+} from "@civfix/contract"
 
 import { Icons } from "@/components/icons"
 import { EmptyState } from "@/components/shared/page-primitives"
@@ -11,7 +16,12 @@ import { AttachmentList } from "@/features/inbox/attachment-chip"
 import { AuthVerdictBadge, PublicationBadge } from "@/features/mail/mail-badges"
 import { correspondent } from "@/features/mail/mail-page-state"
 import { MAIL_STATUS_CLS } from "@/features/mail/mail-presentation"
-import { useMailThread, useReplyMail, useResendMail, useSetMailStatus } from "@/features/mail/use-mail"
+import {
+  useMailThread,
+  useReplyMail,
+  useResendMail,
+  useSetMailStatus,
+} from "@/features/mail/use-mail"
 import { WithheldReplyNote } from "@/features/mail/withheld-reply-note"
 import { useNav } from "@/store/ui-store"
 
@@ -45,25 +55,26 @@ function DeliveryBadge({ delivery }: { delivery: MailMessageDTO["delivery"] }) {
 
 function ReaderLinks({ thread, eventId }: { thread: MailThreadDTO; eventId: string | null }) {
   const nav = useNav()
-  if (!thread.jurisdictionGeoid && !thread.reportId && !eventId) return null
+  const { jurisdictionGeoid, reportId } = thread
+  if (!jurisdictionGeoid && !reportId && !eventId) return null
   return (
     <div className="mail-reader-links">
-      {thread.jurisdictionGeoid && (
+      {jurisdictionGeoid && (
         <button
           type="button"
           className="lnk-inline"
           title="Open this thread's jurisdiction"
-          onClick={() => nav("discovery", thread.jurisdictionGeoid!)}
+          onClick={() => nav("discovery", jurisdictionGeoid)}
         >
           <Icons.Building size={12} /> View jurisdiction
         </button>
       )}
-      {thread.reportId && (
+      {reportId && (
         <button
           type="button"
           className="lnk-inline"
           title="Open the report this thread is about"
-          onClick={() => nav("reports", thread.reportId!)}
+          onClick={() => nav("reports", reportId)}
         >
           <Icons.FileText size={12} /> View report
         </button>
@@ -256,7 +267,13 @@ function ReplyComposer({
   )
 }
 
-export function MailReader({ threadId, eventId = null }: { threadId: string; eventId?: string | null }) {
+export function MailReader({
+  threadId,
+  eventId = null,
+}: {
+  threadId: string
+  eventId?: string | null
+}) {
   const threadQuery = useMailThread(threadId)
   const reply = useReplyMail()
   const setStatus = useSetMailStatus()

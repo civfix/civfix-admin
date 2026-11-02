@@ -55,8 +55,14 @@ export function logoUploadErrorMessage(err: unknown): string {
   return errorMessage(err, {}, { fallback: "Couldn't upload the image. Please try again." })
 }
 
+// SubtleCrypto is [SecureContext]: on plain http the property is missing, though lib.dom types it as
+// always present.
+function secureSubtleCrypto(): SubtleCrypto | undefined {
+  return globalThis.crypto.subtle
+}
+
 async function sha256Hex(blob: Blob): Promise<string> {
-  const subtle = globalThis.crypto?.subtle
+  const subtle = secureSubtleCrypto()
   if (!subtle) throw new Error("A secure context is required to hash the image.")
   const digest = await subtle.digest("SHA-256", await blob.arrayBuffer())
   let hex = ""

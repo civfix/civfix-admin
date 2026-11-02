@@ -35,7 +35,12 @@ function ReportPhotoFace({
   return (
     <>
       {photoUrl ? (
-        <img className="rep-photo-img" src={photoUrl} alt="Reporter photo" decoding="async" />
+        <img
+          className="rep-photo-img"
+          src={photoUrl}
+          alt="Submitted by the reporter"
+          decoding="async"
+        />
       ) : (
         <span className="rep-photo-pin" style={{ background: categoryCssVar(category) }}>
           <img src={pin} alt="" />
@@ -82,7 +87,13 @@ function ReportPhoto({ report, media }: { report: AdminReportDTO; media: ReportM
   )
 }
 
-export function ReportLocation({ report, media }: { report: AdminReportDTO; media: ReportMediaView }) {
+export function ReportLocation({
+  report,
+  media,
+}: {
+  report: AdminReportDTO
+  media: ReportMediaView
+}) {
   return (
     <div className="sub">
       <div className="sub-head">

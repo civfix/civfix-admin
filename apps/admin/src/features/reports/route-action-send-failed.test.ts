@@ -27,6 +27,8 @@ describe("routeActionView with a failed send", () => {
     expect(routeActionView(routedReport({ status: "sent", sendFailed: false })).kind).toBe(
       "already_sent",
     )
-    expect(routeActionView(routedReport({ status: "not_sent", sendFailed: false })).kind).toBe("send")
+    expect(routeActionView(routedReport({ status: "not_sent", sendFailed: false })).kind).toBe(
+      "send",
+    )
   })
 })

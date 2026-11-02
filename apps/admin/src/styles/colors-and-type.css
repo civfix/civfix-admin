@@ -1,65 +1,68 @@
 :root {
-  --bloom-50:  #FFEDE9;
-  --bloom-100: #FFD5CD;
-  --bloom:     #FF7A6B;
-  --bloom-600: #E55F50;
-  --bloom-700: #B8463A;
+  --bloom-50: #ffede9;
+  --bloom-100: #ffd5cd;
+  --bloom: #ff7a6b;
+  --bloom-600: #e55f50;
+  --bloom-700: #b8463a;
 
-  --moss-50:   #E8F3E8;
-  --moss-300:  #9BCF9B;
-  --moss:      #6FB36F;
-  --moss-600:  #4F9551;
-  --moss-700:  #347338;
+  --moss-50: #e8f3e8;
+  --moss-300: #9bcf9b;
+  --moss: #6fb36f;
+  --moss-600: #4f9551;
+  --moss-700: #347338;
 
-  --sun-50:    #FFF6DA;
-  --sun:       #FFCB47;
-  --sun-600:   #E5AE1C;
-  --sun-700:   #A77B0A;
+  --sun-50: #fff6da;
+  --sun: #ffcb47;
+  --sun-600: #e5ae1c;
+  --sun-700: #a77b0a;
 
-  --sky-50:    #E6F2FB;
-  --sky:       #6FB1DC;
-  --sky-700:   #2A6996;
+  --sky-50: #e6f2fb;
+  --sky: #6fb1dc;
+  --sky-700: #2a6996;
 
-  --lilac-50:  #F0EBFB;
-  --lilac:     #9C82DE;
-  --lilac-600: #7657C2;
+  --lilac-50: #f0ebfb;
+  --lilac: #9c82de;
+  --lilac-600: #7657c2;
 
-  --paper:    #FBF7F0;
-  --paper-2:  #F4EFE6;
-  --card:     #FFFFFF;
+  --paper: #fbf7f0;
+  --paper-2: #f4efe6;
+  --card: #ffffff;
 
-  --ink:      #1A1714;
-  --ink-2:    #4A453F;
-  --ink-3:    #8A8378;
-  --ink-4:    #C9C2B5;
+  --ink: #1a1714;
+  --ink-2: #4a453f;
+  --ink-3: #8a8378;
+  --ink-4: #c9c2b5;
 
   --fg-1: var(--ink);
   --fg-3: var(--ink-3);
-  --fg-on-color: #FFFFFF;
+  --fg-on-color: #ffffff;
 
   --bg-1: var(--paper);
 
   --border-soft: rgba(26, 23, 20, 0.06);
-  --border:      rgba(26, 23, 20, 0.10);
+  --border: rgba(26, 23, 20, 0.1);
 
-  --danger:   var(--bloom-600);
+  --danger: var(--bloom-600);
 
   /* These mirror tokens.color.category plus tokens.color.cleanup (light scheme) in @civfix/tokens -
      keep the two identical. */
-  --cat-trash:      #776C60;
-  --cat-recycling:  #63A45A;
-  --cat-graffiti:   #9B7ED9;
-  --cat-hazard:     #E4574A;
-  --cat-encampment: #3E9E8E;
-  --cat-water:      #74A9D8;
-  --cat-other:      #8D8577;
-  --cat-cleanup:    #D9A21B;
+  --cat-trash: #776c60;
+  --cat-recycling: #63a45a;
+  --cat-graffiti: #9b7ed9;
+  --cat-hazard: #e4574a;
+  --cat-encampment: #3e9e8e;
+  --cat-water: #74a9d8;
+  --cat-other: #8d8577;
+  --cat-cleanup: #d9a21b;
 
   /* next/font sets the --font-*-next names on <html> (src/app/layout.tsx); these stacks add the
      fallbacks. */
-  --font-display: var(--font-display-next), 'Bricolage Grotesque', 'Bricolage', ui-sans-serif, system-ui, sans-serif;
-  --font-body:    var(--font-body-next), 'Manrope', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono:    var(--font-mono-next), 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-display:
+    var(--font-display-next), "Bricolage Grotesque", "Bricolage", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-body:
+    var(--font-body-next), "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono-next), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Type scale - built on 1.25 (major third), tightened at small end */
   --fs-12: 0.75rem;
@@ -73,12 +76,12 @@
   --fs-48: 3rem;
 
   --lh-tight: 1.05;
-  --lh-snug:  1.2;
-  --lh-base:  1.45;
+  --lh-snug: 1.2;
+  --lh-base: 1.45;
 
   --tracking-tight: -0.02em;
-  --tracking-snug:  -0.01em;
-  --tracking-wide:   0.06em;
+  --tracking-snug: -0.01em;
+  --tracking-wide: 0.06em;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -97,31 +100,31 @@
   --row-pad-x: 14px;
 
   /* Each shadow pairs a crisp edge with a soft blur for the "lifted paper" look. */
-  --shadow-1: 0 1px 0 rgba(26,23,20,0.04),
-              0 1px 2px rgba(26,23,20,0.05);
+  --shadow-1: 0 1px 0 rgba(26, 23, 20, 0.04), 0 1px 2px rgba(26, 23, 20, 0.05);
 
-  --shadow-2: 0 1px 0 rgba(26,23,20,0.03),
-              0 2px 4px rgba(26,23,20,0.04),
-              0 8px 16px -6px rgba(26,23,20,0.08);
+  --shadow-2:
+    0 1px 0 rgba(26, 23, 20, 0.03), 0 2px 4px rgba(26, 23, 20, 0.04),
+    0 8px 16px -6px rgba(26, 23, 20, 0.08);
 
-  --shadow-3: 0 1px 0 rgba(26,23,20,0.03),
-              0 4px 8px rgba(26,23,20,0.05),
-              0 18px 32px -10px rgba(26,23,20,0.12);
+  --shadow-3:
+    0 1px 0 rgba(26, 23, 20, 0.03), 0 4px 8px rgba(26, 23, 20, 0.05),
+    0 18px 32px -10px rgba(26, 23, 20, 0.12);
 
-  --shadow-4: 0 2px 4px rgba(26,23,20,0.05),
-              0 12px 20px rgba(26,23,20,0.08),
-              0 32px 56px -16px rgba(26,23,20,0.18);
+  --shadow-4:
+    0 2px 4px rgba(26, 23, 20, 0.05), 0 12px 20px rgba(26, 23, 20, 0.08),
+    0 32px 56px -16px rgba(26, 23, 20, 0.18);
 
-  --sheen-top: inset 0 1px 0 rgba(255,255,255,0.6);
+  --sheen-top: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 
   /* Focus ring: deliberately bloom-colored, not the browser's default blue. */
-  --ring: 0 0 0 3px rgba(255,122,107,0.30);
+  --ring: 0 0 0 3px rgba(255, 122, 107, 0.3);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-html, body {
+html,
+body {
   font-family: var(--font-body);
   font-size: var(--fs-16);
   line-height: var(--lh-base);
@@ -137,7 +140,9 @@ h1 {
   line-height: var(--lh-tight);
   letter-spacing: var(--tracking-tight);
   font-weight: 700;
-  font-variation-settings: "opsz" 48, "wdth" 95;
+  font-variation-settings:
+    "opsz" 48,
+    "wdth" 95;
   color: var(--fg-1);
 }
 
@@ -147,7 +152,9 @@ h2 {
   line-height: var(--lh-snug);
   letter-spacing: var(--tracking-snug);
   font-weight: 700;
-  font-variation-settings: "opsz" 38, "wdth" 95;
+  font-variation-settings:
+    "opsz" 38,
+    "wdth" 95;
 }
 
 h3 {
@@ -156,7 +163,9 @@ h3 {
   line-height: var(--lh-snug);
   letter-spacing: var(--tracking-snug);
   font-weight: 700;
-  font-variation-settings: "opsz" 30, "wdth" 100;
+  font-variation-settings:
+    "opsz" 30,
+    "wdth" 100;
 }
 
 h4 {
@@ -164,7 +173,9 @@ h4 {
   font-size: var(--fs-24);
   line-height: var(--lh-snug);
   font-weight: 700;
-  font-variation-settings: "opsz" 24, "wdth" 100;
+  font-variation-settings:
+    "opsz" 24,
+    "wdth" 100;
 }
 
 h5 {
@@ -174,7 +185,8 @@ h5 {
   font-weight: 700;
 }
 
-p, .body {
+p,
+.body {
   font-size: var(--fs-16);
   line-height: var(--lh-base);
   color: var(--fg-1);
@@ -189,7 +201,8 @@ p, .body {
   color: var(--fg-3);
 }
 
-code, .mono {
+code,
+.mono {
   font-family: var(--font-mono);
   font-size: 0.92em;
   background: var(--paper-2);

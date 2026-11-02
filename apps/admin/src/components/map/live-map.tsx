@@ -57,7 +57,8 @@ function statusTone(pin: LivePin): { color: string; label: string } {
   if (pin.eventKind === "other_volunteer") {
     return { color: "var(--moss-700)", label: `${eventKindLabel(pin.eventKind)} event` }
   }
-  if (pin.eventKind) return { color: "var(--sun-700)", label: `${eventKindLabel(pin.eventKind)} event` }
+  if (pin.eventKind)
+    return { color: "var(--sun-700)", label: `${eventKindLabel(pin.eventKind)} event` }
   if (pin.flagged) return { color: "var(--bloom-700)", label: "Flagged" }
   const view = reportStatusView(pin.status)
   return { color: view.tone, label: view.label }

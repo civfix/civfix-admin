@@ -47,7 +47,13 @@ function OutreachLine({ report, outreach }: { report: AdminReportDTO; outreach: 
   )
 }
 
-export function RoutedToCard({ report, outreach }: { report: AdminReportDTO; outreach: OutreachView }) {
+export function RoutedToCard({
+  report,
+  outreach,
+}: {
+  report: AdminReportDTO
+  outreach: OutreachView
+}) {
   const nav = useNav()
   return (
     <div className="sub">

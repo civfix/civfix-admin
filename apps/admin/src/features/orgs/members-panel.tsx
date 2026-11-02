@@ -43,7 +43,13 @@ function useRoster(org: AdminOrgDTO) {
 
 type Roster = ReturnType<typeof useRoster>
 
-function RosterBody({ org, roster: { q, members, ownerName } }: { org: AdminOrgDTO; roster: Roster }) {
+function RosterBody({
+  org,
+  roster: { q, members, ownerName },
+}: {
+  org: AdminOrgDTO
+  roster: Roster
+}) {
   if (q.isLoading) return <LoadingState label="Loading members..." />
   if (q.isError && !q.data) {
     return <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load members" />
@@ -93,7 +99,9 @@ export function MembersPanel({ org }: { org: AdminOrgDTO }) {
             className="btn primary sm"
             onClick={() => setAdding(true)}
             disabled={!!org.deletedAt}
-            title={suspended ? "The organization is suspended; members can still be managed." : undefined}
+            title={
+              suspended ? "The organization is suspended; members can still be managed." : undefined
+            }
           >
             <Icons.Plus size={13} /> Add member
           </button>
@@ -191,25 +199,25 @@ function useMemberActions(org: AdminOrgDTO, member: AdminOrgMemberDTO, ownerName
 
 function MemberActionsMenu({
   member,
-  menu,
+  position,
+  popRef,
+  onMenuKeyDown,
+  onMenuBlur,
   onChangeRole,
   onRemove,
-}: {
+}: Pick<RowMenu, "position" | "popRef" | "onMenuKeyDown" | "onMenuBlur"> & {
   member: AdminOrgMemberDTO
-  menu: RowMenu
   onChangeRole: (to: OrganizationMemberRole) => void
   onRemove: () => void
 }) {
-  if (!menu.position) return null
+  if (!position) return null
   return (
     <div
       className="row-menu-pop"
       role="menu"
       aria-label={`Actions for ${member.user.name}`}
-      ref={menu.popRef}
-      style={menu.position}
-      onKeyDown={menu.onMenuKeyDown}
-      onBlur={menu.onMenuBlur}
+      ref={popRef}
+      style={position}
     >
       <div className="row-menu-label" role="presentation">
         Change role
@@ -220,6 +228,8 @@ function MemberActionsMenu({
           type="button"
           role="menuitem"
           className="row-menu-item"
+          onKeyDown={onMenuKeyDown}
+          onBlur={onMenuBlur}
           onClick={() => onChangeRole(r)}
         >
           {r === "owner" ? (
@@ -232,7 +242,14 @@ function MemberActionsMenu({
         </button>
       ))}
       <div className="row-menu-sep" role="separator" />
-      <button type="button" role="menuitem" className="row-menu-item danger" onClick={onRemove}>
+      <button
+        type="button"
+        role="menuitem"
+        className="row-menu-item danger"
+        onKeyDown={onMenuKeyDown}
+        onBlur={onMenuBlur}
+        onClick={onRemove}
+      >
         <Icons.Trash size={12} /> Remove
       </button>
     </div>
@@ -249,12 +266,27 @@ function MemberRow({
   ownerName: string | null
 }) {
   const nav = useNav()
-  const menu = useRowMenu()
+  const {
+    open,
+    position,
+    close,
+    toggle,
+    wrapRef,
+    popRef,
+    triggerRef,
+    onMenuKeyDown,
+    onMenuBlur,
+    onTriggerKeyDown,
+  } = useRowMenu()
   const actions = useMemberActions(org, member, ownerName)
   // The backend refuses every change to the owner's own membership: ownership moves by promoting
   // someone else, so the owner row has no actions.
   const isOwner = member.role === "owner"
-  const picked: PickedUser = { id: member.user.id, name: member.user.name, handle: member.user.handle }
+  const picked: PickedUser = {
+    id: member.user.id,
+    name: member.user.name,
+    handle: member.user.handle,
+  }
   const openProfile = () => nav("users", member.user.id)
 
   return (
@@ -283,7 +315,9 @@ function MemberRow({
           {isOwner && (
             <>
               <span className="sep">·</span>
-              <span className="muted">Transfer ownership before changing this role or removing</span>
+              <span className="muted">
+                Transfer ownership before changing this role or removing
+              </span>
             </>
           )}
         </div>
@@ -292,29 +326,32 @@ function MemberRow({
         <span className={`pill ${ORG_ROLE_PILL[member.role]} tight`}>
           {isOwner && <Icons.Star size={9} />} {ORG_ROLE_LABEL[member.role]}
         </span>
-        <div className="row-menu" ref={menu.wrapRef}>
+        <div className="row-menu" ref={wrapRef}>
           <button
-            ref={menu.triggerRef}
+            ref={triggerRef}
             type="button"
             className="btn sm ghost icon"
             aria-label={`Actions for ${member.user.name}`}
             aria-haspopup="menu"
-            aria-expanded={menu.open}
+            aria-expanded={open}
             disabled={actions.busy || isOwner || !!org.deletedAt}
-            onClick={menu.toggle}
-            onKeyDown={menu.onTriggerKeyDown}
+            onClick={toggle}
+            onKeyDown={onTriggerKeyDown}
           >
             <Icons.MoreH size={14} />
           </button>
           <MemberActionsMenu
             member={member}
-            menu={menu}
+            position={position}
+            popRef={popRef}
+            onMenuKeyDown={onMenuKeyDown}
+            onMenuBlur={onMenuBlur}
             onChangeRole={(to) => {
-              menu.close(true)
+              close(true)
               void actions.changeRole(to)
             }}
             onRemove={() => {
-              menu.close(true)
+              close(true)
               void actions.removeMember()
             }}
           />
@@ -383,7 +420,7 @@ function AddMemberForm({
   const transfer = role === "owner"
   const personError = attempted && !user ? "Pick a user to add." : null
 
-  const submit = async (e: React.FormEvent) => {
+  const submit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (confirming.current || add.isPending) return
     setAttempted(true)
@@ -429,12 +466,7 @@ function AddMemberForm({
           <UserPicker value={user} onChange={setUser} excludeIds={excludeIds} autoFocus />
           <FieldError id={fieldErrorId(PERSON_FIELD_ID)} text={personError} />
         </div>
-        <RoleField
-          role={role}
-          onChange={setRole}
-          ownerName={ownerName}
-          disabled={add.isPending}
-        />
+        <RoleField role={role} onChange={setRole} ownerName={ownerName} disabled={add.isPending} />
         <ReasonField
           id="org-add-reason"
           value={reason}
@@ -447,8 +479,13 @@ function AddMemberForm({
           <button type="button" className="btn ghost" onClick={onDone} disabled={add.isPending}>
             Cancel
           </button>
-          <button type="submit" className={`btn ${transfer ? "danger" : "primary"}`} disabled={add.isPending}>
-            <Icons.Plus size={13} /> {add.isPending ? "Adding…" : transfer ? "Add and transfer" : "Add member"}
+          <button
+            type="submit"
+            className={`btn ${transfer ? "danger" : "primary"}`}
+            disabled={add.isPending}
+          >
+            <Icons.Plus size={13} />{" "}
+            {add.isPending ? "Adding…" : transfer ? "Add and transfer" : "Add member"}
           </button>
         </div>
       </div>

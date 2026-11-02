@@ -55,7 +55,10 @@ function UserDetailHeader({ user }: { user: AdminUserDTO }) {
       </div>
       <div className="udh-badges">
         {!!user.deletedAt && (
-          <span className="pill status-flag tight" title="This account was self-deleted (tombstoned)">
+          <span
+            className="pill status-flag tight"
+            title="This account was self-deleted (tombstoned)"
+          >
             <Icons.Trash size={11} /> Deleted
           </span>
         )}
@@ -78,17 +81,23 @@ function UserDetailHeader({ user }: { user: AdminUserDTO }) {
   )
 }
 
+// The Clipboard API is [SecureContext]: on plain http the property is missing, though lib.dom types it
+// as always present.
+function secureClipboard(): Clipboard | undefined {
+  return navigator.clipboard
+}
+
 function UserProfileMeta({ user }: { user: AdminUserDTO }) {
   const toast = useToast()
 
   const onCopyId = () => {
     const copyFailed = () => toast("Couldn't copy. Select the ID manually.", "error")
-    // The Clipboard API exists only in a secure context; without it nothing is copied.
-    if (!navigator.clipboard) {
+    const clipboard = secureClipboard()
+    if (!clipboard) {
       copyFailed()
       return
     }
-    navigator.clipboard.writeText(user.id).then(() => toast("User ID copied"), copyFailed)
+    clipboard.writeText(user.id).then(() => toast("User ID copied"), copyFailed)
   }
 
   return (
@@ -158,8 +167,10 @@ function UserActivityTabs({
               onKeyDown={(e) => {
                 const next = menuFocusIndex(e.key, i, PROFILE_TABS.length, "horizontal")
                 if (next === null) return
+                const target = PROFILE_TABS[next]
+                if (target === undefined) return
                 e.preventDefault()
-                onTabChange(PROFILE_TABS[next]!.id)
+                onTabChange(target.id)
                 tabRefs.current[next]?.focus()
               }}
             >

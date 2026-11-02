@@ -5,7 +5,9 @@ import { verifyCheckRequest } from "./gov-claim-presentation"
 
 const PENDING_CHECK = { status: "pending", evidence: null, note: null } as const
 
-function claimWithLinkedin(linkedin: GovClaimDTO["checks"]["linkedin"]): Pick<GovClaimDTO, "id" | "checks"> {
+function claimWithLinkedin(
+  linkedin: GovClaimDTO["checks"]["linkedin"],
+): Pick<GovClaimDTO, "id" | "checks"> {
   return { id: "claim-1", checks: { linkedin, directory: PENDING_CHECK, callback: PENDING_CHECK } }
 }
 

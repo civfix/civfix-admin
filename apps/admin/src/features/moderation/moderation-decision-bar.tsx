@@ -33,7 +33,11 @@ function approveVerbLabel(item: Pick<ModerationItemDTO, "kind">): string {
   return item.kind === "user_report" ? "Keep" : "Approve"
 }
 
-async function askThen(title: string, label: string, decide: (text: string) => void): Promise<void> {
+async function askThen(
+  title: string,
+  label: string,
+  decide: (text: string) => void,
+): Promise<void> {
   const text = await promptDialog({ title, label })
   if (text === null) return
   decide(text)
@@ -66,7 +70,10 @@ export function ModerationDecisionBar({
     })
     if (!ok) return
     await askThen(`Remove ${item.flag}`, REASON_LABEL, (reason) =>
-      remove.mutate({ request: { id: item.id, ...(reason ? { reason } : {}) }, item }, clearOnSuccess),
+      remove.mutate(
+        { request: { id: item.id, ...(reason ? { reason } : {}) }, item },
+        clearOnSuccess,
+      ),
     )
   }
 

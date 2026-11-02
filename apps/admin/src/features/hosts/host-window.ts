@@ -1,4 +1,8 @@
-import type { AdminBroadcastListItemDTO, AdminBroadcastListQuery, AdminHostListQuery } from "@civfix/contract"
+import type {
+  AdminBroadcastListItemDTO,
+  AdminBroadcastListQuery,
+  AdminHostListQuery,
+} from "@civfix/contract"
 
 import { MINUTE_MS } from "@/lib/timing"
 
@@ -53,15 +57,16 @@ export interface HostEventRef {
   title: string
 }
 
-export function eventsFromBroadcasts(
-  items: readonly AdminBroadcastListItemDTO[],
-): HostEventRef[] {
+export function eventsFromBroadcasts(items: readonly AdminBroadcastListItemDTO[]): HostEventRef[] {
   const byCleanupId = new Map<string, HostEventRef>()
   for (const item of items) {
     const existing = byCleanupId.get(item.cleanupId)
     const title = item.eventTitle ?? null
     if (existing === undefined) {
-      byCleanupId.set(item.cleanupId, { cleanupId: item.cleanupId, title: title ?? UNTITLED_EVENT_TITLE })
+      byCleanupId.set(item.cleanupId, {
+        cleanupId: item.cleanupId,
+        title: title ?? UNTITLED_EVENT_TITLE,
+      })
       continue
     }
     if (title !== null && existing.title === UNTITLED_EVENT_TITLE) existing.title = title

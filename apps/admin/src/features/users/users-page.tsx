@@ -39,10 +39,7 @@ export function UsersPage({ focusId }: SectionPageProps) {
     ...(searchTerm ? { q: searchTerm } : {}),
   }
   const listQuery = useUserListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
 
   const counts = listQuery.data?.pages[0]?.counts
 

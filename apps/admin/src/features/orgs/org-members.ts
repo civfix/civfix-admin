@@ -76,7 +76,9 @@ export function roleChangeCopy(opts: {
 }): RoleChangeCopy {
   const { memberName, from, to, orgName, currentOwnerName } = opts
   if (to === "owner") {
-    const previous = currentOwnerName ? `${currentOwnerName} becomes an admin` : "the current owner becomes an admin"
+    const previous = currentOwnerName
+      ? `${currentOwnerName} becomes an admin`
+      : "the current owner becomes an admin"
     return {
       title: `Transfer ownership of ${orgName} to ${memberName}?`,
       body: `An organization has exactly one owner. ${memberName} becomes the owner and ${previous} in the same change. The reason is written to the audit log.`,

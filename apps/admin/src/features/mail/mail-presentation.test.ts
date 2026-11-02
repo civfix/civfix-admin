@@ -70,12 +70,16 @@ describe("withheld reply review", () => {
     expect(withheldNote({ authVerdict: null, from: "" }, false)).toMatch(
       /^This reply couldn't be authenticated, so it wasn't posted to the event timeline\./,
     )
-    expect(withheldNote({ authVerdict: "pass", from: "" }, false)).toMatch(/^This reply came from an unknown sender,/)
+    expect(withheldNote({ authVerdict: "pass", from: "" }, false)).toMatch(
+      /^This reply came from an unknown sender,/,
+    )
   })
 
   it("shows the sender's domain, never the whole address", () => {
     expect(domainOfAddress("clerk@city.gov")).toBe("city.gov")
-    expect(withheldNote({ authVerdict: "pass", from: "clerk@city.gov" }, true)).not.toMatch(/clerk@/)
+    expect(withheldNote({ authVerdict: "pass", from: "clerk@city.gov" }, true)).not.toMatch(
+      /clerk@/,
+    )
   })
 
   it("warns what publishing does before it happens", () => {

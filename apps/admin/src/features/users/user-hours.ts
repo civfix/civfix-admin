@@ -54,7 +54,9 @@ export function hoursEntryCreditor(entry: AdminUserHoursEntryDTO): string | null
 }
 
 export function hoursEntryMeta(entry: AdminUserHoursEntryDTO): string[] {
-  const jurisdiction = entry.jurisdiction ? (entry.jurisdiction.name ?? entry.jurisdiction.geoid) : null
+  const jurisdiction = entry.jurisdiction
+    ? (entry.jurisdiction.name ?? entry.jurisdiction.geoid)
+    : null
   return [hoursEntryDate(entry), jurisdiction, hoursEntryCreditor(entry)].filter(
     (part): part is string => part !== null,
   )
@@ -172,7 +174,8 @@ export function creditConfirmTitle(
   eventTitle: string | null,
 ): string {
   const hours = formatHours(request.hours)
-  if (request.kind === "event") return `Credit ${hours} h to ${userName} for ${eventTitle ?? "this event"}?`
+  if (request.kind === "event")
+    return `Credit ${hours} h to ${userName} for ${eventTitle ?? "this event"}?`
   return `Credit ${hours} h to ${userName} as a manual adjustment for ${formatServiceDate(request.serviceDate)}?`
 }
 

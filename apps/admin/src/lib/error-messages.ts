@@ -4,7 +4,8 @@ import { toAppError } from "@/lib/api"
 
 // fetch() rejects with a TypeError whose wording is the browser's (Chromium, Firefox, WebKit), and it
 // means the request never reached the API.
-const FETCH_FAILURE = /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed)$/
+const FETCH_FAILURE =
+  /^(Failed to fetch|NetworkError when attempting to fetch resource\.?|Load failed)$/
 
 const NETWORK_FAILURE = "Could not reach the server. Check your connection and try again."
 
@@ -34,7 +35,9 @@ export function errorMessage(
     for (const [field, byValue] of Object.entries(opts.fields)) {
       const value = e.fields[field]
       // The value is server data; only copy the caller wrote may match it, never an inherited member.
-      if (value !== undefined && Object.hasOwn(byValue, value)) return byValue[value]!
+      if (value === undefined || !Object.hasOwn(byValue, value)) continue
+      const message = byValue[value]
+      if (message !== undefined) return message
     }
   }
   const override = overrides[e.code]

@@ -48,7 +48,8 @@ export function useInboxMessage(id: string | null) {
     queryKey: queryKeys.inbox.detail(id ?? ""),
     queryFn: () => api.getInboxMessage({ id: id as string }),
     enabled: !!id,
-    refetchInterval: (query) => attachmentRefreshInterval(query.state.data?.attachments.length ?? 0),
+    refetchInterval: (query) =>
+      attachmentRefreshInterval(query.state.data?.attachments.length ?? 0),
   })
 }
 

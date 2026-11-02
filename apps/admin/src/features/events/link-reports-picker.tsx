@@ -122,8 +122,7 @@ export function LinkReportsPicker({
     { keepPreviousData: true },
   )
   const candidates = React.useMemo<AdminReportListItemDTO[]>(
-    () =>
-      flatPages(listQuery.data).filter((r) => !excludeIds.has(r.id)),
+    () => flatPages(listQuery.data).filter((r) => !excludeIds.has(r.id)),
     [listQuery.data, excludeIds],
   )
 

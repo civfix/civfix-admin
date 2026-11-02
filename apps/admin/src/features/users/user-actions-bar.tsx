@@ -39,10 +39,16 @@ export function UserActionsBar({
   }
 
   const onToggleReportVerified = () => {
-    setReportVerified.mutate({ request: { id: user.id, value: !isReportVerified }, name: user.name })
+    setReportVerified.mutate({
+      request: { id: user.id, value: !isReportVerified },
+      name: user.name,
+    })
   }
 
-  const confirmThenSetStatus = async (status: SetUserStatusRequest["status"], dialog: ConfirmOptions) => {
+  const confirmThenSetStatus = async (
+    status: SetUserStatusRequest["status"],
+    dialog: ConfirmOptions,
+  ) => {
     const ok = await confirmDialog(dialog)
     if (!ok) return
     setStatus.mutate({ request: { id: user.id, status }, name: user.name })
@@ -108,11 +114,7 @@ export function UserActionsBar({
           <Icons.Lock size={13} /> Suspend
         </button>
       )}
-      <button
-        className="btn danger"
-        disabled={setStatus.isPending || !allowed.ban}
-        onClick={onBan}
-      >
+      <button className="btn danger" disabled={setStatus.isPending || !allowed.ban} onClick={onBan}>
         <Icons.Trash size={13} /> {user.status === "banned" ? "Banned" : "Ban account"}
       </button>
     </div>

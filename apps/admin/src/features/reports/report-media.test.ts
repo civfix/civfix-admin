@@ -5,9 +5,19 @@ import { reportMediaView } from "./report-media"
 
 type Media = AdminReportDTO["media"][number]
 
-const IMAGE_A: Media = { id: "m-a", kind: "image", url: "https://media.test/a.jpg", thumbUrl: "https://media.test/a-t.jpg" }
+const IMAGE_A: Media = {
+  id: "m-a",
+  kind: "image",
+  url: "https://media.test/a.jpg",
+  thumbUrl: "https://media.test/a-t.jpg",
+}
 const IMAGE_B: Media = { id: "m-b", kind: "image", url: "https://media.test/b.jpg" }
-const VIDEO: Media = { id: "m-v", kind: "video", url: "https://media.test/v.mp4", thumbUrl: "https://media.test/v.jpg" }
+const VIDEO: Media = {
+  id: "m-v",
+  kind: "video",
+  url: "https://media.test/v.mp4",
+  thumbUrl: "https://media.test/v.jpg",
+}
 
 describe("reportMediaView", () => {
   it("has no preview, gallery or lightbox without media", () => {

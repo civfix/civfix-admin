@@ -59,7 +59,12 @@ export function BoundaryMap({ geometry, bbox, layer = "place" }: BoundaryMapProp
     if (!map || !shape) return
     const color = LAYER_COLOR[layer] ?? LAYER_COLOR.place
     // addData styles each new layer from options.style, so the style is set before the data goes in.
-    shape.options.style = { color, weight: SHAPE_WEIGHT, fillColor: color, fillOpacity: SHAPE_FILL_OPACITY }
+    shape.options.style = {
+      color,
+      weight: SHAPE_WEIGHT,
+      fillColor: color,
+      fillOpacity: SHAPE_FILL_OPACITY,
+    }
     // L.GeoJSON accepts a bare GeoJSON geometry object.
     shape.clearLayers().addData(geometry as unknown as LeafletGeoJson)
 

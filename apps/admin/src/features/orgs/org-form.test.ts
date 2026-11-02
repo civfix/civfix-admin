@@ -180,8 +180,8 @@ describe("buildUpdateRequest", () => {
     // Typing surrounding whitespace into the draft is not a change either.
     const draft = draftFromOrg(org)
     draft.name = `  ${org.name}  `
-    draft.description = `${org.description}\n\n`
-    draft.websiteUrl = ` ${org.websiteUrl} `
+    draft.description = `${org.description ?? ""}\n\n`
+    draft.websiteUrl = ` ${org.websiteUrl ?? ""} `
     expect(buildUpdateRequest(org, draft, "r")).toBeNull()
     // A real edit next to a padded field only sends the edited key.
     draft.description = "We clean the river, weekly."
@@ -260,9 +260,11 @@ describe("clearChangedFieldErrors", () => {
 
 describe("pickFieldErrors", () => {
   it("keeps only the keys a form renders", () => {
-    expect(pickFieldErrors({ name: "a", reason: "b", ownerUserId: "c" }, ["name", "slug"])).toEqual({
-      name: "a",
-    })
+    expect(pickFieldErrors({ name: "a", reason: "b", ownerUserId: "c" }, ["name", "slug"])).toEqual(
+      {
+        name: "a",
+      },
+    )
   })
 })
 
@@ -302,7 +304,9 @@ describe("validateProfileDraft length limits", () => {
 
   it("rejects a description longer than the contract allows", () => {
     const draft = { ...draftFromOrg(org), description: "x".repeat(MAX_ORG_DESCRIPTION + 1) }
-    expect(validateProfileDraft(draft).description).toBe(`At most ${MAX_ORG_DESCRIPTION} characters.`)
+    expect(validateProfileDraft(draft).description).toBe(
+      `At most ${MAX_ORG_DESCRIPTION} characters.`,
+    )
   })
 })
 

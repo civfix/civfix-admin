@@ -55,9 +55,7 @@ export function PagePreview({ cleanupId, title }: { cleanupId: string; title: st
 
   return (
     <div className="pg-preview">
-      {page.coverUrl && (
-        <img className="pg-cover" src={page.coverUrl} alt="" />
-      )}
+      {page.coverUrl && <img className="pg-cover" src={page.coverUrl} alt="" />}
       <div>
         <div className="pg-seo-title">{page.seo.title ?? title}</div>
         {page.seo.description && <div className="pg-seo-desc">{page.seo.description}</div>}

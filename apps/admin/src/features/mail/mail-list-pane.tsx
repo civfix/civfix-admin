@@ -49,7 +49,11 @@ function EmptyList({
 }) {
   if (searching) {
     return (
-      <EmptyState title="Nothing matches" sub="Try a different search." icon={<Icons.Search size={20} />} />
+      <EmptyState
+        title="Nothing matches"
+        sub="Try a different search."
+        icon={<Icons.Search size={20} />}
+      />
     )
   }
   if (outreach) {

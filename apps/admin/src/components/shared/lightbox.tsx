@@ -93,7 +93,9 @@ function LightboxExpired({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="lightbox-face" role="alert">
       <span className="lightbox-face-title">This photo link expired</span>
-      <span className="lightbox-face-sub">Photo links are short-lived. Refresh to fetch a new one.</span>
+      <span className="lightbox-face-sub">
+        Photo links are short-lived. Refresh to fetch a new one.
+      </span>
       <button type="button" className="lightbox-face-btn" onClick={onRetry}>
         Refresh photo
       </button>
@@ -104,10 +106,18 @@ function LightboxExpired({ onRetry }: { onRetry: () => void }) {
 function LightboxSteppers({ step }: { step: (delta: number) => void }) {
   return (
     <>
-      <button className="lightbox-btn lightbox-prev" onClick={() => step(-1)} aria-label="Previous photo">
+      <button
+        className="lightbox-btn lightbox-prev"
+        onClick={() => step(-1)}
+        aria-label="Previous photo"
+      >
         <Icons.ChevronLeft size={20} />
       </button>
-      <button className="lightbox-btn lightbox-next" onClick={() => step(1)} aria-label="Next photo">
+      <button
+        className="lightbox-btn lightbox-next"
+        onClick={() => step(1)}
+        aria-label="Next photo"
+      >
         <Icons.ChevronRight size={20} />
       </button>
     </>

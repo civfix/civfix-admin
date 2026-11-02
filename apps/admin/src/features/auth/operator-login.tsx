@@ -30,16 +30,16 @@ export function OperatorLogin() {
           <>
             <h1 className="op-login-title">Not authorized</h1>
             <p role="alert" className="op-login-sub">
-              You signed in with Cloudflare Access, but this account is not authorized for the operator
-              dashboard. Ask an administrator to add your email to the operator allowlist.
+              You signed in with Cloudflare Access, but this account is not authorized for the
+              operator dashboard. Ask an administrator to add your email to the operator allowlist.
             </p>
           </>
         ) : (
           <>
             <h1 className="op-login-title">Operator sign in</h1>
             <p className="op-login-sub">
-              We couldn&apos;t establish your operator session. You are signed in with Cloudflare Access;
-              try again to finish signing in.
+              We couldn&apos;t establish your operator session. You are signed in with Cloudflare
+              Access; try again to finish signing in.
             </p>
             <button
               type="button"

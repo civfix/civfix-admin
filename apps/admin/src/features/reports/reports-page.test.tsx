@@ -64,7 +64,14 @@ const TAG = listItem({
   submitted: { rel: "1d", abs: "Sep 22, 2026, 9:00 AM" },
 })
 
-const COUNTS = { all: 30, submitted: 9, in_progress: 4, completed: 12, flagged: 2, needsVerification: 5 }
+const COUNTS = {
+  all: 30,
+  submitted: 9,
+  in_progress: 4,
+  completed: 12,
+  flagged: 2,
+  needsVerification: 5,
+}
 
 function page(items: AdminReportListItemDTO[], nextCursor: string | null = null) {
   return { items, nextCursor, counts: COUNTS } satisfies AdminReportListResponse
@@ -104,7 +111,9 @@ function mockDetails(...items: AdminReportListItemDTO[]) {
 }
 
 function listCard() {
-  return screen.getByRole("heading", { level: 3, name: "Reports" }).closest("section") as HTMLElement
+  return screen
+    .getByRole("heading", { level: 3, name: "Reports" })
+    .closest("section") as HTMLElement
 }
 
 describe("ReportsPage", () => {
@@ -191,12 +200,16 @@ describe("ReportsPage", () => {
     await userEvent.click(within(listCard()).getByText("Tag on the underpass"))
 
     const card = detailCard()
-    expect(await within(card).findByRole("heading", { name: "Tag on the underpass" })).toBeInTheDocument()
+    expect(
+      await within(card).findByRole("heading", { name: "Tag on the underpass" }),
+    ).toBeInTheDocument()
     // Both the status badge and the toggled flag button read "Flagged".
     expect(within(card).getAllByText("Flagged")).toHaveLength(2)
     expect(within(card).getByRole("button", { name: "Flagged" })).toBeInTheDocument()
     expect(within(card).getByRole("button", { name: "Resolved" })).toBeInTheDocument()
-    expect(within(card).queryByRole("button", { name: /View full account/ })).not.toBeInTheDocument()
+    expect(
+      within(card).queryByRole("button", { name: /View full account/ }),
+    ).not.toBeInTheDocument()
     expect(apiMock.getAdminReport).toHaveBeenCalledWith({ id: TAG.id })
   })
 
@@ -273,8 +286,12 @@ describe("ReportsPage", () => {
     apiMock.listAdminReports.mockResolvedValue(page([COUCH, TAG]))
     mockDetails(COUCH, TAG)
     renderWithQuery(<ReportsPage focusId={TAG.id} />)
-    expect(await within(detailCard()).findByRole("heading", { name: "Tag on the underpass" })).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Couch dumped on sidewalk" })).not.toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Tag on the underpass" }),
+    ).toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Couch dumped on sidewalk" }),
+    ).not.toBeInTheDocument()
     expect(within(listCard()).queryByText("Linked report")).not.toBeInTheDocument()
   })
 
@@ -290,8 +307,12 @@ describe("ReportsPage", () => {
     renderWithQuery(<ReportsPage focusId={OLD.id} />)
 
     const card = detailCard()
-    expect(await within(card).findByRole("heading", { name: "Old broken hydrant" })).toBeInTheDocument()
-    expect(within(card).queryByRole("heading", { name: "Couch dumped on sidewalk" })).not.toBeInTheDocument()
+    expect(
+      await within(card).findByRole("heading", { name: "Old broken hydrant" }),
+    ).toBeInTheDocument()
+    expect(
+      within(card).queryByRole("heading", { name: "Couch dumped on sidewalk" }),
+    ).not.toBeInTheDocument()
 
     const list = listCard()
     expect(await within(list).findByText("Linked report")).toBeInTheDocument()
@@ -361,14 +382,18 @@ describe("ReportsPage correctness and accessibility", () => {
     const tagRow = within(listCard()).getByRole("button", { name: /Tag on the underpass/ })
     tagRow.focus()
     await user.keyboard("{Enter}")
-    expect(await within(detailCard()).findByRole("heading", { name: TAG.title })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: TAG.title }),
+    ).toBeInTheDocument()
     expect(tagRow).toHaveAttribute("aria-current", "true")
 
     const couchRow = within(listCard()).getByRole("button", { name: /Couch dumped on sidewalk/ })
     expect(couchRow).not.toHaveAttribute("aria-current")
     couchRow.focus()
     await user.keyboard(" ")
-    expect(await within(detailCard()).findByRole("heading", { name: COUCH.title })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: COUCH.title }),
+    ).toBeInTheDocument()
   })
 
   it("opens the reporter profile from the keyboard inside a row", async () => {
@@ -425,7 +450,9 @@ describe("ReportsPage correctness and accessibility", () => {
 
     await user.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
     await user.click(within(card).getByRole("button", { name: /Verify and send to city/ }))
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Verify and send" }))
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Verify and send" }),
+    )
     await waitFor(() =>
       expect(apiMock.setReportVerdict).toHaveBeenCalledWith({ id: COUCH.id, verdict: "approved" }),
     )
@@ -452,12 +479,12 @@ describe("ReportsPage correctness and accessibility", () => {
     await within(detailCard()).findByRole("heading", { name: COUCH.title })
 
     await user.click(within(detailCard()).getByRole("button", { name: /Remove report/ }))
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }))
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }),
+    )
 
     expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
-    await waitFor(() =>
-      expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument(),
-    )
+    await waitFor(() => expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument())
     expect(within(detailCard()).getByText("No report selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
   })
@@ -488,12 +515,16 @@ describe("ReportsPage correctness and accessibility", () => {
     expect(await within(listCard()).findByText("Linked report")).toBeInTheDocument()
 
     await user.click(within(detailCard()).getByRole("button", { name: /Remove report/ }))
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }))
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }),
+    )
 
     expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByText("Report not found")).not.toBeInTheDocument()
     expect(within(listCard()).queryByText("Linked report")).not.toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: COUCH.title })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: COUCH.title }),
+    ).not.toBeInTheDocument()
   })
 
   it("clears a report that a verdict drops from the Needs verification list, without opening another", async () => {
@@ -509,11 +540,11 @@ describe("ReportsPage correctness and accessibility", () => {
     await within(detailCard()).findByRole("heading", { name: COUCH.title })
 
     await user.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
-
-    await waitFor(() =>
-      expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument(),
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }),
     )
+
+    await waitFor(() => expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument())
     expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
     expect(within(detailCard()).queryByRole("heading", { name: TAG.title })).not.toBeInTheDocument()
   })
@@ -542,7 +573,9 @@ describe("ReportsPage correctness and accessibility", () => {
     await within(detailCard()).findByRole("heading", { name: COUCH.title })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }),
+    )
 
     await waitFor(() => expect(within(listCard()).queryByText(COUCH.title)).not.toBeInTheDocument())
     expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
@@ -565,11 +598,16 @@ describe("ReportsPage correctness and accessibility", () => {
     await within(detailCard()).findByRole("heading", { name: COUCH.title })
 
     await user.click(within(detailCard()).getByRole("button", { name: /Reject/ }))
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }))
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Reject" }),
+    )
 
     expect(await within(detailCard()).findByText("No report selected")).toBeInTheDocument()
     await waitFor(() =>
-      expect(useUiStore.getState().toast).toMatchObject({ text: "#r1a2b3c4 · rejected", tone: "ok" }),
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "#r1a2b3c4 · rejected",
+        tone: "ok",
+      }),
     )
     await act(async () => {
       heldDetail.resolve(detail(COUCH))
@@ -613,7 +651,9 @@ describe("ReportsPage correctness and accessibility", () => {
 
     const reason = "This report was already sent. Resend it from the Mail thread."
     expect(within(card).getByText(reason)).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: /Already sent/ })).toHaveAccessibleDescription(reason)
+    expect(within(card).getByRole("button", { name: /Already sent/ })).toHaveAccessibleDescription(
+      reason,
+    )
   })
 
   it("shows why a follow-up is blocked before the first send", async () => {
@@ -625,7 +665,9 @@ describe("ReportsPage correctness and accessibility", () => {
 
     const reason = "Send the report to the city first. A follow-up goes on that conversation."
     expect(within(card).getByText(reason)).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: "Send to city" })).toHaveAccessibleDescription(reason)
+    expect(within(card).getByRole("button", { name: "Send to city" })).toHaveAccessibleDescription(
+      reason,
+    )
   })
 
   it("does not offer Reject again on an already rejected report", async () => {
@@ -665,10 +707,9 @@ describe("ReportsPage correctness and accessibility", () => {
     const card = detailCard()
     await within(card).findByRole("heading", { name: CLIP.title })
 
-    expect(within(card).getByRole("link", { name: "Open full media in a new tab" })).toHaveAttribute(
-      "href",
-      "https://media.test/clip.mp4",
-    )
+    expect(
+      within(card).getByRole("link", { name: "Open full media in a new tab" }),
+    ).toHaveAttribute("href", "https://media.test/clip.mp4")
     expect(within(card).queryByText("Reporter photo")).not.toBeInTheDocument()
   })
 
@@ -700,7 +741,7 @@ describe("ReportsPage chat", () => {
 
   function chatHead(card: HTMLElement): HTMLElement {
     const head = [...card.querySelectorAll<HTMLElement>(".sub-head")].find((el) =>
-      el.textContent?.startsWith("Chat"),
+      el.textContent.startsWith("Chat"),
     )
     if (!head) throw new Error("no Chat section in the detail card")
     return head
@@ -709,7 +750,9 @@ describe("ReportsPage chat", () => {
   function renderWithChat(chat: (params: { before?: string }) => ChatHistoryResponse) {
     apiMock.listAdminReports.mockResolvedValue(page([COUCH]))
     mockDetails(COUCH)
-    apiMock.adminReportMessages.mockImplementation(async (params: { before?: string }) => chat(params))
+    apiMock.adminReportMessages.mockImplementation(async (params: { before?: string }) =>
+      chat(params),
+    )
     renderPage()
     return detailCard()
   }
@@ -777,7 +820,9 @@ describe("ReportsPage chat", () => {
     })
     const NEWER = chatMessage({ id: "1a1a1a1a-0000-4000-8000-00000000001a", body: "Still there" })
     const card = renderWithChat(({ before }) =>
-      before === OLDER.id ? { items: [OLDER], nextCursor: null } : { items: [NEWER], nextCursor: OLDER.id },
+      before === OLDER.id
+        ? { items: [OLDER], nextCursor: null }
+        : { items: [NEWER], nextCursor: OLDER.id },
     )
     await within(card).findByText("Still there")
     expect(chatHead(card)).toHaveTextContent(/^Chat 1\+$/)
@@ -791,6 +836,8 @@ describe("ReportsPage chat", () => {
       limit: 50,
       before: OLDER.id,
     })
-    expect(within(card).queryByRole("button", { name: "Load older messages" })).not.toBeInTheDocument()
+    expect(
+      within(card).queryByRole("button", { name: "Load older messages" }),
+    ).not.toBeInTheDocument()
   })
 })

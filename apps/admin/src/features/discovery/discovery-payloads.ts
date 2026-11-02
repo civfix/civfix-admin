@@ -17,7 +17,8 @@ export function contactsPayload(
   const out: Partial<Record<ReportCategory, string | null>> = {}
   for (const category of REPORT_CATEGORIES) {
     if (!edits[category]) continue
-    out[category] = current[category]?.trim() || null
+    const trimmed = current[category]?.trim() ?? ""
+    out[category] = trimmed === "" ? null : trimmed
   }
   return out
 }
@@ -68,7 +69,7 @@ export function jurisdictionFields(
 export function parseHandle(input: string): { value: string; error: string | null } {
   const parsed = JurisdictionHandleSchema.safeParse(input)
   if (parsed.success) return { value: parsed.data ?? "", error: null }
-  return { value: "", error: parsed.error.issues[0]!.message }
+  return { value: "", error: parsed.error.issues[0]?.message ?? parsed.error.message }
 }
 
 export interface SavedExtras {

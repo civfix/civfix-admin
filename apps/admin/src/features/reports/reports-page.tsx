@@ -56,10 +56,7 @@ export function ReportsPage({ focusId }: SectionPageProps) {
     q: debouncedQuery.trim() || undefined,
   }
   const listQuery = useReportListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
 
   const serverCounts: AdminReportCounts | null = listQuery.data?.pages[0]?.counts ?? null
   const counts = serverCounts ?? EMPTY_COUNTS
@@ -89,8 +86,8 @@ export function ReportsPage({ focusId }: SectionPageProps) {
         title="Reports"
         subtitle={
           <span>
-            Every report neighbors submit, verified and then routed to the right city department. Track
-            status, follow up with the city, and close the loop.
+            Every report neighbors submit, verified and then routed to the right city department.
+            Track status, follow up with the city, and close the loop.
           </span>
         }
       />

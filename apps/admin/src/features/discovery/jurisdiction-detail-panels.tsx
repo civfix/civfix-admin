@@ -131,8 +131,8 @@ export function HandleField({
           </span>
         )}
         <div className="hint" style={{ marginTop: 8 }}>
-          Residents can tag “@{parsed.value || "handle"}” in a report’s discussion to forward
-          it to this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to clear.
+          Residents can tag “@{parsed.value || "handle"}” in a report’s discussion to forward it to
+          this jurisdiction. Lowercase letters, numbers, and underscores; leave blank to clear.
           Saved by either “Save draft” or “Save &amp; route”.
         </div>
       </div>
@@ -341,9 +341,9 @@ export function DetailActions({
         <Icons.Send size={13} />
         <span>
           <b>Save &amp; route</b> saves the contacts, the note and the @handle, closes the discovery
-          task, and queues an outreach digest to this jurisdiction when outreach digests are enabled. It
-          does not email the reports already waiting; send each of those from its report.{" "}
-          <b>Save draft</b> saves the same fields and leaves the discovery task open.
+          task, and queues an outreach digest to this jurisdiction when outreach digests are
+          enabled. It does not email the reports already waiting; send each of those from its
+          report. <b>Save draft</b> saves the same fields and leaves the discovery task open.
         </span>
       </div>
     </>

@@ -227,8 +227,12 @@ describe("EventsPage", () => {
     apiMock.listAdminEvents.mockResolvedValue(page([BEACH, PARK]))
     mockDetails(BEACH, PARK)
     renderWithQuery(<EventsPage focusId={PARK.id} />)
-    expect(await within(detailCard()).findByRole("heading", { name: "Park tidy" })).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Beach sweep" })).not.toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Park tidy" }),
+    ).toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Beach sweep" }),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps a deep-linked focusId that is not on the first page", async () => {
@@ -236,10 +240,14 @@ describe("EventsPage", () => {
     apiMock.listAdminEvents.mockResolvedValue(page([BEACH, PARK]))
     mockDetails(BEACH, PARK, OTHER)
     renderWithQuery(<EventsPage focusId={OTHER.id} />)
-    expect(await within(detailCard()).findByRole("heading", { name: "Creek haul" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Creek haul" }),
+    ).toBeInTheDocument()
     await screen.findByText("Beach sweep")
     expect(within(detailCard()).getByRole("heading", { name: "Creek haul" })).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Beach sweep" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Beach sweep" }),
+    ).not.toBeInTheDocument()
     expect(apiMock.getAdminEvent).toHaveBeenCalledWith({ id: OTHER.id })
   })
 })
@@ -315,7 +323,9 @@ describe("EventsPage correctness and accessibility", () => {
     const parkRow = within(listCard()).getByRole("button", { name: /Park tidy/ })
     parkRow.focus()
     await user.keyboard(" ")
-    expect(await within(detailCard()).findByRole("heading", { name: PARK.title })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: PARK.title }),
+    ).toBeInTheDocument()
     expect(parkRow).toHaveAttribute("aria-current", "true")
     expect(within(listCard()).getByRole("button", { name: /Beach sweep/ })).not.toHaveAttribute(
       "aria-current",
@@ -364,18 +374,14 @@ describe("EventsPage correctness and accessibility", () => {
     await user.click(within(listCard()).getByText(PARK.title))
     await within(detailCard()).findByRole("heading", { name: PARK.title })
     await user.click(screen.getByRole("button", { name: /^Upcoming/ }))
-    await waitFor(() =>
-      expect(within(listCard()).queryByText(PARK.title)).not.toBeInTheDocument(),
-    )
+    await waitFor(() => expect(within(listCard()).queryByText(PARK.title)).not.toBeInTheDocument())
 
     expect(within(detailCard()).getByRole("heading", { name: PARK.title })).toBeInTheDocument()
   })
 
   it("does not jump to another event after cancelling the selected one", async () => {
     let cancelled = false
-    apiMock.listAdminEvents.mockImplementation(async () =>
-      page(cancelled ? [PARK] : [BEACH, PARK]),
-    )
+    apiMock.listAdminEvents.mockImplementation(async () => page(cancelled ? [PARK] : [BEACH, PARK]))
     mockDetails(BEACH, PARK)
     apiMock.cancelEvent.mockImplementation(async () => {
       cancelled = true
@@ -391,11 +397,11 @@ describe("EventsPage correctness and accessibility", () => {
     )
 
     expect(await within(detailCard()).findByText("No event selected")).toBeInTheDocument()
-    await waitFor(() =>
-      expect(within(listCard()).queryByText(BEACH.title)).not.toBeInTheDocument(),
-    )
+    await waitFor(() => expect(within(listCard()).queryByText(BEACH.title)).not.toBeInTheDocument())
     expect(within(detailCard()).getByText("No event selected")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: PARK.title })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: PARK.title }),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps a cancelled event open while the All list still holds it", async () => {
@@ -435,7 +441,9 @@ describe("EventsPage correctness and accessibility", () => {
 
     const reason = "This event has already ended and can't be cancelled."
     expect(within(card).getByText(reason)).toBeInTheDocument()
-    expect(within(card).getByRole("button", { name: /Cancel event/ })).toHaveAccessibleDescription(reason)
+    expect(within(card).getByRole("button", { name: /Cancel event/ })).toHaveAccessibleDescription(
+      reason,
+    )
   })
 
   it("posts an attendee update once when Cmd+Enter is pressed again while it is sending", async () => {
@@ -451,7 +459,9 @@ describe("EventsPage correctness and accessibility", () => {
     const box = within(card).getByRole("textbox", { name: "Update for attendees" })
     await user.type(box, "Meet at the north lot")
     await user.keyboard("{Meta>}{Enter}{/Meta}")
-    await waitFor(() => expect(within(card).getByRole("button", { name: "Post update" })).toBeDisabled())
+    await waitFor(() =>
+      expect(within(card).getByRole("button", { name: "Post update" })).toBeDisabled(),
+    )
     await user.keyboard("{Meta>}{Enter}{/Meta}")
     await user.keyboard("{Control>}{Enter}{/Control}")
 
@@ -508,7 +518,9 @@ describe("EventsPage correctness and accessibility", () => {
     await waitFor(() =>
       expect(apiMock.setEventOutcome).toHaveBeenCalledWith({ id: LIVE.id, bags: 1000 }),
     )
-    await waitFor(() => expect(useUiStore.getState().toast?.text).toBe("Outcome logged · 1000 bags"))
+    await waitFor(() =>
+      expect(useUiStore.getState().toast?.text).toBe("Outcome logged · 1000 bags"),
+    )
 
     await user.type(bags, "1")
     await user.click(log)
@@ -555,9 +567,14 @@ describe("EventsPage link-reports picker", () => {
     apiMock.listAdminReports.mockResolvedValue(reportPage([PIER]))
     const { user, dialog } = await openPicker()
 
-    const row = await within(dialog).findByRole("button", { name: /Trash pile by the pier/, pressed: false })
+    const row = await within(dialog).findByRole("button", {
+      name: /Trash pile by the pier/,
+      pressed: false,
+    })
     await user.click(row)
-    expect(within(dialog).getByRole("button", { name: /Trash pile by the pier/, pressed: true })).toBe(row)
+    expect(
+      within(dialog).getByRole("button", { name: /Trash pile by the pier/, pressed: true }),
+    ).toBe(row)
   })
 
   it("loads more reports past the first page", async () => {

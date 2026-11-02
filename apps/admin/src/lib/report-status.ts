@@ -1,5 +1,5 @@
 import { Icons, type IconComponent } from "@/components/icons"
-import type { AdminReportStatus } from "@civfix/contract"
+import { ADMIN_REPORT_STATUS_LABELS, type AdminReportStatus } from "@civfix/contract"
 
 /**
  * The one status-to-bucket map every admin surface reads, so pill labels never disagree. A report is
@@ -29,7 +29,12 @@ export interface ReportStatusView {
 }
 
 const BUCKET_VIEW: Record<ReportBucket, ReportStatusView> = {
-  submitted: { cls: "status-new", icon: Icons.Inbox, label: "Needs verification", tone: "var(--ink-2)" },
+  submitted: {
+    cls: "status-new",
+    icon: Icons.Inbox,
+    label: "Needs verification",
+    tone: "var(--ink-2)",
+  },
   in_progress: {
     cls: "status-progress",
     icon: Icons.Clock,
@@ -42,6 +47,11 @@ const BUCKET_VIEW: Record<ReportBucket, ReportStatusView> = {
 
 export function isReportStatus(status: string): status is AdminReportStatus {
   return Object.hasOwn(REPORT_STATUS_BUCKET, status)
+}
+
+// A status from a newer server shows raw rather than blank.
+export function reportStatusLabel(status: string): string {
+  return isReportStatus(status) ? ADMIN_REPORT_STATUS_LABELS[status] : status
 }
 
 // A status from a newer server reads as awaiting action rather than crashing or passing as Completed.

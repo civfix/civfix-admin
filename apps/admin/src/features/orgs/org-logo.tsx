@@ -19,7 +19,10 @@ export function OrgLogo({
     return <img className="org-logo" style={style} src={org.logoUrl} alt="" />
   }
   return (
-    <span className="org-logo hue-sky" style={{ ...style, fontSize: Math.round(size * MONOGRAM_FONT_RATIO) }}>
+    <span
+      className="org-logo hue-sky"
+      style={{ ...style, fontSize: Math.round(size * MONOGRAM_FONT_RATIO) }}
+    >
       {monogram(org.name)}
     </span>
   )

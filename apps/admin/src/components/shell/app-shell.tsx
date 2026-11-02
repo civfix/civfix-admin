@@ -11,7 +11,7 @@ import { DialogHost } from "@/components/shared/dialog"
 import { LightboxHost } from "@/components/shared/lightbox"
 import { PAGE_REGISTRY, type SectionPageProps } from "@/components/shell/page-registry"
 import { LoadingState } from "@/components/shared/data-states"
-import { useUiStore, type SectionId } from "@/store/ui-store"
+import { useUiStore } from "@/store/ui-store"
 
 export function AppShell() {
   const page = useUiStore((s) => s.page)
@@ -45,7 +45,7 @@ export function AppShell() {
   return (
     <div className="shell-flat">
       <main className={`main ${isHome ? "main-home" : ""}`} key={page}>
-        {!isHome && <BackBar page={page as SectionId} />}
+        {!isHome && <BackBar page={page} />}
         <ErrorBoundary>
           <React.Suspense fallback={<LoadingState />}>
             <PageComponent {...pageProps} />

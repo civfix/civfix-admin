@@ -179,8 +179,10 @@ export const queryKeys = {
 
   moderation: {
     all: ["admin", "moderation"] as const,
-    list: (params?: ModerationListQuery) => ["admin", "moderation", "list", params ?? null] as const,
-    page: (params?: ModerationListQuery) => ["admin", "moderation", "page", params ?? null] as const,
+    list: (params?: ModerationListQuery) =>
+      ["admin", "moderation", "list", params ?? null] as const,
+    page: (params?: ModerationListQuery) =>
+      ["admin", "moderation", "page", params ?? null] as const,
     detail: (id: string) => ["admin", "moderation", "detail", id] as const,
   },
 
@@ -241,6 +243,16 @@ export const queryKeys = {
     all: ["admin", "audit"] as const,
     list: (params?: AuditListQuery) => ["admin", "audit", "list", params ?? null] as const,
   },
+
+  dev: {
+    all: ["admin", "dev"] as const,
+    overview: ["admin", "dev", "overview"] as const,
+    jobs: ["admin", "dev", "jobs"] as const,
+    flags: ["admin", "dev", "flags"] as const,
+    forceUpdate: ["admin", "dev", "force-update"] as const,
+    systemHealth: ["admin", "dev", "system-health"] as const,
+    activity: ["admin", "dev", "activity"] as const,
+  },
 }
 
 type Invalidation = QueryKey | InvalidateQueryFilters | null
@@ -257,7 +269,11 @@ function isQueryKey(target: QueryKey | InvalidateQueryFilters): target is QueryK
 const isPrimitiveKey = (key: QueryKey): boolean =>
   key.every((part) => part === null || typeof part !== "object")
 
-function coveredByAnother(target: QueryKey, index: number, targets: readonly Invalidation[]): boolean {
+function coveredByAnother(
+  target: QueryKey,
+  index: number,
+  targets: readonly Invalidation[],
+): boolean {
   if (!isPrimitiveKey(target)) return false
   return targets.some(
     (other, otherIndex) =>
@@ -278,12 +294,11 @@ export function invalidateKeys(
   qc: QueryClient,
   targets: readonly Invalidation[],
 ): Promise<unknown> {
-  return Promise.all(
-    targets.map((target, index) => {
-      if (target === null) return null
-      if (!isQueryKey(target)) return qc.invalidateQueries(target)
-      if (coveredByAnother(target, index, targets)) return null
-      return qc.invalidateQueries({ queryKey: target })
-    }),
-  )
+  const refetches = targets.flatMap((target, index) => {
+    if (target === null) return []
+    if (!isQueryKey(target)) return [qc.invalidateQueries(target)]
+    if (coveredByAnother(target, index, targets)) return []
+    return [qc.invalidateQueries({ queryKey: target })]
+  })
+  return Promise.all(refetches)
 }

@@ -30,7 +30,12 @@ async function invalidatedBy<I>(
 
 describe("report mutations refresh the sections that show report state", () => {
   it.each([
-    ["status", "setReportStatus", () => useSetReportStatus(), { id: "r1", status: "resolved" as const }],
+    [
+      "status",
+      "setReportStatus",
+      () => useSetReportStatus(),
+      { id: "r1", status: "resolved" as const },
+    ],
     ["flag", "flagReport", () => useFlagReport(), { id: "r1" }],
     ["remove", "removeReport", () => useRemoveReport(), { id: "r1" }],
   ] as const)("%s", async (_name, method, useHook, input) => {

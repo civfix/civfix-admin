@@ -1,4 +1,4 @@
-export function isHttpsUrl(value: string | null | undefined): value is string {
+export function isHttpsUrl(value: string | null | undefined): boolean {
   if (value === null || value === undefined) return false
   try {
     return new URL(value).protocol === "https:"

@@ -69,7 +69,7 @@ const OrgRow = React.memo(function OrgRow({
       </div>
       <div className="trailing">
         <span className={`pill ${view.cls} tight`}>{view.label}</span>
-        <span className="age">{formatDate(pendingSince || org.createdAt)}</span>
+        <span className="age">{formatDate(pendingSince ?? org.createdAt)}</span>
       </div>
     </div>
   )

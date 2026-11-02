@@ -5,7 +5,6 @@ import type {
   AdminEventListItemDTO,
   AdminEventListResponse,
   AdminReportListItemDTO,
-  AdminReportListResponse,
 } from "@civfix/contract"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -77,7 +76,7 @@ async function openPicker() {
   apiMock.listAdminReports.mockResolvedValue({
     items: [REPORT],
     nextCursor: null,
-  } as AdminReportListResponse)
+  })
   const user = userEvent.setup()
   renderWithQuery(<AppShell />)
   await waitForSectionPage()

@@ -10,12 +10,20 @@ describe("FilterChips", () => {
   it("exposes which chip is selected as a pressed toggle button", () => {
     render(<FilterChips options={OPTIONS} value="open" onChange={() => undefined} />)
 
-    expect(screen.getByRole("button", { name: "Open 3", pressed: true })).toHaveAttribute("type", "button")
-    expect(screen.getByRole("button", { name: "All", pressed: false })).toHaveAttribute("type", "button")
+    expect(screen.getByRole("button", { name: "Open 3", pressed: true })).toHaveAttribute(
+      "type",
+      "button",
+    )
+    expect(screen.getByRole("button", { name: "All", pressed: false })).toHaveAttribute(
+      "type",
+      "button",
+    )
   })
 
   it("groups the chips under the given label", () => {
-    render(<FilterChips options={OPTIONS} value="All" onChange={() => undefined} ariaLabel="Status" />)
+    render(
+      <FilterChips options={OPTIONS} value="All" onChange={() => undefined} ariaLabel="Status" />,
+    )
 
     const group = screen.getByRole("group", { name: "Status" })
     expect(group).toContainElement(screen.getByRole("button", { name: "All", pressed: true }))

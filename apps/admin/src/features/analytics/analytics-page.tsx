@@ -9,7 +9,10 @@ import {
   ResolutionTimeCard,
 } from "@/features/analytics/analytics-breakdown-cards"
 import { KpiSection, visibleKpis } from "@/features/analytics/analytics-kpis"
-import { TopContributorsCard, TopJurisdictionsCard } from "@/features/analytics/analytics-rank-cards"
+import {
+  TopContributorsCard,
+  TopJurisdictionsCard,
+} from "@/features/analytics/analytics-rank-cards"
 import { CleanupEventsCard, PinsPerWeekCard } from "@/features/analytics/analytics-trend-cards"
 import {
   useAnalyticsByCategory,

@@ -6,7 +6,10 @@ export type OrgDetailTab = (typeof ORG_DETAIL_TABS)[number]
  * into one focus string), so another section can deep-link straight to e.g. the Members tab:
  * `nav("orgs", orgFocus(id, "members"))`. An unknown tab falls back to null (caller keeps its default).
  */
-export function parseOrgFocus(focusId: string | null): { id: string | null; tab: OrgDetailTab | null } {
+export function parseOrgFocus(focusId: string | null): {
+  id: string | null
+  tab: OrgDetailTab | null
+} {
   if (!focusId) return { id: null, tab: null }
   const [id = "", rest = ""] = focusId.split("/", 2)
   const tab = (ORG_DETAIL_TABS as readonly string[]).includes(rest) ? (rest as OrgDetailTab) : null

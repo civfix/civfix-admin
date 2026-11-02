@@ -28,9 +28,9 @@ export function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
         <div className="sub-head">What this is</div>
         <div className="sub-body">
           <p className="rep-desc">
-            These reports’ locations didn’t resolve to any jurisdiction on file, so they can’t be routed to
-            a city contact yet. This usually means jurisdiction boundaries haven’t been loaded (run the
-            jurisdictions seed/ingest), or the pins fall outside all known coverage.
+            These reports’ locations didn’t resolve to any jurisdiction on file, so they can’t be
+            routed to a city contact yet. This usually means jurisdiction boundaries haven’t been
+            loaded (run the jurisdictions seed/ingest), or the pins fall outside all known coverage.
           </p>
         </div>
       </div>
@@ -61,8 +61,8 @@ export function UnmappedDetail({ dto }: { dto: JurisdictionDirectoryDTO }) {
             </div>
           )}
           <div className="hint" style={{ marginTop: 10 }}>
-            Once jurisdictions are loaded, new pins route automatically; existing unmapped pins may need a
-            re-resolve pass.
+            Once jurisdictions are loaded, new pins route automatically; existing unmapped pins may
+            need a re-resolve pass.
           </div>
         </div>
       </div>
