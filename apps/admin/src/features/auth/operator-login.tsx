@@ -1,7 +1,5 @@
 "use client"
 
-import * as React from "react"
-
 import { BrandBug } from "@/components/shared/brand-bug"
 import { useOperatorBootstrap, useOperatorSession } from "@/hooks/use-admin-auth"
 import { SOURCE } from "@/lib/source"
