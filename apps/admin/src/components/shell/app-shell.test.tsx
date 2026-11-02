@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AppShell } from "@/components/shell/app-shell"
 import { SOURCE } from "@/lib/source"
 import { useUiStore } from "@/store/ui-store"
+import { expectConsoleError } from "@/test/console"
 import { renderWithQuery } from "@/test/render"
 
 vi.mock("@/components/shell/page-registry", async () => {
@@ -17,6 +18,9 @@ vi.mock("@/components/shell/page-registry", async () => {
   function HomeStub() {
     return <h1>Home stub</h1>
   }
+  function UsersStub() {
+    return <h1>Users stub</h1>
+  }
   function BrokenPage(): React.ReactNode {
     throw new TypeError("Cannot read properties of undefined (reading 'cls')")
   }
@@ -25,12 +29,12 @@ vi.mock("@/components/shell/page-registry", async () => {
       home: React.lazy(async () => ({ default: HomeStub })),
       reports: React.lazy(() => Promise.reject(chunkLoadError())),
       events: React.lazy(async () => ({ default: BrokenPage })),
+      users: React.lazy(async () => ({ default: UsersStub })),
     },
   }
 })
 
 beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => undefined)
   vi.spyOn(window, "scrollTo").mockImplementation(() => undefined)
 })
 
@@ -42,6 +46,7 @@ afterEach(() => {
 describe("AppShell error containment", () => {
   it("keeps the shell usable when a section chunk fails to download, offering Reload", async () => {
     const user = userEvent.setup()
+    expectConsoleError("Loading chunk 812 failed.")
     useUiStore.setState({ page: "reports", focusId: null })
     renderWithQuery(<AppShell />)
 
@@ -57,6 +62,7 @@ describe("AppShell error containment", () => {
 
   it("contains a section render error to the page and resets it on navigation", async () => {
     const user = userEvent.setup()
+    expectConsoleError("Cannot read properties of undefined (reading 'cls')")
     useUiStore.setState({ page: "events", focusId: null })
     renderWithQuery(<AppShell />)
 
@@ -73,9 +79,10 @@ describe("AppShell error containment", () => {
 
 describe("AppShell source link", () => {
   it("links the AGPL source from every section page", async () => {
-    useUiStore.setState({ page: "reports", focusId: null })
+    useUiStore.setState({ page: "users", focusId: null })
     renderWithQuery(<AppShell />)
 
+    expect(await screen.findByRole("heading", { name: "Users stub" })).toBeInTheDocument()
     const link = await screen.findByRole("link", { name: "Source code (AGPL-3.0)" })
     expect(link).toHaveAttribute("href", SOURCE.url)
     expect(link).toHaveAttribute("target", "_blank")

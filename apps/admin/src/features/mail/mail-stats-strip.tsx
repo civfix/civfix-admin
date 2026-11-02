@@ -29,7 +29,11 @@ function StatCell({
 function OutboundCells({ stats }: { stats: MailStatsResponse }) {
   if (stats.sent === 0 && stats.bounced === 0 && stats.failed === 0) {
     return (
-      <StatCell label="Outbound · 7d" value={EMPTY_VALUE} hint="No outbound mail in the last 7 days" />
+      <StatCell
+        label="Outbound · 7d"
+        value={EMPTY_VALUE}
+        hint="No outbound mail in the last 7 days"
+      />
     )
   }
   return (

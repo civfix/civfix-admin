@@ -16,11 +16,11 @@ const DOCUMENTS: { type: LegalDocumentType; label: string }[] = [
   { type: "subprocessors", label: "Subprocessors" },
 ]
 
-// Versions published before change notes existed carry no flag or summary (DECISIONS §66): neither
+// Versions published before change notes existed carry no flag or summary (DECISIONS §68): neither
 // "Material" nor "Notice only" is true of them, so they say so instead of guessing.
 const UNFLAGGED_NOTE = "Published before change notes were kept"
 
-// A further version the same day takes the suffix "-2", "-3" (DECISIONS §66) and can share its
+// A further version the same day takes the suffix "-2", "-3" (DECISIONS §68) and can share its
 // effectiveAt, so the suffix breaks the tie.
 function newestFirst(a: LegalDocumentVersionDTO, b: LegalDocumentVersionDTO): number {
   return (
@@ -45,7 +45,11 @@ function VersionRow({ doc }: { doc: LegalDocumentVersionDTO }) {
           {doc.material === false && <span className="pill priority-low tight">Notice only</span>}
         </div>
         <div className="sub">
-          {doc.summary ? <span>{doc.summary}</span> : <span className="muted">{UNFLAGGED_NOTE}</span>}
+          {doc.summary ? (
+            <span>{doc.summary}</span>
+          ) : (
+            <span className="muted">{UNFLAGGED_NOTE}</span>
+          )}
         </div>
       </div>
       <div className="trailing">
@@ -97,8 +101,8 @@ export function LegalPage(_props: SectionPageProps) {
         title="Legal"
         subtitle={
           <span>
-            Every published version of each legal document, newest first, and how many active accounts
-            have accepted the current Terms and Privacy Policy.
+            Every published version of each legal document, newest first, and how many active
+            accounts have accepted the current Terms and Privacy Policy.
           </span>
         }
       />

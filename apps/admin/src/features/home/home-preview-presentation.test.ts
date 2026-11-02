@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  mailPreviewView,
-  moderationPreviewView,
-} from "./home-preview-presentation"
+import { mailPreviewView, moderationPreviewView } from "./home-preview-presentation"
 
 describe("home preview presentation", () => {
   it("leads the mail tile with the server-side outreach unread total", () => {

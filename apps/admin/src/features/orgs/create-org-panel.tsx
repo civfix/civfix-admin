@@ -83,8 +83,8 @@ function OwnerSection({
         <UserPicker value={owner} onChange={onChange} />
         <FieldError id={fieldErrorId(OWNER_FIELD_ID)} text={errors.ownerUserId} />
         <span className="hint" id={fieldHintId(OWNER_FIELD_ID)}>
-          The owner can edit the organization, manage its members and host under its name.
-          Ownership can be transferred later from the Members tab.
+          The owner can edit the organization, manage its members and host under its name. Ownership
+          can be transferred later from the Members tab.
         </span>
       </div>
     </FormSection>

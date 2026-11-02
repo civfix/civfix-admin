@@ -131,7 +131,9 @@ function EventMeetLocation({ event }: { event: AdminEventDTO }) {
 }
 
 function TimelineRow({ item }: { item: EventTimelineItem }) {
-  const TimelineIcon = TIMELINE_ICON[item.kind] ?? Icons.Clock
+  const TimelineIcon = Object.hasOwn(TIMELINE_ICON, item.kind)
+    ? TIMELINE_ICON[item.kind]
+    : Icons.Clock
   return (
     <div className={`rep-tl-row kind-${item.kind}`}>
       <span className="rep-tl-ico">

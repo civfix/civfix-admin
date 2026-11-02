@@ -438,7 +438,10 @@ describe("DialogHost", () => {
     })
     await user.click(opener)
 
-    dragOutToBackdrop(screen.getByText("The reporter is notified."), overlayOf(screen.getByRole("dialog")))
+    dragOutToBackdrop(
+      screen.getByText("The reporter is notified."),
+      overlayOf(screen.getByRole("dialog")),
+    )
     expect(screen.getByRole("dialog")).toBeInTheDocument()
     expect(await settledYet(result!)).toBe(false)
   })
@@ -494,7 +497,9 @@ describe("DialogHost", () => {
     const { user, opener } = renderDialog(() => void confirmDialog({ title: "Remove report?" }))
     await user.click(opener)
 
-    expect(screen.getByRole("dialog", { name: "Remove report?" })).not.toHaveAttribute("aria-describedby")
+    expect(screen.getByRole("dialog", { name: "Remove report?" })).not.toHaveAttribute(
+      "aria-describedby",
+    )
   })
 
   it("names the prompt field by its label", async () => {

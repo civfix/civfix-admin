@@ -2,7 +2,12 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { act, renderHook } from "@testing-library/react"
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query"
-import { AppError, ErrorCode, type AdminLoginResponse, type AdminOperatorDTO } from "@civfix/contract"
+import {
+  AppError,
+  ErrorCode,
+  type AdminLoginResponse,
+  type AdminOperatorDTO,
+} from "@civfix/contract"
 
 import { apiMock } from "@/test/api-mock"
 import { makeTestQueryClient } from "@/test/render"
@@ -24,9 +29,17 @@ vi.mock("@/lib/api", async (importOriginal) => {
   return { ...(await importOriginal<typeof ApiModule>()), api: apiMock }
 })
 
-const OPERATOR: AdminOperatorDTO = { id: "op-1", name: "Ada Ops", email: "ada@civfix.org", role: "operator" }
+const OPERATOR: AdminOperatorDTO = {
+  id: "op-1",
+  name: "Ada Ops",
+  email: "ada@civfix.org",
+  role: "operator",
+}
 
-function loginResponse(user: Partial<AdminLoginResponse["user"]> = {}, csrfToken?: string): AdminLoginResponse {
+function loginResponse(
+  user: Partial<AdminLoginResponse["user"]> = {},
+  csrfToken?: string,
+): AdminLoginResponse {
   return {
     user: {
       id: "op-2",
@@ -50,7 +63,10 @@ function foreignAppError(code: ErrorCode, message = code): Error {
 }
 
 function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  })
 }
 
 function wrapperFor(client: QueryClient) {
@@ -87,7 +103,11 @@ afterEach(() => {
 
 describe("useOperatorBootstrap: session reuse", () => {
   it("adopts a valid session without calling the exchange", async () => {
-    apiMock.adminSession.mockResolvedValue({ authenticated: true, operator: OPERATOR, csrfToken: "csrf-s" })
+    apiMock.adminSession.mockResolvedValue({
+      authenticated: true,
+      operator: OPERATOR,
+      csrfToken: "csrf-s",
+    })
     expect(await bootstrap()).toBe("ok")
     expect(apiMock.adminAccessExchange).not.toHaveBeenCalled()
     expect(useAuthStore.getState()).toMatchObject({
@@ -106,7 +126,11 @@ describe("useOperatorBootstrap: session reuse", () => {
 
   it("refuses a non-operator session as forbidden instead of storing it", async () => {
     const citizen: AdminOperatorDTO = { ...OPERATOR, role: "citizen" }
-    apiMock.adminSession.mockResolvedValue({ authenticated: true, operator: citizen, csrfToken: "c" })
+    apiMock.adminSession.mockResolvedValue({
+      authenticated: true,
+      operator: citizen,
+      csrfToken: "c",
+    })
     const client = makeTestQueryClient()
     const boot = renderHook(() => useOperatorBootstrap(), { wrapper: wrapperFor(client) })
     let outcome = ""
@@ -116,7 +140,11 @@ describe("useOperatorBootstrap: session reuse", () => {
     expect(outcome).toBe("forbidden")
     expect(apiMock.adminAccessExchange).not.toHaveBeenCalled()
     const session = renderHook(() => useOperatorSession(), { wrapper: wrapperFor(client) })
-    expect(session.result.current).toEqual({ isOperator: false, operator: null, status: "forbidden" })
+    expect(session.result.current).toEqual({
+      isOperator: false,
+      operator: null,
+      status: "forbidden",
+    })
     expect(useAuthStore.getState().csrfToken).toBeNull()
   })
 
@@ -181,7 +209,12 @@ describe("useOperatorBootstrap: Access exchange", () => {
   it("stores exactly id, name, email and role and drops the other user fields", async () => {
     apiMock.adminAccessExchange.mockResolvedValue(loginResponse({ handle: "grace" }, "csrf-x"))
     await bootstrap()
-    expect(Object.keys(useAuthStore.getState().operator ?? {}).sort()).toEqual(["email", "id", "name", "role"])
+    expect(Object.keys(useAuthStore.getState().operator ?? {}).sort()).toEqual([
+      "email",
+      "id",
+      "name",
+      "role",
+    ])
   })
 
   it.each([null, undefined])("maps a %s email to an empty string", async (email) => {
@@ -210,13 +243,21 @@ describe("useOperatorBootstrap: Access exchange", () => {
     useAuthStore.setState({ operator: OPERATOR, csrfToken: "csrf-old", status: "authenticated" })
     apiMock.adminAccessExchange.mockRejectedValue(new AppError(ErrorCode.FORBIDDEN, "no"))
     expect(await bootstrap()).toBe("forbidden")
-    expect(useAuthStore.getState()).toMatchObject({ status: "forbidden", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({
+      status: "forbidden",
+      operator: null,
+      csrfToken: null,
+    })
   })
 
   it("refuses an exchanged session whose user is not an operator", async () => {
     apiMock.adminAccessExchange.mockResolvedValue(loginResponse({ role: "citizen" }, "csrf-x"))
     expect(await bootstrap()).toBe("forbidden")
-    expect(useAuthStore.getState()).toMatchObject({ status: "forbidden", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({
+      status: "forbidden",
+      operator: null,
+      csrfToken: null,
+    })
   })
 
   it.each([
@@ -235,7 +276,11 @@ describe("useOperatorBootstrap: Access exchange", () => {
     useAuthStore.setState({ operator: OPERATOR, csrfToken: "csrf-old", status: "authenticated" })
     apiMock.adminAccessExchange.mockRejectedValue(new TypeError("Failed to fetch"))
     expect(await bootstrap()).toBe("error")
-    expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({
+      status: "anonymous",
+      operator: null,
+      csrfToken: null,
+    })
   })
 
   it("can be retried after an error", async () => {
@@ -304,7 +349,11 @@ describe("useOperatorLogout", () => {
     client.setQueryData(["admin", "reports", "list", null], { items: [] })
     await logout(client)
     expect(apiMock.adminLogout).toHaveBeenCalledTimes(1)
-    expect(useAuthStore.getState()).toMatchObject({ status: "signing-out", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({
+      status: "signing-out",
+      operator: null,
+      csrfToken: null,
+    })
     expect(client.getQueryCache().getAll()).toHaveLength(0)
     expect(assign).toHaveBeenCalledTimes(1)
     expect(assign).toHaveBeenCalledWith(`${API_BASE_URL}/cdn-cgi/access/logout`)
@@ -328,7 +377,9 @@ describe("useOperatorLogout", () => {
         resolveLogout = resolve
       }),
     )
-    const { result } = renderHook(() => useOperatorLogout(), { wrapper: wrapperFor(makeTestQueryClient()) })
+    const { result } = renderHook(() => useOperatorLogout(), {
+      wrapper: wrapperFor(makeTestQueryClient()),
+    })
     let pending: Promise<void> = Promise.resolve()
     act(() => {
       pending = result.current()
@@ -348,7 +399,11 @@ describe("useOperatorLogout", () => {
     const client = makeTestQueryClient()
     client.setQueryData(["admin", "home", "summary"], { n: 1 })
     await logout(client)
-    expect(useAuthStore.getState()).toMatchObject({ status: "signing-out", operator: null, csrfToken: null })
+    expect(useAuthStore.getState()).toMatchObject({
+      status: "signing-out",
+      operator: null,
+      csrfToken: null,
+    })
     expect(client.getQueryCache().getAll()).toHaveLength(0)
     expect(assign).toHaveBeenCalledWith(`${API_BASE_URL}/cdn-cgi/access/logout`)
   })
@@ -361,19 +416,29 @@ describe("real API client 401 handling", () => {
 
   it("clears the auth store on a 401 from the session endpoint", async () => {
     fetchMock.mockResolvedValue(jsonResponse(401, { code: "UNAUTHORIZED", message: "expired" }))
-    await expect(getApiClient().adminSession()).rejects.toMatchObject({ code: ErrorCode.UNAUTHORIZED })
-    expect(useAuthStore.getState()).toMatchObject({ status: "anonymous", operator: null, csrfToken: null })
+    await expect(getApiClient().adminSession()).rejects.toMatchObject({
+      code: ErrorCode.UNAUTHORIZED,
+    })
+    expect(useAuthStore.getState()).toMatchObject({
+      status: "anonymous",
+      operator: null,
+      csrfToken: null,
+    })
   })
 
   it("clears the auth store on a 401 from any data endpoint", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 401 }))
-    await expect(getApiClient().adminHomeSummary()).rejects.toMatchObject({ code: ErrorCode.UNAUTHORIZED })
+    await expect(getApiClient().adminHomeSummary()).rejects.toMatchObject({
+      code: ErrorCode.UNAUTHORIZED,
+    })
     expect(useAuthStore.getState().status).toBe("anonymous")
   })
 
   it("leaves the auth store alone on a 403", async () => {
     fetchMock.mockResolvedValue(jsonResponse(403, { code: "FORBIDDEN", message: "no" }))
-    await expect(getApiClient().adminHomeSummary()).rejects.toMatchObject({ code: ErrorCode.FORBIDDEN })
+    await expect(getApiClient().adminHomeSummary()).rejects.toMatchObject({
+      code: ErrorCode.FORBIDDEN,
+    })
     expect(useAuthStore.getState()).toMatchObject({ status: "authenticated", operator: OPERATOR })
   })
 

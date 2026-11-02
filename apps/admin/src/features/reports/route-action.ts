@@ -1,11 +1,6 @@
 import type { AdminReportDTO, ReportOutreachStatus } from "@civfix/contract"
 
-type RouteActionKind =
-  | "send"
-  | "resend"
-  | "already_sent"
-  | "no_contact"
-  | "no_jurisdiction"
+type RouteActionKind = "send" | "resend" | "already_sent" | "no_contact" | "no_jurisdiction"
 
 export interface RouteAction {
   kind: RouteActionKind

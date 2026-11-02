@@ -34,7 +34,9 @@ const reply = {
 } as const satisfies InboxFeedResponse["items"][number]
 
 describe("inbox feed query", () => {
-  beforeEach(() => listInboxFeed.mockReset())
+  beforeEach(() => {
+    listInboxFeed.mockReset()
+  })
 
   it("pages the feed with its filter and search until the server cursor runs out", async () => {
     listInboxFeed

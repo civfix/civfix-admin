@@ -34,8 +34,15 @@ export function reportVerdictActions(
   approvesOnSend: boolean,
   onApprovedChange: (approved: boolean) => void,
 ) {
-  const { toast, routeMutation, verdictMutation, routeOpen, setRouteOpen, routeNote, setRouteNote } =
-    controls
+  const {
+    toast,
+    routeMutation,
+    verdictMutation,
+    routeOpen,
+    setRouteOpen,
+    routeNote,
+    setRouteNote,
+  } = controls
   const sendAttempted = report.outreach.routedAt !== null
 
   const openRoute = () => {

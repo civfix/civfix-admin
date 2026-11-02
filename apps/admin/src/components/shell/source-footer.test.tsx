@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SourceFooter } from "@/components/shell/source-footer"
+import { SOURCE } from "@/lib/source"
 import { useUiStore } from "@/store/ui-store"
 
 beforeEach(() => {
@@ -17,6 +18,16 @@ afterEach(() => {
 })
 
 describe("SourceFooter", () => {
+  it("T1: links the developer page next to the source offer", () => {
+    render(<SourceFooter />)
+
+    expect(screen.getByRole("link", { name: "Developer" })).toHaveAttribute("href", "/dev/")
+    expect(screen.getByRole("link", { name: "Source code (AGPL-3.0)" })).toHaveAttribute(
+      "href",
+      SOURCE.url,
+    )
+  })
+
   it("T3: the Legal link opens the legal page", async () => {
     render(<SourceFooter />)
 

@@ -306,7 +306,9 @@ describe("HomePage", () => {
     expect(
       await screen.findByRole("button", { name: /^Jurisdictions\s*12 jurisdictions in queue$/ }),
     ).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /^Reports\s*5 reports flagged$/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /^Reports\s*5 reports flagged$/ }),
+    ).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /^Events\s*3 upcoming events$/ })).toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: /^Mail\s*1 unread outreach message$/ }),
@@ -353,7 +355,9 @@ describe("HomePage", () => {
     expect(within(discovery).getByText("3d")).toBeInTheDocument()
     expect(within(discovery).getByText("Tiny Town")).toBeInTheDocument()
     expect(within(discovery).getByText("2 reports")).toBeInTheDocument()
-    expect(within(discovery).getByRole("button", { name: /and 10 more cities\s*Open/ })).toBeInTheDocument()
+    expect(
+      within(discovery).getByRole("button", { name: /and 10 more cities\s*Open/ }),
+    ).toBeInTheDocument()
 
     const reports = tileOf(/^Reports/)
     expect(await within(reports).findByText("Broken streetlight")).toBeInTheDocument()

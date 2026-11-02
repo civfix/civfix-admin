@@ -68,8 +68,10 @@ export function ModerationPage({ focusId }: SectionPageProps) {
               onKeyDown={(e) => {
                 const next = menuFocusIndex(e.key, i, SECTION_OPTIONS.length, "both")
                 if (next === null) return
+                const target = SECTION_OPTIONS[next]
+                if (target === undefined) return
                 e.preventDefault()
-                switchTo(SECTION_OPTIONS[next]!.id)
+                switchTo(target.id)
                 radioRefs.current[next]?.focus()
               }}
             >

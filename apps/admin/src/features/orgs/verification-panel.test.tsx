@@ -60,7 +60,9 @@ describe("VerificationPanel decision", () => {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument()
     }
     expect(
-      screen.getByText("This organization was deleted, so its application can no longer be decided."),
+      screen.getByText(
+        "This organization was deleted, so its application can no longer be decided.",
+      ),
     ).toBeInTheDocument()
   })
 })
@@ -69,7 +71,9 @@ describe("VerificationPanel evidence", () => {
   it("shows no evidence card for an organization that never applied", async () => {
     await renderPanelFor(makeOrg({ verification: null }))
 
-    expect(screen.getByText("This organization has never applied for verification.")).toBeInTheDocument()
+    expect(
+      screen.getByText("This organization has never applied for verification."),
+    ).toBeInTheDocument()
     expect(screen.queryByText("Evidence")).not.toBeInTheDocument()
     expect(screen.queryByText("No evidence uploaded")).not.toBeInTheDocument()
   })

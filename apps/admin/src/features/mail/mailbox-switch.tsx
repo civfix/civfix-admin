@@ -28,17 +28,18 @@ export function MailboxSwitch({
   })
   const outreach = folder === "outreach"
 
-  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     const step = FOLDER_ARROW_STEP[e.key]
     if (!step) return
+    const next = FOLDERS[(FOLDERS.indexOf(folder) + step + FOLDERS.length) % FOLDERS.length]
+    if (next === undefined) return
     e.preventDefault()
-    const next = FOLDERS[(FOLDERS.indexOf(folder) + step + FOLDERS.length) % FOLDERS.length]!
     onSwitch(next)
     folderRefs.current[next]?.focus()
   }
 
   return (
-    <div className="mailbox-switch" role="radiogroup" aria-label="Mailbox folder" onKeyDown={onKeyDown}>
+    <div className="mailbox-switch" role="radiogroup" aria-label="Mailbox folder">
       <button
         ref={(el) => {
           folderRefs.current.outreach = el
@@ -48,6 +49,7 @@ export function MailboxSwitch({
         role="radio"
         aria-checked={outreach}
         tabIndex={outreach ? 0 : -1}
+        onKeyDown={onKeyDown}
         onClick={() => onSwitch("outreach")}
       >
         <Icons.Mail size={13} /> Outreach
@@ -62,6 +64,7 @@ export function MailboxSwitch({
         role="radio"
         aria-checked={!outreach}
         tabIndex={outreach ? -1 : 0}
+        onKeyDown={onKeyDown}
         onClick={() => onSwitch("inbox")}
       >
         <Icons.Inbox size={13} /> Inbox

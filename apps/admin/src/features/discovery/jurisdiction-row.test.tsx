@@ -33,7 +33,13 @@ const ITEM = {
 describe("JurisdictionRow waiting age", () => {
   it("reads its age and overdue state from the now prop", () => {
     const row = (now: number) => (
-      <JurisdictionRow item={ITEM} selected={false} onSelect={() => undefined} now={now} showOldest />
+      <JurisdictionRow
+        item={ITEM}
+        selected={false}
+        onSelect={() => undefined}
+        now={now}
+        showOldest
+      />
     )
     const { container, rerender } = render(row(NOW))
     const age = () => container.querySelector(".juris-age")

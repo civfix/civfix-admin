@@ -18,7 +18,11 @@ export function HeldMediaCard({
   if (media.length === 0) return null
   const heldImages: LightboxImage[] = media
     .filter((m) => m.kind === "image")
-    .map((m, i, images) => ({ id: m.id, url: m.url, alt: `Held image ${i + 1} of ${images.length}` }))
+    .map((m, i, images) => ({
+      id: m.id,
+      url: m.url,
+      alt: `Held image ${i + 1} of ${images.length}`,
+    }))
   const heldVideoIds = media.filter((m) => m.kind === "video").map((m) => m.id)
   return (
     <div className="sub">
@@ -81,9 +85,8 @@ function SignalCell({ signal }: { signal: ModerationSignal }) {
 
 // Signals carry no id and the backend does not promise unique labels, so a repeated label is told
 // apart by how many times it appeared before.
-function signalKey(signals: readonly ModerationSignal[], index: number): string {
-  const label = signals[index]!.label
-  const earlier = signals.slice(0, index).filter((s) => s.label === label).length
+function signalKey(label: string, before: readonly ModerationSignal[]): string {
+  const earlier = before.filter((s) => s.label === label).length
   return `${label}#${earlier}`
 }
 
@@ -95,7 +98,7 @@ export function SignalsCard({ signals }: { signals: readonly ModerationSignal[] 
       <div className="sub-body">
         <div className="user-meta-rows">
           {signals.map((signal, i, all) => (
-            <SignalCell key={signalKey(all, i)} signal={signal} />
+            <SignalCell key={signalKey(signal.label, all.slice(0, i))} signal={signal} />
           ))}
         </div>
       </div>

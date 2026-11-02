@@ -36,18 +36,21 @@ const KIND_ICON: Record<ModerationKind, IconComponent> = {
 
 // The fallbacks below cover an enum value newer than this build, which the client passes through.
 export function priorityView(priority: Priority): PillView {
-  return PRIORITY_VIEW[priority] ?? PRIORITY_VIEW.low
+  return Object.hasOwn(PRIORITY_VIEW, priority) ? PRIORITY_VIEW[priority] : PRIORITY_VIEW.low
 }
 
 export function toneClass(tone: ModerationTone): string {
-  return TONE_CLASS[tone] ?? TONE_CLASS.ok
+  return Object.hasOwn(TONE_CLASS, tone) ? TONE_CLASS[tone] : TONE_CLASS.ok
 }
 
-export function kindIcon(kind: ModerationKind): IconComponent {
-  return KIND_ICON[kind] ?? Icons.Shield
+export function ModerationKindIcon({ kind, size }: { kind: ModerationKind; size: number }) {
+  const Icon = Object.hasOwn(KIND_ICON, kind) ? KIND_ICON[kind] : Icons.Shield
+  return <Icon size={size} />
 }
 
-export function moderationKindLabel(item: Pick<ModerationListItemDTO, "kind" | "subjectType">): string {
+export function moderationKindLabel(
+  item: Pick<ModerationListItemDTO, "kind" | "subjectType">,
+): string {
   if (item.kind === "user_report" && item.subjectType) return `Reported ${item.subjectType}`
   return MODERATION_KIND_LABELS[item.kind]
 }

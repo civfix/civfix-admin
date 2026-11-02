@@ -19,7 +19,10 @@ export interface AuthState {
   operator: AdminOperatorDTO | null
   csrfToken: string | null
 
-  setSession: (input: { operator: AdminOperatorDTO | null; csrfToken?: string | null }) => void
+  setSession: (input: {
+    operator: AdminOperatorDTO | null
+    csrfToken?: string | null | undefined
+  }) => void
   setStatus: (status: AuthStatus) => void
   clear: (status?: SignedOutStatus) => void
 }

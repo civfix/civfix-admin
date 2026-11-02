@@ -5,7 +5,11 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { describe, expect, it } from "vitest"
 
 import { renderWithQuery } from "@/test/render"
-import { emptyProfileDraft, type OrgProfileDraft, type OrgProfileErrors } from "@/features/orgs/org-form"
+import {
+  emptyProfileDraft,
+  type OrgProfileDraft,
+  type OrgProfileErrors,
+} from "@/features/orgs/org-form"
 import { OrgProfileFields, ReasonField } from "@/features/orgs/org-form-fields"
 
 function Fields({

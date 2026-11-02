@@ -11,7 +11,10 @@ import { useSetEventOutcome } from "@/features/events/use-events"
 function TurnoutMeter({ event }: { event: AdminEventDTO }) {
   const percent = turnoutPercent(event.attendees, event.capacity)
   return (
-    <div className="evt-turnout" style={event.status === "cancelled" ? { opacity: 0.6 } : undefined}>
+    <div
+      className="evt-turnout"
+      style={event.status === "cancelled" ? { opacity: 0.6 } : undefined}
+    >
       <div className="evt-turnout-top">
         <span className="evt-turnout-n">
           {event.attendees}
@@ -33,7 +36,8 @@ function BagsCollected({ event }: { event: AdminEventDTO }) {
     return (
       <div className="evt-stat-row">
         <span className="evt-stat">
-          <Icons.Trash size={13} /> <b>{event.bags}</b> {event.bags === 1 ? "bag" : "bags"} collected
+          <Icons.Trash size={13} /> <b>{event.bags}</b> {event.bags === 1 ? "bag" : "bags"}{" "}
+          collected
         </span>
       </div>
     )

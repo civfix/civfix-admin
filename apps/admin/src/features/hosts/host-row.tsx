@@ -50,8 +50,7 @@ export const HostRow = React.memo(function HostRow({
           <span>{row.recipientCount.toLocaleString()} recipients</span>
           <span className="sep">·</span>
           <span>
-            {row.eventsMessaged.toLocaleString()}{" "}
-            {row.eventsMessaged === 1 ? "event" : "events"}
+            {row.eventsMessaged.toLocaleString()} {row.eventsMessaged === 1 ? "event" : "events"}
           </span>
         </div>
       </div>

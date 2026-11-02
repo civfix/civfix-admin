@@ -49,10 +49,7 @@ export function EventsPage({ focusId }: SectionPageProps) {
     q: debouncedQuery.trim() || undefined,
   }
   const listQuery = useEventListInfinite(listParams)
-  const items = React.useMemo(
-    () => flatPages(listQuery.data),
-    [listQuery.data],
-  )
+  const items = React.useMemo(() => flatPages(listQuery.data), [listQuery.data])
 
   const serverCounts: AdminEventCounts | null = listQuery.data?.pages[0]?.counts ?? null
   const counts = serverCounts ?? EMPTY_COUNTS
@@ -72,8 +69,8 @@ export function EventsPage({ focusId }: SectionPageProps) {
         title="Events"
         subtitle={
           <span>
-            Cleanups and other volunteer events neighbors organize on civfix. Track
-            turnout, keep them on the level, and message attendees.
+            Cleanups and other volunteer events neighbors organize on civfix. Track turnout, keep
+            them on the level, and message attendees.
           </span>
         }
       />

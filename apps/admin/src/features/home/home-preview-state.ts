@@ -7,7 +7,7 @@ export interface PreviewState {
   onRetry: () => void
   hasMore: boolean
   /** One source of a merged tile failed while the other loaded; its rows still show. */
-  partialError?: { title: string; error: unknown; onRetry: () => void }
+  partialError?: { title: string; error: unknown; onRetry: () => void } | undefined
 }
 
 interface ListPage<T> {
@@ -65,7 +65,9 @@ export function mailPreviewState<O, I>(
       void inboxQuery.refetch()
     },
     hasMore:
-      outreachQuery.data?.nextCursor != null || inboxQuery.data?.nextCursor != null || loaded > shown,
+      outreachQuery.data?.nextCursor != null ||
+      inboxQuery.data?.nextCursor != null ||
+      loaded > shown,
     partialError: mailPartialError(outreachQuery, inboxQuery),
   }
 }
@@ -84,7 +86,9 @@ export function moreLabel(
   if (state.isLoading || state.isError || shown === 0) return null
   if (total !== undefined) {
     const remaining = Math.max(0, total - shown)
-    return remaining > 0 ? `… and ${remaining} more ${remaining === 1 ? noun.one : noun.many}` : null
+    return remaining > 0
+      ? `… and ${remaining} more ${remaining === 1 ? noun.one : noun.many}`
+      : null
   }
   return state.hasMore ? `… and more ${noun.many}` : null
 }

@@ -15,7 +15,10 @@ import {
   type ContactEdits,
 } from "@/features/discovery/discovery-payloads"
 import { REPORT_TYPES, routingCount } from "@/features/discovery/jurisdiction-view"
-import { usePatchJurisdiction, useSaveJurisdictionContacts } from "@/features/discovery/use-discovery"
+import {
+  usePatchJurisdiction,
+  useSaveJurisdictionContacts,
+} from "@/features/discovery/use-discovery"
 import { useToast } from "@/store/ui-store"
 
 function seedContacts(dto: JurisdictionDirectoryDTO): Record<string, string> {
@@ -75,8 +78,16 @@ export function useJurisdictionEditor(dto: JurisdictionDirectoryDTO) {
   const patch = usePatchJurisdiction()
   const saveContacts = useSaveJurisdictionContacts()
   const draft = useJurisdictionDraft(dto)
-  const { contacts, contactEdits, contactsSaved, note, defaultEmail, formUrl, parsedHandle, canSave } =
-    draft
+  const {
+    contacts,
+    contactEdits,
+    contactsSaved,
+    note,
+    defaultEmail,
+    formUrl,
+    parsedHandle,
+    canSave,
+  } = draft
   const isFlagged = dto.flaggedAt !== null
   const saveBlocked = saveContacts.isPending || patch.isPending || parsedHandle.error !== null
 
@@ -138,7 +149,11 @@ export function useJurisdictionEditor(dto: JurisdictionDirectoryDTO) {
     // Awaited rather than chained through a per-call callback: that is dropped once this pane unmounts,
     // which would save the note but never the contacts.
     try {
-      await patch.mutateAsync({ request: { geoid: dto.geoid, ...extras }, org: dto.org, action: "extras" })
+      await patch.mutateAsync({
+        request: { geoid: dto.geoid, ...extras },
+        org: dto.org,
+        action: "extras",
+      })
     } catch {
       // The query client already toasted the failure, and the contacts must not save without the note.
       return

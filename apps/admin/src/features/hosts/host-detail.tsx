@@ -244,10 +244,7 @@ export function HostDetail({
     [row.host.id, activityWindow],
   )
   const logQuery = useBroadcastListInfinite(logParams)
-  const broadcasts = React.useMemo(
-    () => flatPages(logQuery.data),
-    [logQuery.data],
-  )
+  const broadcasts = React.useMemo(() => flatPages(logQuery.data), [logQuery.data])
   const events = React.useMemo(() => eventsFromBroadcasts(broadcasts), [broadcasts])
 
   return (

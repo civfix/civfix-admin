@@ -56,15 +56,23 @@ describe("UserPicker", () => {
   })
 
   it("says everyone matching is already a member when the page held only members", async () => {
-    const members = Array.from({ length: 8 }, (_, i) => person({ id: `m${i}`, name: `Member ${i}` }))
+    const members = Array.from({ length: 8 }, (_, i) =>
+      person({ id: `m${i}`, name: `Member ${i}` }),
+    )
     apiMock.listAdminUsers.mockResolvedValue(page(members))
     renderWithQuery(
-      <UserPicker value={null} onChange={() => {}} excludeIds={new Set(members.map((m) => m.id))} />,
+      <UserPicker
+        value={null}
+        onChange={() => {}}
+        excludeIds={new Set(members.map((m) => m.id))}
+      />,
     )
 
     await userEvent.type(screen.getByRole("textbox"), "member")
     await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent("Everyone matching is already a member."),
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Everyone matching is already a member.",
+      ),
     )
     expect(apiMock.listAdminUsers).toHaveBeenLastCalledWith({ q: "member", limit: 16 })
   })
@@ -75,16 +83,16 @@ describe("UserPicker", () => {
     renderWithQuery(<UserPicker value={null} onChange={() => {}} excludeIds={members} />)
 
     await userEvent.type(screen.getByRole("textbox"), "ada")
-    await waitFor(() => expect(apiMock.listAdminUsers).toHaveBeenLastCalledWith({ q: "ada", limit: 100 }))
+    await waitFor(() =>
+      expect(apiMock.listAdminUsers).toHaveBeenLastCalledWith({ q: "ada", limit: 100 }),
+    )
   })
 
   it("keeps at most eight results after leaving out members", async () => {
     const members = [person({ id: "m0", name: "Member 0" })]
     const others = Array.from({ length: 9 }, (_, i) => person({ id: `o${i}`, name: `Other ${i}` }))
     apiMock.listAdminUsers.mockResolvedValue(page([...members, ...others]))
-    renderWithQuery(
-      <UserPicker value={null} onChange={() => {}} excludeIds={new Set(["m0"])} />,
-    )
+    renderWithQuery(<UserPicker value={null} onChange={() => {}} excludeIds={new Set(["m0"])} />)
 
     const results = await screen.findByRole("list", { name: "Matching users" })
     expect(within(results).getAllByRole("button")).toHaveLength(8)
@@ -108,7 +116,9 @@ describe("UserPicker", () => {
     expect(within(results).getByText("Suspended")).toBeInTheDocument()
     expect(within(results).queryByText("suspended")).not.toBeInTheDocument()
     expect(within(results).getByRole("button", { name: /Cy Ames/ })).toHaveTextContent("Deleted")
-    expect(within(results).getByRole("button", { name: /Ada Park/ })).not.toHaveTextContent(/Deleted|Active/)
+    expect(within(results).getByRole("button", { name: /Ada Park/ })).not.toHaveTextContent(
+      /Deleted|Active/,
+    )
   })
 
   it("announces how many users match", async () => {
@@ -130,7 +140,12 @@ describe("UserPicker", () => {
       <>
         <span id="owner-label">Owner</span>
         <span id="owner-error">Pick an owner.</span>
-        <UserPicker value={null} onChange={() => {}} labelledBy="owner-label" describedBy="owner-error" />
+        <UserPicker
+          value={null}
+          onChange={() => {}}
+          labelledBy="owner-label"
+          describedBy="owner-error"
+        />
       </>,
     )
     const box = screen.getByRole("textbox", { name: "Owner" })

@@ -144,8 +144,8 @@ function OrgBanners({
         <div className="org-banner" role="status">
           <Icons.Trash size={14} />
           <div>
-            <b>Deleted {formatDateTime(org.deletedAt)}.</b> This organization was soft-deleted; it is
-            read-only here.
+            <b>Deleted {formatDateTime(org.deletedAt)}.</b> This organization was soft-deleted; it
+            is read-only here.
           </div>
         </div>
       )}
@@ -181,18 +181,19 @@ function OrgDetailTabs({
 }) {
   const tabRefs = React.useRef(new Map<OrgDetailTab, HTMLButtonElement>())
 
-  const onTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     const current = ORG_DETAIL_TABS.indexOf(tab)
     const next = menuFocusIndex(e.key, current, ORG_DETAIL_TABS.length, "horizontal")
     if (next === null) return
+    const target = ORG_DETAIL_TABS[next]
+    if (target === undefined) return
     e.preventDefault()
-    const target = ORG_DETAIL_TABS[next]!
     onTab(target)
     tabRefs.current.get(target)?.focus()
   }
 
   return (
-    <div className="profile-tabs org-tabs" role="tablist" onKeyDown={onTabKeyDown}>
+    <div className="profile-tabs org-tabs" role="tablist">
       {ORG_DETAIL_TABS.map((t) => (
         <button
           key={t}
@@ -207,6 +208,7 @@ function OrgDetailTabs({
           aria-controls={tab === t ? panelId : undefined}
           tabIndex={tab === t ? 0 : -1}
           className={`profile-tab ${tab === t ? "on" : ""}`}
+          onKeyDown={onTabKeyDown}
           onClick={() => onTab(t)}
         >
           {TAB_LABEL[t]}
@@ -232,7 +234,11 @@ export function OrgDetail({
   if (q.isLoading) return <LoadingState label="Loading organization..." />
   if (q.isError && !q.data) {
     return (
-      <ErrorState error={q.error} onRetry={() => q.refetch()} title="Could not load this organization" />
+      <ErrorState
+        error={q.error}
+        onRetry={() => q.refetch()}
+        title="Could not load this organization"
+      />
     )
   }
   const org = q.data

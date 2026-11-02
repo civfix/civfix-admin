@@ -4,7 +4,11 @@ import * as React from "react"
 import { MODERATION_KIND_LABELS, type ModerationListItemDTO } from "@civfix/contract"
 
 import { isKeyboardActivationKey } from "@/components/shared/keyboard-activation"
-import { kindIcon, moderationKindLabel, priorityView } from "@/features/moderation/moderation-views"
+import {
+  ModerationKindIcon,
+  moderationKindLabel,
+  priorityView,
+} from "@/features/moderation/moderation-views"
 
 function ModerationRow({
   item,
@@ -15,7 +19,6 @@ function ModerationRow({
   selected: boolean
   onSelect: (id: string) => void
 }) {
-  const KindIcon = kindIcon(item.kind)
   const priority = priorityView(item.priority)
   return (
     <div
@@ -31,7 +34,7 @@ function ModerationRow({
       }}
     >
       <span className="prow-ico hue-lilac" title={MODERATION_KIND_LABELS[item.kind]}>
-        <KindIcon size={15} />
+        <ModerationKindIcon kind={item.kind} size={15} />
       </span>
       <div className="body">
         <div className="top">

@@ -72,7 +72,10 @@ function mockPage(detail: MailThreadDTO) {
     bodyTemplate: null,
     updatedAt: null,
   } satisfies GetForwardTemplateDefaultResponse)
-  apiMock.listInboxFeed.mockResolvedValue({ items: [], nextCursor: null } satisfies InboxFeedResponse)
+  apiMock.listInboxFeed.mockResolvedValue({
+    items: [],
+    nextCursor: null,
+  } satisfies InboxFeedResponse)
   const { messages: _messages, ...row } = detail
   apiMock.listMail.mockResolvedValue({ items: [row], nextCursor: null } satisfies MailListResponse)
   apiMock.getMailThread.mockResolvedValue(detail)
@@ -121,7 +124,9 @@ const FAILING_ACTIONS: FailingAction[] = [
     fail: (error) => apiMock.replyMail.mockRejectedValue(error),
     thread: () => threadOf({}),
     run: async () => {
-      const reply = await within(detailCard()).findByPlaceholderText("Reply to Oakland Public Works…")
+      const reply = await within(detailCard()).findByPlaceholderText(
+        "Reply to Oakland Public Works…",
+      )
       await userEvent.type(reply, "Thanks")
       await userEvent.click(within(detailCard()).getByRole("button", { name: /^Reply/ }))
     },
@@ -132,7 +137,9 @@ const FAILING_ACTIONS: FailingAction[] = [
     fail: (error) => apiMock.setMailStatus.mockRejectedValue(error),
     thread: () => threadOf({}),
     run: async () => {
-      await userEvent.click(await within(detailCard()).findByRole("button", { name: /Mark replied/ }))
+      await userEvent.click(
+        await within(detailCard()).findByRole("button", { name: /Mark replied/ }),
+      )
     },
     copy: "Couldn't update the thread.",
   },
@@ -165,8 +172,12 @@ const FAILING_ACTIONS: FailingAction[] = [
     fail: (error) => apiMock.publishMailReply.mockRejectedValue(error),
     thread: withheldThread,
     run: async () => {
-      await userEvent.click(await within(detailCard()).findByRole("button", { name: /Publish reply/ }))
-      await userEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Publish reply" }))
+      await userEvent.click(
+        await within(detailCard()).findByRole("button", { name: /Publish reply/ }),
+      )
+      await userEvent.click(
+        within(screen.getByRole("dialog")).getByRole("button", { name: "Publish reply" }),
+      )
     },
     copy: "Couldn't publish the reply. Please try again.",
   },
@@ -185,16 +196,19 @@ describe("mail mutation failures", () => {
     expect(toasts).toHaveBeenCalledWith(REJECTED.message, "error")
   })
 
-  it.each(FAILING_ACTIONS)("toasts its own copy when $name fails with no message", async (action) => {
-    const toasts = spyToasts()
-    action.fail({ status: "failed" })
-    renderPage(action.thread())
+  it.each(FAILING_ACTIONS)(
+    "toasts its own copy when $name fails with no message",
+    async (action) => {
+      const toasts = spyToasts()
+      action.fail({ status: "failed" })
+      renderPage(action.thread())
 
-    await action.run()
+      await action.run()
 
-    await waitFor(() => expect(toasts).toHaveBeenCalled())
-    expect(toasts).toHaveBeenCalledWith(action.copy, "error")
-  })
+      await waitFor(() => expect(toasts).toHaveBeenCalled())
+      expect(toasts).toHaveBeenCalledWith(action.copy, "error")
+    },
+  )
 
   it("shows one error toast when saving the default template fails", async () => {
     const toasts = spyToasts()
@@ -223,7 +237,9 @@ describe("mail mutation failures", () => {
     const dialog = screen.getByRole("dialog", { name: "Default forwarding email" })
     await userEvent.click(within(dialog).getByRole("button", { name: /Preview/ }))
 
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Preview renderer unavailable")
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Preview renderer unavailable",
+    )
     expect(toasts).not.toHaveBeenCalled()
   })
 })

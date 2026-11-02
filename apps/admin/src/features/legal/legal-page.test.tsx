@@ -1,6 +1,10 @@
 import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { GetLegalVersionsResponse, LegalDocumentType, LegalDocumentVersionDTO } from "@civfix/contract"
+import type {
+  GetLegalVersionsResponse,
+  LegalDocumentType,
+  LegalDocumentVersionDTO,
+} from "@civfix/contract"
 import { describe, expect, it, vi } from "vitest"
 
 import type * as ApiModule from "@/lib/api"
@@ -31,7 +35,10 @@ function legalVersion(
   } satisfies LegalDocumentVersionDTO
 }
 
-const NO_CHANGE = { summary: "No change in wording", material: false } satisfies Partial<LegalDocumentVersionDTO>
+const NO_CHANGE = {
+  summary: "No change in wording",
+  material: false,
+} satisfies Partial<LegalDocumentVersionDTO>
 
 const OLDER: Record<LegalDocumentType, string[]> = {
   terms: ["2026-09-21", "2026-09-16", "2026-09-06"],
@@ -51,7 +58,10 @@ const CURRENT_EXTRA: Record<LegalDocumentType, Partial<LegalDocumentVersionDTO>>
 function fixtureF(termsCurrent: Partial<LegalDocumentVersionDTO> = {}): GetLegalVersionsResponse {
   const types: LegalDocumentType[] = ["terms", "privacy", "cookies", "subprocessors"]
   const documents = types.flatMap((type) => [
-    legalVersion(type, CURRENT, { ...CURRENT_EXTRA[type], ...(type === "terms" ? termsCurrent : {}) }),
+    legalVersion(type, CURRENT, {
+      ...CURRENT_EXTRA[type],
+      ...(type === "terms" ? termsCurrent : {}),
+    }),
     ...OLDER[type].map((version) => legalVersion(type, version)),
   ])
   return { documents, generatedAt: GENERATED_AT } satisfies GetLegalVersionsResponse
@@ -66,7 +76,7 @@ function card(label: string): HTMLElement {
 function versionsIn(label: string): string[] {
   return within(card(label))
     .getAllByText(VERSION_TEXT)
-    .map((el) => el.textContent ?? "")
+    .map((el) => el.textContent)
 }
 
 function row(label: string, version: string): HTMLElement {
@@ -90,7 +100,12 @@ describe("LegalPage", () => {
       "Cookie Policy",
       "Subprocessors",
     ])
-    expect(versionsIn("Terms of Service")).toEqual(["2026-10-27", "2026-09-21", "2026-09-16", "2026-09-06"])
+    expect(versionsIn("Terms of Service")).toEqual([
+      "2026-10-27",
+      "2026-09-21",
+      "2026-09-16",
+      "2026-09-06",
+    ])
     expect(within(card("Cookie Policy")).getByText("3 versions")).toBeInTheDocument()
   })
 
@@ -104,7 +119,12 @@ describe("LegalPage", () => {
       "Cookie Policy",
       "Subprocessors",
     ])
-    expect(versionsIn("Terms of Service")).toEqual(["2026-10-27", "2026-09-21", "2026-09-16", "2026-09-06"])
+    expect(versionsIn("Terms of Service")).toEqual([
+      "2026-10-27",
+      "2026-09-21",
+      "2026-09-16",
+      "2026-09-06",
+    ])
     expect(within(card("Cookie Policy")).getByText("3 versions")).toBeInTheDocument()
   })
 
@@ -149,15 +169,21 @@ describe("LegalPage", () => {
   it("T9: the current Terms and Privacy versions show how many accounts accepted", async () => {
     await renderLoaded(fixtureF())
 
-    expect(within(row("Terms of Service", CURRENT)).getByText("812 of 1,204 accounts accepted")).toBeInTheDocument()
-    expect(within(row("Privacy Policy", CURRENT)).getByText("790 of 1,204 accounts accepted")).toBeInTheDocument()
+    expect(
+      within(row("Terms of Service", CURRENT)).getByText("812 of 1,204 accounts accepted"),
+    ).toBeInTheDocument()
+    expect(
+      within(row("Privacy Policy", CURRENT)).getByText("790 of 1,204 accounts accepted"),
+    ).toBeInTheDocument()
     expect(screen.getAllByText(/accounts accepted/)).toHaveLength(2)
   })
 
   it("T10: no acceptance line when the active account count is missing", async () => {
     await renderLoaded(fixtureF({ acceptedCount: 812, activeAccounts: null }))
 
-    expect(within(row("Terms of Service", CURRENT)).queryByText(/accounts accepted/)).not.toBeInTheDocument()
+    expect(
+      within(row("Terms of Service", CURRENT)).queryByText(/accounts accepted/),
+    ).not.toBeInTheDocument()
   })
 
   it("T11: a later version of the same day is listed first", async () => {
@@ -189,7 +215,9 @@ describe("LegalPage", () => {
 
     apiMock.adminGetLegalVersions.mockResolvedValue(fixtureF())
     await userEvent.click(within(alert).getByRole("button", { name: "Try again" }))
-    expect(await screen.findByRole("heading", { name: "Terms of Service", level: 3 })).toBeInTheDocument()
+    expect(
+      await screen.findByRole("heading", { name: "Terms of Service", level: 3 }),
+    ).toBeInTheDocument()
     expect(apiMock.adminGetLegalVersions).toHaveBeenCalledTimes(2)
   })
 
@@ -204,6 +232,8 @@ describe("LegalPage", () => {
   it("T15: has no editing controls", async () => {
     const { container } = await renderLoaded(fixtureF())
 
-    expect(container.querySelectorAll("button, input, textarea, select, [contenteditable]")).toHaveLength(0)
+    expect(
+      container.querySelectorAll("button, input, textarea, select, [contenteditable]"),
+    ).toHaveLength(0)
   })
 })

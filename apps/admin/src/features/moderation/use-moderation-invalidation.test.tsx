@@ -51,7 +51,12 @@ describe("moderation decisions refresh the sections the decision changes", () =>
     ["approve", "approveModeration", () => useApproveModeration(), { id: "m1" }],
     ["remove", "removeModeration", () => useRemoveModeration(), { id: "m1" }],
     ["hold", "holdModeration", () => useHoldModeration(), { id: "m1" }],
-    ["appeal", "appealModeration", () => useAppealModeration(), { id: "m1", decision: "uphold" as const }],
+    [
+      "appeal",
+      "appealModeration",
+      () => useAppealModeration(),
+      { id: "m1", decision: "uphold" as const },
+    ],
   ] as const)("%s", async (_name, method, useHook, request) => {
     apiMock[method].mockResolvedValue({ ok: true })
     const keys = await invalidatedBy(useHook as never, { request, item: SUBJECT })
@@ -70,10 +75,38 @@ describe("moderation decisions refresh the sections the decision changes", () =>
 
 describe("moderation decisions confirm from the item the operator decided", () => {
   it.each([
-    ["approve", "approveModeration", () => useApproveModeration(), { id: "m1" }, "image", "MOD-101 · approved"],
-    ["keep", "approveModeration", () => useApproveModeration(), { id: "m1" }, "user_report", "MOD-101 · kept"],
-    ["remove", "removeModeration", () => useRemoveModeration(), { id: "m1" }, "image", "MOD-101 · removed"],
-    ["hold", "holdModeration", () => useHoldModeration(), { id: "m1" }, "image", "MOD-101 · held for review"],
+    [
+      "approve",
+      "approveModeration",
+      () => useApproveModeration(),
+      { id: "m1" },
+      "image",
+      "MOD-101 · approved",
+    ],
+    [
+      "keep",
+      "approveModeration",
+      () => useApproveModeration(),
+      { id: "m1" },
+      "user_report",
+      "MOD-101 · kept",
+    ],
+    [
+      "remove",
+      "removeModeration",
+      () => useRemoveModeration(),
+      { id: "m1" },
+      "image",
+      "MOD-101 · removed",
+    ],
+    [
+      "hold",
+      "holdModeration",
+      () => useHoldModeration(),
+      { id: "m1" },
+      "image",
+      "MOD-101 · held for review",
+    ],
     [
       "uphold",
       "appealModeration",
@@ -111,7 +144,9 @@ describe("gov claim approval", () => {
       text: govClaimApproveErrorMessage(new AppError(ErrorCode.FORBIDDEN, "Forbidden")),
       tone: "error",
     })
-    expect(useUiStore.getState().toast?.text).toMatch(/^That contact email belongs to an operator account\./)
+    expect(useUiStore.getState().toast?.text).toMatch(
+      /^That contact email belongs to an operator account\./,
+    )
   })
 })
 

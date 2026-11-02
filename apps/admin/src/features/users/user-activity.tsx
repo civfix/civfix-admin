@@ -28,7 +28,7 @@ interface ActivityQuery<T> {
   isError: boolean
   error: unknown
   refetch: () => unknown
-  data?: { pages: { items: T[] }[] }
+  data: { pages: { items: T[] }[] } | undefined
   hasNextPage: boolean
   isFetchingNextPage: boolean
   fetchNextPage: () => unknown

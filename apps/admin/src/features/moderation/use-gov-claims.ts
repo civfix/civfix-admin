@@ -65,7 +65,8 @@ export interface GovClaimDecision<Request> {
 export function useApproveGovClaim() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ request }: GovClaimDecision<ApproveGovClaimRequest>) => api.approveGovClaim(request),
+    mutationFn: ({ request }: GovClaimDecision<ApproveGovClaimRequest>) =>
+      api.approveGovClaim(request),
     meta: {
       errorMessage: govClaimApproveErrorMessage,
       successMessage: (_res: unknown, { claim }: GovClaimDecision<ApproveGovClaimRequest>) =>
@@ -83,7 +84,8 @@ export function useApproveGovClaim() {
 export function useRejectGovClaim() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ request }: GovClaimDecision<RejectGovClaimRequest>) => api.rejectGovClaim(request),
+    mutationFn: ({ request }: GovClaimDecision<RejectGovClaimRequest>) =>
+      api.rejectGovClaim(request),
     onSuccess: (_res, { request: { id } }) => invalidateGovClaims(qc, id),
     meta: {
       successMessage: (_res: unknown, { claim }: GovClaimDecision<RejectGovClaimRequest>) =>

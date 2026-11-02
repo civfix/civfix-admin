@@ -31,7 +31,9 @@ export function useAnalyticsExport(
     rows.push(["Volunteers", events.volunteers, ""])
     rows.push([])
     rows.push(["Category", "Reports", "Share %"])
-    byCategory.rows.forEach((row) => rows.push([REPORT_CATEGORY_LABELS[row.cat], row.count, row.pct]))
+    byCategory.rows.forEach((row) =>
+      rows.push([REPORT_CATEGORY_LABELS[row.cat], row.count, row.pct]),
+    )
     downloadCsv(EXPORT_FILENAME, rows)
     toast(`Analytics exported · ${EXPORT_FILENAME}`)
   }

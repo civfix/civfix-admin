@@ -140,7 +140,9 @@ describe("UsersPage", () => {
     expect(within(listCard).getByTitle("Flagged")).toBeInTheDocument()
 
     expect(apiMock.listAdminUsers).toHaveBeenCalledWith({})
-    expect(await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" }),
+    ).toBeInTheDocument()
     expect(within(detailCard()).getByText("u-ana")).toBeInTheDocument()
     expect(within(detailCard()).getByText(/Risk: Low/)).toBeInTheDocument()
     expect(within(detailCard()).getByRole("button", { name: /Ban account/ })).toBeInTheDocument()
@@ -237,8 +239,12 @@ describe("UsersPage", () => {
     apiMock.listAdminUsers.mockResolvedValue(page([ANA, BEN]))
     mockDetails(ANA, BEN)
     renderWithQuery(<UsersPage focusId="u-ben" />)
-    expect(await within(detailCard()).findByRole("heading", { name: "Ben Okafor" })).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Ana Ruiz" })).not.toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Ben Okafor" }),
+    ).toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Ana Ruiz" }),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps a deep-linked focusId that is not on the first page selected", async () => {
@@ -246,10 +252,14 @@ describe("UsersPage", () => {
     apiMock.listAdminUsers.mockResolvedValue(page([ANA, BEN]))
     mockDetails(ANA, BEN, CARA)
     renderWithQuery(<UsersPage focusId="u-cara" />)
-    expect(await within(detailCard()).findByRole("heading", { name: "Cara Lind" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Cara Lind" }),
+    ).toBeInTheDocument()
     await within(accountsList()).findByText("Ana Ruiz")
     expect(within(detailCard()).getByRole("heading", { name: "Cara Lind" })).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Ana Ruiz" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Ana Ruiz" }),
+    ).not.toBeInTheDocument()
   })
 })
 
@@ -273,7 +283,13 @@ async function openActivityTab(label: string) {
 }
 
 function eventItem(over: Partial<UserEventItemDTO> & { id: string; title: string }) {
-  return { place: "Lake Merritt", role: "member", attendees: 4, when: "Sat", ...over } satisfies UserEventItemDTO
+  return {
+    place: "Lake Merritt",
+    role: "member",
+    attendees: 4,
+    when: "Sat",
+    ...over,
+  } satisfies UserEventItemDTO
 }
 
 function messageItem(over: Partial<UserMessageItemDTO> & { id: string; text: string }) {
@@ -316,11 +332,17 @@ describe("UsersPage selection", () => {
     await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: /Suspend/ }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }),
+    )
 
-    await waitFor(() => expect(within(accountsList()).queryByText("Ana Ruiz")).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(accountsList()).queryByText("Ana Ruiz")).not.toBeInTheDocument(),
+    )
     expect(await within(detailCard()).findByText("No user selected")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("heading", { name: "Ben Okafor" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("heading", { name: "Ben Okafor" }),
+    ).not.toBeInTheDocument()
     expect(rowOf("Ben Okafor")).not.toHaveAttribute("aria-current")
   })
 
@@ -331,7 +353,9 @@ describe("UsersPage selection", () => {
     const detailRefetch = deferred<AdminUserDTO>()
     apiMock.listAdminUsers.mockImplementation(async () => page(suspended ? [BEN] : [ANA, BEN]))
     apiMock.getAdminUser.mockImplementation(({ id }: { id: string }) =>
-      id === ANA.id && suspended ? detailRefetch.promise : Promise.resolve(detail(id === ANA.id ? ANA : BEN)),
+      id === ANA.id && suspended
+        ? detailRefetch.promise
+        : Promise.resolve(detail(id === ANA.id ? ANA : BEN)),
     )
     apiMock.getUserReports.mockResolvedValue(NO_REPORTS)
     apiMock.setUserStatus.mockImplementation(async () => {
@@ -347,14 +371,19 @@ describe("UsersPage selection", () => {
     await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: /Suspend/ }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }),
+    )
 
     expect(await within(detailCard()).findByText("No user selected")).toBeInTheDocument()
     await act(async () => {
       detailRefetch.resolve(detail({ ...ANA, status: "suspended" }))
     })
     await waitFor(() =>
-      expect(useUiStore.getState().toast).toMatchObject({ text: "Ana Ruiz · account suspended", tone: "ok" }),
+      expect(useUiStore.getState().toast).toMatchObject({
+        text: "Ana Ruiz · account suspended",
+        tone: "ok",
+      }),
     )
   })
 
@@ -379,9 +408,13 @@ describe("UsersPage selection", () => {
     await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })
 
     await userEvent.click(within(detailCard()).getByRole("button", { name: /Suspend/ }))
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }))
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend" }),
+    )
 
-    expect(await within(detailCard()).findByRole("button", { name: /Reactivate/ })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("button", { name: /Reactivate/ }),
+    ).toBeInTheDocument()
     expect(within(detailCard()).getByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
     expect(rowOf("Ana Ruiz")).toHaveAttribute("aria-current", "true")
   })
@@ -396,7 +429,9 @@ describe("UsersPage selection", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^Suspended/ }))
 
-    await waitFor(() => expect(within(accountsList()).queryByText("Ana Ruiz")).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(accountsList()).queryByText("Ana Ruiz")).not.toBeInTheDocument(),
+    )
     expect(within(detailCard()).getByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
     expect(rowOf("Ben Okafor")).not.toHaveAttribute("aria-current")
   })
@@ -411,12 +446,16 @@ describe("UsersPage selection", () => {
 
     rowOf("Ben Okafor").focus()
     await userEvent.keyboard(" ")
-    expect(await within(detailCard()).findByRole("heading", { name: "Ben Okafor" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Ben Okafor" }),
+    ).toBeInTheDocument()
     expect(rowOf("Ben Okafor")).toHaveAttribute("aria-current", "true")
 
     rowOf("Ana Ruiz").focus()
     await userEvent.keyboard("{Enter}")
-    expect(await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" })).toBeInTheDocument()
+    expect(
+      await within(detailCard()).findByRole("heading", { name: "Ana Ruiz" }),
+    ).toBeInTheDocument()
   })
 })
 
@@ -454,13 +493,18 @@ describe("UsersPage account detail", () => {
     )
     renderWithQuery(<UsersPage focusId="u-gone" />)
     expect(await within(detailCard()).findByText("User not found")).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument()
   })
 
   it("says the copy failed, in the error tone, when the clipboard is unavailable", async () => {
     resetShellAfterTest()
     const original = Object.getOwnPropertyDescriptor(window.navigator, "clipboard")
-    Object.defineProperty(window.navigator, "clipboard", { configurable: true, get: () => undefined })
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      get: () => undefined,
+    })
     onTestFinished(() => {
       if (original) Object.defineProperty(window.navigator, "clipboard", original)
       else delete (window.navigator as { clipboard?: unknown }).clipboard
@@ -517,7 +561,14 @@ describe("UsersPage account detail", () => {
     mockDetails(ANA)
     apiMock.getUserReports.mockResolvedValue({
       items: [
-        { id: "r-1", title: "Broken bench", category: "other", status: "submitted", place: "Fresno", age: "2d" },
+        {
+          id: "r-1",
+          title: "Broken bench",
+          category: "other",
+          status: "submitted",
+          place: "Fresno",
+          age: "2d",
+        },
       ],
       nextCursor: null,
     } satisfies UserReportsResponse)
@@ -608,6 +659,8 @@ describe("UsersPage account detail", () => {
     expect(await within(detailCard()).findByText(/older message/)).toBeInTheDocument()
     expect(apiMock.getUserMessages).toHaveBeenLastCalledWith({ id: "u-ana", cursor: "m-c2" })
     expect(within(detailCard()).getByText(/newest message/)).toBeInTheDocument()
-    expect(within(detailCard()).queryByRole("button", { name: "Load more" })).not.toBeInTheDocument()
+    expect(
+      within(detailCard()).queryByRole("button", { name: "Load more" }),
+    ).not.toBeInTheDocument()
   })
 })

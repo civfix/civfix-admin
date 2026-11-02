@@ -44,7 +44,9 @@ describe("contacts payload", () => {
   })
 
   it("keeps an edit made while the save was in flight marked for the next save", () => {
-    expect(afterContactsSaved({ trash: 2, graffiti: 1 }, { trash: 1, graffiti: 1 })).toEqual({ trash: 2 })
+    expect(afterContactsSaved({ trash: 2, graffiti: 1 }, { trash: 1, graffiti: 1 })).toEqual({
+      trash: 2,
+    })
     expect(afterContactsSaved({ trash: 1 }, { trash: 1 })).toEqual({})
   })
 })
