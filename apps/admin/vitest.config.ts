@@ -16,8 +16,6 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-  // tsconfig keeps `jsx: preserve` for Next; tests need the automatic runtime.
-  oxc: { jsx: { runtime: "automatic" } },
   test: {
     pool: "forks",
     coverage: {
