@@ -1,15 +1,13 @@
 import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
-import { FlatCompat } from "@eslint/eslintrc"
 import vitest from "@vitest/eslint-plugin"
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals"
+import nextTypescript from "eslint-config-next/typescript"
 import jsxA11y from "eslint-plugin-jsx-a11y"
 import reactHooks from "eslint-plugin-react-hooks"
 
 const baseDirectory = dirname(fileURLToPath(import.meta.url))
-
-// eslint-config-next 15.x ships only eslintrc presets; FlatCompat is the supported bridge until 16.
-const compat = new FlatCompat({ baseDirectory })
 
 const TEST_FILES = [
   "src/**/*.test.{ts,tsx}",
@@ -23,8 +21,9 @@ const [, controlLabelOptions] = a11yRecommended["jsx-a11y/control-has-associated
 // A list row's name is its title, which the shared .qrow markup nests four levels down.
 const CONTROL_LABEL_DEPTH = 4
 
-// eslint-config-next 15 depends on react-hooks v5, and which copy its preset loads is up to module
-// resolution, so its plugin and rules are dropped here and the pinned v7 below is the only one.
+// eslint-config-next's preset runs exhaustive-deps, incompatible-library and unsupported-syntax as warnings
+// and leaves out void-use-memo, so its react-hooks rules are dropped here and the pinned plugin's full
+// recommended set below is the only source of them.
 function withoutReactHooks(entry) {
   const { plugins, rules, ...rest } = entry
   const { "react-hooks": _reactHooks, ...otherPlugins } = plugins ?? {}
@@ -48,7 +47,7 @@ const config = [
   {
     linterOptions: { reportUnusedDisableDirectives: "error" },
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript").map(withoutReactHooks),
+  ...[...nextCoreWebVitals, ...nextTypescript].map(withoutReactHooks),
   // Every recommended rule at error, including the ones the preset ships as warnings.
   {
     plugins: reactHooksRecommended.plugins,

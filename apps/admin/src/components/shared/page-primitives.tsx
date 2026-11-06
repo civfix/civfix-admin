@@ -56,7 +56,14 @@ export function FilterChips({
             onClick={() => onChange(val)}
           >
             {label}
-            {count !== undefined && <span className="fchip-count">{count}</span>}
+            {/* The flex chip never renders this space; it keeps the accessible name "Open 3" without relying on
+                layout, which jsdom does not compute. */}
+            {count !== undefined && (
+              <>
+                {" "}
+                <span className="fchip-count">{count}</span>
+              </>
+            )}
           </button>
         )
       })}

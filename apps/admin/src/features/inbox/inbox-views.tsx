@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import {
   INBOUND_EMAIL_STATUS_LABELS,
   MAIL_STATUS_LABELS,

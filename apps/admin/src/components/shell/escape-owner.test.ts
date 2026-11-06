@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest"
 import { ESCAPE_OWNER_SELECTOR, hasEscapeOwner, shellEscapeGoesHome } from "./escape-owner"
 
 function doc(open: boolean): Pick<Document, "querySelector"> {
-  return {
+  // Typed by inference, not by the return type: no-deprecated matches a key typed as Document's
+  // querySelector against all of its overloads, one of which is deprecated.
+  const fake = {
     querySelector: (selector: string) =>
       open && selector === ESCAPE_OWNER_SELECTOR ? ({} as Element) : null,
   }
+  return fake
 }
 
 describe("escape ownership", () => {

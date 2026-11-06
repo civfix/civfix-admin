@@ -1,28 +1,96 @@
+@layer theme, base, components, utilities;
+
 /*
  * Global styles for the civfix admin / operator dashboard.
  *
  * Layering order matters:
- *   1. Leaflet's stylesheet (the dashboard maps use Leaflet + CARTO raster tiles, matching the
- *      design prototype exactly - a deliberate design-fidelity choice for this internal tool; it does
- *      NOT use MapLibre like community-web).
- *   2. Tailwind, which contributes only its base reset; the markup uses no intended Tailwind
- *      utilities. The dashboard's visual system is the ported design CSS imported in the root layout
- *      AFTER this file (src/styles/admin.css, which @imports src/styles/colors-and-type.css), so its
- *      component classes win over the reset wherever they overlap.
+ *   1. Leaflet's stylesheet, in the base layer ahead of Tailwind so Tailwind's reset still follows it (the
+ *      dashboard maps use Leaflet + CARTO raster tiles, matching the design prototype exactly - a deliberate
+ *      design-fidelity choice for this internal tool; it does NOT use MapLibre like community-web).
+ *   2. Tailwind, which contributes only its base reset; the markup uses no intended Tailwind utilities. The
+ *      dashboard's visual system is the ported design CSS imported in the root layout AFTER this file
+ *      (src/styles/admin.css, which @imports src/styles/colors-and-type.css). It is unlayered, so its rules
+ *      win over every layer here wherever they overlap.
  *
  * Fonts: next/font assigns --font-display-next / --font-body-next / --font-mono-next on <html>
  * (layout.tsx), exactly the names the ported design stylesheet (colors-and-type.css) aliases into the
  * final --font-display / --font-body / --font-mono stacks. No bridge is needed (and a
  * `--font-*-next: var(--font-*)` bridge would be CIRCULAR, invalidating font-family -> serif fallback).
+ * Tailwind's theme also declares --font-mono; the unlayered colors-and-type.css value is the one that holds.
  */
 
-@import "leaflet/dist/leaflet.css";
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "leaflet/dist/leaflet.css" layer(base);
+@import "tailwindcss";
 
 @layer base {
+  /*
+   * The dashboard was drawn against Tailwind 3's reset. These put back what Tailwind 4's reset changed
+   * and admin.css does not set itself; revert-layer hands a property back to the browser's default.
+   */
+  *,
+  ::before,
+  ::after {
+    border-color: #e5e7eb;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+  }
+
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button,
+  input,
+  select,
+  optgroup,
+  textarea {
+    border-radius: revert-layer;
+    opacity: revert-layer;
+  }
+
+  input:where(:not([type="button"], [type="reset"], [type="submit"])),
+  select,
+  optgroup,
+  textarea {
+    background-color: revert-layer;
+  }
+
+  option {
+    padding: revert-layer;
+  }
+
+  ::-webkit-date-and-time-value {
+    min-height: revert-layer;
+    text-align: revert-layer;
+  }
+
+  ::-webkit-datetime-edit {
+    display: revert-layer;
+  }
+
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert-layer;
+  }
+
+  ::-webkit-datetime-edit,
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: revert-layer;
+  }
+
+  ::-webkit-calendar-picker-indicator {
+    line-height: revert-layer;
+  }
+
   html,
   body,
   #root {
@@ -40,6 +108,15 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+/*
+ * Unlayered, like Tailwind 3's reset was: as a layered rule it would lose to admin.css's `button { cursor:
+ * pointer }`, which it outranks today, so disabled buttons without a cursor of their own would turn to a
+ * pointer.
+ */
+:disabled {
+  cursor: default;
 }
 
 /* Leaflet canvas should inherit the body font so attributions match the design. */
