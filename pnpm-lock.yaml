@@ -189,8 +189,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: 0.72.0-b-feat-notification-actor.g5365d83
-        version: 0.72.0-b-feat-notification-actor.g5365d83
+        specifier: ^0.72.0
+        version: 0.72.0
       '@civfix/tokens':
         specifier: ^0.1.1
         version: 0.1.1
@@ -382,8 +382,8 @@ packages:
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
 
-  '@civfix/contract@0.72.0-b-feat-notification-actor.g5365d83':
-    resolution: {integrity: sha512-EOUHsLFdN5GROtse76lafWK/tFn0KSWlxPQwFcdGikmojAfJl8ZyIMZFLBqbeGaEcwXg0wZocRyx9E2TrVaWsA==}
+  '@civfix/contract@0.72.0':
+    resolution: {integrity: sha512-SFoAgVy543lY6G4hyBD1XKiUPM4K9nXyr8B9WqcSTPvrxUSbO32FgUsBEvEcSOWNZ7c247j+xK1gXwMQz1ijyA==}
     engines: {node: ^24.15}
 
   '@civfix/tokens@0.1.1':
@@ -3890,7 +3890,7 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@civfix/contract@0.72.0-b-feat-notification-actor.g5365d83':
+  '@civfix/contract@0.72.0':
     dependencies:
       zod: 4.6.7
 
