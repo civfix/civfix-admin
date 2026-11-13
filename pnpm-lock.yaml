@@ -189,8 +189,8 @@ importers:
   apps/admin:
     dependencies:
       '@civfix/contract':
-        specifier: ^0.71.1
-        version: 0.71.1
+        specifier: ^0.72.0
+        version: 0.72.0
       '@civfix/tokens':
         specifier: ^0.1.1
         version: 0.1.1
@@ -382,9 +382,9 @@ packages:
     resolution: {integrity: sha512-0GEz8qJWokkUVYQYRukmkSHIFNoBH8QTreeHrAFbvz1XFYc3Y+puhMs8PQ5x8GNugiC2l5jvDBXKLbBIByeSBw==}
     hasBin: true
 
-  '@civfix/contract@0.71.1':
-    resolution: {integrity: sha512-jg5VpST3D+BljDsuGnwHtguSZCCat/S0ooCXPQx2I0QF6rhGtEkhRgJkF8F+UCWuBRjDfOfbfrPRbBZgcAl4hw==}
-    engines: {node: '>=20'}
+  '@civfix/contract@0.72.0':
+    resolution: {integrity: sha512-SFoAgVy543lY6G4hyBD1XKiUPM4K9nXyr8B9WqcSTPvrxUSbO32FgUsBEvEcSOWNZ7c247j+xK1gXwMQz1ijyA==}
+    engines: {node: ^24.15}
 
   '@civfix/tokens@0.1.1':
     resolution: {integrity: sha512-q8X1kGM90fEAbbk1tEuy91cA9Dr8Z/l9v3gdKN5DibEZrSnVbPnclJCMotmW7HzC8AjhqBo1MHxxrBaooGUPkw==}
@@ -3890,7 +3890,7 @@ snapshots:
     dependencies:
       css-tree: 3.2.1
 
-  '@civfix/contract@0.71.1':
+  '@civfix/contract@0.72.0':
     dependencies:
       zod: 4.6.7
 
